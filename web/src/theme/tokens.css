@@ -402,3 +402,10 @@
   --gr-th: #8C6A2F;
   --gr-unique: #0F6E62;
 }
+
+/* 어두운 무대(뽑기 공개·시상식 등) 위 등급색 — 테마와 상관없이 밝은 판. 판에 class="on-dark" */
+.on-dark {
+  --gr-normal: #A3ACB8; --gr-special: #F2852A; --gr-rare: #E0384F; --gr-elite: #A07BFF; --gr-legend: #E2B762;
+  --gr-franchise: #D9AE55; --gr-black: #C9CED6; --gr-signature: #E8DDFF; --gr-mvp: #E7BE57; --gr-gg: #E2B342; --gr-th: #DDA63C;
+  --gr-unique: #7FE3D4;
+}

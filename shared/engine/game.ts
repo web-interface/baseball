@@ -16,13 +16,15 @@ import { newLog, newBat, newPit, batLine, pitLine, fldLine, bkOut, bkPO, logPitc
 import { homeWE } from './we.ts';
 import { windAt } from './weather.ts';
 const WO = new Float64Array(2);
-function windOut(g: G): number { if (g.wx.dome) return 0; windAt(g.slot, g.park, 0, WO); return g.park.expoHigh > 0 ? WO[0] / g.park.expoHigh : 0; }
+function windOut(g: G): number { if (g.wx.dome) return 0; windAt(g.slot, g.park, 0, WO); return g.park.expoHigh > 0 ? WO[0] / (g.park.expoHigh * P.air.expo) : 0; }
 
 const PRE_SLOTS = 18;
 
 function buildTeam(g: G, tin: TeamIn, side: 0 | 1): TeamSt {
   const pcs: PC[] = []; const idOf = new Map<number, number>();
-  for (let i = 0; i < tin.players.length; i++) { const p = tin.players[i]; pcs.push(buildCache(p, { team: side, home: side === 1, importance: g.inp.ctx.importance, rec: i })); idOf.set(p.id, i); }
+  // 이 경기에 나올 수 있는 선수만 캐시(라인업·선발·불펜·벤치) — 2군·부상자는 건너뜀
+  const need = new Set<number>([tin.sp, ...tin.lineup.map((l) => l.pid), ...tin.pen.map((x) => x.pid), ...tin.bench]);
+  for (let i = 0; i < tin.players.length; i++) { const p = tin.players[i]; if (!need.has(p.id)) continue; idOf.set(p.id, pcs.length); pcs.push(buildCache(p, { team: side, home: side === 1, importance: g.inp.ctx.importance, rec: i })); }
   const n = pcs.length;
   const order = new Int16Array(9), field = new Int16Array(10).fill(-1), posOf = new Int8Array(n).fill(-1);
   tin.lineup.forEach((l, k) => { const i = idOf.get(l.pid)!; order[k] = i; const pi = POS_NAME.indexOf(l.pos); field[pi] = i; posOf[i] = pi; });
@@ -37,7 +39,7 @@ function buildTeam(g: G, tin: TeamIn, side: 0 | 1): TeamSt {
     inf: 0, of: 0, alignFixed: false, reviews: g.rules.reviews, visits: 5, approach: 0, starterIdx: sp,
   };
   const ps = newPitSt(sp, true, 'SP', g, T); T.pit = ps; T.pitHist.push(ps);
-  const pl = newPit(tin.players[sp].id); pl.GS = 1; T.pitL.set(pl.pid, pl);
+  const pl = newPit(pcs[sp].id); pl.GS = 1; T.pitL.set(pl.pid, pl);
   return T;
 }
 
@@ -121,6 +123,7 @@ function runPA(g: G, firstOfHalf: boolean): void {
   g.paNo++; g.pitchInPA = 0; g.balls = 0; g.strikes = 0; pa.countsSeen = 1;
   let res: number = R.OUT; let ended = false; let rbi = 0; let onBase = false, isHit = false, wasK = false, hbp = false; let outsBefore = g.outs;
   const runsBefore = g.score[g.half];
+  PL.kind = -1; PL.sf = false; PL.sh = false; PL.gdp = false; PL.rbi = 0;
   // 고의4구(투구 없이, KBO 2018~)
   if (aiIBB(g)) {
     walk(g); res = R.IBB; bl.BB++; bl.IBB++; pl.BB++; pl.IBB++; D.pit.bb++; D.pit.ibb++; onBase = true; ended = true;
@@ -149,7 +152,7 @@ function runPA(g: G, firstOfHalf: boolean): void {
     const stealing = pre0.steal2 ? 2 : pre0.steal3 ? 3 : 0;
     if (stealing && pa.mode === 1) { const r = g.bases[stealing - 2]; if (r) r.lead = 6; }
     let code: number;
-    if (auto >= 0) { code = auto === 0 ? PR.AUTO_B : PR.AUTO_S; PT.type = 0; PT.vPlate = 0; PT.x = 0; PT.z = 0; PT.d = 0; PT.wp = false; PT.pb = false; PT.swing = false; PT.inZone = false; PT.called = auto === 1; }
+    if (auto >= 0) { code = auto === 0 ? PR.AUTO_B : PR.AUTO_S; PT.type = 0; PT.pi = 0; PT.vPlate = 0; PT.vRel = pa.vFF; PT.H = 0; PT.x = 0; PT.z = 0; PT.d = 0; PT.wp = false; PT.pb = false; PT.swing = false; PT.inZone = false; PT.frame = false; PT.bunt = false; PT.called = auto === 1; }
     else code = throwPitch(g, pre0.pitchout);
     // ── 기록·피로·기억 ──
     const ps = D.pit;
@@ -274,7 +277,7 @@ function runPA(g: G, firstOfHalf: boolean): void {
   evPAEnd(g, res, onBase, isHit, runs, g.outs - outsBefore, wasK, hbp);
   if (g.col?.pa) g.col.pa({ result: res, batter: b.id, pitcher: p.id, bHand: pa.bL ? 'L' : 'R', pHand: pa.pL ? 'L' : 'R', outsBefore: outs0, basesBefore: bases0, runs, rbi: PL.rbi, pitches: g.pitchInPA,
     balls: g.balls, strikes: g.strikes, countsSeen: pa.countsSeen, tto, isStarter: D.pit.starter, inning: g.inning, half: g.half, homeBatting: g.half === 1, li: pa.li, tempC: g.slot.tC, rainLv: g.slot.rainLv, dayClear: g.dayClear,
-    windOut: windOut(g), batterPlatoonAdv: !pa.same, scoreDiff: score0, ibb: res === R.IBB, sh: res === R.SH || PL.sh, sf: PL.sf, gdp: res === R.DP, roe: res === R.ROE });
+    windOut: windOut(g), batterPlatoonAdv: !pa.same, scoreDiff: score0, ibb: res === R.IBB, sh: res === R.SH || PL.sh, sf: PL.sf, gdp: res === R.DP, roe: res === R.ROE, foulOut: PL.kind === 5 && res === R.OUT });
   if (g.logOn) {
     const L = g.log as LogBuf; const we1 = homeWE(g.inning, g.half, Math.min(3, g.outs), basesCode(g), g.score[1] - g.score[0], g.maxInn);
     L.pa.push(g.inning * 2 + g.half, outs0, bases0, score0, recNo(g, b.id), recNo(g, p.id), res, PL.rbi, firstPitchNo, g.pitchInPA, L.bb.length / 17 - 1, Math.round((we1 - we0) * 1000));

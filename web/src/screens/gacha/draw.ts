@@ -5,6 +5,7 @@
 import { useSyncExternalStore } from 'react';
 import { CARDS, ME, MY_CARD_IDS, PACKS, PLAYERS, teamById } from '../../game/mock';
 import { GRADES } from '../../game/grades';
+import { spend, useWallet } from '../../game/wallet';
 import { PITCH_KO, POS_KO } from '../../game/labels';
 import type { CardInst, ClubCode, GradeId, Pack, PitchType, Player, SignaturePitch } from '../../game/types';
 import { CLUB_TIER, LEGEND_SEASONS, YEAR_OPTIONS, clubPool } from './local-mock';
@@ -100,9 +101,10 @@ const bump = () => { state.version++; listeners.forEach((l) => l()); };
 
 export function useGacha() {
   useSyncExternalStore((l) => { listeners.add(l); return () => { listeners.delete(l); }; }, () => state.version);
+  const wallet = useWallet();
   return {
     pityOf: (packId: string) => state.pity[packId] ?? 0,
-    wallet: { gp: ME.gp - state.spent.gp, ball: ME.ball - state.spent.ball },
+    wallet,
     lastResult: state.lastResult,
   };
 }
@@ -291,6 +293,7 @@ export function pullPack(pack: Pack, pick: Pick | null, opt: { seed?: string; fo
 
   state.spent.gp += pack.price.gp ?? 0;
   state.spent.ball += pack.price.ball ?? 0;
+  spend({ gp: pack.price.gp, ball: pack.price.ball }); // 헤더 지갑도 같이 줄어든다
 
   const res: PullResult = {
     requestId, pack, pick, cards, best,

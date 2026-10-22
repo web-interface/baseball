@@ -62,9 +62,9 @@ function Store({ query }: { query: URLSearchParams }) {
   const toPity = pack.pity.max - pity;
   const combos = combosFor(pick);
 
-  // 개발 서버 데모 — ?demo=open&pack=legend&best=signature&step=grid|flip|cine|done (스크린샷용)
+  // 데모 — ?demo=open&pack=legend&best=signature&step=grid|flip|cine|done (스크린샷용)
   useEffect(() => {
-    if (!import.meta.env.DEV || query.get('demo') !== 'open') return;
+    if (query.get('demo') !== 'open') return; // 미리보기에서도 열린다 (목업 단계)
     const key = location.hash;
     if (DEMO_DONE.has(key)) return;
     DEMO_DONE.add(key);

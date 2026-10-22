@@ -1,7 +1,9 @@
 // 화면 틀 — 위쪽 헤더(뒤로·제목·재화) + 가로 메뉴 + 본문. 아래 탭바는 없다(앱처럼 X).
 import { Component, Suspense, useEffect, useLayoutEffect, useRef, useState, type ErrorInfo, type ReactNode } from 'react';
 import { IconButton, TopBar, Emblem } from '../ui';
-import { ME, STANDINGS, myTeam } from '../game/mock';
+import { STANDINGS, myTeam } from '../game/mock';
+import { useWallet } from '../game/wallet';
+import { useTitleOverride } from './title';
 import { record } from '../ui/format';
 import { MENU, type RouteDef } from './routes';
 import { Link, goBack, navigate } from './router';
@@ -9,7 +11,8 @@ import s from './Shell.module.css';
 
 export function Shell({ route, preview, children }: { route: RouteDef | null; preview: boolean; children: ReactNode }) {
   const chrome = route?.chrome ?? 'full';
-  const wallet = { gp: ME.gp, ball: ME.ball };
+  const wallet = useWallet();
+  const over = useTitleOverride();
   const team = myTeam();
   const st = STANDINGS.findIndex((x) => x.teamId === team.id);
   const row = STANDINGS[st];
@@ -42,7 +45,8 @@ export function Shell({ route, preview, children }: { route: RouteDef | null; pr
         <div className={s.top}>
           {route?.back ? (
             <TopBar
-              title={route.title}
+              title={over?.title ?? route.title}
+              sub={over?.sub}
               tag={preview ? '미리보기' : undefined}
               onBack={() => goBack(route.back)}
               wallet={wallet}

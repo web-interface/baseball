@@ -148,6 +148,8 @@ export interface PitchingLine {
 export interface Player {
   id: string;
   name: string;
+  /** 영문 이름 (카드 아랫단) — 없으면 카드가 한글에서 만든다 */
+  nameEn?: string;
   teamId: string;
   number: number;
   pos: Pos;
@@ -234,6 +236,12 @@ export interface CardInst {
   dup: number;
   isNew?: boolean;
   locked?: boolean;
+  /** 이 카드의 종합 (같은 선수라도 등급·연도마다 다르다) — 없으면 선수 ovr */
+  ovr?: number;
+  /** 일련번호 (한정 등급) — 서버가 뽑는 순간 매긴다. null = 번호 없음 */
+  serial?: { no: number; of: number; match: boolean } | null;
+  /** 낀 장비 — 모양은 cards/gear.ts 의 GearPiece */
+  gear?: { slot: string; name: string; grade: string; plus: number; set?: string }[];
 }
 
 /* ───────── 라인업 · 조합 ───────── */

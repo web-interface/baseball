@@ -7,7 +7,7 @@
   z-index: 4;
   display: flex;
   align-items: flex-end;
-  background: linear-gradient(180deg, transparent 18%, color-mix(in srgb, var(--inv) 72%, transparent) 52%, color-mix(in srgb, var(--inv) 94%, transparent));
+  background: linear-gradient(180deg, transparent 12%, color-mix(in srgb, var(--inv) 84%, transparent) 40%, color-mix(in srgb, var(--inv) 97%, transparent) 62%);
 }
 .preIn { width: 100%; padding: 0 var(--gutter) 16px; color: var(--inv-fg); animation: preIn 420ms var(--ease-out) both; }
 @keyframes preIn { from { opacity: 0; transform: translateY(10px); } }
@@ -138,7 +138,7 @@
 :global([data-theme='broadcast']) .mvpArt { border-radius: 0; }
 
 /* classic — 신문 경기 결과란 */
-:global([data-theme='classic']) .pre { background: linear-gradient(180deg, transparent 20%, color-mix(in srgb, var(--bg) 82%, transparent) 50%, var(--bg)); }
+:global([data-theme='classic']) .pre { background: linear-gradient(180deg, transparent 12%, color-mix(in srgb, var(--bg) 90%, transparent) 40%, var(--bg) 62%); }
 :global([data-theme='classic']) .preIn { color: var(--fg); }
 :global([data-theme='classic']) .pre .eyebrow { color: var(--club-text); }
 :global([data-theme='classic']) .preNote, :global([data-theme='classic']) .favor span { color: var(--fg-3); }

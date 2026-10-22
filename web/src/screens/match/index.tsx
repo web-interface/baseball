@@ -16,6 +16,7 @@ import { Caption, LineScore, Scrubber, Transport } from './Board';
 import { Feed, Matchup, Momentum, Tactics } from './Panels';
 import { FinalOverlay, PreGame, Starters, Summary } from './Summary';
 import { VIEW_KEY, seenKey, store } from './hooks';
+import { readPrefs } from '../../app/prefs';
 import s from './match.module.css';
 
 const isMode = (v: unknown): v is Mode => v === 'quick' || v === 'key' || v === 'inning' || v === 'detail';
@@ -30,7 +31,11 @@ function calloutFor(i: number, mode: Mode, classic: boolean): CalloutData {
   const team = classic && !mine
     ? { primary: 'var(--fg)', secondary: 'var(--bg)', ink: 'var(--bg)' }
     : { primary: t.colors.primary, secondary: t.colors.secondary, ink: t.colors.ink };
-  return { id: `${p.id}-${mode}`, kind: h.kind, title: h.title, sub: h.sub, meta: h.meta, causes: (p.causes ?? []).map((c) => c.text).slice(0, 2), team };
+  // 작은 줄 = 이닝 · 아웃 — 같은 말이 sub 에 있으면 sub 에서 뺀다
+  const inn = `${p.inning}회${p.half === 'top' ? '초' : '말'}`;
+  const outs = ['무사', '1사', '2사'][p.outsBefore] ?? '';
+  const sub = h.sub?.replace(`${inn} `, '').replace(` ${inn}`, '').replace(`${outs} `, '');
+  return { id: `${p.id}-${mode}`, kind: h.kind, title: h.title, sub, kicker: `${inn} · ${outs}`, meta: h.meta, causes: (p.causes ?? []).map((c) => c.text).slice(0, 2), team };
 }
 
 /** 주소의 at · beat 로 시작 박자 찾기 */
@@ -54,8 +59,10 @@ export default function MatchScreen({ query }: ScreenProps) {
   const [mode, setMode] = useState<Mode>(() => {
     const m = q0.get('mode');
     if (isMode(m)) return m;
+    // 설정 화면의 '경기 보기 방식' (app/prefs · bb.prefs) — 예전 키 bb.matchView 도 읽어 준다
+    const pref = readPrefs().watch;
     const saved = store.get(VIEW_KEY);
-    return isMode(saved) ? saved : 'quick';
+    return isMode(pref) ? pref : isMode(saved) ? saved : 'quick';
   });
   const [phase, setPhase] = useState<Phase>(() => {
     const st = q0.get('state');
@@ -185,7 +192,7 @@ export default function MatchScreen({ query }: ScreenProps) {
   return (
     <div className={[s.screen, s['m-' + mode]].join(' ')}>
       <h1 className="sr-only">경기 — {teamById(GAME.match.awayId).name} 대 {teamById(GAME.match.homeId).name}</h1>
-      <LineScore live={pre ? liveOf({ play: 0, pitches: 0, applied: false }) : liveShown} done={done} />
+      <LineScore live={pre ? { ...liveOf({ play: 0, pitches: 0, applied: false }), inn: { away: Array(9).fill(null), home: Array(9).fill(null) } } : liveShown} done={done || pre} />
       <CalloutStage callout={queue.current} pace={calloutPace(mode)} onDone={() => { queue.next(); player.release(); }} className={s.stageWrap}>
         <Stage player={player} live={pre ? liveOf({ play: 0, pitches: 0, applied: false }) : liveShown} showZone={showZone} idle={pre}>
           {pre && <PreGame mode={mode} onStart={start} />}

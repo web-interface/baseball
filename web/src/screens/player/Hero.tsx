@@ -125,7 +125,7 @@ export function Hero({ p, team, card, cards, owned, isMineCard, enh, fails, leve
               const mineC = isMineCard(c.id);
               return (
                 <button key={c.id} type="button" className={[s.sw, on && s.swOn, !mineC && s.swOff].filter(Boolean).join(' ')} onClick={() => onPickCard(c.id)} aria-pressed={on}>
-                  <CardMini player={p} grade={c.grade} enhance={c.enhance} width={52} selected={on} dimmed={!mineC} />
+                  <CardMini {...cardProps(c)} width={52} selected={on} dimmed={!mineC} />
                   <span className={s.swText}>
                     <b style={{ color: `var(--gr-${c.grade})` }}>{gi.short}</b>
                     {c.year != null && gi.yearTagged && <span className="num">{fmt.yearTag(c.year)}</span>}

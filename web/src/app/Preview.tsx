@@ -15,10 +15,20 @@ import { Link } from './router';
 import s from './Preview.module.css';
 
 const SCREEN_LIST = [
-  { no: 1, title: '로그인', path: '/login', desc: '가입 · 로그인 · 복구 코드로 비밀번호 다시 정하기', ready: true },
+  { no: 1, title: '로그인', path: '/login?gate=1', desc: '가입 · 로그인 · 복구 코드로 비밀번호 다시 정하기' },
   ...ROUTES.slice().sort((a, b) => order(a.key) - order(b.key)).map((r, i) => ({
-    no: i + 2, title: r.title, path: r.sample ?? r.path, desc: r.desc, ready: false,
+    no: i + 2, title: r.key === 'player' ? '선수 정보' : r.title, path: r.sample ?? r.path, desc: r.desc,
   })),
+];
+
+/** 바로 보는 장면 — 화면 안 깊은 곳을 주소로 연다 */
+const SCENES: { k: string; title: string; desc: string; path: string }[] = [
+  { k: '6-4-3', title: '호수비 강조 문구', desc: '7회초 2사, 잡을 확률 18% 다이빙 캐치', path: '/match?mode=key&at=a21&beat=callout&ms=0' },
+  { k: 'W/O', title: '끝내기', desc: '9회말 우중간 끝내기 안타 — 승리 확률 80 → 100%', path: '/match?mode=key&at=a29&beat=callout&ms=0' },
+  { k: '9/9', title: '능력치 폭발', desc: '독수리스 9명을 다 맞추는 순간', path: '/lineup?demo=boom' },
+  { k: 'SIG', title: '등급 갤러리', desc: '같은 선수로 11등급 테두리를 한 번에 비교', path: '/cards?gallery=1&same=1' },
+  { k: 'BLK', title: '레전드 이펙트', desc: '레전드팩 30장 — 블랙 카드가 나오는 장면', path: '/gacha?demo=open&pack=legend&best=black' },
+  { k: '1/1', title: '특별 선수 만들기', desc: '투타·포지션·팔 각도·고유 구종 고르기', path: '/club-select?step=special' },
 ];
 function order(k: string) {
   return ['club-select', 'home', 'lineup', 'match', 'cards', 'player', 'gacha', 'shop', 'pvp', 'settings'].indexOf(k);
@@ -70,8 +80,8 @@ export function Preview() {
     <div className={s.page}>
       <header className={s.intro}>
         <p className={s.eyebrow}><span className="num">2027</span> 시즌 · 화면 미리보기</p>
-        <h1 className={s.title}>모든 화면을<br />한눈에 둘러봐요</h1>
-        <p className={s.lead}>로그인 없이 볼 수 있어요. 숫자와 선수는 아직 목업이에요. 테마를 바꾸면 모든 화면이 같이 바뀌고, 이 기기에 기억돼요.</p>
+        <h1 className={s.title}>야구 매니저,<br />먼저 둘러보세요</h1>
+        <p className={s.lead}>로그인 없이 모든 화면을 볼 수 있어요. 선수·숫자는 아직 연습용이고, 경기 결과는 서버가 붙으면 진짜로 정해져요.</p>
       </header>
 
       <section className={s.sec}>
@@ -80,7 +90,22 @@ export function Preview() {
       </section>
 
       <section className={s.sec}>
-        <h2 className={s.h}><span>화면</span><em className="num">{SCREEN_LIST.length}</em></h2>
+        <h2 className={s.h}><span>바로 보는 장면</span><em>누르면 그 장면부터</em></h2>
+        <ul className={s.scenes}>
+          {SCENES.map((sc) => (
+            <li key={sc.k}>
+              <Link to={sc.path} className={s.scene}>
+                <span className={['num', s.sceneK].join(' ')}>{sc.k}</span>
+                <b>{sc.title}</b>
+                <small>{sc.desc}</small>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className={s.sec}>
+        <h2 className={s.h}><span>모든 화면</span><em className="num">{SCREEN_LIST.length}</em></h2>
         <ol className={s.screens}>
           {SCREEN_LIST.map((sc) => (
             <li key={sc.path}>
@@ -90,7 +115,7 @@ export function Preview() {
                   <b>{sc.title}</b>
                   <small>{sc.desc}</small>
                 </span>
-                <span className={[s.state, sc.ready && s.ready].filter(Boolean).join(' ')}>{sc.ready ? '완료' : '준비 중'}</span>
+                <code className={s.path}>#{sc.path.split('?')[0]}</code>
                 <Icon name="chevron" size={16} className={s.chev} />
               </Link>
             </li>
@@ -138,11 +163,11 @@ export function Preview() {
 
       <section className={s.sec}>
         <h2 className={s.h}><span>카드 등급</span><em>11종 + 특별 선수</em></h2>
-        <p className={s.note}>지금은 임시 카드예요. 등급별 테두리는 카드 디자이너가 마저 다듬어요. 등급 이름은 정해 주신 그대로예요.</p>
+        <p className={s.note}>서열 순서예요. 등급이 높을수록 테가 두꺼워지고, 엘리트·블랙·시그니처는 테가 움직여요. <Link to="/cards?gallery=1&same=1" className={s.inline}>같은 선수로 비교하기</Link></p>
         <div className={s.cards}>
           {GRADE_CARDS.map((c) => (
             <figure key={c.id} className={s.cardFig}>
-              <Card {...cardProps(c)} width={104} />
+              <Card {...cardProps(c)} fluid />
               <figcaption>
                 <b style={{ color: `var(--gr-${c.grade})` }}>{GRADES[c.grade].ko}</b>
                 <span>{GRADES[c.grade].frame}</span>
@@ -152,8 +177,8 @@ export function Preview() {
         </div>
       </section>
 
-      <section className={s.sec}>
-        <h2 className={s.h}><span>부품</span><em>src/ui</em></h2>
+      <details className={s.sec}>
+        <summary className={s.h}><span>부품</span><em>만드는 사람용 · src/ui</em></summary>
         <div className={s.parts}>
           <div className={s.part}>
             <h3>버튼</h3>
@@ -227,7 +252,7 @@ export function Preview() {
             </div>
           </div>
         </div>
-      </section>
+      </details>
 
       <footer className={s.foot}>
         <span>선수 <b className="num">{PLAYERS.length}</b> · 카드 <b className="num">{CARDS.length}</b> · 구단 <b className="num">10</b></span>

@@ -289,7 +289,7 @@ export function airCarry(s: WxSlot, elevM: number, d0: number): number {
 }
 /** 바람 → 타구 방위 기준 성분(m/s): 뒷바람(+)·옆바람(+는 시계 방향=우익 쪽) */
 export function windAt(s: WxSlot, park: Park, phiDeg: number, out: Float64Array): void {
-  const w = s.windMs * park.expoHigh; const toDir = s.windFromDeg + 180; const bearing = park.orientDeg + phiDeg;
+  const w = s.windMs * park.expoHigh * P.air.expo; const toDir = s.windFromDeg + 180; const bearing = park.orientDeg + phiDeg;
   const a = (toDir - bearing) * Math.PI / 180;
   out[0] = w * Math.cos(a); out[1] = w * Math.sin(a);
 }

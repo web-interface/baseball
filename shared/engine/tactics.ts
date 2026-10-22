@@ -42,7 +42,7 @@ export function newPitSt(i: number, starter: boolean, role: string, g: G, D: Tea
   const pc = D.pcs[i];
   const lead = D.side === 1 ? g.score[1] - g.score[0] : g.score[0] - g.score[1];
   const runners = (g.bases[0] ? 1 : 0) + (g.bases[1] ? 1 : 0) + (g.bases[2] ? 1 : 0);
-  const saveSit = !starter && lead >= 1 && (lead <= 3 || lead <= runners + 2) && g.inning >= 7;
+  const saveSit = !starter && lead >= 1 && (lead <= 3 || lead <= runners + 2);
   return { i, F: 0, pitches: 0, strikes: 0, bf: 0, outs: 0, runs: 0, er: 0, h: 0, bb: 0, ibb: 0, hbp: 0, k: 0, hr: 0, wp: 0, bk: 0, starter, role, inn0: g.inning, inningPitches: 0, curInning: g.inning,
     inh: runners, inhScored: 0, vMax: 0, saveSit, lead0: lead, blown: false, heldLead: true, tto: new Int8Array(9), firstInningDone: false, warmed: true, rattled: 0, inZone: false, coldArm: 0,
     b2bLoss: b2bLoss(D.tin.players.find((p) => p.id === pc.id)?.state?.b2b, hasT(pc, TR.rubberArm)) };
@@ -99,7 +99,7 @@ export function aiPitching(g: G, startOfHalf: boolean): void {
   let pull = false;
   if (ps.starter) {
     const tp = D.tac.pit?.[pc.id];
-    const hook = (tp?.limit ?? pc.limit + 4) + D.tac.hookPitches - 4 * style + P.ai.spLimitSlack + 6 * invN(sub(g.rA, g.seed, KIND.A, D.side * 7919 + 3, 777).next()) * (lvl <= 2 ? 1.5 : 1);
+    const hook = (tp?.limit ?? pc.limit + P.ai.hookAdd) + D.tac.hookPitches - 4 * style + P.ai.spLimitSlack + 6 * invN(sub(g.rA, g.seed, KIND.A, D.side * 7919 + 3, 777).next()) * (lvl <= 2 ? 1.5 : 1);
     const hookRuns = D.tac.hookRuns || P.ai.spHookRuns;
     const winGuard = g.inning === 5 && lead > 0 && ps.F < pc.limit;
     if (startOfHalf && ps.pitches >= hook - 6) pull = true;
@@ -253,7 +253,7 @@ export function aiPrePitch(g: G): PrePitch {
     const be = (reB - reF) / Math.max(0.05, reS - reF);
     const margin = P.steal.margin - 0.025 * O.style - (O.tac.stealFreq * 0.03) + (g.strikes === 2 && g.balls < 3 ? 0.03 : 0);
     if (ps - be < margin || ps < S.minProb) return false;
-    const q = 0.30 * S.attemptScale * (hasT(rp, TR.stealsOften) ? 2 * (rp.sigBat === 'lightningLegs' ? 1.3 : 1) : 1) * (tb === 'green' ? 1.5 : 1) * (1 + 0.3 * O.tac.stealFreq) * (hasT(cpc, TR.runnerKiller) ? 0.85 : 1);
+    const q = 0.30 * S.attemptScale * (hasT(rp, TR.stealsOften) ? P.steal.often * (rp.sigBat === 'lightningLegs' ? 1.3 : 1) : 1) * (tb === 'green' ? 1.5 : 1) * (1 + 0.3 * O.tac.stealFreq) * (hasT(cpc, TR.runnerKiller) ? 0.85 : 1);
     return aiU(g, 51 + from) < q;
   };
   if (!(O.user && !O.auto)) {

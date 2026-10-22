@@ -72,9 +72,19 @@ export interface CardProps {
 }
 
 /** CardInst → Card props (CardMini · CardBack 에도 그대로 펼쳐 넣을 수 있다) */
+const ovrCache = new Map<string, Player>();
+function withOvr(p: Player, ovr: number): Player {
+  const k = `${p.id}|${ovr}`;
+  let v = ovrCache.get(k);
+  if (!v) { v = { ...p, ovr }; ovrCache.set(k, v); }
+  return v;
+}
+
 export function cardProps(c: CardInst) {
-  const player = playerOfCard(c);
-  const extra = c as CardInst & { gear?: GearPiece[]; serial?: Serial | null };
+  const base = playerOfCard(c);
+  // 카드마다 종합이 다르다 (CardInst.ovr) — 같은 선수라도 윗 등급이 더 높게
+  const player = c.ovr != null && c.ovr !== base.ovr ? withOvr(base, c.ovr) : base;
+  const extra = c as Omit<CardInst, 'gear'> & { gear?: GearPiece[]; serial?: Serial | null };
   return {
     player,
     grade: c.grade,

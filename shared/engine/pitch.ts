@@ -38,7 +38,7 @@ export function beginPA(g: G, evPhys: Float64Array, evPsy: Float64Array, evPPhys
   pa.pL = p.throwsL; pa.bL = b.bats === 1 || (b.bats === 2 && !p.throwsL); pa.same = pa.bL === pa.pL;
   pa.zCon = p.throwsL ? b.zConL : b.zConR;
   pa.zPow = b.z[A.power]; pa.zEye = b.z[A.eye]; pa.zK = b.z[A.avoidK]; pa.zFast = b.z[A.vsFast]; pa.zBreak = b.z[A.vsBreak]; pa.zIQ = b.z[A.baseballIQ]; pa.zAg = b.z[A.agility];
-  if (pa.same && b.split > 0) { pa.zPow -= P.platoon.batPow * b.split / 2 / 10; pa.zEye -= P.platoon.batEye * b.split / 2 / 10; }
+  if (pa.same && b.split > 0) { pa.zPow -= P.platoon.batPow * b.split / 2 / P.scale[A.power]; pa.zEye -= P.platoon.batEye * b.split / 2 / P.scale[A.eye]; }
   const hz = b.height * b.zoneMult;
   pa.top = P.zone.top * hz; pa.bot = P.zone.bot * b.height; pa.HH = (pa.top - pa.bot) / 2; pa.zMid = (pa.top + pa.bot) / 2;
   // 승부처·압박감
@@ -61,8 +61,8 @@ export function beginPA(g: G, evPhys: Float64Array, evPsy: Float64Array, evPPhys
   pa.cVelo = p.chP[CH.velo] + evPPhys[CH.velo];
   pa.cErr = clamp(evPPsy[CH.error] + evPPhys[CH.error], -0.47, 0.47);
   // 기억
-  const key = pa.b * 64 + pa.p; let m = O.mem.get(key); if (!m) { m = new Float64Array(9); O.mem.set(key, m); }
-  let tm = O.teamMem.get(pa.p); if (!tm) { tm = new Float64Array(9); O.teamMem.set(pa.p, tm); }
+  const key = pa.b * 64 + pa.p; let m = O.mem.get(key); if (!m) { m = [0, 0, 0, 0, 0, 0, 0, 0, 0]; O.mem.set(key, m); }
+  let tm = O.teamMem.get(pa.p); if (!tm) { tm = [0, 0, 0, 0, 0, 0, 0, 0, 0]; O.teamMem.set(pa.p, tm); }
   pa.mem = m; pa.tmem = tm;
   pa.gq = gqOf(c, p);
   // 결정구: 직구 아닌 공 중 위력 최고
@@ -106,7 +106,7 @@ export function throwPitch(g: G, pitchout: boolean): number {
   let wsum = 0;
   for (let i = 0; i < np; i++) {
     const x = p.pitches[i]; const fam = P.pt.fam[x.t];
-    let be = Math.log(x.use) + (fam === 0 ? P.count.FB[ci] + P.sel.fastBase : 0);
+    let be = Math.log(x.use) + (fam === 0 ? P.count.FB[ci] + P.sel.fastBase : 0) + P.sel.bias[x.t];
     be += P.sel.platoon * (P.pt.platoon[x.t] + p.slotPlat) * hs * 0.5;
     const zb = fam === 0 ? pa.zFast : pa.zBreak; be += P.sel.weak * gq * clamp(-zb, -1.5, 1.5) * (fam === 0 ? 1 : 0.6);
     const f = Math.max(pa.mem[x.t], pa.tmem[x.t]); be -= P.sel.mem * gq * f;
@@ -168,7 +168,7 @@ export function throwPitch(g: G, pitchout: boolean): number {
   const zCtl = p.z[A.control] - 0.015 * pn.over + pa.cCtl * 0 + (c.z[A.pitcherLead] * 0.02);
   let zCmd = pc.zc - 0.025 * pn.over + 0.02 * c.z[A.pitcherLead];
   const tRain = rainLv > 0 ? 1 + (P.wx.rainSig[rainLv + 1] - 1) * p.wxT[2] : 1;
-  const heat = sl.atC > 34 ? 1 + (P.wx.heatSig - 1) * p.wxT[0] : 1;
+  const heat = (sl.atC > 34 ? 1 + (P.wx.heatSig - 1) * p.wxT[0] : 1) * (sl.tC < 15 ? 1 + P.wx.coldCtl * (15 - sl.tC) * p.wxT[1] : 1);
   const footing = P.wx.footing[sl.field];
   const pWild = P.loc.pWild * Math.exp(-P.loc.ctlK * zCtl - P.ev.ctlWild * pa.cCtl) * (1 + P.fat.overWild * pn.over) * tRain * footing * (sl.atC > 34 ? 1 + (P.wx.heatWild - 1) * p.wxT[0] : 1) * (pc.sig === 1 ? 1.15 : 1);
   T.wild = SL[5] < pWild && !pitchout;
@@ -199,7 +199,7 @@ export function throwPitch(g: G, pitchout: boolean): number {
   // 피치아웃
   if (pitchout) { T.res = PR.PITCHOUT; wpCheck(g, c, pc, rainLv); return PR.PITCHOUT; }
   // ── 위력(플래툰·피로·첫 이닝·채널) ──
-  let zs = pc.zs + (pa.same ? 1 : -1) * P.platoon.pit * (P.pt.platoon[t] + p.slotPlat + (pc.sig === 3 && pa.same ? 0.3 : 0) + (pc.sig === 6 ? -0.3 : 0) + (pc.sig === 7 ? -0.6 : 0) + (pc.sig === 13 ? 0.2 : 0)) / 2 / 10
+  let zs = pc.zs + (pa.same ? 1 : -1) * P.platoon.pit * (P.pt.platoon[t] + p.slotPlat + (pc.sig === 3 && pa.same ? 0.3 : 0) + (pc.sig === 6 ? -0.3 : 0) + (pc.sig === 7 ? -0.6 : 0) + (pc.sig === 13 ? 0.2 : 0)) / 2 / P.scaleStuff
     - 0.015 * pn.over + pn.first + 0.02 * c.z[A.pitcherLead];
   T.zs = zs;
   const f = Math.max(pa.mem[t], pa.tmem[t]); T.f = f;
@@ -263,7 +263,7 @@ export function throwPitch(g: G, pitchout: boolean): number {
     else {
       const U = g.ump;
       const sideB = dzv > HH ? (z > zm ? U.high : U.low) : ((x > 0 ? 1 : -1) === inSign ? U.inside : U.outside);
-      const bump = U.size + sideB + U.countBias * P.ump.countBias[ci];
+      const bump = U.size + sideB + U.countBias * P.ump.countBias[ci] + P.ump.countShift[ci];
       const sgm = P.ump.s * U.consistency * (sl.atC > 35 ? P.ump.heatS : 1);
       const bsig = pc.sig === 6 && !pa.same ? 0.8 : 0;
       strike = SL[11] < sig((d + P.ump.b0 + bump + P.ump.framing * c.z[A.framing] + P.ump.cmd * pc.zc + bsig) / sgm);

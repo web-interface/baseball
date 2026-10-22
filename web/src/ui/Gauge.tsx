@@ -30,7 +30,7 @@ export function Gauge({
     <div className={[s.gauge, className].filter(Boolean).join(' ')}>
       <div className={s.big}>
         <span className={s.label}>{label}</span>
-        <b className="num-display">{value}</b>
+        <b className={["num-display", s.value].join(" ")}>{value}</b>
       </div>
       <div className={s.right}>
         {(parts || bonus > 0) && (

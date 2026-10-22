@@ -2,6 +2,8 @@
 //   :id 는 선수 id(p03) 또는 카드 id(c03). ?card= 로 이 선수의 다른 카드, ?tab=attr|record|gear|enhance 로 탭.
 //   큰 카드(얼굴 초상) · 레벨/강화/잠재력 · 능력치(FM 1~20) · 구종 · 특성 · 숨은 특성 · 폼 · 날씨 궁합
 //   기록(시즌 · 최근 10경기 · 명장면 · 부상) · 장비(착용·강화·세트) · 강화(재료 · 확률 · 실패 보정 · +5 플레이스타일)
+import { setQueryQuiet } from '../../app/router';
+import { useScreenTitle } from '../../app/title';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { navigate } from '../../app/router';
@@ -23,18 +25,6 @@ import s from './player.module.css';
 type Tab = 'attr' | 'record' | 'gear' | 'enhance';
 const TAB_IDS: Tab[] = ['attr', 'record', 'gear', 'enhance'];
 
-/** 주소의 쿼리만 조용히 바꾼다 (탭 — 새로고침해도 그 탭, 화면은 위로 튀지 않게) */
-function setQueryQuiet(patch: Record<string, string | null>) {
-  try {
-    const h = location.hash;
-    const i = h.indexOf('?');
-    const path = i >= 0 ? h.slice(0, i) : h;
-    const q = new URLSearchParams(i >= 0 ? h.slice(i + 1) : '');
-    Object.entries(patch).forEach(([k, v]) => (v == null ? q.delete(k) : q.set(k, v)));
-    const qs = q.toString();
-    history.replaceState(history.state, '', path + (qs ? '?' + qs : ''));
-  } catch { /* 주소를 못 바꿔도 화면은 그대로 */ }
-}
 
 export default function PlayerScreen({ params, query }: ScreenProps) {
   const cardQ = query.get('card');
@@ -49,6 +39,7 @@ interface Prog { enh: number; fails: number; tries: number; ps: string | null; l
 function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: Player; cards: CardInst[]; mine: CardInst[]; card: CardInst; owned: boolean; initTab: Tab }) {
   const team = teamById(p.teamId);
   const toast = useToast();
+  useScreenTitle(p.name, `${team.name} · No.${p.number}`);
   const [tab, setTabState] = useState<Tab>(owned ? initTab : initTab === 'record' ? 'record' : 'attr');
   const [scale, setScale] = useState<Scale>('fm');
   const [prog, setProg] = useState<Record<string, Prog>>({});

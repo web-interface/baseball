@@ -259,3 +259,6 @@
 :global([data-theme='classic']) .rOut polyline { stroke: var(--fg-3); stroke-width: .6; stroke-dasharray: 2 2.4; }
 :global([data-theme='classic']) .rOut circle { stroke: var(--fg-3); }
 :global([data-theme='classic']) .residue text { fill: var(--fg-2); font-size: 13px; }
+:global([data-theme='classic']) .lb .on { background: var(--ball); }
+:global([data-theme='classic']) .ls .on { background: var(--strike); }
+:global([data-theme='classic']) .lo .on { background: var(--out); }

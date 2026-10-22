@@ -344,7 +344,8 @@ export function buildBip(p: FullPlay, align: Alignment, prevScore: [number, numb
     const pts = basePath(r.from, Math.min(4, r.to));
     let len = pathLen(pts) * 140;
     let t1 = t0 + len / v;
-    if (code === 'HR') t1 = Math.max(t0 + 1.2, (r.batter ? 1.0 : 0.6) + (hangT + 1.8) * (len / 109.7));
+    // 홈런 — 공이 담장을 넘은 뒤에 차례로 들어옴 (앞 주자부터)
+    if (code === 'HR') t1 = Math.max(t0 + 1.2, hangT + 0.5 + (len / 109.7) * 2.6);
     if (r.fate === 'out') {
       const outT = r.batter && isAirOut ? hangT : outAtBase.get(r.to) ?? ballDone;
       if (r.batter && (isAirOut || code === 'K')) {

@@ -275,7 +275,7 @@ function buildPlayer(s: Spec): Player {
         stuff: clamp(Math.round(L + r.gauss() * 6 + (sigHere ? 6 : 0) + (t === 'FF' ? (v - L) * 0.5 : 0)), 25, 99),
         command: clamp(Math.round((attrs.control ?? 60) + r.gauss() * 6 - (t === 'KN' || t === 'CU' ? 3 : 0)), 25, 99),
         usage: u,
-        kmh: Math.round(130 + 0.3 * v + VELO_OFF[t] + r.gauss()),
+        kmh: Math.round(118 + 0.36 * v + VELO_OFF[t] * 0.85 + r.gauss()),
       };
     });
   }
@@ -327,7 +327,7 @@ function buildPlayer(s: Spec): Player {
     const g = sp ? 14 + Math.round(r.next() * 2) : 28 + Math.round(r.next() * 8);
     const ip = sp ? Math.round(g * (5.4 + (attrs.stamina ?? 60) / 60) * 3) / 3 : Math.round(g * 1.02 * 3) / 3;
     const ipDisp = Math.floor(ip) + Math.round((ip - Math.floor(ip)) * 3) / 10;
-    const so = Math.round(ip * (5.5 + ((pitches?.[0]?.stuff ?? 60) - 50) * 0.09));
+    const so = Math.round(ip * clamp(6.6 + ((pitches?.[0]?.stuff ?? 60) - 50) * 0.11, 4, 12.5) / 9);
     const bb = Math.round(ip * clamp(4.6 - ((attrs.control ?? 60) - 50) * 0.06, 1.2, 6) / 9);
     const h = Math.round(ip * clamp(9.6 - (q - 50) * 0.09, 5.5, 12) / 9);
     const wins = sp ? Math.round(clamp(g * (0.25 + (q - 55) * 0.012) + r.gauss(), 1, 13)) : Math.round(r.next() * 4);
@@ -402,6 +402,9 @@ baseCards[5].dup = 1;  // 표건우 레어 '27 한 장 더
 baseCards[12].dup = 2; // 남궁찬 노멀 '27 두 장 더
 
 export const CARDS: CardInst[] = [...baseCards, ...extraCards];
+
+/** 등급별 종합 보정 — 같은 선수라도 윗 등급 카드가 더 세다 */
+const GRADE_OVR: Record<GradeId, number> = { normal: -3, special: -1, rare: 0, legend: 1, elite: 2, mvp: 2, gg: 2, th: 2, franchise: 3, unique: 3, black: 4, signature: 5 };
 
 /** 내가 가진 카드 */
 export const MY_CARD_IDS: string[] = [
@@ -759,6 +762,63 @@ export const NEWS: NewsItem[] = [
 ];
 
 /* ───────── 찾기 ───────── */
+/* ───────── 독수리스 좌익수·지명타자 (라인업 9/9 '능력치 폭발'을 맞출 수 있게 — 벤치) ───────── */
+const lineOf = (g: number, ab: number, h: number, d2: number, d3: number, hr: number, rbi: number, r: number, sb: number, bb: number, so: number): BattingLine => {
+  const singles = h - d2 - d3 - hr;
+  const avg = h / ab;
+  const obp = (h + bb) / (ab + bb);
+  const slg = (singles + 2 * d2 + 3 * d3 + 4 * hr) / ab;
+  const r3 = (v: number) => Math.round(v * 1000) / 1000;
+  return { g, pa: ab + bb + 4, ab, h, d2, d3, hr, rbi, r, sb, bb, so, avg: r3(avg), obp: r3(obp), slg: r3(slg), ops: r3(obp + slg) };
+};
+
+const DJ_EXTRA_PLAYERS: Player[] = [
+  {
+    ...PLAYERS.find((x) => x.id === 'p21')!,
+    id: 'lp1', name: '사공린', teamId: 'dj', number: 35, pos: 'LF', subPos: ['RF'], bats: 'L', throws: 'R',
+    age: 24, heightCm: 181, weightKg: 79, draftYear: 2021, ovr: 78, look: 'look:lp1',
+    face: [
+      { code: 'CON', ko: '컨택', v: 80 }, { code: 'POW', ko: '파워', v: 70 }, { code: 'EYE', ko: '선구', v: 76 },
+      { code: 'SPD', ko: '주루', v: 82 }, { code: 'DEF', ko: '수비', v: 77 }, { code: 'ARM', ko: '송구', v: 72 },
+    ],
+    potential: 4.5, traits: ['밀어치기 장인'], personality: '성실파', form: { bat: '오픈 스탠스' },
+    season: { bat: lineOf(66, 238, 70, 13, 2, 6, 31, 38, 9, 26, 48) }, condition: 4, fatigue: 14, injury: undefined,
+  },
+  {
+    ...PLAYERS.find((x) => x.id === 'p14')!,
+    id: 'lp2', name: '서문혁', teamId: 'dj', number: 50, pos: 'DH', subPos: ['1B'], bats: 'R', throws: 'R',
+    age: 31, heightCm: 188, weightKg: 102, draftYear: 2014, ovr: 83, look: 'look:lp2',
+    face: [
+      { code: 'CON', ko: '컨택', v: 81 }, { code: 'POW', ko: '파워', v: 90 }, { code: 'EYE', ko: '선구', v: 80 },
+      { code: 'GAP', ko: '장타', v: 86 }, { code: 'ADJ', ko: '대처', v: 79 }, { code: 'SPD', ko: '주루', v: 52 },
+    ],
+    potential: 3, traits: ['직구 노림수'], personality: '느긋한 성격', form: { bat: '어퍼 스윙' },
+    season: { bat: lineOf(70, 255, 74, 15, 0, 17, 58, 41, 1, 33, 71) }, condition: 3, fatigue: 22, injury: undefined,
+  },
+];
+
+const DJ_EXTRA_CARDS: CardInst[] = [
+  { id: 'lc1', playerId: 'lp1', grade: 'special', year: 27, level: 4.6, enhance: 1, dup: 0 },
+  { id: 'lc2', playerId: 'lp2', grade: 'rare', year: 27, level: 6.35, enhance: 2, dup: 0, isNew: true },
+];
+
+PLAYERS.push(...DJ_EXTRA_PLAYERS);
+CARDS.push(...DJ_EXTRA_CARDS);
+MY_CARD_IDS.push(...DJ_EXTRA_CARDS.map((c) => c.id));
+
+// 카드별 종합 — 선수 ovr 은 그 선수 대표 카드(첫 카드) 기준. 다른 등급·지난 시즌 카드는 보정
+{
+  const main = new Map<string, CardInst>();
+  for (const c of CARDS) if (!main.has(c.playerId)) main.set(c.playerId, c);
+  for (const c of CARDS) {
+    const p = PLAYERS.find((x) => x.id === c.playerId);
+    const m = main.get(c.playerId);
+    if (!p || !m || c.ovr != null) continue;
+    const old = c.year != null && c.year < SEASON % 100 ? -1 : 0;
+    c.ovr = Math.max(40, Math.min(99, p.ovr + GRADE_OVR[c.grade] - GRADE_OVR[m.grade] + old));
+  }
+}
+
 const teamMap = new Map(TEAMS.map((t) => [t.id, t]));
 const playerMap = new Map(PLAYERS.map((p) => [p.id, p]));
 const cardMap = new Map(CARDS.map((c) => [c.id, c]));
@@ -768,6 +828,12 @@ export const playerById = (id: string): Player | undefined => playerMap.get(id);
 export const cardById = (id: string): CardInst | undefined => cardMap.get(id);
 /** 카드의 선수 (없으면 첫 선수 — 목업이라 항상 있음) */
 export const playerOfCard = (c: CardInst): Player => playerMap.get(c.playerId) ?? PLAYERS[0];
+
+/** 화면이 만든 선수·카드를 찾을 수 있게 등록 (구단팩 가상 선수 등) — 서버가 붙으면 서버 데이터로 */
+export function registerPlayers(players: Player[], cards: CardInst[] = []) {
+  for (const p of players) if (!playerMap.has(p.id)) playerMap.set(p.id, p);
+  for (const c of cards) if (!cardMap.has(c.id)) cardMap.set(c.id, c);
+}
 export const cardsOfPlayer = (playerId: string) => CARDS.filter((c) => c.playerId === playerId);
 export const myTeam = () => teamById(ME.teamId);
 

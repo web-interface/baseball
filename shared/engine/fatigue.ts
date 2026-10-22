@@ -52,7 +52,7 @@ export function availability(st: PlayerState, isStarter: boolean, daysSinceStart
   if (isStarter) return daysSinceStart >= 4 ? 2 : daysSinceStart >= 3 ? 1 : 0;
   if (b[0] > 0 && b[1] > 0 && (!rubber || b[2] > 0)) return 0;          // 사흘 연속 금지
   if (b[0] >= 30) return rubber ? 1 : 0;
-  if (b[0] >= 20 || (st.arm ?? 0) > 60) return 1;
+  if (b[0] >= 15 || (st.arm ?? 0) > 60) return 1;
   return 2;
 }
 export const attrRecovery = (p: PC): number => p.v[A.recovery];

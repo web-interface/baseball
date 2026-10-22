@@ -227,7 +227,7 @@ export interface PaEvt {
   runs: number; rbi: number; pitches: number; balls: number; strikes: number; countsSeen: number;
   tto: number; isStarter: boolean; inning: number; half: number; homeBatting: boolean; li: number;
   tempC: number; rainLv: number; dayClear: boolean; windOut: number; batterPlatoonAdv: boolean; scoreDiff: number;
-  ibb: boolean; sh: boolean; sf: boolean; gdp: boolean; roe: boolean;
+  ibb: boolean; sh: boolean; sf: boolean; gdp: boolean; roe: boolean; foulOut?: boolean;
 }
 export interface RunEvt { kind: string; outs: number; field: number; result: number }
 export interface StealEvt { base: number; success: boolean; combinedTime: number; pickoff: boolean }

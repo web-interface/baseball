@@ -32,6 +32,27 @@ export interface CalloutData {
   causes?: string[];
   /** 띠 색 — 장면의 주인공 구단 */
   team?: CalloutTeam;
+  /** 띠 위 작은 줄 — '9회말 · 2사 1·2루' (없으면 종류 이름) */
+  kicker?: string;
+}
+
+/** 종류 이름 (kicker 가 없을 때) */
+const KIND_KO: Record<CalloutKind, string> = {
+  defense: '수비', clutch: '클러치', 'go-ahead': '결승타', comeback: '역전', walkoff: '경기 끝', escape: '위기 관리', record: '기록',
+};
+
+/** meta 글에서 숫자를 꺼내 그림으로 — '승리 확률 31% → 58%' · '잡을 확률 18% · 2점 지킴' */
+type Stat =
+  | { k: 'swing'; label: string; from: number; to: number; rest?: string }
+  | { k: 'catch'; label: string; v: number; rest?: string }
+  | null;
+function readStat(meta?: string): Stat {
+  if (!meta) return null;
+  const sw = meta.match(/^(.*?)(\d{1,3})%\s*→\s*(\d{1,3})%\s*(?:·\s*(.*))?$/);
+  if (sw) return { k: 'swing', label: sw[1].replace(/[·\s]+$/, '').trim() || '승리 확률', from: +sw[2], to: +sw[3], rest: sw[4] };
+  const c = meta.match(/^(잡을 확률|성공 확률|확률)\s*(\d{1,3})%\s*(?:·\s*(.*))?$/);
+  if (c) return { k: 'catch', label: c[1], v: +c[2], rest: c[3] };
+  return null;
 }
 
 const PACE: Record<CalloutPace, { total: number; wipe: number; out: number }> = {
@@ -123,6 +144,8 @@ function CalloutLayer({ data, pace, phase }: { data: CalloutData; pace: CalloutP
   } as CSSProperties;
   const causes = (data.causes ?? []).slice(0, 2);
   const big = data.kind === 'walkoff' || data.kind === 'comeback';
+  const stat = readStat(data.meta);
+  const kicker = data.kicker ?? KIND_KO[data.kind];
   return (
     <div
       className={[s.layer, s['k-' + data.kind], s['p-' + pace], phase === 'out' && s.out, big && s.big].filter(Boolean).join(' ')}
@@ -148,7 +171,8 @@ function CalloutLayer({ data, pace, phase }: { data: CalloutData; pace: CalloutP
           <div className={s.band}>
             {big && <div className={s.band2} />}
             <div className={s.bandIn}>
-              <p className={s.title}>
+              <p className={s.kicker}><span>{kicker}</span></p>
+              <p className={s.title} data-t={data.title}>
                 {k.icon && <Icon name={k.icon} size={big ? 30 : 26} stroke={2.2} className={s.ico} />}
                 <span>{data.title}</span>
               </p>
@@ -158,8 +182,32 @@ function CalloutLayer({ data, pace, phase }: { data: CalloutData; pace: CalloutP
         )}
         {(data.meta || causes.length > 0) && (
           <div className={s.under}>
-            {data.meta && <p className={s.meta}>{data.meta}</p>}
-            {causes.map((c) => <p key={c} className={s.cause}>↳ {c}</p>)}
+            <div className={s.underIn}>
+              {stat?.k === 'swing' ? (
+                <div className={s.stat}>
+                  <span className={s.statLabel}>{stat.label}</span>
+                  <span className={s.swingNums}>
+                    <b className={s.from}>{stat.from}</b>
+                    <i className={s.arrow} aria-hidden />
+                    <b className={s.to}>{stat.to}<small>%</small></b>
+                  </span>
+                  <span className={s.meter} style={{ '--from': `${stat.from}%`, '--to': `${stat.to}%` } as CSSProperties}>
+                    <i className={s.mFrom} /><i className={s.mFill} /><i className={s.mHalf} />
+                  </span>
+                  {stat.rest && <span className={s.rest}>{stat.rest}</span>}
+                </div>
+              ) : stat?.k === 'catch' ? (
+                <div className={s.stat}>
+                  <span className={s.statLabel}>{stat.label}</span>
+                  <span className={s.swingNums}><b className={s.to}>{stat.v}<small>%</small></b></span>
+                  <span className={[s.meter, s.meterLow].join(' ')} style={{ '--from': '0%', '--to': `${stat.v}%` } as CSSProperties}>
+                    <i className={s.mFill} />
+                  </span>
+                  {stat.rest && <span className={s.rest}>{stat.rest}</span>}
+                </div>
+              ) : data.meta ? <p className={s.meta}>{data.meta}</p> : null}
+              {causes.map((c) => <p key={c} className={s.cause}>↳ {c}</p>)}
+            </div>
           </div>
         )}
       </div>

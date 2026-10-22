@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { navigate, goBack } from '../../app/router';
 import { Button, CalloutAnnouncer, CalloutStage, Emblem, Field, Icon, Tabs, fmt, useCalloutQueue, type CalloutData, type CalloutPace } from '../../ui';
+import { readPrefs } from '../../app/prefs';
 import { PlayerArt } from '../../art/PlayerArt';
 import { POS_KO } from '../../game/labels';
 import { BASES } from '../../game/field';
@@ -22,7 +23,7 @@ export function Battle({ opp, auto, rating, left, onFinish }: { opp: PvpOpponent
   const [tries, setTries] = useState(0);
   const sim = useMemo(() => simulate(me, them, `${opp.id}:${tries}`), [me, them, opp.id, tries]);
   const [phase, setPhase] = useState<Phase>(auto ? 'live' : 'pre');
-  const [pace, setPace] = useState<'quick' | 'normal'>('quick');
+  const [pace, setPace] = useState<'quick' | 'normal'>(() => (readPrefs().watch === 'quick' ? 'quick' : 'normal'));
   const [at, setAt] = useState(-1);
   const [delta, setDelta] = useState(0);
   const q = useCalloutQueue();

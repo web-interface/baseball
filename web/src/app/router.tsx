@@ -98,3 +98,18 @@ export function Link({ to, replace, onClick, children, ...rest }: LinkProps) {
     </a>
   );
 }
+
+/** 주소의 쿼리만 조용히 바꾼다 — 탭 상태를 남기되 화면은 위로 튀지 않고 기록도 안 쌓인다 */
+export function setQueryQuiet(patch: Record<string, string | null>) {
+  try {
+    const h = location.hash;
+    const i = h.indexOf('?');
+    const path = i >= 0 ? h.slice(0, i) : h;
+    const q = new URLSearchParams(i >= 0 ? h.slice(i + 1) : '');
+    Object.entries(patch).forEach(([k, v]) => (v == null ? q.delete(k) : q.set(k, v)));
+    const qs = q.toString();
+    history.replaceState(history.state, '', path + (qs ? '?' + qs : ''));
+    lastHash = location.hash;
+    current = read();
+  } catch { /* 주소를 못 바꿔도 화면은 그대로 */ }
+}

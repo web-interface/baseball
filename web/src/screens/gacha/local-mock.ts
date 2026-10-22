@@ -1,7 +1,7 @@
 // 뽑기 화면만 쓰는 목업 — game/mock 값을 이어 붙인다 (서버가 붙으면 응답으로 바뀜).
 // 연도팩 선택지(25·26·27 + 레전드 시즌)는 세계관 goldenEras, 구단팩 선수 풀은 구단마다 시즌 30명을 흉내 낸다.
 
-import { PLAYERS, TEAMS } from '../../game/mock';
+import { PLAYERS, TEAMS, registerPlayers } from '../../game/mock';
 import { CLUBS } from '../../game/world';
 import type { ClubCode, Player, Pos } from '../../game/types';
 
@@ -106,6 +106,7 @@ export function clubPool(code: ClubCode): Player[] {
     i++;
   }
   poolCache.set(code, out);
+  registerPlayers(out.filter(isSynthetic));
   return out;
 }
 

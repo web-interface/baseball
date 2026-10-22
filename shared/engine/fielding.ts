@@ -55,13 +55,15 @@ export function reachIn(t: number, react: number, v: number, tau: number): numbe
 
 // ── 야수 능력(포지션 숙련 배율 적용) ──
 export interface FAbil { react: number; v: number; tau: number; dive: number; reachH: number; hands: number; iq: number; ag: number }
+/** 라이너 판단 지연(외야): 발사각이 낮을수록 낙구점 판단이 늦다 — running.ts 가 타구마다 설정 */
+export const OFJ = { add: 0 };
 const FA: FAbil = { react: 0, v: 0, tau: 0, dive: 0, reachH: 0, hands: 0, iq: 0, ag: 0 };
 /** 뜬공·라이너 추격 능력(외야 공식 / 내야 공식) */
 export function flyAbil(pc: PC, pos: number, rangeCh: number): FAbil {
   const F = P.fld; const zfs = defZ(pc, A.firstStep, pos), zr = defZ(pc, A.range, pos), ziq = pc.z[A.baseballIQ], zag = pc.z[A.agility];
   const sprint = pc.sprint * (1 + rangeCh * 0.5);
   if (pos >= 6) {
-    FA.react = clamp(F.ofReact - F.ofReactFS * zfs - F.ofReactIQ * ziq, 0.25, 0.90) * (1 - 0.5 * rangeCh);
+    FA.react = clamp(F.ofReact - F.ofReactFS * zfs - F.ofReactIQ * ziq, 0.25, 0.90) * (1 - 0.5 * rangeCh) + OFJ.add;
     FA.tau = Math.max(0.8, F.ofTau - F.ofTauAg * zag);
     FA.v = sprint * clamp(F.ofPath + F.ofPathR * zr + F.ofPathIQ * ziq, 0.80, 0.99);
   } else {
@@ -91,7 +93,8 @@ export function flyCatch(g: G, def: TeamSt, lx: number, ly: number, T: number, d
     // ① 낙구점 도달
     const D = Math.hypot(lx - fx, ly - fy) - 0.5;
     const tCatch = T - 0.08;
-    const need = travel(D, ab.react, ab.v, ab.tau);
+    const back = pos <= 5 && Math.hypot(lx, ly) > Math.hypot(fx, fy) + 4;
+    const need = back ? travel(D, ab.react + P.fld.ifBackReact, ab.v * P.fld.ifBackV, ab.tau) : travel(D, ab.react, ab.v, ab.tau);
     let m = tCatch - need + ab.dive;
     let p = sig(m / P.fld.catchSig);
     let dive = m - ab.dive < 0 && m > 0;
@@ -181,7 +184,7 @@ export function retrieve(g: G, def: TeamSt, phi: number, s0: number, t0: number,
   const sinp = Math.sin(phi * Math.PI / 180), cosp = Math.cos(phi * Math.PI / 180);
   const sWall = fenceD - 0.5;
   const sStop = s0 + rollStop(Math.max(0.3, vb), roll);
-  const tWall = s0 < sWall && sStop > sWall ? t0 + gbTime(sWall - s0, Math.max(0.3, vb), roll) : 99;
+  const tWall = s0 >= sWall ? t0 : sStop > sWall ? t0 + gbTime(sWall - s0, Math.max(0.3, vb), roll) : 99;
   const stopAt = sStop < sWall ? sStop : sWall - (2 + 3 * wallBounce);
   for (let pos = 2; pos <= 8; pos++) {
     if (pos <= 5 && s0 > 55) continue;
@@ -193,16 +196,21 @@ export function retrieve(g: G, def: TeamSt, phi: number, s0: number, t0: number,
       const tb = t0 + (s > s0 ? gbTime(s - s0, Math.max(0.3, vb), roll) : 0);
       if (tb > RR.t || tb === Infinity) break;
       const tf = travel(Math.hypot(s * sinp - fx, s * cosp - fy) - 1.0, ab.react, ab.v, ab.tau);
-      if (tf <= tb) { if (tb < RR.t) { RR.f = pos; RR.t = tb + 0.25; RR.x = s * sinp; RR.y = s * cosp; RR.wall = false; } found = true; break; }
+      if (tf <= tb) { const vAt = s > s0 ? rollSpeed(s - s0, Math.max(0.3, vb), roll) : vb; const tt = tb + P.fld.pickup + (vAt > 6 ? 0.04 * (vAt - 6) : 0); if (tt < RR.t) { RR.f = pos; RR.t = tt; RR.x = s * sinp; RR.y = s * cosp; RR.wall = false; } found = true; break; }
     }
     if (!found) {
       // 담장까지 간 공: 담장 앞 멈춘 지점으로
       const s = Math.min(stopAt, sWall); const x = s * sinp, y = s * cosp;
       const tf = travel(Math.hypot(x - fx, y - fy) - 1.0, ab.react, ab.v, ab.tau);
       const tStopB = t0 + Math.atan(Math.max(0.3, vb) * Math.sqrt(roll.k / roll.c)) / Math.sqrt(roll.c * roll.k);
-      const tt = sStop < sWall ? Math.max(tf, tStopB) + 0.3 : Math.max(tf, tWall + 0.6) + 0.45;
+      const tt = sStop < sWall ? Math.max(tf, tStopB) + 0.3 : Math.max(tf, tWall + 0.6) + P.fld.wallPick;
       if (tt < RR.t) { RR.f = pos; RR.t = tt; RR.x = x; RR.y = y; RR.wall = sStop >= sWall; }
     }
+  }
+  if (RR.f < 0) {   // 안전장치: 어떤 경우에도 가장 가까운 외야수가 공을 줍는다(이전 값 재사용 금지 — 결정성)
+    const x = s0 * sinp, y = s0 * cosp; let best = 7, bt = 1e9;
+    for (let pos = 6; pos <= 8; pos++) { const ab = flyAbil(pcAt(def, pos), pos, rangeCh); const tf = travel(Math.hypot(x - g.fx[pos], y - g.fy[pos]) - 1.0, ab.react, ab.v, ab.tau); if (tf < bt) { bt = tf; best = pos; } }
+    RR.f = best; RR.t = Math.max(bt, t0) + P.fld.wallPick; RR.x = x; RR.y = y; RR.wall = true;
   }
   return RR;
 }

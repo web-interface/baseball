@@ -22,7 +22,7 @@ for (let n = 1; n <= 12; n++) POW.push(conv(POW[n - 1], inn));
 let pTie1 = 0, pHome1 = 0; for (let a = 0; a < MR; a++) for (let h = 0; h < MR; h++) { const p = inn[a] * inn[h]; if (h > a) pHome1 += p; else if (h === a) pTie1 += p; }
 function extraWE(innLeft: number): number { if (innLeft <= 0) return 0.5; let w = 0, tie = 1; for (let k = 0; k < innLeft; k++) { w += tie * pHome1; tie *= pTie1; } return w + 0.5 * tie; }
 
-const MEMO = new Float32Array(13 * 2 * 24 * 31).fill(-1);
+const MEMO = new Float64Array(13 * 2 * 24 * 31).fill(-1);   // Float64: 캐시에서 꺼낸 값과 새로 계산한 값이 비트까지 같아야 결정적
 /** 홈 팀 승리 기대값. inning 1~, half 0 초 1 말, outs 0~2, bases 비트, diff = 홈 − 원정 */
 export function homeWE(inning: number, half: number, outs: number, bases: number, diff: number, maxInn = 11): number {
   if (outs >= 3) { if (half === 0) { half = 1; outs = 0; bases = 0; } else { inning++; half = 0; outs = 0; bases = 0; } }

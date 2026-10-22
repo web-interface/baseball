@@ -5,12 +5,12 @@ import { clamp, invN, sig } from './rng.ts';
 import { flight, FL, gbTime, rollSpeed, heightAtFrac, timeAtFrac, kindOf, type Roll } from './batted.ts';
 import { airCarry, windAt } from './weather.ts';
 import { type G, type Runner, type TeamSt, PO, BASE_X, BASE_Y, R, offense, defense } from './state.ts';
-import { pcAt, fenceAt, fenceHAt, flyCatch, groundIntercept, retrieve, releaseTime, throwFlight, throwSpeed, throwErrP, flyAbil, travel } from './fielding.ts';
+import { OFJ, pcAt, fenceAt, fenceHAt, flyCatch, groundIntercept, retrieve, releaseTime, throwFlight, throwSpeed, throwErrP, flyAbil, travel } from './fielding.ts';
 import { bkRun, bkOut, bkPO, bkA, bkE, bkDP, batLine, fldLine, logBB, closeBB, logFD, logTH, logRN, logWhy, WHY } from './log.ts';
 
 const DEG = Math.PI / 180, BL = 27.43;
 const W2 = new Float64Array(2);
-const OF_ROLL: Roll = { c: 3.0, k: 1 / 100 }, OF_ROLL_T: Roll = { c: 2.0, k: 1 / 140 };
+const OF_ROLL: Roll = { c: 1.5, k: 1 / 200 }, OF_ROLL_T: Roll = { c: 1.0, k: 1 / 260 };
 
 /** 플레이 결과(재사용) — game.ts 가 타석 결과로 기록 */
 export const DBG: Record<string, number> = {};
@@ -19,7 +19,7 @@ const dbg = (k: string, v = 1) => { DBG[k] = (DBG[k] ?? 0) + v; };
 function rev(g: G, kind: string, outs: number, field: number, result: number): void { if (g.col?.run) g.col.run({ kind, outs, field, result }); }
 const fieldCode = (f: number): number => (f === 6 ? 0 : f === 7 ? 1 : f === 8 ? 2 : 3);
 export const PL = { res: 0 as number, rbi: 0, hitBases: 0, kind: 0, ev: 0, la: 0, phi: 0, dist: 0, hang: 0, catchP: 1, fielder: -1, gdp: false, sf: false, sh: false, roe: false, err: false, hr: false, wall: false, robbed: false, fenceD: 0, hrDist: 0, outsMade: 0 };
-function resetPL(): void { PL.res = R.OUT; PL.rbi = 0; PL.hitBases = 0; PL.kind = 0; PL.catchP = 1; PL.fielder = -1; PL.gdp = false; PL.sf = false; PL.sh = false; PL.roe = false; PL.err = false; PL.hr = false; PL.wall = false; PL.robbed = false; PL.fenceD = 0; PL.hrDist = 0; PL.outsMade = 0; }
+function resetPL(): void { PL.res = R.OUT; PL.rbi = 0; PL.hitBases = 0; PL.kind = 0; PL.catchP = 1; PL.fielder = -1; PL.gdp = false; PL.sf = false; PL.sh = false; PL.roe = false; PL.err = false; PL.hr = false; PL.wall = false; PL.robbed = false; PL.fenceD = 0; PL.hrDist = 0; PL.outsMade = 0; PL.hang = 0; PL.dist = 0; }
 
 // ── 주자 시간 ──
 export function runV(g: G, pc: PC): number { return pc.sprint * (1 + pc.chP[CH.speed] + (g.pa ? 0 : 0)); }
@@ -102,7 +102,9 @@ export interface BipCtx { ev: number; la: number; phi: number; weak: boolean; ra
 export function resolveBIP(g: G, c: BipCtx): void {
   resetPL();
   PL.ev = c.ev; PL.la = c.la; PL.phi = c.phi; PL.kind = kindOf(c.la);
+  OFJ.add = c.la >= 10 ? P.fld.ofLineReact * Math.max(0, 25 - c.la) / 15 : 0;
   if (c.la < 10) playGround(g, c); else playAir(g, c);
+  OFJ.add = 0;
   closeBB(g);
 }
 
@@ -254,7 +256,8 @@ function playAir(g: G, c: BipCtx): void {
   if (sl.gustMs > sl.windMs) tail += P.air.gust * (sl.gustMs - sl.windMs) * g.park.expoHigh * invN(g.rW.next());
   const dWind = P.air.tail * T0 * tail;
   const delta = clamp(dAir + dWind, -P.air.cap, P.air.cap);
-  const d = Math.max(1, d0 + delta);
+  const d = Math.max(1, d0 + delta + P.air.offset * Math.pow(d0 / 121.9, 1.3));
+  if (d < 80) OFJ.add += P.fld.ofShortReact * (80 - d) / 20;
   const drift = P.air.cross * T0 * cross;
   const T = T0 * (1 + 0.004 * delta);
   const phiL = clamp(c.phi + Math.atan2(drift, Math.max(5, d)) / DEG, -46, 46);
@@ -328,7 +331,7 @@ function playAir(g: G, c: BipCtx): void {
   // ── 떨어진 공: 바운드 후 회수 ──
   logBB(g, c.ev, c.la, c.phi, lx, ly, T, FL.apex, kind, 1, cr.p);
   const turf = g.park.surface === 'turf';
-  const vb = FL.vl * (turf ? 0.62 : 0.50) * (kind === 3 ? 0.4 : 1);
+  const vb = FL.vl * clamp((turf ? 0.95 : 0.85) - 0.012 * c.la, 0.25, 0.8);
   outfieldHit(g, phiL, d, T, vb, turf ? OF_ROLL_T : OF_ROLL, false, kind, false);
 }
 
@@ -347,7 +350,7 @@ function caughtFly(g: G, f: number, x: number, y: number, tC: number, kind: numb
   bkOut(g); bkPO(g, f); PL.res = R.OUT;
   if (g.outs >= 3) return;
   const fpc = pcAt(D, f);
-  const rel = releaseTime(fpc, f, false);
+  const rel = releaseTime(fpc, f, false) + P.thr.tagRel;
   // 라이너: 뛰던 주자(히트앤런) 더블 아웃
   if (kind === 1 && g.pa.mode === 1 && g.bases[0] && g.rB.next() < 0.6) { bkOut(g); bkA(g, f); bkPO(g, PO.B1); g.bases[0] = null; PL.gdp = true; return; }
   if (kind >= 3 || Math.hypot(x, y) < 45) return;  // 내야 뜬공 — 진루 없음
@@ -422,47 +425,51 @@ function outfieldHit(g: G, phi: number, s0: number, t0: number, vb: number, lam:
     if (ground || twoOut) return { t: b === 2 ? 0.1 : 0, pos: lead, moving: true };
     if (kind === 1) return { t: P.run.lineFreeze + 0.2, pos: lead * 0.8, moving: false };
     // 뜬공: 하프웨이(1루 12m, 2루 9m, 3루 태그 위치 0)
-    const half = b === 0 ? 12 : b === 1 ? 9 : 2;
-    return { t: Math.max(0.3, t0 - 0.2), pos: half, moving: true };
+    const half = b === 0 ? P.run.half1 : b === 1 ? P.run.half2 : 2;
+    return { t: clamp(t0 - P.run.flyRead, 0.5, P.run.flyMaxStart), pos: half, moving: true };
   };
-  // 각 주자 목표 베이스 결정(앞 주자부터): 베이스 번호 1~4
+  // 타자의 '자연' 목표(앞 주자 무시) 먼저 — 그래야 주자가 안타 종류를 알고 판단한다
   const tgt = [0, 0, 0];   // 주자 b(0,1,2) 의 목표 베이스(2~4)
   const arrT = [0, 0, 0];
   const late = g.inning >= 7;
   const trailing = offDiffG(g) < 0;
   const aggr = 0.15 * O.tac.extraBase;
+  let bNat = 1;
+  {
+    const sj = P.run.sigJ * Math.exp(-P.run.sigJBR * bat.z[A.baserunning]);
+    for (let k = 2; k <= 4; k++) {
+      const m = tThrowTo(k === 4 ? 0 : k) - batterTo(g, bat, k);
+      const th = (k === 2 ? P.run.thB2[outs] : k === 3 ? P.run.thB3[outs] : 0.6) - aggr * 0.5 - (hasT(bat, TR.aggressiveRunner) ? 0.08 : 0) + (k === 2 && ground && !wall ? 0.15 : 0);
+      if (m + noise(g, sj) > th) bNat = k; else break;
+    }
+  }
+  // 각 주자(앞 주자부터): 가장 먼 베이스부터 거꾸로 — 갈 수 있는 가장 먼 곳
   let aheadTgt = 5;
   for (let b = 2; b >= 0; b--) {
     const r = g.bases[b]; if (!r) continue;
     const pc = O.pcs[r.i]; const st = startOf(b, r);
-    const minB = b + 2;   // 한 베이스는 무조건(타자가 1루로 오므로 밀림 — 1루 주자) / 안타에서 앞 주자도 최소 1
-    let best = minB;
-    for (let k = minB + 1; k <= 4; k++) {
-      if (k >= aheadTgt && aheadTgt <= 4) break;
+    const minB = Math.max(b + 2, Math.min(4, bNat + 1 + (b === 0 ? 0 : b === 1 && g.bases[0] ? 0 : 0)) * (b + 1 <= bNat ? 1 : 0));
+    let best = Math.min(Math.max(b + 2, minB), aheadTgt <= 4 ? aheadTgt - 1 : 4);
+    const sj = P.run.sigJ * Math.exp(-P.run.sigJBR * pc.z[A.baserunning]);
+    const adj = -aggr - (hasT(pc, TR.aggressiveRunner) ? 0.10 : 0) - (late && trailing ? 0.10 : 0) + (offDiffG(g) >= 4 ? 0.15 : 0);
+    for (let k = 4; k > best; k--) {
+      if (aheadTgt <= 4 && k >= aheadTgt) continue;
       const tr = arrive(g, pc, BL - st.pos, k - (b + 1) - 1, st.t, st.moving);
       const m = tThrowTo(k === 4 ? 0 : k) - tr;
-      const sj = P.run.sigJ * Math.exp(-P.run.sigJBR * pc.z[A.baserunning]);
-      const thBase = b === 0 ? (k === 3 ? P.run.th1to3[outs] : P.run.th1toH2B[outs]) : b === 1 ? P.run.th2toH[outs] : -1;
-      const th = thBase - aggr - (hasT(pc, TR.aggressiveRunner) ? 0.10 : 0) - (late && trailing ? 0.10 : 0) + (offDiffG(g) >= 4 ? 0.15 : 0);
-      if (m + noise(g, sj) > th) best = k; else break;
+      let th: number;
+      if (b === 0) th = k === 3 ? (bNat >= 2 ? -9 : P.run.th1to3[outs]) : (bNat >= 2 ? P.run.th1toH2B[outs] : P.run.th1to3[outs] + 0.4);
+      else if (b === 1) th = bNat >= 2 ? -0.3 : P.run.th2toH[outs];
+      else th = -9;
+      if (m + noise(g, sj) > th + adj) { best = k; break; }
     }
-    tgt[b] = Math.min(best, aheadTgt <= 4 ? aheadTgt - 1 : 4);
-    if (tgt[b] < minB) tgt[b] = minB;   // 밀려나는 경우(아주 드묾)
+    tgt[b] = Math.max(b + 2, Math.min(best, aheadTgt <= 4 ? aheadTgt - 1 : 4));
     arrT[b] = arrive(g, pc, BL - st.pos, tgt[b] - (b + 1) - 1, st.t, st.moving);
     aheadTgt = tgt[b] >= 4 ? 5 : tgt[b];
   }
-  // 타자
-  let bTgt = 1;
-  {
-    const sj = P.run.sigJ * Math.exp(-P.run.sigJBR * bat.z[A.baserunning]);
-    for (let k = 2; k <= 4; k++) {
-      if (aheadTgt <= 4 && k >= aheadTgt) break;
-      const tr = batterTo(g, bat, k);
-      const m = tThrowTo(k === 4 ? 0 : k) - tr;
-      const th = (k === 2 ? P.run.thB2[outs] : k === 3 ? P.run.thB3[outs] : 0.6) - aggr * 0.5 - (hasT(bat, TR.aggressiveRunner) ? 0.08 : 0) + (k === 2 && ground && !wall ? 0.15 : 0);
-      if (m + noise(g, sj) > th) bTgt = k; else break;
-    }
-  }
+  // 타자: 앞 주자에 막히면 그 앞까지
+  let bTgt = Math.min(bNat, aheadTgt <= 4 ? aheadTgt - 1 : 4);
+  if (bTgt < 1) bTgt = 1;
+
   // 수비 송구: 가장 잡기 쉬운 진루 주자(이득 순: 홈 > 3루 > 2루)
   let tb = -1, tm = 9, isBat = false;
   for (let b = 2; b >= 0; b--) {

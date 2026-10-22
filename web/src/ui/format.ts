@@ -45,12 +45,14 @@ export const man = (n: number) => {
 };
 
 /** 좁은 곳용 한국식 줄임 — 1조 · 1.28조 · 1억 · 12.8억 · 128만 · 3,420 (전체 숫자는 title 로) */
-export const kr = (n: number) => {
+export const kr = (n: number): string => {
   const a = Math.abs(n);
   const trim = (v: number, d: number) => { const s = v.toFixed(d); return s.includes('.') ? s.replace(/0+$/, '').replace(/\.$/, '') : s; };
+  // 반올림한 값이 다음 단위에 닿으면 올려 쓴다 (999,999,730,000 → '1조', '10000억' 이 아니라)
+  const over = (div: number, d: number) => Math.abs(Number((n / div).toFixed(d))) >= 10000;
   if (a >= 1e12) return `${trim(n / 1e12, a >= 1e14 ? 0 : 2)}조`;
-  if (a >= 1e8) return `${trim(n / 1e8, a >= 1e10 ? 0 : 1)}억`;
-  if (a >= 1e4) return `${trim(n / 1e4, a >= 1e6 ? 0 : 1)}만`;
+  if (a >= 1e8) { const d = a >= 1e10 ? 0 : 1; return over(1e8, d) ? kr(Math.sign(n) * 1e12) : `${trim(n / 1e8, d)}억`; }
+  if (a >= 1e4) { const d = a >= 1e6 ? 0 : 1; return over(1e4, d) ? kr(Math.sign(n) * 1e8) : `${trim(n / 1e4, d)}만`; }
   return int(n);
 };
 

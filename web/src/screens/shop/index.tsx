@@ -1,6 +1,7 @@
 // AI 스카우트 상점 — 담당: 상점 화면 개발자 (요구 20)
 // 오늘의 진열(사람마다 다름) · 하루에 데려올 수 있는 인원 · 스카우트 한마디(말풍선 없이 담백하게) · 가격(시세와 함께)
 // 진열·가격·한도는 코드(가치 평가·수요)가 정하고, 스카우트 말은 Claude 가 말맛만.
+import { readWallet, spend, useWallet } from '../../game/wallet';
 import { useEffect, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { navigate } from '../../app/router';
@@ -57,13 +58,15 @@ export default function ShopScreen(_: ScreenProps) {
   const [confirm, setConfirm] = useState<ShelfItem | null>(null);
   const team = myTeam();
   const line = shop.left === 0 ? SCOUT_LINES.done : shop.left === 1 ? SCOUT_LINES.last : SCOUT_LINES.open;
-  const wallet = { gp: ME.gp, ball: ME.ball };
+  const wallet = useWallet();
 
   const doBuy = () => {
     if (!confirm) return;
     const c = cardById(confirm.cardId);
     const p = c ? playerOfCard(c) : null;
-    if (buy(confirm.id) && p) {
+    const cost = { gp: confirm.price.gp, ball: confirm.price.ball };
+    if (readWallet().gp >= (cost.gp ?? 0) && readWallet().ball >= (cost.ball ?? 0) && buy(confirm.id) && p) {
+      spend(cost);
       toast({ text: `${p.name}${hasJong(p.name) ? '을' : '를'} 데려왔어요. 보관함에 넣었어요.`, tone: 'good', action: { label: '라인업', onClick: () => navigate('/lineup') } });
     } else {
       toast({ text: '오늘은 더 데려올 수 없어요.', tone: 'bad' });

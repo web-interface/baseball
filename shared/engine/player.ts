@@ -18,6 +18,7 @@ export const PITCH_KEYS: PitchKey[] = ['FF', 'SI', 'FC', 'SL', 'SW', 'CU', 'CH',
 export const POS_KEYS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'] as const;
 /** 성향(좋고 나쁨이 아닌 방향) — (v−50)/50 */
 const TENDENCY = new Set([A.pullTend, A.launchTend, A.swingTend, A.gbTend]);
+const IS_T = new Uint8Array(45); for (const i of TENDENCY) IS_T[i] = 1;
 /** 포지션 숙련 배율이 붙는 수비 능력 [11 4.1 ④] */
 const DEF_ATTRS = [A.range, A.firstStep, A.hands, A.turnDP, A.armAcc];
 const DEF_MULT: [number, number][] = [[1, 0.5], [5, 0.68], [7, 0.76], [10, 0.84], [12, 0.88], [15, 0.94], [18, 0.98], [20, 1]];
@@ -57,7 +58,7 @@ export interface PC {
   id: number; rec: number; team: 0 | 1;
   throwsL: boolean; bats: 0 | 1 | 2;   // 0 우 · 1 좌 · 2 양
   height: number; age: number;
-  v: Float64Array; z: Float64Array;
+  v: number[]; z: number[];
   tPull: number; tLaunch: number; tSwing: number; tGb: number;
   zConR: number; zConL: number; split: number;
   sprint: number; h1: number; bunt: number;
@@ -66,16 +67,16 @@ export interface PC {
   parkGames: number;
   // 포수
   pop: number;
-  posMult: Float64Array;           // 포지션별 수비 배율(P..DH)
-  posProf: Float64Array;
+  posMult: number[];           // 포지션별 수비 배율(P..DH)
+  posProf: number[];
   traits: number; sigBat: string;
   /** 숨은 1~20 */
-  h: Float64Array;
+  h: number[];
   /** 날씨 특성 민감 배율 T = 1 − k(t−10): 더위·추위·비·햇빛·바람·박명 */
-  wxT: Float64Array;
+  wxT: number[];
   mech: MechBonus;
   /** 12 상태가 만든 채널 값(물리층·심리층): bat.contact, bat.power, bat.eye, bat.aggr, pit.stuff, pit.control, fld.error(log) */
-  chP: Float64Array; chS: Float64Array;
+  chP: number[]; chS: number[];
   injMult: number;                 // 부상 배율(경향·내구성·나이·프로의식)
   zoneMult: number;                // '웅크림' 폼 존 높이 배율
   role: string;
@@ -88,10 +89,12 @@ const WX_K = [0.05, 0.05, 0.05, 0.06, 0.06, 0.04];
 /** 경기 단위 문맥(큰 경기·홈) */
 export interface CacheCtx { team: 0 | 1; home: boolean; importance: number; rec: number }
 
+const cubeS = (u: number): number => u + P.zCubeStuff * u * u * u;
+const zeros = (n: number): number[] => { const a = new Array<number>(n); for (let i = 0; i < n; i++) a[i] = 0; return a; };
 export function buildCache(p: PlayerIn, cx: CacheCtx): PC {
-  const v = new Float64Array(N_ATTR), z = new Float64Array(N_ATTR);
+  const v = zeros(N_ATTR), z = zeros(N_ATTR);
   const B = p.bonus;
-  const hid = new Float64Array(19);
+  const hid = zeros(19);
   for (let i = 0; i < 19; i++) hid[i] = p.hidden ? (p.hidden[i] ?? 10) : 10;
   // 특성 비트
   let traits = 0;
@@ -103,7 +106,7 @@ export function buildCache(p: PlayerIn, cx: CacheCtx): PC {
   for (let i = 0; i < N_ATTR; i++) {
     let x = p.attrs[i] ?? 50;
     if (B && B[i]) x += compressBonus(B[i]);
-    if (!TENDENCY.has(i)) {
+    if (!IS_T[i]) {
       x += adapt;
       if (big && (i <= A.vsBreak || (i >= A.velocity && i <= A.deception))) x += big;
       if (st.pain) x *= 0.9;
@@ -114,13 +117,14 @@ export function buildCache(p: PlayerIn, cx: CacheCtx): PC {
   if (traits && hasTraitBits(traits, TR.bigSwing)) { v[A.power] += 3; v[A.avoidK] -= 5; v[A.launchTend] += 8; }
   if (traits && hasTraitBits(traits, TR.diver)) { v[A.range] += 3; }
   // 포지션 숙련
-  const posProf = new Float64Array(10), posMult = new Float64Array(10);
+  const posProf = zeros(10), posMult = zeros(10);
   for (let i = 0; i < 10; i++) { posProf[i] = p.pos[i] ?? 1; posMult[i] = defMult(posProf[i]); }
   const C = P.center;
   for (let i = 0; i < N_ATTR; i++) {
-    if (TENDENCY.has(i)) { v[i] = clamp(v[i], 1, 100); z[i] = (v[i] - 50) / 50; continue; }
+    if (IS_T[i]) { v[i] = clamp(v[i], 1, 100); z[i] = (v[i] - 50) / 50; continue; }
     v[i] = softCap(v[i]);
-    z[i] = (v[i] - (C[i] ?? 60)) / 10;
+    const u = (v[i] - (C[i] ?? 60)) / (P.scale[i] ?? 10);
+    z[i] = P.zGain * (i <= A.vsBreak ? u + P.zCube[i] * u * u * u : u);   // 타격 능력은 3차 항으로 꼬리(스타)를 키운다 — 팀 평균 이동엔 거의 영향 없음
   }
   // 플래툰 컨택
   const zConR = z[A.contactR], zConL = z[A.contactL];
@@ -137,7 +141,7 @@ export function buildCache(p: PlayerIn, cx: CacheCtx): PC {
     const sig = x.sig ? Math.max(0, SIG.indexOf(x.sig)) : 0;
     if (sig === 1) cmd -= 4;
     if (t === 8) kn = true;
-    pitches.push({ t, stuff, cmd, use: Math.max(0.5, x.use), sig, zs: (stuff - P.centerStuff) / 10, zc: (cmd - P.centerCmd) / 10 });
+    pitches.push({ t, stuff, cmd, use: Math.max(0.5, x.use), sig, zs: P.zGain * cubeS((stuff - P.centerStuff) / P.scaleStuff), zc: P.zGain * (cmd - P.centerCmd) / P.scaleCmd });
   }
   let useSum = 0; for (const x of pitches) useSum += x.use;
   for (const x of pitches) x.use /= useSum || 1;
@@ -147,10 +151,10 @@ export function buildCache(p: PlayerIn, cx: CacheCtx): PC {
   pPlat += (SLOT_PLATOON[slot] ?? 0.8) - 0.8;
   const armF = st.arm ?? 0;
   const limit = P.fat.limitA + (v[A.stamina] - 50) * P.fat.limitK - armF * P.fat.armK;
-  const wxT = new Float64Array(6);
+  const wxT = zeros(6);
   for (let i = 0; i < 6; i++) wxT[i] = clamp(1 - WX_K[i] * (hid[13 + i] - 10), 0.3, 1.6);
   // 12 상태 → 채널 값(물리층 chP / 심리층 chS) [12 stateVars]
-  const chP = new Float64Array(N_CH), chS = new Float64Array(N_CH);
+  const chP = zeros(N_CH), chS = zeros(N_CH);
   const cond = st.cond ?? 0;
   const condV = cond === 2 ? 0.03 : cond === 1 ? 0.015 : cond === -1 ? -0.02 : cond === -2 ? -0.04 : 0;
   if (condV) { chP[CH.contact] += condV; chP[CH.power] += condV; chP[CH.stuff] += condV; chP[CH.control] += condV; chP[CH.range] += condV * 0.5; }
@@ -190,13 +194,13 @@ function hasTraitBits(traits: number, t: number): boolean { return Math.floor(tr
 export function defZ(pc: PC, attr: number, posIdx: number): number {
   const m = pc.posMult[posIdx];
   if (m >= 0.999) return pc.z[attr];
-  return (pc.v[attr] * m - (P.center[attr] ?? 60)) / 10;
+  return P.zGain * (pc.v[attr] * m - (P.center[attr] ?? 60)) / (P.scale[attr] ?? 10);
 }
 
 /** 팀 전원에 같은 보너스(조합 시험용): 모든 능력(성향 제외)·구종에 B 점 */
 export function uniformBonus(B: number): number[] {
   const out = new Array(47).fill(0);
-  for (let i = 0; i < N_ATTR; i++) if (!TENDENCY.has(i)) out[i] = B;
+  for (let i = 0; i < N_ATTR; i++) if (!IS_T[i]) out[i] = B;
   out[45] = B; out[46] = B;
   return out;
 }

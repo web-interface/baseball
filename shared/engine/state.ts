@@ -41,9 +41,9 @@ export interface TeamSt {
   lob: number; hits: number; errors: number; runsInn: number[];
   mood: number; chemTier: number; streak: number;
   /** (타자 pcs, 투수 pcs) → 구종 9개 기억 */
-  mem: Map<number, Float64Array>;
+  mem: Map<number, number[]>;
   /** 더그아웃 공유 기억: 상대 투수 pcs → 구종 9개 */
-  teamMem: Map<number, Float64Array>;
+  teamMem: Map<number, number[]>;
   tac: Tactics; level: number; style: number; user: boolean; auto: boolean;
   /** 내야 0 보통 · 1 병살 · 2 전진 · 3 코너 전진 / 외야 0 보통 · 1 깊게 · 2 얕게 — 명령으로 고정 시 fixed */
   inf: number; of: number; alignFixed: boolean;
@@ -111,12 +111,12 @@ export interface PaCtx {
   pitches: number;
   guessFam: number;
   stealOn: number;    // 이번 투구에 뛰는 주자(베이스 비트)
-  mem: Float64Array; tmem: Float64Array;
+  mem: number[]; tmem: number[];
   gq: number; outPitch: number; vFF: number; hot: number;
 }
 
 export const newPaCtx = (): PaCtx => ({ b: 0, p: 0, c: 0, bL: false, pL: false, same: false, zCon: 0, zPow: 0, zEye: 0, zK: 0, zFast: 0, zBreak: 0, zIQ: 0, zAg: 0, top: 0, bot: 0, HH: 0, zMid: 0,
-  li: 1, press: 0, cCon: 0, cPow: 0, cEye: 0, cAggr: 0, cStuff: 0, cCtl: 0, cErr: 0, cVelo: 0, approach: 0, mode: 0, countsSeen: 0, prevType: -1, prevV: 0, run: 0, pitches: 0, guessFam: -1, stealOn: 0, mem: new Float64Array(9), tmem: new Float64Array(9), gq: 0.55, outPitch: -1, vFF: 146, hot: 0 });
+  li: 1, press: 0, cCon: 0, cPow: 0, cEye: 0, cAggr: 0, cStuff: 0, cCtl: 0, cErr: 0, cVelo: 0, approach: 0, mode: 0, countsSeen: 0, prevType: -1, prevV: 0, run: 0, pitches: 0, guessFam: -1, stealOn: 0, mem: [0, 0, 0, 0, 0, 0, 0, 0, 0], tmem: [0, 0, 0, 0, 0, 0, 0, 0, 0], gq: 0.55, outPitch: -1, vFF: 146, hot: 0 });
 
 export const offense = (g: G): TeamSt => g.T[g.half];
 export const defense = (g: G): TeamSt => g.T[1 - g.half];

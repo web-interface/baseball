@@ -7,6 +7,11 @@ export const P = {
   ver: 'p1.0',
   /** 능력치 중심값(1군 주전 평균) — z = (v − center)/10. generate.ts 로 만든 리그에서 잰 값 [15 생성 실측] */
   center: [64.5,64.1,57,62.3,60.8,58.3,57.2,57.3,44.7,56.2,51.9,50.3,52.9,57.1,45.7,52.4,55.4,56.7,60.8,58,58.1,50.1,66,57.5,62.4,59.3,56.1,62.6,61.9,52.1,46.5,61,53.8,54.5,50.5,56,56.7,56.5,56.5,45.8,53.8,56,55.7,50.2,57.6] as number[],
+  /** 능력치 눈금(1군 주전 표준편차, 최소 10) — z = (v − center)/scale. 15 는 "주전 SD ≈ 10" 을 의도했지만 생성 리그 실측은 아키타입이 섞여 9~23 → 실측으로 표준화 [15 생성 실측] */
+  scale: [13.3,13.7,19.2,13.3,11.5,12,10,10.8,15.1,14.6,16,12.6,18.2,11.1,15.6,10,16.4,14.6,13.2,13.8,11.9,14.3,11.8,15.5,12.2,15.9,16.5,14.6,15.8,11.4,22.9,11.1,10,10,10,17.1,11.7,12,11.7,11.6,11.3,12,10.5,12,12.1] as number[],
+  /** 실력 → 결과 감도(모든 z 에 곱함) — 실력 차 승률 곡선(11 16.3)에 맞춤 [보정] */
+  zGain: 1, zCube: [0, 0, 0, 0, 0, 0, 0, 0] as number[], zCubeStuff: 0,
+  scaleStuff: 11.9, scaleCmd: 12.5,
   /** 구종 위력·커맨드 중심값 */
   centerStuff: 66.4, centerCmd: 57.9,   // 구사율 가중 평균 [15 생성 실측 40구단]
   bonus: {
@@ -38,12 +43,12 @@ export const P = {
     // 변 고르기: 위·아래·글러브 쪽·팔 쪽 [11]
     side: [[.40, .15, .25, .20], [.05, .45, .10, .40], [.15, .25, .50, .10], [.05, .45, .50, 0], [.05, .45, .50, 0], [.05, .80, .10, .05], [.03, .72, .05, .20], [.03, .72, .05, .20], [.25, .25, .25, .25]],
   },
-  sel: { fastBase: 0, platoon: 0.5, weak: 0.35, mem: 0.6, repeat: 0.35, stuff: 0.15, outPitch: 0.6, block: 1.2, mix: 0.25, rain: 0.25 },
+  sel: { bias: [0, 0, 0, 0, 0, 0, 0, 0, 0], fastBase: 0, platoon: 0.5, weak: 0.35, mem: 0.6, repeat: 0.35, stuff: 0.15, outPitch: 0.6, block: 1.2, mix: 0.25, rain: 0.25 },
   intent: { s0: [0.03, 0.37, 0.60], s1: [0.80, 0.20, 0.0], quick: 0.12, nibble: -0.15, chase: -0.08, calling: 0.10, eye: 0.06, around: 0.10 },
   loc: { sigma0: 15, cmdK: 0.12, pWild: 0.030, ctlK: 0.45, sigWild: 40, heartShrink: 9, edgeIn: [1, 8], outNear: [3, 15], outFar: [15, 40], farShare: 0.15 },
   perc: { sp0: 4.0, eye: 0.18, cope: 0.12, dec: 0.15, mem: 0.20, tunnel: 1.0, memIll: 0.5, stuffIll: 0.08 },
   swing: { tSwing: 0.55, eyeOut: 0.25, aggressive: 0.25, patient: -0.25, power: 0.10, contact2S: 0.10, firstPitch: 0.15, guessHit: 0.8, guessMiss: -0.6, tanhW: 6, scale: 1.0 },
-  ump: { b0: -0.61, s: 2.02, framing: 0.45, cmd: 0.15, countBias: [0, -1.0, 0, 0, 0, -0.6, 0.6, 0, 0, 1.2, 0.6, 0], heatS: 1.15 },
+  ump: { countShift: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], b0: -0.61, s: 2.02, framing: 0.45, cmd: 0.15, countBias: [0, -1.0, 0, 0, 0, -0.6, 0.6, 0, 0, 1.2, 0.6, 0], heatS: 1.15 },
   con: { c0: 0.922, c1: 0.964, w: 8, zc: 0.55, zk: 0.25, zcope: 0.20, zs: 0.55, velo: 0.030, mem: 0.6, highFF: 0.25, two: 0.25, guessHit: 0.35, guessMiss: -0.5, timing: 0.015 },
   foul: { tanh: 0.6, zc: 0.15, zs: 0.10, shorten: -0.25, grinder: -0.30, guess: 0.10, tip: 0.055, tipCatch: 0.92, popFoul: 0.035 },
   hbp: { scale: 0.6, thresh: 50, width: 5, agil: 0.12, temp: 0.0063, rain: [1, 1.03, 1.08, 1.15] },
@@ -57,11 +62,11 @@ export const P = {
     gapLD: 0.0, coldEv: 0.005, rainEv: [0, 0, 0.005, 0.010],
   },
   spray: { base: 6.5, tPull: 18, inside: 0.20, gb: 6, fb: -5, slow: 0.12, sd: 24, vRef: 140 },
-  air: { temp: 0.18, pres: -0.04, rh: 0.005, elev: 0.0045, tail: 0.415, cross: 0.264, cap: 12, gust: 0.3 },
+  air: { expo: 1, offset: 0, temp: 0.18, pres: -0.04, rh: 0.005, elev: 0.0045, tail: 0.415, cross: 0.264, cap: 12, gust: 0.3 },
   gb: { factor: 0.80, chop: 0.55, chopLA: -15, cGrass: [2.5, 2.8, 3.4, 4.2], cTurf: [1.6, 1.7, 1.8, 2.0], kGrass: 1 / 150, kTurf: 1 / 200, grass: [1, 0.98, 0.93, 0.85], turf: [1, 1.03, 1.05, 1.02], bounce: [1, 1.1, 1.3, 1.6], domeTurf: 1.05 },   // 구름: 감속 = c + k·v² [설계 → 보정]
   fld: {
     // 외야 [11 7.2]
-    ofReact: 0.50, ofReactFS: 0.06, ofReactIQ: 0.03, ofTau: 1.5, ofTauAg: 0.10, ofPath: 0.92, ofPathR: 0.02, ofPathIQ: 0.01, catchSig: 0.15,
+    ofReact: 0.50, ofLineReact: 0.0, ofShortReact: 0.0, ifBackReact: 0.2, ifBackV: 0.8, pickup: 0.25, wallPick: 0.45, ofReactFS: 0.06, ofReactIQ: 0.03, ofTau: 1.5, ofTauAg: 0.10, ofPath: 0.92, ofPathR: 0.02, ofPathIQ: 0.01, catchSig: 0.15,
     diveBase: 0.12, diveAg: 0.03, wallK: 0.80, wallIQ: 0.06,
     // 내야(뜬공·라이너) [11 7.2]
     ifFlyReact: 0.25, ifFlyFS: 0.035, ifFlyTau: 0.7, ifFlyV: 0.85,
@@ -76,7 +81,7 @@ export const P = {
   },
   thr: {
     vBase: [34.0, 35.0, 33.5, 34.0, 37.0, 37.0, 37.5, 38.5, 39.0], arm: 2.0, normal: 0.88, hurry: 0.97, arc: 0.04,
-    relIF: 0.45, relIFAg: 0.04, relIFIQ: 0.03, relOF: 0.75, relOFAg: 0.05, relay: 0.55, relayDist: 60, bounce: 0.85, tag: 0.08,
+    relIF: 0.45, relIFAg: 0.04, relIFIQ: 0.03, relOF: 0.75, relOFAg: 0.05, relay: 0.55, tagRel: 0.0, relayDist: 60, bounce: 0.85, tag: 0.08,
   },
   run: {
     v0: 7.0, vK: 0.021, tauStand: 1.0, tauAg: 0.05, tauMove: 0.4, h1A: 4.80, h1K: 0.0075, lhb: 0.10, hustle: 0.03, turn: 0.25, turnBR: 0.03,
@@ -84,13 +89,13 @@ export const P = {
     sigJ: 0.22, sigJBR: 0.25, safeNoise: 0.07, slide: 0.03, headfirst: 0.04, lineFreeze: 0.3,
     // θ 기본(초): [0아웃,1아웃,2아웃] [11 8.2]
     th1to3: [0.30, 0.20, 0.08], th2toH: [0.20, 0.05, -0.15], th1toH2B: [0.25, 0.15, -0.05], thTag3: [0.10, 0.00, 9], thTag2: [0.25, 0.40, 9], thB2: [0.35, 0.30, 0.25], thB3: [0.45, 0.40, 0.35],
-    gbR2go: 0.15, gbR3contact: 0.0, closeCall: 0.06,
+    flyRead: 0.2, flyMaxStart: 9, half1: 12, half2: 9, gbR2go: 0.15, gbR3contact: 0.0, closeCall: 0.06,
   },
   dp: { pivot: 0.75, turnDP: 0.05, ag: 0.02, mech: 0.012, chem: 0.03, min: 0.45, max: 1.10, feed: 0.25 },
   steal: {
     jump: 0.30, jumpK: 0.05, pickoffK: 0.04, slowTempo: 0.03, lefty: 0.05, jumpSd: 0.05, deliv: 1.55, delivK: 0.004, pop: 2.15, popK: 0.004,
     sig: 0.09, slide: 0.03, wide: 0.12, wideK: 0.3, err: 0.02, errK: 0.4, pitchout: 0.15, killer: 0.04,
-    attemptScale: 1.0, margin: 0.0, breakEven2: 0.70, breakEven3: 0.75, green: 1.0, minProb: 0.62,
+    often: 2.0, attemptScale: 1.0, margin: 0.0, breakEven2: 0.70, breakEven3: 0.75, green: 1.0, minProb: 0.62,
   },
   pick: { base: 0.07, thr: 1.5, freq: 0.25, artist: 1.5, out: 0.010, outPk: 0.45, outJump: 0.35, err: 0.004, leadDecay: 0.92, maxPer: 3 },
   balk: { base: 0.0003, pk: 0.4, comp: 0.3 },
@@ -106,7 +111,7 @@ export const P = {
   home: { contact: 0.8, eye: 1.0 },
   ctx: { bigGame: 0.12, pressure: 0.08, adapt: 4 },
   ai: {
-    spLimitSlack: 0, spHookRuns: 6, spHookRunsEarly: 5, spMinInnWin: 5, rpMaxPitches: 30, rpOneInning: true,
+    hookAdd: 4, spLimitSlack: 0, spHookRuns: 6, spHookRunsEarly: 5, spMinInnWin: 5, rpMaxPitches: 30, rpOneInning: true,
     phLI: 1.2, phGain: 0.030, ibbMargin: 0.004, buntK: 0.012, closerSaveOnly: true, pitchoutP: 0.35,
     leash: 0, tto3: 0.0, starterPullLI: 1.8, mopDiff: 6, liNorm: 0.0,
   },
@@ -117,7 +122,7 @@ export const P = {
     stuffLogit: 1.3, stuffWeak: 1.5, ctlWild: 2.5, ctlSig: 0.8,
   },
   inj: { rate: 1.0 },
-  wx: { sunK: 0.06, twilight: 1.02, fog1: 1.10, fog05: 1.25, rainSig: [1, 1.03, 1.08, 1.15, 1.25], heatSig: 1.05, heatWild: 1.10, footing: [1, 1.02, 1.05, 1.10], coldVelo: 0.5, veloTemp: 0.08, plateTemp: 0.045, moveTemp: 0.0034 },
+  wx: { coldCtl: 0.0, sunK: 0.06, twilight: 1.02, fog1: 1.10, fog05: 1.25, rainSig: [1, 1.03, 1.08, 1.15, 1.25], heatSig: 1.05, heatWild: 1.10, footing: [1, 1.02, 1.05, 1.10], coldVelo: 0.5, veloTemp: 0.08, plateTemp: 0.045, moveTemp: 0.0034 },
   clock: { pitchEmpty: 19, pitchOn: 24, paChange: 15, bip: 8, inningChange: 120, pitcherChange: 140, visit: 35, cooling: 240 },
   /** 리그 득점 환경 보정(마지막 손잡이 — 모든 것이 맞은 뒤 아주 작게만) */
   env: { contactAdj: 0, powerAdj: 0, babipAdj: 0 },

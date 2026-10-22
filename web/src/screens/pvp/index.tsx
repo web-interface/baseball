@@ -1,6 +1,7 @@
 // 대전 #/pvp — 비동기 대전 (담당: 선수 상세·대전 개발자, 이 폴더만 고친다)
 //   다른 감독이 저장해 둔 라인업과 혼자 붙는다(상대 접속 필요 없음). 랭킹 · 내 전적.
 //   ?tab=opp|rank|log · ?by=rating|pct|power|collection · ?vs=<상대 id> 경기(경기 전 → 빨리 보기 → 결과)
+import { setQueryQuiet } from '../../app/router';
 import { useMemo, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { navigate } from '../../app/router';
@@ -16,17 +17,6 @@ import s from './pvp.module.css';
 
 type Tab = 'opp' | 'rank' | 'log';
 
-function setQueryQuiet(patch: Record<string, string | null>) {
-  try {
-    const h = location.hash;
-    const i = h.indexOf('?');
-    const path = i >= 0 ? h.slice(0, i) : h;
-    const q = new URLSearchParams(i >= 0 ? h.slice(i + 1) : '');
-    Object.entries(patch).forEach(([k, v]) => (v == null ? q.delete(k) : q.set(k, v)));
-    const qs = q.toString();
-    history.replaceState(history.state, '', path + (qs ? '?' + qs : ''));
-  } catch { /* */ }
-}
 
 export default function PvpScreen({ query }: ScreenProps) {
   const vs = query.get('vs');
