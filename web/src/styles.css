@@ -1,0 +1,58 @@
+:root {
+  --bg: #f2f4f6; --card: #fff; --text: #191f28; --muted: #6b7684; --line: #e5e8eb;
+  --brand: #0b6e4f; --brand-ink: #fff; --bad: #e42939; --ok: #12a150;
+  color-scheme: light;
+  font-family: Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #101215; --card: #1b1e23; --text: #eceef1; --muted: #9aa3ad; --line: #2b3038; --brand: #2fb985; --brand-ink: #08130e; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); }
+button, input { font: inherit; }
+.page { max-width: 480px; margin: 0 auto; padding: 0 16px 48px; }
+.top { display: flex; align-items: center; justify-content: space-between; height: 56px; }
+.logo { font-weight: 800; font-size: 20px; letter-spacing: -0.04em; }
+.who { font-size: 14px; color: var(--muted); }
+.card { background: var(--card); border-radius: 18px; padding: 22px 20px; margin-top: 12px; }
+h1 { font-size: 22px; margin: 0 0 16px; }
+h2 { font-size: 18px; margin: 0 0 8px; }
+h3 { font-size: 14px; color: var(--muted); margin: 0 0 8px; }
+.auth label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 12px; }
+.auth input { display: block; width: 100%; margin-top: 6px; height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: 16px; }
+.auth input:focus { outline: 2px solid var(--brand); outline-offset: -1px; }
+.primary { width: 100%; height: 50px; border: 0; border-radius: 12px; background: var(--brand); color: var(--brand-ink); font-weight: 700; font-size: 16px; cursor: pointer; }
+.primary:disabled { opacity: 0.6; }
+.primary.small { width: auto; height: 40px; padding: 0 16px; font-size: 14px; }
+.link { background: none; border: 0; padding: 8px 4px; color: var(--muted); cursor: pointer; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; }
+.switch { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: center; margin-top: 12px; }
+.error { color: var(--bad); font-size: 14px; margin: 4px 0 12px; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.notice { border: 2px solid var(--brand); }
+.code { display: block; font-size: 20px; font-weight: 700; letter-spacing: 0.06em; text-align: center; padding: 14px; margin: 12px 0; background: var(--bg); border-radius: 12px; word-break: break-all; }
+.row { display: flex; justify-content: space-between; align-items: center; }
+.ping { margin-top: 16px; padding: 14px; background: var(--bg); border-radius: 12px; line-height: 1.6; }
+.ping p { margin: 0 0 6px; }
+.status { margin-top: 24px; padding: 0 4px; }
+.status ul { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px; }
+.status b { font-weight: 600; color: var(--muted); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--line); margin-right: 6px; vertical-align: 1px; }
+.dot.ok { background: var(--ok); }
+.dot.bad { background: var(--bad); }
+
+/* 휴대폰 우선 — 노치·홈 막대 피하기, 손가락 크기(44px) 터치, 탭 시 파란 번쩍임 없애기 */
+html { -webkit-text-size-adjust: 100%; }
+body { -webkit-tap-highlight-color: transparent; min-height: 100dvh; }
+.page { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); padding-bottom: max(48px, env(safe-area-inset-bottom)); }
+.top { position: sticky; top: 0; z-index: 10; background: var(--bg); padding-top: env(safe-area-inset-top); height: auto; min-height: 56px; }
+.link { min-height: 44px; display: inline-flex; align-items: center; }
+.primary { touch-action: manipulation; }
+.primary:active, .link:active { transform: scale(0.98); }
+.status ul li { min-height: 28px; display: flex; align-items: center; gap: 4px; }
+@media (max-width: 360px) {
+  .card { padding: 18px 16px; border-radius: 16px; }
+  .code { font-size: 17px; letter-spacing: 0.03em; }
+  .status ul { grid-template-columns: 1fr; }
+}
+@media (min-width: 768px) { .page { padding-top: 32px; } }

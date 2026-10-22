@@ -1,0 +1,15 @@
+# 야구 게임 서버 — npx wrangler deploy
+name = "baseball-api"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ALLOWED_ORIGINS = "https://web-interface.github.io,http://localhost:5173,http://127.0.0.1:5173"
+AI_MODEL = "claude-haiku-5-5"
+AI_DAILY_CALLS = "20"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "baseball"
+database_id = "ebb6c16f-580d-4101-82cb-bd1c0144447b"
