@@ -7,7 +7,7 @@ import { GRADES } from '../../game/grades';
 import { POS_KO, ROLE_KO } from '../../game/labels';
 import { teamById } from '../../game/mock';
 import { navigate } from '../../app/router';
-import { Button, IconButton, Sheet } from '../../ui';
+import { Button, IconButton, Sheet, StatBar, fmt } from '../../ui';
 import { yearTag } from '../../ui/format';
 import { PackArt } from './PackArt';
 import { PACK_LOOK, isSynthetic } from './local-mock';
@@ -334,11 +334,42 @@ export function Opening({ result, step, onClose, onAgain, onCombo }: OpeningProp
             </div>
           </div>
         )}
+        {detail && <DetailStats pc={detail} />}
       </Sheet>
 
       <p className="sr-only" aria-live="polite">{said}</p>
     </div>,
     document.body,
+  );
+}
+
+/** 상세 아래 능력치 — 카드 앞면 대표 6개 · 투수는 구종 · 이번 시즌 한 줄 */
+function DetailStats({ pc }: { pc: PulledCard }) {
+  const p = pc.player;
+  const isP = p.pos === 'P';
+  const bat = p.season.bat, pit = p.season.pit;
+  return (
+    <section className={s.stats} aria-label="능력치">
+      <h3 className={s.statsH}>능력치 <small>1~100</small></h3>
+      <div className={s.statList}>
+        {p.face.map((f) => <StatBar key={f.code} label={f.ko} value={f.v} size="s" labelWidth={56} />)}
+      </div>
+      {isP && p.pitches && p.pitches.length > 0 && (
+        <>
+          <h3 className={s.statsH}>구종 <small>위력 · 평균 구속</small></h3>
+          <div className={s.statList}>
+            {p.pitches.map((x) => <StatBar key={x.type} label={x.ko} value={x.stuff} size="s" labelWidth={56} note={<span className="num">{x.kmh}</span>} />)}
+          </div>
+        </>
+      )}
+      {(bat || pit) && (
+        <p className={s.seasonLine}>
+          <span>’27 시즌</span>
+          {bat && <>타율 <b className="num">{fmt.avg(bat.avg)}</b> · 홈런 <b className="num">{bat.hr}</b> · 타점 <b className="num">{bat.rbi}</b> · OPS <b className="num">{fmt.avg(bat.ops)}</b></>}
+          {pit && <>평균자책 <b className="num">{fmt.era(pit.era)}</b> · <b className="num">{pit.w}</b>승 <b className="num">{pit.l}</b>패 · 탈삼진 <b className="num">{pit.so}</b></>}
+        </p>
+      )}
+    </section>
   );
 }
 

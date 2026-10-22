@@ -211,3 +211,13 @@
 @media (min-height: 760px) {
   .grid { gap: 7px; }
 }
+
+/* 상세 — 능력치 (시트 본문이 길어지면 시트 안에서 스크롤) */
+.stats { padding: 4px 0 6px; border-top: 1px solid var(--line); margin-top: 4px; }
+.statsH { display: flex; align-items: baseline; justify-content: space-between; margin: 12px 0 6px; font-size: 13px; font-weight: 750; color: var(--fg); }
+.statsH small { font-size: 11px; font-weight: 500; color: var(--fg-3); }
+.statList { display: grid; gap: 6px; }
+.seasonLine { margin-top: 12px; font-size: 12.5px; color: var(--fg-2); line-height: 1.6; }
+.seasonLine > span { margin-right: 8px; font-size: 11.5px; color: var(--fg-3); }
+.seasonLine b { color: var(--fg); font-size: 13.5px; }
+@media (min-width: 420px) { .statList { grid-template-columns: 1fr 1fr; column-gap: 18px; } }

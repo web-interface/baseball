@@ -19,6 +19,7 @@
   flex-direction: column;
   width: 100%;
   max-width: var(--col);
+  max-height: 88vh;   /* dvh 를 모르는 브라우저 */
   max-height: 88dvh;
   background: var(--surface);
   background-image: var(--texture);
@@ -30,7 +31,7 @@
   animation: rise 280ms var(--ease-out) both;
   outline: none;
 }
-.tall { height: 88dvh; }
+.tall { height: 88vh; height: 88dvh; }
 
 .grip {
   align-self: center;
@@ -50,7 +51,8 @@
 .title { font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 19px; line-height: 1.25; }
 .sub { margin-top: 4px; font-size: 13px; color: var(--fg-3); }
 .close { color: var(--fg-2); margin-top: -4px; }
-.body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 var(--gutter) 16px; }
+.body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; padding: 0 var(--gutter) 16px; }
+.head, .foot, .grip { flex: none; }
 .foot {
   display: flex;
   gap: 8px;
@@ -77,7 +79,7 @@
 /* 넓은 화면 — 가운데 뜨는 상자 */
 @media (min-width: 720px) {
   .root { justify-content: center; padding: 24px; }
-  .panel { border-radius: 12px; max-height: 80dvh; padding-bottom: 0; animation-name: pop; }
+  .panel { border-radius: 12px; max-height: 80vh; max-height: 80dvh; padding-bottom: 0; animation-name: pop; }
   .closing .panel { animation-name: drop; }
   :global([data-theme='broadcast']) .panel { border-radius: 0; }
   .grip { visibility: hidden; height: 0; margin: 4px 0 0; }
