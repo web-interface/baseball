@@ -1,0 +1,12 @@
+.stub { padding: 22px var(--gutter) 48px; }
+.eyebrow { display: flex; align-items: baseline; gap: 10px; font-size: 12px; font-weight: 600; color: var(--fg-3); }
+.eyebrow .num { font-size: 15px; color: var(--accent); }
+.title { margin-top: 6px; font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 30px; line-height: 1.15; }
+.lead { margin-top: 8px; font-size: 14px; color: var(--fg-2); }
+.demo { margin: 22px 0 6px; }
+.h { margin-top: 26px; padding-bottom: 8px; border-bottom: 1px solid var(--line-2); font-size: 12px; font-weight: 700; color: var(--fg-3); letter-spacing: -.01em; }
+.list li { display: grid; grid-template-columns: 30px 1fr; gap: 6px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.list .num { font-size: 13px; color: var(--fg-4); padding-top: 1px; }
+.list p { color: var(--fg); }
+.mock { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; }
+.mock code { font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace; font-size: 12px; color: var(--fg-2); }

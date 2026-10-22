@@ -1,0 +1,103 @@
+/* 10개 구단 고르기 — 5칸 × 2줄 */
+.grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; margin: 0 var(--gutter); background: var(--line); box-shadow: 0 0 0 1px var(--line); }
+.cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px 2px 9px;
+  background: var(--bg);
+  background-image: var(--texture);
+  background-size: var(--texture-size);
+  color: var(--fg-2);
+  text-align: center;
+  transition: background-color var(--dur-2);
+}
+.cell b { margin-top: 3px; font-size: 12.5px; font-weight: 700; letter-spacing: -.04em; white-space: nowrap; }
+.cell small { font-size: 10.5px; color: var(--fg-4); }
+.cell::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--c1); transform: scaleX(0); transition: transform var(--dur-2) var(--ease-out); }
+.cellOn { background-color: color-mix(in srgb, var(--c1) 14%, var(--bg)); color: var(--fg); }
+.cellOn::after { transform: scaleX(1); }
+.cellOn small { color: var(--fg-3); }
+:global([data-theme='broadcast']) .grid { background: var(--fg); box-shadow: 0 0 0 1.5px var(--fg); gap: 1.5px; }
+:global([data-theme='broadcast']) .cell { background: var(--surface); }
+:global([data-theme='broadcast']) .cellOn { background: var(--inv); color: var(--inv-fg); --emblem-edge: rgba(243, 241, 236, .5); }
+:global([data-theme='broadcast']) .cellOn small { color: var(--inv-fg-3); }
+:global([data-theme='broadcast']) .cell::after { height: 4px; }
+:global([data-theme='classic']) .grid { background: var(--line-2); box-shadow: 0 0 0 1px var(--line-3); }
+:global([data-theme='classic']) .cellOn { background: color-mix(in srgb, var(--c1) 10%, var(--bg)); }
+
+/* 고른 구단 소개 */
+.detail { margin-top: 18px; padding-bottom: 18px; }
+.hero { position: relative; isolation: isolate; display: flex; align-items: center; gap: 16px; padding: 18px var(--gutter) 16px; overflow: hidden; }
+.glow { position: absolute; z-index: -1; left: -40px; top: -60px; width: 260px; height: 260px; background: radial-gradient(closest-side, color-mix(in srgb, var(--c1) 30%, transparent), transparent); }
+.crest { flex: none; }
+.heroText { min-width: 0; }
+.region { font-size: 12px; color: var(--fg-3); letter-spacing: -.01em; }
+.name { margin-top: 3px; font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 26px; line-height: 1.1; text-shadow: var(--misreg); }
+.style { margin-top: 8px; font-size: 14px; font-weight: 700; letter-spacing: -.03em; }
+.styleDesc { margin-top: 3px; font-size: 12.5px; color: var(--fg-2); line-height: 1.5; letter-spacing: -.02em; }
+
+.facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 4px var(--gutter) 0; border-top: 1px solid var(--line-2); border-bottom: 1px solid var(--line); }
+.facts > div { display: flex; flex-direction: column; gap: 4px; padding: 10px 0 10px 10px; }
+.facts > div:first-child { padding-left: 0; }
+.facts > div + div { box-shadow: inset 1px 0 0 var(--line); }
+.facts dt { font-size: 11px; color: var(--fg-3); }
+.facts dd { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 700; letter-spacing: -.03em; white-space: nowrap; }
+.facts dd b { font-size: 18px; font-weight: 600; }
+.facts dd.num { font-size: 16px; }
+.diff { display: inline-flex; gap: 2px; }
+.diff i { width: 5px; height: 12px; background: var(--line-2); }
+.diff .on { background: var(--fg); }
+.titles { margin: 8px var(--gutter) 0; font-size: 13px; color: var(--fg-3); letter-spacing: .02em; }
+
+.colors { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 16px var(--gutter) 0; }
+.swatch { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.swatch i { flex: none; width: 26px; height: 34px; box-shadow: inset 0 0 0 1px rgba(127, 127, 127, .35); }
+.swatch > span { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.swatch b { font-size: 12.5px; letter-spacing: -.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.swatch small { font-size: 11px; color: var(--fg-3); }
+
+.park { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 14px; margin: 18px var(--gutter) 0; padding-top: 14px; border-top: 1px solid var(--line); }
+.parkField { overflow: hidden; border-radius: var(--r-2); }
+.parkText { min-width: 0; }
+.parkName { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; letter-spacing: -.03em; }
+.parkName svg { color: var(--fg-3); }
+.parkDesc { margin-top: 4px; font-size: 12.5px; color: var(--fg-2); line-height: 1.5; letter-spacing: -.02em; }
+.fence { display: flex; align-items: baseline; gap: 10px; margin-top: 8px; font-size: 11.5px; color: var(--fg-3); }
+.fence b { font-size: 17px; color: var(--fg); margin-left: 2px; }
+.feats { margin-top: 4px; font-size: 12px; color: var(--fg-2); }
+.note { margin-top: 6px; font-size: 12px; color: var(--fg-3); }
+
+.rival { display: flex; align-items: center; gap: 10px; margin: 16px var(--gutter) 0; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: 13px; color: var(--fg-2); }
+.rival b { color: var(--fg); }
+.mascot { margin: 10px var(--gutter) 0; font-size: 12.5px; color: var(--fg-2); line-height: 1.5; }
+.mascot span { margin-right: 8px; font-size: 11px; font-weight: 700; color: var(--fg-3); }
+.tip { margin: 8px var(--gutter) 0; padding-left: 10px; border-left: 2px solid var(--c1); font-size: 12.5px; color: var(--fg-2); line-height: 1.5; }
+
+/* broadcast — 팀 소개 중계 그래픽: 검은 판 + 구단색 기둥 */
+:global([data-theme='broadcast']) .hero { background: var(--inv); color: var(--inv-fg); margin: 0 var(--gutter); padding-left: 0; --emblem-edge: rgba(243, 241, 236, .5); }
+:global([data-theme='broadcast']) .glow { left: 0; top: 0; width: 132px; height: 100%; background: var(--c1); }
+:global([data-theme='broadcast']) .crest { width: 132px !important; }
+:global([data-theme='broadcast']) .crest figcaption { border-top-color: rgba(0, 0, 0, .25); }
+:global([data-theme='broadcast']) .crest figcaption span { color: var(--c2); }
+:global([data-theme='broadcast']) .region, :global([data-theme='broadcast']) .styleDesc { color: var(--inv-fg-2); }
+:global([data-theme='broadcast']) .style { color: var(--accent); }
+:global([data-theme='broadcast']) .facts { border-top: 2px solid var(--fg); }
+:global([data-theme='broadcast']) .facts dd b { font-style: italic; font-weight: 800; }
+
+/* classic — 인쇄 카드: 겹줄 · 망점 · 별색 */
+:global([data-theme='classic']) .glow { display: none; }
+:global([data-theme='classic']) .hero { margin: 0 var(--gutter); padding: 16px 0; border-top: 1px solid var(--line-3); border-bottom: 1px solid var(--line-3); box-shadow: 0 3px 0 -2px var(--bg), 0 4px 0 -2px var(--line-3); }
+:global([data-theme='classic']) .style { color: var(--club-text); }
+:global([data-theme='classic']) .facts { border-top: 0; }
+:global([data-theme='classic']) .facts dd b, :global([data-theme='classic']) .facts dd.num { font-family: var(--font-num-display); font-weight: 800; }
+:global([data-theme='classic']) .titles { font-family: var(--font-hand); font-size: 18px; color: var(--fg-2); letter-spacing: .04em; }
+:global([data-theme='classic']) .swatch i { box-shadow: inset 0 0 0 1px var(--line-3); }
+:global([data-theme='classic']) .tip { border-left-color: var(--club); }
+
+@media (min-width: 560px) {
+  .park { grid-template-columns: 180px minmax(0, 1fr); }
+}

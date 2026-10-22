@@ -1,0 +1,404 @@
+/*
+ * 테마 토큰 — 화면은 색·글꼴·모서리를 직접 쓰지 말고 이 변수만 쓴다.
+ * <html data-theme="night | broadcast | classic">  (요소에 붙이면 그 안만 그 테마 — 미리보기 견본용)
+ *   night      나이트 스타디움 (시안 A) — 조명 켜진 밤 경기장, 남색 잉크 + 주황, 고운 결
+ *   broadcast  중계방송 (시안 B)       — TV 중계 그래픽, 검정 띠 + 종이 면 + 주황
+ *   classic    클래식 카드 (시안 C → 요구사항 32번으로 다시) — 인쇄물: 카드 용지 · 먹 · 내 구단 별색 한 가지,
+ *              기록지 괘선, 수동 점수판(초록 나무판 + 흰 페인트), 망점, 아주 살짝 어긋난 판. 금박은 카드(레전드 이상)에만.
+ * 이름 규칙: --bg(바탕) --surface(올린 면) --sunk(파인 면) --inv(점수판처럼 반대색 면)
+ *            --fg(글자 1~4단) --line(헤어라인 1~3단) --accent(강조) --field-*(경기장) --gr-*(카드 등급)
+ *            --club* 는 내 구단 색 (themes.ts 의 applyClubColors 가 넣음)
+ */
+
+/* ───────── 테마와 상관없는 눈금 ───────── */
+:root {
+  --sp-0: 2px; --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-7: 32px; --sp-8: 40px; --sp-9: 56px;
+  --gutter: 16px;
+
+  --fs-3xs: 10px; --fs-2xs: 10.5px; --fs-xs: 11.5px; --fs-s: 12.5px; --fs-m: 14px; --fs-l: 16px;
+  --fs-xl: 18px; --fs-2xl: 22px; --fs-3xl: 28px; --fs-4xl: 36px; --fs-5xl: 52px;
+
+  --header-h: 52px;
+  --menu-h: 40px;
+  --col: 600px;        /* 휴대폰 화면 폭 기준 본문 칸 */
+  --col-wide: 1120px;  /* 넓게 쓰는 화면(미리보기 등) */
+
+  --ease-out: cubic-bezier(.2, .7, .2, 1);
+  --ease-in-out: cubic-bezier(.6, 0, .3, 1);
+  --ease-snap: cubic-bezier(.3, 1.4, .5, 1);
+  --dur-1: 120ms; --dur-2: 220ms; --dur-3: 420ms;
+
+  --z-header: 30; --z-sheet: 60; --z-callout: 70; --z-toast: 80;
+
+  --font-body: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  --font-hand: 'Nanum Pen Script', 'Pretendard Variable', cursive;
+
+  /* 내 구단 색 기본값 (대전 독수리스) — applyClubColors 가 덮어씀 */
+  --club: #F28C28;
+  --club-2: #1F2024;
+  --club-ink: #14110D;
+  --club-text: #B45F12;
+}
+
+/* ───────── night · 나이트 스타디움 (기본) ───────── */
+:root,
+[data-theme='night'] {
+  color-scheme: dark;
+  --bg: #070C16;
+  --bg-deep: #03060C;
+  --surface: #0C1320;
+  --surface-2: #121B2B;
+  --surface-3: #1A2539;
+  --sunk: #050912;
+  --scrim: rgba(2, 4, 9, .68);
+
+  --fg: #EDF1F7;
+  --fg-2: #A6B1C3;
+  --fg-3: #6E7A8C;
+  --fg-4: #465165;
+
+  --line: rgba(160, 186, 230, .10);
+  --line-2: rgba(160, 186, 230, .17);
+  --line-3: rgba(160, 186, 230, .30);
+
+  /* 점수판·자막처럼 반대 면 (night 는 더 깊은 잉크) */
+  --inv: #03060B;
+  --inv-2: #0A101B;
+  --inv-fg: #EDF1F7;
+  --inv-fg-2: #A6B1C3;
+  --inv-fg-3: #6E7A8C;
+  --inv-line: rgba(160, 186, 230, .14);
+
+  --accent: #FF7A2A;
+  --accent-2: #FFA36B;
+  --accent-deep: #D95A14;
+  --accent-ink: #140800;
+  --accent-weak: rgba(255, 122, 42, .10);
+
+  --good: #3DDC84;
+  --bad: #FF5045;
+  --warn: #FFC53D;
+  --info: #3AA9F0;
+  --up: #FF5045;     /* 올라감(한국식 빨강) */
+  --down: #3AA9F0;   /* 내려감 */
+
+  --ball: #3DDC84;
+  --strike: #FFC53D;
+  --out: #FF5045;
+  --volt: #D4FF3D;   /* 케미 선·형광 — 한 화면 2곳까지 */
+  --gold: #F2C35A;
+  --gold-2: #F3D89C;
+
+  --field-sky: #03060C;
+  --field-grass: #0F3B24;
+  --field-grass-2: #14492D;
+  --field-dirt: #8C5B3B;
+  --field-dirt-2: #7B4E31;
+  --field-line: #F4F1EA;
+  --field-wall: #111926;
+  --field-track: #563B28;
+  --field-stands: #0A111F;
+  --field-light: #FFF4DE;   /* 조명 빛 */
+  --field-light-a: .14;     /* 조명 웅덩이 세기 */
+  --field-scenery-water: #0B1C30;
+  --field-scenery-land: #0D1524;
+
+  --font-head: 'Wanted Sans Variable', var(--font-body);
+  --font-num: 'Barlow Condensed', 'Pretendard Variable', sans-serif;
+  --font-num-display: var(--font-num);
+  --num-stretch: 100%;
+  --num-weight: 600;
+  --num-display-weight: 600;
+  --num-display-style: normal;
+  --head-weight: 850;
+  --head-tracking: -.035em;
+  --body-tracking: -.02em;
+
+  --r-1: 2px;
+  --r-2: 3px;
+  --r-3: 6px;
+  --r-card: 10px;
+  --cut: 10px; /* 주 버튼 오른쪽 아래 모서리 컷 */
+  --btn-clip: polygon(0 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%);
+
+  --shadow-1: 0 1px 0 rgba(0, 0, 0, .45);
+  --shadow-2: 0 18px 40px -18px rgba(0, 0, 0, .85);
+  --shadow-sheet: 0 -24px 60px -20px rgba(0, 0, 0, .85);
+
+  /* 고운 결 — 그라디언트 띠(banding)를 없애고 깊이를 준다 */
+  --texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  --texture-size: 160px 160px;
+  --page-glow: radial-gradient(130% 55% at 50% -12%, rgba(64, 112, 190, .16), transparent 62%);
+  --misreg: none;
+  --halftone: none;
+  --halftone-size: auto;
+
+  --header-bg: #070C16;
+  --header-fg: #EDF1F7;
+  --header-fg-2: #A6B1C3;
+  --header-line: rgba(160, 186, 230, .10);
+  --menu-bg: #070C16;
+  --menu-fg: #6E7A8C;
+  --menu-fg-on: #EDF1F7;
+  --menu-bar: #EDF1F7;
+
+  --focus: #FFA36B;
+
+  --coin: #C9D3E0;
+  --coin-edge: #7C889A;
+  --goldball: #E9BE5C;
+  --goldball-seam: #8A5E14;
+  --emblem-edge: rgba(237, 241, 247, .55); /* 어두운 바탕에서 어두운 엠블럼 면 테두리 */
+
+  /* 카드 등급 — 고유색(작은 표시·글자용). 테두리 연출은 cards/ 가 맡는다 */
+  --gr-normal: #A3ACB8;
+  --gr-special: #F2852A;
+  --gr-rare: #D42640;
+  --gr-elite: #9466FF;
+  --gr-legend: #D9AE55;
+  --gr-franchise: #CFA14A;
+  --gr-black: #C9CED6;      /* 검은 카드 위 크롬 테 — 글자로 쓸 땐 이 색 */
+  --gr-signature: #E8DDFF;
+  --gr-mvp: #E7BE57;
+  --gr-gg: #E2B342;
+  --gr-th: #DDA63C;
+  --gr-unique: #7FE3D4;     /* 특별 선수 — 단 하나뿐인 카드 */
+  --gr-holo: linear-gradient(100deg, #ff8fb8, #ffd27e 22%, #b8f5a0 40%, #8fe3ff 58%, #b59cff 76%, #ff8fb8);
+}
+
+/* ───────── broadcast · 중계방송 ───────── */
+[data-theme='broadcast'] {
+  color-scheme: light;
+  --bg: #F4F3EF;
+  --bg-deep: #E9E7E1;
+  --surface: #FBFAF7;
+  --surface-2: #E9E7E1;
+  --surface-3: #DCD9D1;
+  --sunk: #ECEAE4;
+  --scrim: rgba(11, 14, 18, .55);
+
+  --fg: #0B0E12;
+  --fg-2: #59606A;
+  --fg-3: #858B94;
+  --fg-4: #B4B8BE;
+
+  --line: rgba(11, 14, 18, .11);
+  --line-2: rgba(11, 14, 18, .22);
+  --line-3: rgba(11, 14, 18, .62);
+
+  --inv: #0B0E12;
+  --inv-2: #19202A;
+  --inv-fg: #F3F1EC;
+  --inv-fg-2: rgba(243, 241, 236, .62);
+  --inv-fg-3: rgba(243, 241, 236, .36);
+  --inv-line: rgba(255, 255, 255, .10);
+
+  --accent: #F2641E;
+  --accent-2: #FF8A4F;
+  --accent-deep: #C9480A;
+  --accent-ink: #160700;
+  --accent-weak: rgba(242, 100, 30, .10);
+
+  --good: #1C9A50;
+  --bad: #D3263A;
+  --warn: #D99A00;
+  --info: #2F6BD9;
+  --up: #D3263A;
+  --down: #2F6BD9;
+
+  --ball: #3CCB6E;
+  --strike: #FFC531;
+  --out: #FF4B3E;
+  --volt: #D9FF3D;
+  --gold: #B8862A;
+  --gold-2: #E8C77A;
+
+  --field-sky: #0B0E12;
+  --field-grass: #2B6A3B;
+  --field-grass-2: #317545;
+  --field-dirt: #B27B4F;
+  --field-dirt-2: #9B6841;
+  --field-line: #F6F3EC;
+  --field-wall: #0B0E12;
+  --field-track: #8B5E3C;
+  --field-stands: #10161D;
+  --field-light: #FFF6E8;
+  --field-light-a: .10;
+  --field-scenery-water: #0F2A40;
+  --field-scenery-land: #161D26;
+
+  --font-head: 'Wanted Sans Variable', var(--font-body);
+  --num-weight: 700;
+  --num-display-weight: 800;
+  --num-display-style: italic;
+  --head-weight: 900;
+  --head-tracking: -.03em;
+
+  --r-1: 2px;
+  --r-2: 3px;
+  --r-3: 4px;
+  --r-card: 8px;
+  --btn-clip: none;
+
+  --shadow-1: 0 1px 0 rgba(11, 14, 18, .06);
+  --shadow-2: 0 14px 34px -16px rgba(11, 14, 18, .38);
+  --shadow-sheet: 0 -16px 40px -16px rgba(11, 14, 18, .35);
+
+  --texture: none;
+  --page-glow: none;
+  --misreg: none;
+  --halftone: none;
+
+  --header-bg: #0B0E12;
+  --header-fg: #F3F1EC;
+  --header-fg-2: rgba(243, 241, 236, .62);
+  --header-line: rgba(255, 255, 255, .08);
+  --menu-bg: #0B0E12;
+  --menu-fg: rgba(243, 241, 236, .5);
+  --menu-fg-on: #F3F1EC;
+  --menu-bar: #F2641E;
+
+  --focus: #F2641E;
+
+  --coin: #D9DEE5;
+  --coin-edge: #7E8896;
+  --goldball: #EBC15F;
+  --goldball-seam: #8A5E14;
+  --emblem-edge: rgba(11, 14, 18, .25);
+
+  --gr-normal: #7D8592;
+  --gr-legend: #B48A2E;
+  --gr-franchise: #AE8530;
+  --gr-black: #23262C;
+  --gr-signature: #6B4FD8;
+  --gr-mvp: #B88A22;
+  --gr-gg: #B3861C;
+  --gr-th: #AC7B1E;
+  --gr-unique: #0E8C7E;
+}
+
+/* ───────── classic · 인쇄물 (카드 용지 + 먹 + 별색 한 가지) ───────── */
+[data-theme='classic'] {
+  color-scheme: light;
+  --bg: #EEEBE3;            /* 카드 용지 (누런 크림 아님) */
+  --bg-deep: #E4E0D5;
+  --surface: #F6F4EE;
+  --surface-2: #E7E3D8;
+  --surface-3: #DAD5C8;
+  --sunk: #E9E6DD;
+  --scrim: rgba(29, 30, 33, .5);
+
+  --fg: #1D1E21;            /* 먹 */
+  --fg-2: #46474B;
+  --fg-3: #77766F;          /* 연필 */
+  --fg-4: #A8A59C;
+
+  /* 공식 기록지 괘선 — 옅은 초록 회색 잉크 */
+  --line: rgba(47, 88, 72, .20);
+  --line-2: rgba(47, 88, 72, .38);
+  --line-3: rgba(29, 30, 33, .74);
+
+  /* 수동 점수판 — 초록 나무판 + 흰 페인트 숫자판 */
+  --inv: #22382C;
+  --inv-2: #2C4637;
+  --inv-fg: #F2EFE6;
+  --inv-fg-2: rgba(242, 239, 230, .68);
+  --inv-fg-3: rgba(242, 239, 230, .42);
+  --inv-line: rgba(242, 239, 230, .14);
+
+  /* 별색 = 내 구단 색 한 가지 */
+  /* 글자·선으로 쓸 땐 종이 위에서 읽히게 어둡힌 별색, 면(주 버튼)은 별색 그대로 */
+  --accent: var(--club-text);
+  --accent-2: var(--club);
+  --accent-deep: var(--club-text);
+  --accent-ink: #F6F4EE;
+  --accent-weak: color-mix(in srgb, var(--club) 11%, transparent);
+
+  --good: #2F6B4F;
+  --bad: #A8342A;
+  --warn: #7E6230;
+  --info: #2C4A6E;
+  --up: #A8342A;
+  --down: #2C4A6E;
+
+  --ball: #3F7D5A;
+  --strike: #A8812D;
+  --out: #A8342A;
+  --volt: var(--club);      /* 형광 없음 — 별색으로 */
+  --gold: var(--fg);        /* 화면 UI 에 금색 없음 */
+  --gold-2: var(--fg-2);
+
+  /* 경기장 — 기록지에 그린 그림: 종이 위 먹 선, 흙은 크라프트 */
+  --field-sky: #E7E3D8;
+  --field-grass: #E5E1D5;
+  --field-grass-2: #DEDACB;
+  --field-dirt: #D6C9AE;
+  --field-dirt-2: #BCAC8A;
+  --field-line: #1D1E21;
+  --field-wall: #1D1E21;
+  --field-track: #CEC2A6;
+  --field-stands: #EEEBE3;
+  --field-light: #FFFFFF;
+  --field-light-a: 0;
+  --field-scenery-water: #DCD8CB;
+  --field-scenery-land: #E2DED2;
+
+  --font-head: 'Wanted Sans Variable', var(--font-body);
+  --font-num-display: 'Big Shoulders Display Variable', 'Barlow Condensed', sans-serif;
+  --num-stretch: 100%;
+  --num-weight: 600;
+  --num-display-weight: 800;
+  --num-display-style: normal;
+  --head-weight: 900;
+  --head-tracking: -.04em;
+
+  --r-1: 0px;
+  --r-2: 1px;
+  --r-3: 2px;
+  --r-card: 4px;
+  --btn-clip: none;
+
+  --shadow-1: none;
+  --shadow-2: 0 10px 24px -14px rgba(29, 30, 33, .35);
+  --shadow-sheet: 0 -10px 30px -14px rgba(29, 30, 33, .3);
+
+  /* 카드 용지 결 (중성 회색 섬유) */
+  --texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .2 0 0 0 0 .2 0 0 0 0 .18 0 0 0 .5 -.18'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.42'/%3E%3C/svg%3E");
+  --texture-size: 200px 200px;
+  --page-glow: none;
+  /* 판 어긋남 — 별색 판이 먹 판보다 아주 살짝 밀림 (1px 이하) */
+  --misreg: .7px .5px 0 color-mix(in srgb, var(--club) 60%, transparent);
+  /* 망점 */
+  --halftone: radial-gradient(circle at 50% 50%, rgba(29, 30, 33, .17) 0 .9px, transparent 1.25px);
+  --halftone-size: 4px 4px;
+
+  --header-bg: #EEEBE3;
+  --header-fg: #1D1E21;
+  --header-fg-2: #46474B;
+  --header-line: rgba(29, 30, 33, .74);
+  --menu-bg: #EEEBE3;
+  --menu-fg: #77766F;
+  --menu-fg-on: #1D1E21;
+  --menu-bar: #1D1E21;
+
+  --focus: #1D1E21;
+
+  --coin: #D8D3C5;
+  --coin-edge: #6E6C66;
+  --goldball: #C9B27A;
+  --goldball-seam: #5E4A20;
+  --emblem-edge: rgba(29, 30, 33, .3);
+
+  --gr-normal: #6F6E68;
+  --gr-special: #B85C1C;
+  --gr-rare: #A61F30;
+  --gr-elite: #5E43B0;
+  --gr-legend: #8C6A2F;
+  --gr-franchise: #8C6A2F;
+  --gr-black: #1D1E21;
+  --gr-signature: #4F3AA6;
+  --gr-mvp: #8C6A2F;
+  --gr-gg: #8C6A2F;
+  --gr-th: #8C6A2F;
+  --gr-unique: #0F6E62;
+}

@@ -1,0 +1,200 @@
+/* 영입 — 팩 고르기 화면 */
+.screen { padding-bottom: 40px; }
+.tabs { padding: 0 var(--gutter); }
+.tabs > button { flex: 1 0 auto; }
+
+/* ───────── 무대 ───────── */
+.stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(124px, 42%) 1fr;
+  gap: 18px;
+  align-items: center;
+  padding: 22px var(--gutter) 22px;
+  background: var(--inv);
+  color: var(--inv-fg);
+  overflow: hidden;
+  isolation: isolate;
+}
+.stageBg { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.beamL, .beamR { display: none; }
+.bigNum { display: none; }
+
+.packCol { position: relative; padding: 4px 4px 2px; }
+.packArt { width: 100%; filter: drop-shadow(0 18px 22px rgba(0, 0, 0, .5)); }
+
+.info { min-width: 0; }
+.kicker { display: flex; align-items: baseline; gap: 8px; font-size: 11px; letter-spacing: .2em; color: var(--inv-fg-2); font-weight: 700; }
+.kicker em { font-family: var(--font-body); letter-spacing: -.02em; font-size: 11.5px; color: var(--accent-2); }
+.title { margin: 7px 0 4px; font-size: 27px; line-height: 1.08; color: var(--inv-fg); }
+.title small { margin-left: 7px; font-size: 17px; letter-spacing: -.03em; color: var(--inv-fg-2); }
+.desc { font-size: 12.5px; line-height: 1.4; color: var(--inv-fg-2); letter-spacing: -.03em; }
+
+.facts { margin: 12px 0 14px; border-top: 1px solid var(--inv-line); }
+.fact { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 34px; border-bottom: 1px solid var(--inv-line); }
+.fact dt { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; letter-spacing: -.03em; white-space: nowrap; color: var(--inv-fg); }
+.fact dd { display: flex; align-items: baseline; gap: 7px; margin: 0; white-space: nowrap; }
+.fact dd b { font-size: 17px; color: var(--inv-fg); }
+.fact dd span { font-size: 11px; color: var(--inv-fg-3); }
+.fact dd span .num { font-size: 12px; color: var(--inv-fg-2); }
+.factPity dt { color: var(--inv-fg-2); font-weight: 600; }
+.factPity dd b { font-size: 19px; color: var(--accent-2); }
+
+.buy { box-shadow: 0 10px 22px -12px rgba(0, 0, 0, .7); }
+.buyPrice { color: inherit; }
+.wallet { margin-top: 8px; display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--inv-fg-3); white-space: nowrap; }
+.wallet .num { font-size: 11.5px; color: var(--inv-fg-2); }
+
+.price { display: inline-flex; align-items: center; gap: 5px; }
+
+/* night — 경기장 조명 두 줄기 + 바닥 빛 */
+:global([data-theme='night']) .stage { background: radial-gradient(120% 90% at 26% 40%, #0E1A2E 0%, #050911 62%, #03060B 100%); }
+:global([data-theme='night']) .beamL, :global([data-theme='night']) .beamR {
+  display: block; position: absolute; top: -40px; width: 120px; height: 140%;
+  background: linear-gradient(180deg, rgba(255, 240, 214, .2), rgba(255, 240, 214, 0) 78%);
+  filter: blur(10px); transform-origin: top center;
+}
+:global([data-theme='night']) .beamL { left: 2%; transform: rotate(-16deg); }
+:global([data-theme='night']) .beamR { left: 34%; transform: rotate(14deg); opacity: .7; }
+:global([data-theme='night']) .stageBg::after {
+  content: ''; position: absolute; left: 4%; width: 40%; bottom: 12px; height: 26px;
+  background: radial-gradient(closest-side, rgba(255, 228, 176, .2), transparent);
+}
+:global([data-theme='night']) .buy { background: linear-gradient(180deg, #FFE7A3 0%, #E9B44C 48%, #C8902F 52%, #E6B24A 100%); color: #2A1A04; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), inset 0 -1px 0 rgba(0, 0, 0, .25), 0 10px 24px -12px rgba(233, 180, 76, .5); }
+:global([data-theme='night']) .buy:hover:not(:disabled) { background: linear-gradient(180deg, #FFEDB8 0%, #EDBC5A 48%, #CC9634 52%, #EAB955 100%); }
+:global([data-theme='night']) .factPity dd b { color: #F3D89C; }
+
+/* broadcast — 검은 띠 + 사선 + 큰 기울인 숫자 */
+:global([data-theme='broadcast']) .stage { background: #0B0E12; }
+:global([data-theme='broadcast']) .stageBg::before {
+  content: ''; position: absolute; left: -10%; right: -10%; bottom: 18%; height: 38%;
+  background: linear-gradient(90deg, rgba(242, 100, 30, 0), rgba(242, 100, 30, .16) 30%, rgba(242, 100, 30, .05) 80%);
+  transform: skewY(-11deg);
+}
+:global([data-theme='broadcast']) .bigNum {
+  display: block; position: absolute; right: -8px; top: 8px;
+  font-size: 230px; color: rgba(243, 241, 236, .045); letter-spacing: -.05em;
+}
+:global([data-theme='broadcast']) .stage::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--accent); }
+:global([data-theme='broadcast']) .title { font-size: 29px; }
+:global([data-theme='broadcast']) .kicker { color: var(--accent-2); }
+
+/* classic — 수동 점수판 초록 나무판 + 흰 페인트 숫자판 */
+:global([data-theme='classic']) .stage {
+  background:
+    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0) 0 46px, rgba(0, 0, 0, .16) 46px 47px, rgba(255, 255, 255, .03) 47px 48px),
+    var(--inv);
+  box-shadow: inset 0 0 0 4px #1A2D22, inset 0 0 0 5px rgba(242, 239, 230, .14);
+}
+:global([data-theme='classic']) .stageBg { background-image: var(--texture); background-size: var(--texture-size); opacity: .5; mix-blend-mode: soft-light; }
+:global([data-theme='classic']) .packArt { filter: drop-shadow(0 10px 14px rgba(0, 0, 0, .35)); }
+:global([data-theme='classic']) .facts { border-top: 0; display: grid; gap: 4px; }
+:global([data-theme='classic']) .fact { border: 0; min-height: 32px; padding: 0 0 0 2px; }
+:global([data-theme='classic']) .fact dd b {
+  min-width: 52px; padding: 3px 6px 1px; text-align: center;
+  font-family: var(--font-num-display); font-weight: 800; font-size: 19px; line-height: 1;
+  color: #1D1E21; background: #F2EFE6; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .12);
+}
+:global([data-theme='classic']) .factPity dd b { color: #1D1E21; }
+:global([data-theme='classic']) .fact dd span { color: var(--inv-fg-2); }
+:global([data-theme='classic']) .kicker em { color: var(--inv-fg); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ───────── 골라 뽑기 ───────── */
+.pick { padding: 18px 0 2px; border-bottom: 1px solid var(--line); }
+.pick .secHead { padding: 0 var(--gutter); }
+.years { display: flex; gap: 6px; overflow-x: auto; padding: 12px var(--gutter) 4px; scrollbar-width: none; scroll-snap-type: x proximity; }
+.years::-webkit-scrollbar { display: none; }
+.yearBtn {
+  flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  width: 54px; height: 58px; scroll-snap-align: start;
+  border-radius: var(--r-2);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  color: var(--fg);
+  transition: background-color var(--dur-2), color var(--dur-2), box-shadow var(--dur-2);
+}
+.yearBtn b { font-size: 25px; line-height: .9; }
+.yearBtn small { font-size: 10.5px; color: var(--fg-3); letter-spacing: -.03em; }
+.yearBtn.legendYear small { color: var(--gr-legend); }
+.yearBtn.on { background: var(--fg); color: var(--bg); box-shadow: none; }
+.yearBtn.on small { color: color-mix(in srgb, var(--bg) 70%, transparent); }
+:global([data-theme='night']) .yearBtn.on { background: var(--surface-3); color: var(--fg); box-shadow: inset 0 0 0 1px var(--line-3), inset 0 -2px 0 var(--accent); }
+:global([data-theme='night']) .yearBtn.on small { color: var(--fg-2); }
+:global([data-theme='classic']) .yearBtn { border-radius: 0; background: var(--surface); }
+:global([data-theme='classic']) .yearBtn.on { background: var(--inv); color: var(--inv-fg); }
+
+.yearNote { padding: 10px var(--gutter) 14px; font-size: 12.5px; color: var(--fg-2); }
+.yearNote p b { color: var(--fg); font-size: 14px; }
+.yearNote ul { margin-top: 8px; display: grid; gap: 6px; }
+.yearNote li { display: flex; align-items: flex-start; gap: 8px; line-height: 1.4; }
+.yearNote li b { color: var(--fg); font-weight: 700; }
+
+.clubs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px 2px; padding: 12px calc(var(--gutter) - 4px) 14px; }
+.clubBtn {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 8px 0 7px; border-radius: var(--r-2);
+  font-size: 11.5px; font-weight: 700; letter-spacing: -.04em; color: var(--fg-3);
+  transition: color var(--dur-2), background-color var(--dur-2);
+}
+.clubBtn.on { color: var(--fg); background: color-mix(in srgb, var(--team) 12%, transparent); }
+.clubBtn.on::after { content: ''; position: absolute; left: 22%; right: 22%; bottom: 0; height: 2px; background: var(--team); }
+:global([data-theme='classic']) .clubBtn { border-radius: 0; }
+
+/* ───────── 아래 구역 ───────── */
+.sec { padding: 20px var(--gutter) 2px; }
+.secHead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.secHead h3 { font-size: 16px; line-height: 1.3; }
+.secHead > span { font-size: 11.5px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.link { display: inline-flex; align-items: center; gap: 2px; min-height: 32px; font-size: 12.5px; font-weight: 700; color: var(--fg-2); }
+.link:hover { color: var(--fg); }
+
+.oddsBar { margin-top: 10px; }
+.legendList { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; margin-top: 8px; }
+.legendList li { display: flex; align-items: center; gap: 7px; height: 28px; border-bottom: 1px solid var(--line); font-size: 12.5px; color: var(--fg-2); letter-spacing: -.03em; }
+.legendList li b { margin-left: auto; font-size: 13.5px; color: var(--fg); }
+.missing { display: flex; gap: 8px; margin-top: 10px; padding: 10px 12px; font-size: 12.5px; line-height: 1.45; color: var(--fg-2); background: var(--surface-2); border-radius: var(--r-2); }
+.missing svg { flex: none; margin-top: 1px; color: var(--fg-3); }
+.missing b { color: var(--fg); }
+:global([data-theme='classic']) .missing { background: transparent; box-shadow: inset 0 0 0 1px var(--line-2); border-radius: 0; }
+
+.pityRow { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 18px; margin-top: 10px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.pityBig { display: flex; align-items: baseline; gap: 4px; font-size: 13px; font-weight: 700; letter-spacing: -.04em; white-space: nowrap; }
+.pityBig b { font-size: 40px; line-height: .8; margin: 0 1px; }
+.pityRight p { margin-top: 6px; font-size: 11.5px; color: var(--fg-3); letter-spacing: -.02em; }
+.pityRight p .num { color: var(--fg-2); font-size: 12px; }
+
+.combos { margin-top: 6px; }
+.combos li { padding: 10px 0 11px; border-bottom: 1px solid var(--line); }
+.comboTop { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.comboTop b { font-size: 13.5px; letter-spacing: -.03em; }
+.comboTop span { font-size: 17px; font-weight: 700; }
+.comboTop span i { font-size: 13px; color: var(--fg-3); }
+.comboBar { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 3px; margin-top: 7px; }
+.comboBar i { height: 5px; background: var(--line-2); }
+.comboBar i.on { background: var(--club); }
+.combos p { margin-top: 7px; font-size: 12.5px; color: var(--fg-2); }
+.combos p em { color: var(--fg); font-weight: 700; }
+.combos p b { font-size: 14px; color: var(--fg); }
+:global([data-theme='night']) .comboBar i.on { background: var(--volt); }
+.empty { margin-top: 8px; font-size: 12.5px; color: var(--fg-3); }
+
+.toCombo {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  width: calc(100% - var(--gutter) * 2); margin: 22px var(--gutter) 0; padding: 16px 16px 16px 18px;
+  text-align: left; color: var(--fg);
+  background: var(--surface); border-radius: var(--r-3);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  transition: box-shadow var(--dur-2), transform var(--dur-1);
+}
+.toCombo:hover { box-shadow: inset 0 0 0 1px var(--line-3); }
+.toCombo:active { transform: scale(.99); }
+.toComboText { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.toComboText b { font-size: 16px; }
+.toComboText span { font-size: 12.5px; color: var(--fg-2); line-height: 1.4; }
+:global([data-theme='broadcast']) .toCombo { background: var(--inv); color: var(--inv-fg); box-shadow: none; border-radius: 0; border-left: 4px solid var(--accent); }
+:global([data-theme='broadcast']) .toComboText span { color: var(--inv-fg-2); }
+:global([data-theme='classic']) .toCombo { border-radius: 0; background: transparent; box-shadow: inset 0 0 0 1px var(--line-3), inset 0 0 0 4px var(--bg), inset 0 0 0 5px var(--line-2); }
+
+@media (min-width: 560px) {
+  .stage { grid-template-columns: 200px 1fr; gap: 28px; padding: 28px var(--gutter); }
+  .clubs { grid-template-columns: repeat(10, 1fr); }
+}

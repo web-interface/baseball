@@ -1,0 +1,72 @@
+.todo { padding: 0 var(--gutter); }
+.h { font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 17px; margin-bottom: 10px; }
+
+/* 헤어라인 격자 — 칸 사이 1px 선 */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line);
+  box-shadow: 0 0 0 1px var(--line);
+}
+.grid li { background: var(--bg); background-image: var(--texture); background-size: var(--texture-size); }
+.tile {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto auto;
+  gap: 2px;
+  width: 100%;
+  min-height: 92px;
+  padding: 11px 12px 12px;
+  text-align: left;
+  color: var(--fg);
+  transition: background-color var(--dur-1);
+}
+.tile:active { background: var(--line); }
+@media (hover: hover) { .tile:hover { background: color-mix(in srgb, var(--fg) 4%, transparent); } }
+.top { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--fg-2); letter-spacing: -.02em; }
+.top svg { color: var(--fg-3); }
+.value { margin-top: 4px; line-height: 1; }
+.value b { font-size: 28px; font-weight: 600; color: var(--fg); letter-spacing: -.01em; }
+.value i { font-size: 14px; color: var(--fg-3); margin-left: 2px; font-weight: 600; }
+.note { font-size: 11.5px; color: var(--fg-3); letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.note b, .note .num { color: var(--fg-2); font-size: 12.5px; }
+.chev { position: absolute; right: 9px; top: 12px; color: var(--fg-4); }
+.hot .value b { color: var(--accent); }
+.hot .top { color: var(--fg); }
+
+:global([data-theme='broadcast']) .grid { background: var(--fg); box-shadow: 0 0 0 1.5px var(--fg); gap: 1.5px; }
+:global([data-theme='broadcast']) .grid li { background: var(--surface); }
+:global([data-theme='broadcast']) .value b { font-style: italic; font-weight: 800; }
+:global([data-theme='broadcast']) .hot .value b { color: var(--accent-deep); }
+:global([data-theme='classic']) .grid { background: var(--line-2); box-shadow: 0 0 0 1px var(--line-3); }
+:global([data-theme='classic']) .value b { font-family: var(--font-num-display); font-weight: 800; font-size: 30px; }
+:global([data-theme='classic']) .hot .value b { color: var(--club-text); text-shadow: var(--misreg); }
+
+@media (min-width: 520px) {
+  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* 시즌 자동 진행 시트 */
+.sheet { display: flex; flex-direction: column; gap: 12px; padding-bottom: 6px; }
+.sheetLabel { font-size: 12px; font-weight: 700; color: var(--fg-3); }
+.path { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 4px; border-top: 2px solid var(--fg); }
+.path li { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 10px 6px 0 0; font-size: 11px; color: var(--fg-3); line-height: 1.3; }
+.path li::before { content: ''; position: absolute; top: -6px; left: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--bg); box-shadow: inset 0 0 0 2px var(--fg); }
+.path li:first-child::before { background: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+.path b { font-size: 12.5px; color: var(--fg); letter-spacing: -.03em; }
+
+.toggle { position: relative; display: flex; align-items: center; gap: 12px; padding: 12px 0 4px; border-top: 1px solid var(--line); cursor: pointer; }
+.toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch { flex: none; position: relative; width: 42px; height: 24px; border-radius: 12px; background: var(--line-2); transition: background-color var(--dur-2); }
+.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--fg); transition: transform var(--dur-2) var(--ease-out); }
+.toggle input:checked + .switch { background: var(--accent); }
+.toggle input:checked + .switch::after { transform: translateX(18px); background: var(--accent-ink); }
+.toggle input:focus-visible + .switch { outline: 2px solid var(--focus); outline-offset: 2px; }
+.toggleText { display: flex; flex-direction: column; gap: 2px; }
+.toggleText b { font-size: 14px; letter-spacing: -.03em; }
+.toggleText small { font-size: 12px; color: var(--fg-3); }
+:global([data-theme='classic']) .switch, :global([data-theme='broadcast']) .switch { border-radius: 2px; }
+:global([data-theme='classic']) .switch::after, :global([data-theme='broadcast']) .switch::after { border-radius: 1px; }
+:global([data-theme='classic']) .toggle input:checked + .switch { background: var(--club); }
+:global([data-theme='classic']) .toggle input:checked + .switch::after { background: var(--club-ink); }

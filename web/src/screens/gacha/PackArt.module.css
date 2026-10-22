@@ -1,0 +1,129 @@
+/* 팩 그림 — 색은 여기서만 (테마 × 재질). 팩은 '상품 인쇄물'이라 고유 잉크를 쓴다 */
+.pack {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  -webkit-user-select: none;
+  user-select: none;
+  /* 기본(night · 그래파이트) */
+  --c0: #4A566C; --c1: #2C3547; --c2: #1E2534; --c3: #2A3346; --c4: #161C29; --c5: #10141D;
+  --ink: #E9EEF4; --ink2: rgba(233, 238, 244, .6); --mark: #C9D1DC;
+  --crimp: rgba(0, 0, 0, .22); --ridge: rgba(255, 255, 255, .1); --perf: rgba(255, 255, 255, .4);
+  --tagbg: rgba(0, 0, 0, .34); --tagfg: #E9EEF4; --edge: rgba(255, 255, 255, .2);
+  --stripeA: transparent; --stripeB: transparent; --spot: #46474B;
+}
+.s0 { stop-color: var(--c0); } .s1 { stop-color: var(--c1); } .s2 { stop-color: var(--c2); }
+.s3 { stop-color: var(--c3); } .s4 { stop-color: var(--c4); } .s5 { stop-color: var(--c5); }
+
+.mark { stroke: var(--mark); }
+.nameKo { font-family: var(--font-head); font-weight: 900; font-size: 25px; letter-spacing: -.04em; fill: var(--ink); }
+.nameEn { font-family: var(--font-num); font-weight: 700; font-size: 10.5px; letter-spacing: .26em; fill: var(--ink2); }
+.tagBox { fill: var(--tagbg); }
+.tagText { font-family: var(--font-body); font-weight: 700; font-size: 10px; letter-spacing: -.02em; fill: var(--tagfg); }
+.crimp { fill: var(--crimp); }
+.crimpLine { fill: var(--ridge); }
+.ridge { fill: var(--ridge); }
+.ridges { opacity: .9; }
+.perf { stroke: var(--perf); stroke-width: 1.1; stroke-dasharray: 3 3; }
+.notch { fill: none; stroke: var(--perf); stroke-width: 1.4; stroke-linejoin: round; }
+.edge { fill: none; stroke: var(--edge); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.floor { fill: rgba(0, 0, 0, .45); filter: blur(4px); }
+.facets path { mix-blend-mode: normal; }
+
+/* 연도팩 */
+.yearKicker { font-family: var(--font-num); font-weight: 700; font-size: 11px; letter-spacing: .34em; fill: var(--ink2); }
+.yearBig { font-family: var(--font-num-display); font-weight: 800; font-size: 96px; letter-spacing: -.03em; fill: var(--yearFill, var(--ink)); font-style: var(--num-display-style); }
+.yearSmall { font-family: var(--font-num); font-weight: 600; font-size: 12px; letter-spacing: .3em; fill: var(--ink2); }
+
+/* 구단팩 */
+.clubDisc { fill: var(--disc, rgba(0, 0, 0, .18)); stroke: var(--discLine, rgba(255, 255, 255, .25)); stroke-width: 1; }
+
+/* 레전드팩 — 세피아 종이 + 밀랍 봉인 */
+.seal { fill: var(--sealC, #9E2B25); }
+.sealRing { fill: none; stroke: rgba(255, 230, 210, .35); stroke-width: 1.2; }
+.sealStar { fill: rgba(60, 10, 8, .45); stroke: rgba(255, 225, 205, .45); stroke-width: .8; }
+
+/* 반사 띠 — 고른 팩만 4초마다 한 번 */
+.sheen { transform: translateX(-140px); opacity: 0; }
+.sheenOn { animation: sheen 4.2s cubic-bezier(.45, 0, .2, 1) 600ms infinite; }
+@keyframes sheen {
+  0% { transform: translateX(-140px); opacity: 0; }
+  6% { opacity: 1; }
+  30% { transform: translateX(200px); opacity: 1; }
+  31%, 100% { transform: translateX(200px); opacity: 0; }
+}
+
+/* 찢기 */
+.strip { transform-box: view-box; transform-origin: 0 40px; transition: transform 90ms linear; }
+.leak { fill: var(--light); filter: blur(2.5px); }
+.torn .strip { animation: fly 420ms cubic-bezier(.3, 0, .8, .15) forwards; }
+@keyframes fly { to { transform: translate(-36px, -120px) rotate(-30deg); opacity: 0; } }
+
+/* 결과 신호 빛줄 */
+.signal { pointer-events: none; }
+.ray { fill: var(--light); animation: ray 1.25s cubic-bezier(.45, 0, .55, 1) infinite both; }
+@keyframes ray { 0% { transform: translateY(-100px); opacity: 0; } 20% { opacity: .9; } 100% { transform: translateY(300px); opacity: 0; } }
+
+/* ───────── night · 포일 ───────── */
+.k-gold { --c0: #FFF1C1; --c1: #E9B44C; --c2: #9C6A1E; --c3: #F5D27A; --c4: #A87420; --c5: #6E4510;
+  --ink: #1F1505; --ink2: rgba(31, 21, 5, .7); --mark: rgba(42, 26, 4, .82); --crimp: rgba(70, 40, 6, .18); --ridge: rgba(255, 255, 255, .22);
+  --perf: rgba(60, 35, 5, .5); --tagbg: rgba(26, 18, 6, .86); --tagfg: #F5D27A; --edge: rgba(255, 240, 200, .55); }
+.k-crimson { --c0: #FF9F92; --c1: #D3142E; --c2: #7A0715; --c3: #E1323E; --c4: #8E0A1B; --c5: #4E040C;
+  --ink: #FFF1EE; --ink2: rgba(255, 241, 238, .68); --mark: #FFD9D2; --crimp: rgba(0, 0, 0, .24); --ridge: rgba(255, 255, 255, .13);
+  --perf: rgba(255, 230, 225, .5); --tagbg: rgba(0, 0, 0, .36); --tagfg: #FFE3DD; --edge: rgba(255, 200, 190, .38); }
+.k-sepia { --c0: #F3E7C9; --c1: #E4D2A6; --c2: #CFB888; --c3: #E8D8B0; --c4: #CCB17E; --c5: #B59861;
+  --ink: #3A2717; --ink2: rgba(58, 39, 23, .66); --mark: #3A2717; --crimp: rgba(80, 50, 20, .14); --ridge: rgba(80, 50, 20, .2);
+  --perf: rgba(80, 50, 20, .55); --tagbg: #3A2717; --tagfg: #F1E4C4; --edge: rgba(80, 50, 20, .35); }
+.k-year { --c0: #2E3F64; --c1: #18233C; --c2: #0C1324; --c3: #1E2A47; --c4: #0E1628; --c5: #070C18;
+  --ink: #E9EEF4; --ink2: rgba(233, 238, 244, .58); --yearFill: #DCE3EE; --mark: #C9D1DC; --tagbg: rgba(220, 227, 238, .14); --tagfg: #DCE3EE; }
+.k-club {
+  --c0: color-mix(in srgb, var(--team) 62%, #fff); --c1: var(--team); --c2: color-mix(in srgb, var(--team) 60%, #000);
+  --c3: color-mix(in srgb, var(--team) 82%, #fff); --c4: color-mix(in srgb, var(--team) 70%, #000); --c5: color-mix(in srgb, var(--team) 45%, #000);
+  --ink: var(--team-ink); --ink2: color-mix(in srgb, var(--team-ink) 70%, transparent); --mark: var(--team-ink);
+  --perf: color-mix(in srgb, var(--team-ink) 50%, transparent); --tagbg: rgba(0, 0, 0, .34); --tagfg: #fff; --edge: rgba(255, 255, 255, .3);
+  --disc: color-mix(in srgb, var(--team2) 55%, transparent); --discLine: color-mix(in srgb, var(--team-ink) 35%, transparent);
+}
+
+/* ───────── broadcast · 평평한 면 + 사선 띠 ───────── */
+.t-broadcast .facets { display: none; }
+.t-broadcast .floor { fill: rgba(11, 14, 18, .3); }
+.t-broadcast { --edge: rgba(11, 14, 18, .25); }
+.t-broadcast.k-graphite { --c0: #E9E7E1; --c1: #E9E7E1; --c2: #E4E2DB; --c3: #E9E7E1; --c4: #E2DFD8; --c5: #DCD9D1;
+  --ink: #0B0E12; --ink2: #59606A; --mark: #0B0E12; --crimp: rgba(11, 14, 18, .07); --ridge: rgba(11, 14, 18, .12); --perf: rgba(11, 14, 18, .55);
+  --tagbg: #0B0E12; --tagfg: #F3F1EC; --stripeA: #0B0E12; --stripeB: #F2641E; }
+.t-broadcast.k-gold { --c0: #12161C; --c1: #0B0E12; --c2: #0B0E12; --c3: #10141A; --c4: #0B0E12; --c5: #07090C;
+  --ink: #F3F1EC; --ink2: #E8C77A; --mark: #E8C77A; --crimp: rgba(255, 255, 255, .05); --ridge: rgba(255, 255, 255, .1); --perf: rgba(232, 199, 122, .6);
+  --tagbg: #E8C77A; --tagfg: #0B0E12; --stripeA: #E8C77A; --stripeB: #B8862A; --edge: rgba(232, 199, 122, .5); }
+.t-broadcast.k-crimson { --c0: #D3263A; --c1: #D3263A; --c2: #C21F33; --c3: #D3263A; --c4: #BC1C30; --c5: #A9182A;
+  --ink: #FFFFFF; --ink2: rgba(255, 255, 255, .78); --mark: #fff; --crimp: rgba(0, 0, 0, .14); --ridge: rgba(255, 255, 255, .16);
+  --tagbg: #0B0E12; --tagfg: #fff; --stripeA: #0B0E12; --stripeB: #fff; }
+.t-broadcast.k-sepia { --c0: #F3EAD6; --c1: #F1E6CF; --c2: #ECE0C6; --c3: #F1E6CF; --c4: #E9DCC0; --c5: #E2D4B6;
+  --stripeA: #0B0E12; --stripeB: #B8862A; --sealC: #B3261E; }
+.t-broadcast.k-year { --c0: #F7F5F0; --c1: #F3F1EC; --c2: #F3F1EC; --c3: #EFECE6; --c4: #F3F1EC; --c5: #E9E7E1;
+  --ink: #0B0E12; --ink2: #59606A; --yearFill: #0B0E12; --tagbg: #0B0E12; --tagfg: #F3F1EC; --crimp: rgba(11, 14, 18, .06); --ridge: rgba(11, 14, 18, .12);
+  --perf: rgba(11, 14, 18, .5); --stripeA: #F2641E; --stripeB: #0B0E12; }
+.t-broadcast.k-club { --c0: var(--team); --c1: var(--team); --c2: var(--team); --c3: var(--team); --c4: var(--team); --c5: color-mix(in srgb, var(--team) 88%, #000);
+  --stripeA: var(--team2); --stripeB: color-mix(in srgb, var(--team-ink) 80%, transparent); }
+.stripeA { fill: var(--stripeA); }
+.stripeB { fill: var(--stripeB); }
+
+/* ───────── classic · 왁스 종이 인쇄 (먹 + 별색 한 가지) ───────── */
+.t-classic { --c0: #F1ECDF; --c1: #ECE6D6; --c2: #E8E1CF; --c3: #EDE7D8; --c4: #E6DFCC; --c5: #E1D9C4;
+  --ink: #1D1E21; --ink2: #46474B; --mark: #1D1E21; --crimp: rgba(29, 30, 33, .06); --ridge: rgba(29, 30, 33, .14);
+  --perf: rgba(29, 30, 33, .55); --tagbg: var(--spot); --tagfg: #F6F4EE; --edge: rgba(29, 30, 33, .4); --floor: rgba(29, 30, 33, .22); }
+.t-classic .floor { fill: rgba(29, 30, 33, .2); }
+.t-classic.k-graphite { --spot: #46474B; }
+.t-classic.k-gold { --spot: #A87B22; --mark: #A87B22; }
+.t-classic.k-crimson { --spot: #A8342A; --mark: #A8342A; }
+.t-classic.k-sepia { --c0: #E6D6B3; --c1: #DCC9A1; --c2: #D3BD90; --c3: #DFCCA5; --c4: #CDB688; --c5: #C2A977; --spot: #3A2717; --sealC: #9E2B25; --ink: #2B1D10; }
+.t-classic.k-year { --spot: var(--club); --yearFill: #1D1E21; }
+.t-classic.k-club { --spot: var(--team); --disc: color-mix(in srgb, var(--team) 14%, transparent); --discLine: rgba(29, 30, 33, .5); }
+.paperGrain { fill: var(--spot); opacity: .0; }
+.t-classic .tagBox { fill: var(--spot); }
+.t-classic .nameKo { paint-order: stroke; }
+.printFine { font-family: var(--font-num); font-weight: 600; font-size: 8px; letter-spacing: .14em; fill: var(--ink2); }
+.frameOuter { fill: none; stroke: var(--ink); stroke-width: 1.2; }
+.frameInner { fill: none; stroke: var(--spot); stroke-width: .8; }
+.dot { fill: var(--spot); opacity: .55; }
+.misreg { fill: var(--spot) !important; opacity: .5; }

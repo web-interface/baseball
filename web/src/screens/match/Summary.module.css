@@ -1,0 +1,155 @@
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .02em; color: var(--accent); }
+
+/* ───────── 경기 전 (무대 위) ───────── */
+.pre {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: flex-end;
+  background: linear-gradient(180deg, transparent 18%, color-mix(in srgb, var(--inv) 72%, transparent) 52%, color-mix(in srgb, var(--inv) 94%, transparent));
+}
+.preIn { width: 100%; padding: 0 var(--gutter) 16px; color: var(--inv-fg); animation: preIn 420ms var(--ease-out) both; }
+@keyframes preIn { from { opacity: 0; transform: translateY(10px); } }
+.pre .eyebrow { color: var(--accent-2); }
+.preTitle { margin-top: 4px; font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 30px; line-height: 1.05; text-shadow: var(--misreg); }
+.preFeat { margin-top: 6px; font-size: 13px; font-weight: 700; color: var(--inv-fg); letter-spacing: -.02em; }
+.preNote { margin-top: 2px; font-size: 12px; color: var(--inv-fg-2); }
+.favor { display: flex; gap: 8px; margin: 10px 0 14px; padding-top: 9px; border-top: 1px solid var(--inv-line); font-size: 12.5px; color: var(--inv-fg); letter-spacing: -.02em; line-height: 1.4; }
+.favor span { flex: none; color: var(--inv-fg-3); font-weight: 600; }
+
+/* 선발 맞대결 */
+.starters { padding: 12px var(--gutter) 14px; border-bottom: 1px solid var(--line); }
+.stHead { display: flex; align-items: baseline; justify-content: space-between; font-size: 12.5px; font-weight: 700; }
+.stHead small { font-size: 11px; font-weight: 500; color: var(--fg-3); }
+.stRow { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 10px; }
+.st { display: flex; gap: 10px; align-items: flex-end; min-width: 0; }
+.stR { flex-direction: row-reverse; text-align: right; padding-left: 10px; box-shadow: inset 1px 0 0 var(--line); }
+.stFace { flex: none; width: 58px; height: 70px; overflow: hidden; border-radius: var(--r-2); background: linear-gradient(180deg, transparent 30%, color-mix(in srgb, var(--tc) 34%, transparent)); box-shadow: inset 0 -2px 0 var(--tc); color: var(--fg); }
+.stInfo { min-width: 0; }
+.stTeam { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--fg-3); font-weight: 600; }
+.stName { font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stLine { font-size: 11px; color: var(--fg-3); white-space: nowrap; }
+.stLine b { font-size: 13.5px; color: var(--fg); }
+.stWp { display: flex; align-items: baseline; justify-content: space-between; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12px; color: var(--fg-3); font-weight: 600; }
+.stWp b { font-size: 28px; color: var(--fg); }
+.stWp i { font-size: 14px; color: var(--fg-2); margin-left: 1px; }
+
+/* ───────── 경기 끝 (무대 위) ───────── */
+.final {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  transform: translate(-50%, -64%);
+  padding: 12px 22px 12px;
+  text-align: center;
+  background: color-mix(in srgb, var(--inv) 88%, transparent);
+  box-shadow: inset 0 0 0 1px var(--inv-line);
+  color: var(--inv-fg);
+  border-radius: var(--r-2);
+  animation: preIn 400ms var(--ease-out) both;
+}
+.finalTag { font-size: 11px; font-weight: 700; color: var(--accent-2); letter-spacing: .02em; }
+.finalScore { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 6px; }
+.finalScore span { display: inline-flex; align-items: center; gap: 8px; }
+.finalScore b { font-size: 40px; }
+.finalScore i { font-style: normal; font-size: 22px; color: var(--inv-fg-3); }
+.finalWin { margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--inv-fg-2); }
+
+/* ───────── 요약 ───────── */
+.sum { padding-bottom: 24px; }
+.result { padding: 18px var(--gutter) 16px; border-bottom: 1px solid var(--line); }
+.resTag { font-size: 11.5px; color: var(--fg-3); font-weight: 600; }
+.resRow { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; margin-top: 10px; }
+.resTeam { display: flex; align-items: center; gap: 8px; font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 16px; color: var(--fg-3); }
+.resR { justify-content: flex-end; }
+.win { color: var(--fg); }
+.resScore { display: flex; align-items: center; gap: 12px; }
+.resScore b { font-size: 52px; line-height: .9; }
+.resScore i { width: 10px; height: 2px; background: var(--fg-3); }
+.dec { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 14px 0 0; padding-top: 11px; border-top: 1px solid var(--line); font-size: 13px; }
+.dec div { display: flex; gap: 6px; }
+.dec dt { color: var(--fg-3); font-weight: 600; }
+.dec dd { margin: 0; font-weight: 700; }
+
+.mvp { display: flex; gap: 14px; padding: 16px var(--gutter); border-bottom: 1px solid var(--line); }
+.mvpArt { flex: none; width: 104px; height: 128px; overflow: hidden; border-radius: var(--r-3); box-shadow: inset 0 0 0 1px var(--line-2); }
+.mvpInfo { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+.mvpName { margin-top: 3px; font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 26px; line-height: 1.1; text-shadow: var(--misreg); }
+.mvpLine { margin-top: 3px; font-size: 13px; font-weight: 600; color: var(--fg-2); }
+.mvpMoment { margin-top: 2px; font-size: 12px; color: var(--fg-3); }
+.mvpMoment::before { content: '— '; }
+.mvpWpa { display: flex; align-items: baseline; gap: 4px; margin-top: auto; padding-top: 8px; font-size: 11.5px; color: var(--fg-3); font-weight: 600; }
+.mvpWpa b { font-size: 22px; color: var(--accent); margin-left: 4px; }
+
+.sec { padding: 16px var(--gutter) 6px; }
+.h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 16px; }
+.h small { font-family: var(--font-body); font-weight: 500; font-size: 11px; color: var(--fg-3); letter-spacing: -.02em; text-align: right; }
+
+.factors { border-top: 1px solid var(--line-2); }
+.factor { display: grid; grid-template-columns: 18px 22px 1fr; gap: 8px; align-items: start; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.fNo { font-size: 15px; color: var(--fg-4); padding-top: 1px; }
+.fIco { color: var(--accent); margin-top: 1px; }
+.fHead { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--fg-2); }
+.fHead em { font-style: normal; font-size: 10.5px; font-weight: 700; color: var(--accent); box-shadow: inset 0 -1px 0 currentColor; }
+.fText { margin-top: 2px; font-size: 13.5px; line-height: 1.45; letter-spacing: -.025em; }
+
+.chart { margin-top: 2px; }
+.chartSvg { width: 100%; height: auto; display: block; overflow: visible; touch-action: pan-y; }
+.grid { stroke: var(--line); stroke-width: 1; }
+.gMid { stroke: var(--line-3); stroke-width: 1; }
+.axis { font-family: var(--font-num); font-size: 9.5px; fill: var(--fg-4); font-variant-numeric: tabular-nums; }
+.areaMine { opacity: .16; }
+.areaOpp { opacity: .12; }
+.line { fill: none; stroke: var(--fg); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.cross { stroke: var(--fg-3); stroke-width: 1; }
+.dot { cursor: pointer; }
+.dot circle:last-child { stroke: var(--bg); stroke-width: 2; }
+.hit { fill: transparent; }
+.lab { font-size: 10px; font-weight: 600; fill: var(--fg-3); }
+.tip { min-height: 36px; margin-top: 6px; font-size: 12.5px; line-height: 1.45; letter-spacing: -.02em; }
+.tip b { margin-right: 4px; }
+.tip .num { margin-left: 4px; font-weight: 700; }
+.tipDim { color: var(--fg-4); }
+
+.scenes { border-top: 1px solid var(--line-2); }
+.scene { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--line); text-align: left; }
+.scInn { flex: none; width: 44px; font-size: 11.5px; font-weight: 700; color: var(--fg-3); }
+.scInn b { font-size: 16px; color: var(--fg); margin-right: 1px; }
+.scBody { flex: 1; min-width: 0; display: flex; flex-direction: column; padding-left: 10px; box-shadow: inset 3px 0 0 var(--tc); }
+.scBody b { font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 15px; }
+.scBody small { font-size: 12px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scPlay { flex: none; color: var(--fg-3); }
+
+.info { display: grid; gap: 4px; font-size: 12.5px; color: var(--fg-2); }
+.info span { display: inline-block; width: 64px; color: var(--fg-3); }
+.info b { font-size: 14px; color: var(--fg); margin-right: 2px; }
+.again { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 16px var(--gutter) 0; }
+
+/* broadcast */
+:global([data-theme='broadcast']) .final { background: var(--inv); box-shadow: none; border-radius: 0; border-top: 4px solid var(--accent); }
+:global([data-theme='broadcast']) .result { background: var(--inv); color: var(--inv-fg); border-bottom: 0; box-shadow: inset 0 -4px 0 var(--accent); }
+:global([data-theme='broadcast']) .resTeam { color: var(--inv-fg-3); }
+:global([data-theme='broadcast']) .win { color: var(--inv-fg); }
+:global([data-theme='broadcast']) .resTag, :global([data-theme='broadcast']) .dec dt { color: var(--inv-fg-2); }
+:global([data-theme='broadcast']) .dec { border-top-color: var(--inv-line); }
+:global([data-theme='broadcast']) .resScore i { background: var(--inv-fg-3); }
+:global([data-theme='broadcast']) .mvpArt { border-radius: 0; }
+
+/* classic — 신문 경기 결과란 */
+:global([data-theme='classic']) .pre { background: linear-gradient(180deg, transparent 20%, color-mix(in srgb, var(--bg) 82%, transparent) 50%, var(--bg)); }
+:global([data-theme='classic']) .preIn { color: var(--fg); }
+:global([data-theme='classic']) .pre .eyebrow { color: var(--club-text); }
+:global([data-theme='classic']) .preNote, :global([data-theme='classic']) .favor span { color: var(--fg-3); }
+:global([data-theme='classic']) .preFeat, :global([data-theme='classic']) .favor { color: var(--fg); }
+:global([data-theme='classic']) .favor { border-top-color: var(--line-2); }
+:global([data-theme='classic']) .final { background: var(--surface); color: var(--fg); box-shadow: inset 0 0 0 1px var(--line-3), 0 0 0 4px var(--surface), 0 0 0 5px var(--line-3); border-radius: 0; }
+:global([data-theme='classic']) .finalTag { color: var(--club-text); }
+:global([data-theme='classic']) .finalScore i, :global([data-theme='classic']) .finalWin { color: var(--fg-3); }
+:global([data-theme='classic']) .result { border-top: 3px double var(--line-3); }
+:global([data-theme='classic']) .mvpArt, :global([data-theme='classic']) .stFace { border-radius: 0; box-shadow: inset 0 0 0 1px var(--line-3); }
+:global([data-theme='classic']) .fIco, :global([data-theme='classic']) .fHead em, :global([data-theme='classic']) .mvpWpa b, :global([data-theme='classic']) .eyebrow { color: var(--club-text); }
+:global([data-theme='classic']) .areaMine { fill: var(--club) !important; opacity: .18; }
+:global([data-theme='classic']) .areaOpp { fill: var(--fg) !important; opacity: .07; }
+:global([data-theme='classic']) .scBody { box-shadow: inset 2px 0 0 var(--fg); }

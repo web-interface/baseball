@@ -1,0 +1,107 @@
+.art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* night 기본 */
+  --hs-sky1: #02050B;
+  --hs-sky2: #0C1A33;
+  --hs-light: #FFF4DE;
+  --hs-glow-a: .62;
+  --hs-beam-a: .15;
+  --hs-haze: #1E3A60;
+  --hs-haze-a: .34;
+  --hs-stand: #0A111F;
+  --hs-row: #7F9CC8;
+  --hs-row-a: .08;
+  --hs-crowd: #FFF2DA;
+  --hs-crowd-a: .32;
+  --hs-board-frame: #03060B;
+  --hs-board-face: #060B14;
+  --hs-board-text: #FFC53D;
+  --hs-tower: #060A12;
+  --hs-head: #101826;
+  --hs-lamp: #FFF8EA;
+  --hs-wall: #0C1626;
+  --hs-wall-top: #E7C44C;
+  --hs-track: #4C3424;
+  --hs-turf1: #1D5E39;
+  --hs-turf2: #0A2616;
+  --hs-stripe-a: .035;
+  --hs-dirt: #6E4A30;
+  --hs-infield: #154A2C;
+  --hs-base: #F4F1EA;
+  --hs-pool-a: .05;
+}
+
+.haze { fill: var(--hs-haze); opacity: var(--hs-haze-a); }
+.stand { fill: var(--hs-stand); }
+.row { fill: none; stroke: var(--hs-row); stroke-opacity: var(--hs-row-a); stroke-width: .8; }
+.crowd { stroke: var(--hs-crowd); stroke-opacity: var(--hs-crowd-a); stroke-width: 1.3; stroke-linecap: round; }
+.boardFrame { fill: var(--hs-board-frame); stroke: color-mix(in srgb, var(--hs-board-text) 22%, transparent); stroke-width: .8; }
+.boardFace { fill: var(--hs-board-face); }
+.boardText { font-family: var(--font-num); font-weight: 600; font-size: 10px; fill: var(--hs-board-text); opacity: .9; }
+.boardDots { stroke: var(--hs-board-text); stroke-opacity: .2; stroke-dasharray: 1.2 2.2; }
+.glow { fill: url(#hsGlow); }
+.pole { fill: var(--hs-tower); }
+.head { fill: var(--hs-head); }
+.lamp { fill: var(--hs-lamp); }
+.wall { fill: var(--hs-wall); }
+.wallTop { fill: var(--hs-wall-top); opacity: .85; }
+.track { fill: var(--hs-track); }
+.stripes { fill: #fff; opacity: var(--hs-stripe-a); }
+.dirt { fill: var(--hs-dirt); }
+.infield { fill: var(--hs-infield); }
+.base { fill: var(--hs-base); }
+.lightPool { fill: var(--hs-light); opacity: var(--hs-pool-a); }
+
+/* broadcast — 같은 밤 구장, 더 검고 대비 강하게 (중계 화면) */
+:global([data-theme='broadcast']) .art {
+  --hs-sky1: #050608;
+  --hs-sky2: #141A22;
+  --hs-haze: #24303F;
+  --hs-haze-a: .3;
+  --hs-stand: #0D1116;
+  --hs-row: #FFFFFF;
+  --hs-row-a: .05;
+  --hs-board-text: #FF8A4F;
+  --hs-wall: #0B0E12;
+  --hs-wall-top: #F2641E;
+  --hs-turf1: #2B6A3B;
+  --hs-turf2: #10301A;
+  --hs-infield: #24592F;
+  --hs-dirt: #8B5E3C;
+  --hs-glow-a: .55;
+}
+
+/* classic — 인쇄물: 종이 하늘 · 먹 관중석 · 초록 나무 점수판 · 별색 담장 선 (조명 끔) */
+:global([data-theme='classic']) .art {
+  --hs-sky1: #EEEBE3;
+  --hs-sky2: #E8E4D9;
+  --hs-light: #FFFFFF;
+  --hs-glow-a: 0;
+  --hs-beam-a: 0;
+  --hs-haze: #DCD7CA;
+  --hs-haze-a: .55;
+  --hs-stand: #B7B3A8;      /* 먹 30% 망점 */
+  --hs-row: #1D1E21;
+  --hs-row-a: .16;
+  --hs-crowd: #1D1E21;
+  --hs-crowd-a: .45;
+  --hs-board-frame: #22382C;
+  --hs-board-face: #2C4637;
+  --hs-board-text: #F2EFE6;
+  --hs-tower: #1D1E21;
+  --hs-head: #1D1E21;
+  --hs-lamp: #E9E5DA;
+  --hs-wall: #1D1E21;
+  --hs-wall-top: var(--club);
+  --hs-track: #D2C6AA;
+  --hs-turf1: #E3DFD3;
+  --hs-turf2: #D9D4C6;
+  --hs-stripe-a: 0;
+  --hs-dirt: #CDBE9F;
+  --hs-infield: #E2DED1;
+  --hs-base: #1D1E21;
+  --hs-pool-a: 0;
+}
+:global([data-theme='classic']) .beams, :global([data-theme='classic']) .glow { display: none; }

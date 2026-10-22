@@ -1,0 +1,39 @@
+.field { display: flex; flex-direction: column; gap: 7px; }
+.label { font-size: 12.5px; font-weight: 600; color: var(--fg-2); letter-spacing: -.02em; }
+.input {
+  height: 50px;
+  width: 100%;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-2);
+  background: var(--sunk);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  color: var(--fg);
+  font-size: 16px; /* 16px 미만이면 아이폰이 확대함 */
+  letter-spacing: -.01em;
+  transition: box-shadow var(--dur-2);
+  -webkit-appearance: none;
+  appearance: none;
+}
+.input::placeholder { color: var(--fg-4); }
+.input:focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--accent); }
+.hint { font-size: 12px; color: var(--fg-3); }
+.bad .input { box-shadow: inset 0 0 0 1.5px var(--bad); }
+.bad .hint { color: var(--bad); }
+
+/* broadcast — 흰 상자 + 진한 테 */
+:global([data-theme='broadcast']) .input { background: #fff; box-shadow: inset 0 0 0 1px var(--line-2); }
+:global([data-theme='broadcast']) .input:focus { box-shadow: inset 0 0 0 2px var(--fg); }
+:global([data-theme='broadcast']) .label { color: var(--fg); font-weight: 700; }
+
+/* classic — 종이 위 밑줄 칸 */
+:global([data-theme='classic']) .input {
+  height: 46px;
+  padding: 0 2px;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: inset 0 -1px 0 var(--line-3);
+}
+:global([data-theme='classic']) .input:focus { box-shadow: inset 0 -2px 0 var(--accent); }
+:global([data-theme='classic']) .bad .input { box-shadow: inset 0 -2px 0 var(--bad); }
+:global([data-theme='classic']) .label { font-size: 12px; letter-spacing: .02em; color: var(--fg-3); }

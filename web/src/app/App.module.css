@@ -1,0 +1,31 @@
+.splash {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+.splash b { font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 22px; }
+.bar { position: relative; width: 120px; height: 2px; background: var(--line-2); overflow: hidden; }
+.bar::after { content: ''; position: absolute; top: 0; bottom: 0; width: 40%; background: var(--accent); animation: slide 900ms var(--ease-in-out) infinite; }
+@keyframes slide { from { left: -40%; } to { left: 100%; } }
+
+.code {
+  display: block;
+  margin: 4px 0 8px;
+  padding: 18px 12px;
+  text-align: center;
+  font-size: 24px;
+  letter-spacing: .08em;
+  background: var(--sunk);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  border-radius: var(--r-2);
+  word-break: break-all;
+  user-select: all;
+}
+
+.missing { padding: 64px var(--gutter); }
+.missing p { font-size: 64px; color: var(--fg-4); }
+.missing h2 { margin-top: 12px; font-family: var(--font-head); font-weight: var(--head-weight); font-size: 22px; letter-spacing: var(--head-tracking); }
+.missing a { display: inline-flex; margin-top: 16px; min-height: 44px; align-items: center; font-weight: 700; color: var(--accent); }

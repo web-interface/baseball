@@ -1,0 +1,61 @@
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: var(--r-3);
+  background-color: var(--bg);
+  background-image: var(--texture);
+  background-size: var(--texture-size);
+  color: var(--fg);
+  box-shadow: 0 0 0 1px var(--line-2);
+  text-align: left;
+  transition: box-shadow var(--dur-2), transform var(--dur-1);
+}
+.tile:active { transform: scale(.98); }
+.on { box-shadow: 0 0 0 2px var(--accent); }
+
+/* 작은 중계 띠 */
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  height: 26px;
+  padding: 0 8px;
+  background: var(--header-bg);
+  color: var(--header-fg);
+  border-bottom: 1px solid var(--header-line);
+}
+.bug { display: inline-flex; align-items: center; gap: 4px; }
+.bug b { font-size: 13px; line-height: 1; }
+.team, .team2 { width: 3px; height: 12px; background: #3AA9F0; }
+.team2 { background: #FF7A2A; margin-left: 2px; }
+.inn { font-size: 10px; font-weight: 700; color: var(--header-fg-2); }
+
+.body { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; padding: 12px 10px 6px; }
+.ovr { font-size: 40px; color: var(--fg); }
+.lines { display: flex; flex-direction: column; gap: 5px; flex: 1; max-width: 44px; padding-bottom: 4px; }
+.lines i { height: 3px; background: var(--line-3); }
+.lines i:first-child { background: var(--accent); width: 80%; }
+.lines i:last-child { width: 60%; }
+
+.name { display: flex; flex-direction: column; gap: 2px; padding: 4px 10px 12px; }
+.name b { font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 14px; line-height: 1.2; }
+.name small { font-size: 10.5px; color: var(--fg-3); line-height: 1.3; }
+.check { position: absolute; right: 8px; bottom: 10px; font-size: 10px; font-weight: 700; color: var(--accent); }
+.on .name { padding-right: 46px; }
+
+.compact .body { padding-top: 8px; }
+.compact .ovr { font-size: 30px; }
+.compact .name small { display: none; }
+
+@media (max-width: 380px) {
+  .grid { gap: 8px; }
+  .name b { font-size: 13px; }
+  .check { position: static; padding: 0 10px 10px; margin-top: -6px; }
+  .on .name { padding-right: 10px; }
+}

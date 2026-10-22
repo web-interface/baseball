@@ -1,0 +1,34 @@
+.field { position: relative; width: 100%; aspect-ratio: 1; }
+.svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.over { position: absolute; inset: 0; }
+
+.stands { fill: var(--field-stands); }
+.g1 { fill: var(--field-grass); }
+.g2 { fill: var(--field-grass-2); }
+.foul { fill: var(--field-grass); }
+.track { fill: var(--field-track); }
+.dirt { fill: var(--field-dirt); }
+.infieldGrass { stroke: var(--field-dirt-2); stroke-width: 2; stroke-linejoin: round; }
+.path { fill: none; stroke: var(--field-dirt); stroke-width: 6; stroke-linejoin: round; opacity: .9; }
+.pathTurf { fill: none; stroke: var(--field-line); stroke-width: .8; opacity: .35; }
+.lines { fill: none; stroke: var(--field-line); stroke-width: 1.2; opacity: .85; }
+.mound { fill: var(--field-dirt); stroke: var(--field-dirt-2); stroke-width: 1; }
+.base { fill: var(--field-line); }
+.box { fill: none; stroke: var(--field-line); stroke-width: .6; opacity: .5; }
+.wall { fill: var(--field-wall); }
+.wallTop { fill: none; stroke: var(--gold); stroke-width: .9; opacity: .8; }
+.dist text { font-family: var(--font-num); font-stretch: var(--num-stretch); font-weight: 600; font-size: 9px; fill: var(--field-line); opacity: .6; }
+.lights { mix-blend-mode: screen; }
+
+/* 외야 너머 풍경 — 아주 낮은 대비로 (경기장이 주인공) */
+.sea { fill: var(--field-scenery-water); }
+.wave { fill: none; stroke: var(--field-line); stroke-width: .8; opacity: .14; }
+.river { fill: var(--field-scenery-water); }
+.city { fill: var(--field-scenery-land); }
+.mountain { fill: var(--field-scenery-land); }
+.fortress { fill: var(--field-scenery-land); }
+.dome { fill: none; stroke: var(--field-line); stroke-width: 1.2; opacity: .16; stroke-dasharray: 2 5; }
+
+:global([data-theme='broadcast']) .wallTop { stroke: var(--accent); opacity: .9; }
+:global([data-theme='classic']) .wallTop { stroke: var(--field-line); opacity: .7; }
+:global([data-theme='classic']) .lights, :global([data-theme='broadcast']) .lights { display: none; }

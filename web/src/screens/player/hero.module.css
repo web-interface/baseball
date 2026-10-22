@@ -1,0 +1,205 @@
+/* 선수 상세 머리 — 카드 + 신상 + 세 칸(레벨 · 강화 · 잠재력) + 카드 바꾸기 */
+.top {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+/* 등번호 — 뒤에 아주 크게 */
+.bigNo {
+  position: absolute;
+  right: -10px;
+  top: 2px;
+  z-index: -1;
+  font-size: 172px;
+  line-height: .8;
+  letter-spacing: -.05em;
+  color: transparent;
+  -webkit-text-stroke: 1px var(--line-2);
+  text-shadow: none;
+  pointer-events: none;
+  user-select: none;
+  font-variant-numeric: proportional-nums;
+}
+/* night — 카드 뒤 구단색 빛 */
+.top::before {
+  content: '';
+  position: absolute;
+  z-index: -2;
+  left: -60px;
+  top: -40px;
+  width: 360px;
+  height: 380px;
+  background: radial-gradient(50% 50% at 46% 46%, color-mix(in srgb, var(--team) 24%, transparent), transparent 72%);
+  pointer-events: none;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  gap: 16px;
+  padding: 18px var(--gutter) 18px;
+  align-items: start;
+}
+.cardWrap { position: relative; min-width: 0; }
+.cardWrap > * { width: 100% !important; }
+
+.ident { min-width: 0; padding-top: 2px; }
+.eyebrow { font-size: 12px; font-weight: 600; color: var(--fg-3); letter-spacing: -.01em; }
+.name { margin-top: 6px; font-size: clamp(27px, 8.2vw, 36px); line-height: 1.04; word-break: keep-all; }
+.teamLine {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--fg-2);
+  white-space: nowrap;
+  min-width: 0;
+}
+.teamLine > span:nth-of-type(1) { overflow: hidden; text-overflow: ellipsis; }
+.teamLine .num { font-size: 13.5px; color: var(--fg-3); }
+.dot { width: 3px; height: 3px; border-radius: 50%; background: var(--fg-4); flex: none; }
+.bio { margin-top: 4px; font-size: 12.5px; color: var(--fg-3); }
+.bio .num { font-size: 13.5px; color: var(--fg-2); }
+
+.grade { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 12.5px; color: var(--fg-2); }
+.grade b { color: var(--gr); font-weight: 800; letter-spacing: -.02em; }
+.grade .num { font-size: 13.5px; }
+.grMark { width: 7px; height: 7px; background: var(--gr); transform: rotate(45deg); flex: none; margin-right: 1px; }
+
+.state {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--fg-3);
+}
+.cond { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.cond b { color: var(--fg); font-weight: 700; }
+.c5 svg { color: var(--up); }
+.c4 svg { color: color-mix(in srgb, var(--up) 55%, var(--warn)); }
+.c3 svg { color: var(--fg-3); }
+.c2 svg { color: color-mix(in srgb, var(--down) 70%, var(--fg-3)); }
+.c1 svg { color: var(--down); }
+.fat { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.fatBar { position: relative; width: 40px; height: 3px; background: var(--line-2); }
+.fatBar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--fg-2); }
+.fatBar .fatHi { background: var(--warn); }
+.fat b { font-size: 13px; color: var(--fg); }
+.inj { margin-top: 8px; font-size: 12px; font-weight: 700; color: var(--bad); }
+
+/* ── 세 칸 ── */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0 var(--gutter);
+  border-top: 1px solid var(--line-2);
+  border-bottom: 1px solid var(--line);
+}
+.kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 0;
+  padding: 13px 8px 13px 12px;
+  text-align: left;
+  color: inherit;
+  transition: background-color var(--dur-1);
+}
+.kpi:first-child { padding-left: 0; }
+.kpi + .kpi { border-left: 1px solid var(--line); }
+.kpi:active { background: var(--line); }
+.kLabel { font-size: 11.5px; font-weight: 700; color: var(--fg-3); letter-spacing: -.01em; }
+.kVal { font-size: 31px; line-height: .86; color: var(--fg); font-variant-numeric: proportional-nums; }
+.kValS { font-size: 24px; }
+.roman { letter-spacing: .03em; }
+.lvBar { position: relative; width: 100%; max-width: 92px; height: 3px; background: var(--line-2); }
+.lvBar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+.kSub { font-size: 11.5px; color: var(--fg-3); white-space: nowrap; letter-spacing: -.02em; }
+.kSub .num { font-size: 12.5px; color: var(--fg-2); }
+.kSub em { color: var(--accent); font-weight: 700; font-size: 11px; }
+.kStars { margin-top: -1px; }
+.enhPips i:nth-child(n + 6) { --pip-on: var(--accent); }
+
+/* ── 카드 바꾸기 ── */
+.switcher { padding: 14px var(--gutter) 0; }
+.swLabel { font-size: 12px; color: var(--fg-3); }
+.swLabel .num { color: var(--fg-2); font-size: 13px; }
+.swList { display: flex; gap: 14px; margin-top: 10px; padding: 4px 4px 8px; overflow-x: auto; scrollbar-width: none; }
+.swList::-webkit-scrollbar { display: none; }
+.sw { display: flex; flex-direction: column; align-items: center; gap: 7px; flex: none; color: inherit; }
+.swText { display: flex; align-items: baseline; gap: 4px; font-size: 11.5px; }
+.swText b { font-weight: 800; letter-spacing: .02em; }
+.swText .num { font-size: 12px; color: var(--fg-3); }
+.swOn .swText .num { color: var(--fg); }
+.dup { color: var(--accent) !important; }
+.swOff { opacity: .9; }
+
+/* ───────── broadcast — 검정 띠 위 TV 자막 ───────── */
+:global([data-theme='broadcast']) .top { background: var(--inv); color: var(--inv-fg); padding-bottom: 14px; }
+:global([data-theme='broadcast']) .top::before { display: none; }
+:global([data-theme='broadcast']) .top::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--accent); }
+:global([data-theme='broadcast']) .bigNo { color: rgba(255, 255, 255, .055); -webkit-text-stroke: 0; font-style: italic; right: -4px; top: 10px; font-size: 190px; }
+:global([data-theme='broadcast']) .eyebrow { color: var(--accent-2); }
+:global([data-theme='broadcast']) .name { color: var(--inv-fg); }
+:global([data-theme='broadcast']) .teamLine { color: var(--inv-fg); }
+:global([data-theme='broadcast']) .teamLine .num,
+:global([data-theme='broadcast']) .bio,
+:global([data-theme='broadcast']) .state { color: var(--inv-fg-2); }
+:global([data-theme='broadcast']) .bio .num { color: var(--inv-fg); }
+:global([data-theme='broadcast']) .grade { color: var(--inv-fg-2); }
+:global([data-theme='broadcast']) .grade b { color: var(--inv-fg); }
+:global([data-theme='broadcast']) .state { border-top-color: var(--inv-line); }
+:global([data-theme='broadcast']) .cond b,
+:global([data-theme='broadcast']) .fat b { color: var(--inv-fg); }
+:global([data-theme='broadcast']) .fatBar { background: var(--inv-line); }
+:global([data-theme='broadcast']) .fatBar i { background: var(--inv-fg-2); }
+:global([data-theme='broadcast']) .kpis { border-top: 1px solid var(--inv-line); border-bottom: 0; }
+:global([data-theme='broadcast']) .kpi + .kpi { border-left-color: var(--inv-line); }
+:global([data-theme='broadcast']) .kLabel { color: var(--inv-fg-2); }
+:global([data-theme='broadcast']) .kVal { color: var(--inv-fg); font-size: 34px; }
+:global([data-theme='broadcast']) .kSub { color: var(--inv-fg-2); }
+:global([data-theme='broadcast']) .kSub .num { color: var(--inv-fg); }
+:global([data-theme='broadcast']) .lvBar { background: var(--inv-line); height: 4px; }
+:global([data-theme='broadcast']) .swLabel { color: var(--inv-fg-2); }
+:global([data-theme='broadcast']) .swText { color: var(--inv-fg); }
+:global([data-theme='broadcast']) .kpi:active { background: var(--inv-2); }
+
+/* ───────── classic — 인쇄된 선수 카드 뒷면처럼: 이중 테 · 망점 등번호 · 판 어긋남 ───────── */
+:global([data-theme='classic']) .top {
+  margin: 14px var(--gutter) 0;
+  border: 1px solid var(--line-3);
+  box-shadow: inset 0 0 0 3px var(--bg), inset 0 0 0 4px var(--line-2);
+}
+:global([data-theme='classic']) .top::before { display: none; }
+:global([data-theme='classic']) .hero { padding: 16px 14px 16px; grid-template-columns: 140px minmax(0, 1fr); gap: 14px; }
+:global([data-theme='classic']) .bigNo {
+  -webkit-text-stroke: 0;
+  color: transparent;
+  background-image: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--club) 70%, transparent) 0 .9px, transparent 1.3px);
+  background-size: 4px 4px;
+  -webkit-background-clip: text;
+  background-clip: text;
+  opacity: .55;
+  right: 6px;
+  top: 8px;
+}
+:global([data-theme='classic']) .eyebrow { font-weight: 700; color: var(--accent); letter-spacing: .02em; }
+:global([data-theme='classic']) .name { font-size: clamp(28px, 8.4vw, 38px); letter-spacing: -.05em; }
+:global([data-theme='classic']) .state { border-top: 1px solid var(--line-2); }
+:global([data-theme='classic']) .kpis { margin: 0 14px; border-top: 1.5px solid var(--fg); border-bottom: 0; }
+:global([data-theme='classic']) .kpi + .kpi { border-left-color: var(--line-2); }
+:global([data-theme='classic']) .lvBar i { background: var(--club); }
+:global([data-theme='classic']) .switcher { padding: 12px 14px 4px; border-top: 1px solid var(--line-2); }
+:global([data-theme='classic']) .grMark { box-shadow: .6px .5px 0 color-mix(in srgb, var(--club) 60%, transparent); }
+
+/* 좁은 폰 */
+@media (max-width: 359px) {
+  .hero { grid-template-columns: 124px minmax(0, 1fr); gap: 12px; }
+  .kVal { font-size: 26px; }
+}

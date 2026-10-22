@@ -1,0 +1,24 @@
+.sw { display: inline-block; flex: none; border-radius: 1px; vertical-align: middle; }
+:global([data-theme='classic']) .sw { border-radius: 0; box-shadow: inset 0 0 0 .5px rgba(29, 30, 33, .4); }
+
+.bar { display: flex; gap: 1.5px; width: 100%; }
+.bar i { display: block; min-width: 2px; height: 100%; }
+:global([data-theme='classic']) .bar { gap: 1px; padding: 1px; box-shadow: inset 0 0 0 1px var(--line-3); }
+
+/* 천장 칸 */
+.cells { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 2px; width: 100%; }
+.cells i { display: block; height: 6px; background: var(--line-2); }
+.cells i.cellOn { background: var(--fg); }
+.cells i.cellLast { box-shadow: inset 0 0 0 1px var(--accent); background: transparent; }
+.cells i.cellLast.cellOn { background: var(--accent); }
+:global([data-theme='night']) .cells i { background: rgba(160, 186, 230, .14); }
+:global([data-theme='night']) .cells i.cellOn { background: linear-gradient(180deg, #F3D89C, #B9893A); }
+:global([data-theme='night']) .cells i.cellLast { background: transparent; box-shadow: inset 0 0 0 1px #F3D89C; }
+:global([data-theme='broadcast']) .cells i { height: 7px; }
+
+/* 연필 正 */
+.pencil { overflow: visible; }
+.pencil path { fill: none; stroke-linecap: round; transform-box: fill-box; transform-origin: center; }
+.lead { stroke: var(--fg); stroke-width: 1.7; opacity: .86; }
+.ghost { stroke: var(--fg-4); stroke-width: 1; stroke-dasharray: 1.6 2.2; }
+.price { display: inline-flex; align-items: center; gap: 5px; }

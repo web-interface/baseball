@@ -1,0 +1,9 @@
+/* 경기 화면 틀 — 점수판·경기장은 가장자리까지(여백 없이), 나머지는 --gutter */
+.screen { padding-bottom: env(safe-area-inset-bottom); container-type: inline-size; }
+.stageWrap { background: var(--field-stands); }
+.next { padding: 2px var(--gutter) 12px; }
+
+/* 넓은 화면 — 본문 폭(600) 안에서 경기장이 너무 커지지 않게 */
+@media (min-width: 700px) {
+  .screen { padding-top: 12px; }
+}

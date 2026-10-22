@@ -1,0 +1,43 @@
+.row {
+  display: grid;
+  grid-template-columns: 72px 1fr auto;
+  align-items: center;
+  column-gap: 10px;
+  min-height: 28px;
+}
+.label { font-size: 12.5px; color: var(--fg-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -.03em; }
+.bar { position: relative; height: 4px; background: var(--line-2); }
+.fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--fg); }
+.bonus {
+  position: absolute;
+  top: 0; bottom: 0;
+  background: repeating-linear-gradient(90deg, var(--accent) 0 2px, transparent 2px 4px);
+}
+.val { display: inline-flex; align-items: baseline; justify-content: flex-end; gap: 3px; min-width: 30px; }
+.val b { font-size: 17px; line-height: 1; }
+.val em { font-size: 11px; color: var(--accent); font-weight: 600; }
+.val small { margin-left: 4px; font-size: 10.5px; color: var(--fg-3); }
+
+/* 값 띠 (1~100) */
+.top { color: var(--gold); font-weight: 700; }
+.hi { color: var(--fg); }
+.mid { color: var(--fg-2); }
+.lo { color: var(--fg-3); }
+
+/* FM 1~20 */
+.fm5 { color: var(--good); font-weight: 700; }
+.fm4 { color: var(--fg); }
+.fm3 { color: var(--fg-2); }
+.fm2 { color: var(--warn); }
+.fm1 { color: var(--bad); }
+
+.s { min-height: 22px; column-gap: 8px; grid-template-columns: 56px 1fr auto; }
+.s .label { font-size: 11.5px; }
+.s .bar { height: 3px; }
+.s .val b { font-size: 14px; }
+
+:global([data-theme='broadcast']) .bar { height: 5px; background: var(--surface-3); }
+:global([data-theme='broadcast']) .s .bar { height: 4px; }
+:global([data-theme='classic']) .bar { background: var(--surface-3); }
+:global([data-theme='classic']) .bonus { background: repeating-linear-gradient(90deg, var(--accent) 0 1.5px, transparent 1.5px 3.5px); }
+:global([data-theme='broadcast']) .top, :global([data-theme='classic']) .top { color: var(--accent); }

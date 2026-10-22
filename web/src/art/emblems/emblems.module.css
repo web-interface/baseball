@@ -1,0 +1,23 @@
+.em { display: inline-block; flex: none; vertical-align: middle; overflow: visible; }
+
+/* 큰 표장 — 엠블럼 아래 지역 영문 띠 */
+.crest { display: inline-flex; flex-direction: column; align-items: center; gap: 10px; margin: 0; }
+.band {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-3);
+}
+.word {
+  font-family: var(--font-num);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: .16em;
+  line-height: 1;
+  color: var(--fg);
+  padding-left: .16em; /* 자간 때문에 오른쪽으로 쏠림 보정 */
+}
+.est { font-size: 10px; font-weight: 600; letter-spacing: .1em; color: var(--fg-3); padding-left: .1em; }

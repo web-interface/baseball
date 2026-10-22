@@ -1,0 +1,149 @@
+/* 팀컬러 진행 — 상자 없이 헤어라인 줄. 구단색(--tc)은 칸·숫자에만 */
+.panel { padding: 0 var(--gutter); }
+
+/* 구단 — 주인공 줄 */
+.hero {
+  --tc-text: color-mix(in srgb, var(--tc) 74%, var(--fg));
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  column-gap: 12px;
+  align-items: start;
+  padding: 16px 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+.emb { margin-top: 2px; }
+.heroMain { min-width: 0; }
+.heroTop { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.heroName {
+  font-family: var(--font-head);
+  font-weight: var(--head-weight);
+  letter-spacing: var(--head-tracking);
+  font-size: 16.5px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: var(--misreg);
+}
+.kind { font-size: 11px; font-weight: 600; color: var(--fg-3); white-space: nowrap; }
+
+.track { position: relative; margin-top: 10px; padding-bottom: 15px; }
+.scale { position: absolute; left: 0; right: 0; bottom: 0; height: 12px; }
+.scale i {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--fg-4);
+  white-space: nowrap;
+}
+.scale i:last-child { transform: translateX(-100%); font-family: var(--font-body); font-size: 10px; letter-spacing: -.03em; }
+.scale .reached { color: var(--tc-text); font-weight: 700; }
+
+.note { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin-top: 6px; font-size: 12.5px; color: var(--fg-2); letter-spacing: -.03em; line-height: 1.4; }
+.cur { font-weight: 800; color: var(--tc-text); }
+.lead { font-weight: 700; color: var(--fg); }
+
+.count { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.count > span { display: inline-flex; align-items: baseline; }
+.count b { font-size: 30px; color: var(--fg); }
+.count i { font-size: 15px; font-weight: 600; color: var(--fg-3); margin-left: 1px; }
+
+/* 칸 막대 */
+.seg { display: flex; gap: 2px; height: 7px; }
+.seg i {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  background: var(--line-2);
+  border-radius: 1px;
+}
+.seg .fill { background: var(--tc, var(--fg-2)); animation: segIn 320ms var(--ease-out) both; animation-delay: calc(var(--k) * 28ms); }
+.seg .tick::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  top: -3px;
+  width: 2px;
+  height: 13px;
+  background: var(--fg-2);
+  opacity: .8;
+}
+@keyframes segIn { from { transform: scaleX(0); transform-origin: left; } }
+
+/* 베이스 */
+.bases { display: block; overflow: visible; }
+.dLine { fill: none; stroke: var(--line-3); stroke-width: 1; }
+.off { fill: var(--bg); stroke: var(--line-3); stroke-width: 1.2; }
+.on { fill: var(--tc); stroke: var(--tc); stroke-width: 1.2; animation: baseOn 420ms var(--ease-snap) both; }
+.home { animation-duration: 600ms; }
+@keyframes baseOn { from { opacity: .2; } 50% { opacity: 1; } }
+
+/* 다 맞춤 — 칸이 은은하게 빛을 머금음 */
+.done .seg .fill { background: linear-gradient(90deg, var(--tc), color-mix(in srgb, var(--tc) 60%, var(--gold-2))); }
+.done .heroName { color: var(--fg); }
+.done .cur { color: var(--tc-text); }
+
+/* 폭발 힌트 */
+.hint {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  column-gap: 10px;
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.hintN { font-size: 13px; font-weight: 800; color: var(--fg); white-space: nowrap; }
+.hintN b { font-size: 17px; color: var(--accent-2); margin: 0 1px; }
+.hintT { min-width: 0; font-size: 12.5px; color: var(--fg-2); letter-spacing: -.03em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hintIco { color: var(--fg-3); }
+.hint:hover .hintT { color: var(--fg); }
+
+/* 권역 · 시즌 · 더비 */
+.rows { margin: 0; }
+.row {
+  --tc: var(--fg-2);
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  grid-template-areas: 'k l n' 'k s s' 'k b b';
+  column-gap: 12px;
+  row-gap: 6px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.rowKind { grid-area: k; padding-top: 1px; font-size: 11px; font-weight: 700; color: var(--fg-3); }
+.rowLabel { grid-area: l; min-width: 0; font-size: 13.5px; font-weight: 700; letter-spacing: -.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rowN { grid-area: n; font-size: 16px; color: var(--fg); }
+.rowN i { font-size: 12px; color: var(--fg-3); font-style: normal; }
+.row .seg { grid-area: s; height: 5px; }
+.rowBonus { grid-area: b; display: flex; align-items: baseline; gap: 8px; font-size: 12px; letter-spacing: -.03em; }
+.rowBonus b { font-weight: 800; color: var(--fg); }
+.rowBonus small { font-size: 11.5px; color: var(--fg-3); }
+.none { color: var(--fg-4); }
+
+/* broadcast — 굵은 잉크 칸, 주황 문턱 */
+:global([data-theme='broadcast']) .seg { gap: 3px; height: 9px; }
+:global([data-theme='broadcast']) .seg i { border-radius: 0; background: var(--surface-3); }
+:global([data-theme='broadcast']) .seg .tick::after { background: var(--accent); }
+:global([data-theme='broadcast']) .row .seg { height: 6px; }
+:global([data-theme='broadcast']) .hero { border-bottom: 2px solid var(--fg); }
+:global([data-theme='broadcast']) .heroName { font-style: italic; }
+:global([data-theme='broadcast']) .count b { font-size: 32px; }
+
+/* classic — 기록지 칸: 먹 테두리 상자, 채우면 별색 */
+:global([data-theme='classic']) .seg { gap: 0; height: 10px; box-shadow: inset 0 0 0 1px var(--fg); }
+:global([data-theme='classic']) .seg i { border-radius: 0; background: none; box-shadow: inset -1px 0 0 var(--line-2); }
+:global([data-theme='classic']) .seg i:last-child { box-shadow: none; }
+:global([data-theme='classic']) .seg .fill { background: var(--tc); background-image: var(--halftone); background-size: var(--halftone-size); }
+:global([data-theme='classic']) .seg .tick { box-shadow: inset -1.5px 0 0 var(--fg); }
+:global([data-theme='classic']) .seg .tick::after { display: none; }
+:global([data-theme='classic']) .row .seg { height: 8px; }
+:global([data-theme='classic']) .hero { border-bottom: 1px solid var(--line-3); }
+:global([data-theme='classic']) .row { border-bottom-color: var(--line-2); }
+:global([data-theme='classic']) .hintN b { color: var(--accent); }
+:global([data-theme='classic']) .done .seg .fill { background: var(--tc); }

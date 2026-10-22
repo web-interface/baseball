@@ -1,0 +1,92 @@
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 44px;
+  padding: 0 18px;
+  border-radius: var(--r-2);
+  font-family: var(--font-body);
+  font-weight: 700;
+  letter-spacing: -.03em;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+  transition: transform var(--dur-1) var(--ease-out), background-color var(--dur-2), color var(--dur-2), box-shadow var(--dur-2), opacity var(--dur-2);
+}
+.btn:active:not(:disabled) { transform: scale(.98); }
+.btn:disabled { opacity: .42; }
+
+.main { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.label { overflow: hidden; text-overflow: ellipsis; }
+.trailing {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-num); font-stretch: var(--num-stretch); font-variant-numeric: tabular-nums;
+  font-weight: var(--num-weight); font-size: 1.02em; letter-spacing: 0; opacity: .78;
+}
+
+.l { height: 52px; font-size: 16px; }
+.m { height: 46px; font-size: 15px; }
+.s { height: 36px; font-size: 13.5px; padding: 0 13px; gap: 6px; }
+.block { display: flex; width: 100%; }
+.split { justify-content: space-between; }
+.split:not(.block) { justify-content: center; }
+
+/* 주 버튼 — night 는 오른쪽 아래 모서리 컷 */
+.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  clip-path: var(--btn-clip);
+}
+.primary:hover:not(:disabled) { background: var(--accent-2); }
+
+.secondary {
+  background: transparent;
+  color: var(--fg);
+  box-shadow: inset 0 0 0 1px var(--line-3);
+}
+.secondary:hover:not(:disabled) { box-shadow: inset 0 0 0 1px var(--fg-2); }
+
+.ink { background: var(--fg); color: var(--bg); }
+.ghost { background: transparent; color: var(--fg-2); padding: 0 10px; }
+.ghost:hover:not(:disabled) { color: var(--fg); }
+
+/* broadcast — 두꺼운 테두리, 굵은 글자 */
+:global([data-theme='broadcast']) .btn { font-weight: 800; }
+:global([data-theme='broadcast']) .secondary { box-shadow: inset 0 0 0 1.5px var(--fg); }
+
+/* classic — 별색 면 + 먹 글자, 각진 인쇄 블록 */
+:global([data-theme='classic']) .btn { letter-spacing: -.02em; }
+:global([data-theme='classic']) .primary { background: var(--club); color: var(--club-ink); }
+:global([data-theme='classic']) .primary:hover:not(:disabled) { background: color-mix(in srgb, var(--club) 88%, #000); }
+:global([data-theme='classic']) .secondary { box-shadow: inset 0 0 0 1px var(--line-3); }
+
+.loading .label { opacity: .55; }
+.loading::after {
+  content: '';
+  position: absolute;
+  left: 18px; right: 18px; bottom: 9px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  animation: sweep 1s linear infinite;
+  opacity: .5;
+}
+@keyframes sweep { from { background-position: -40% 0; } to { background-position: 140% 0; } }
+
+.iconBtn {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: -6px;
+  color: inherit;
+  border-radius: 50%;
+  transition: background-color var(--dur-1);
+}
+.iconBtn:active { background: var(--line); }
+
+/* 모서리 컷이 바깥 테를 잘라서 안쪽에 그린다 */
+.primary:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: -5px; }

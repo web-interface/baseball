@@ -1,0 +1,150 @@
+/* 기록 탭 */
+.panel { display: flex; flex-direction: column; gap: 32px; padding: 22px var(--gutter) 28px; }
+.r { text-align: right; }
+
+/* ── 2027 시즌 — 점수판 ── */
+.heads { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 12px; }
+.headCell { display: flex; flex-direction: column; gap: 6px; padding-right: 8px; }
+.headCell + .headCell { padding-left: 12px; border-left: 1px solid var(--line); }
+.headCell span { font-size: 11.5px; font-weight: 700; color: var(--fg-3); }
+.headCell b { font-size: 34px; line-height: .86; font-variant-numeric: proportional-nums; }
+.board { background: var(--inv); color: var(--inv-fg); border-radius: var(--r-2); overflow: hidden; }
+.bRow { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); }
+.bRow + .bRow { border-top: 1px solid var(--inv-line); }
+.bCell { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 9px 0 10px; min-width: 0; }
+.bCell + .bCell { box-shadow: inset 1px 0 0 var(--inv-line); }
+.bCell span { font-size: 10.5px; color: var(--inv-fg-3); white-space: nowrap; letter-spacing: -.04em; }
+.bCell b { font-size: 16px; line-height: 1; color: var(--inv-fg); }
+
+/* ── 최근 10경기 ── */
+.sum { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: -2px 0 10px; }
+.sum div { display: flex; align-items: baseline; gap: 6px; }
+.sum dt { font-size: 12px; color: var(--fg-3); }
+.sum dd { margin: 0; font-size: 17px; color: var(--fg); }
+.chart { position: relative; }
+.svg { display: block; width: 100%; height: auto; overflow: visible; }
+.grid { stroke: var(--line); stroke-width: 1; }
+.axis { stroke: var(--line-3); stroke-width: 1; }
+.tick { font-size: 10px; fill: var(--fg-3); }
+.bar { fill: var(--fg-4); transition: fill var(--dur-1); }
+.barNote { fill: var(--fg-3); }
+.barLast { fill: var(--accent); }
+.barHover { fill: var(--fg-2); }
+.barLast.barHover { fill: var(--accent-2); }
+.val { font-size: 11px; fill: var(--fg-2); font-weight: 600; }
+.valLast { fill: var(--fg); font-weight: 700; }
+.hit { fill: transparent; outline: none; cursor: default; }
+.hit:focus-visible { stroke: var(--focus); stroke-width: 1.5; }
+.tip {
+  position: absolute;
+  top: -6px;
+  transform: translate(-50%, -100%);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 112px;
+  padding: 7px 10px 8px;
+  background: var(--inv);
+  color: var(--inv-fg-2);
+  font-size: 11.5px;
+  white-space: nowrap;
+  box-shadow: var(--shadow-2);
+  pointer-events: none;
+}
+.tip b { font-size: 17px; color: var(--inv-fg); }
+.xs { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); margin-top: 5px; }
+.xs span { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0; }
+.xLine { font-size: 12px; font-weight: 600; color: var(--fg-2); }
+.xs i { font-style: normal; font-size: 9.5px; color: var(--fg-4); }
+.xLast .xLine { color: var(--fg); }
+
+.log { width: 100%; margin-top: 16px; font-size: 12.5px; border-top: 1px solid var(--line-2); }
+.log th { padding: 7px 4px 6px; font-size: 11px; font-weight: 650; color: var(--fg-3); text-align: left; border-bottom: 1px solid var(--line-2); }
+.log td { padding: 7px 4px; border-bottom: 1px solid var(--line); color: var(--fg-2); vertical-align: baseline; }
+.log th:first-child, .log td:first-child { padding-left: 0; }
+.log th:last-child, .log td:last-child { padding-right: 0; }
+.log .num { font-size: 13.5px; color: var(--fg); }
+.detail { width: 46%; }
+.detail em { font-style: normal; color: var(--accent); font-weight: 700; }
+.rt { font-weight: 700; }
+.noteRow td { background: var(--accent-weak); }
+
+/* ── 명장면 ── */
+.hlList { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-bottom: 10px; }
+.hlList::-webkit-scrollbar { display: none; }
+.hlItem { display: flex; flex-direction: column; gap: 3px; flex: none; padding: 9px 12px 10px; text-align: left; color: var(--fg-2); box-shadow: inset 0 0 0 1px var(--line-2); border-radius: var(--r-2); }
+.hlItem b { font-size: 14px; font-weight: 800; color: var(--fg); letter-spacing: -.03em; }
+.hlItem span { font-size: 11.5px; white-space: nowrap; }
+.hlOn { box-shadow: inset 0 0 0 1.5px var(--fg); }
+.stage { border-radius: var(--r-3); background: var(--field-sky); }
+.stageField { aspect-ratio: 1 / .9; overflow: hidden; position: relative; }
+.stageField > * { position: absolute; left: 0; right: 0; top: -10%; }
+.stageCap { position: absolute; left: 0; right: 0; bottom: 0; padding: 26px 14px 11px; background: linear-gradient(180deg, transparent, rgba(3, 6, 12, .82) 46%); color: #F2F4F8; font-size: 13px; font-weight: 650; }
+.cause { margin-top: 3px; font-size: 12px; font-weight: 500; color: rgba(242, 244, 248, .72); }
+.range { fill: color-mix(in srgb, var(--accent) 16%, transparent); stroke: var(--accent); stroke-width: 1.4; }
+.run { stroke: var(--field-line); stroke-width: 1.4; stroke-dasharray: 3 3; opacity: .8; }
+.flight { fill: none; stroke: var(--field-line); stroke-width: 1.6; opacity: .55; }
+.ball { fill: #FFFFFF; stroke: #0B0E12; stroke-width: 1.6; }
+.hlFoot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
+.hlNote { font-size: 12px; color: var(--fg-3); }
+
+/* ── 부상 ── */
+.risk { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--fg-3); margin-bottom: 6px; }
+.riskPips i { width: 14px !important; height: 5px !important; }
+.rp0 { --pip-on: var(--good); }
+.rp1 { --pip-on: var(--fg-2); }
+.rp2 { --pip-on: var(--warn); }
+.rp3 { --pip-on: var(--bad); }
+.risk0 { color: var(--good); }
+.risk1 { color: var(--fg); }
+.risk2 { color: var(--warn); }
+.risk3 { color: var(--bad); }
+.none { font-size: 13px; color: var(--fg-3); padding: 8px 0; }
+.inj li { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.when { font-size: 13.5px; color: var(--fg-3); }
+.injBody b { font-size: 14px; font-weight: 750; letter-spacing: -.03em; }
+.injCause { margin-top: 2px; font-size: 12px; color: var(--fg-3); }
+.recur { margin-left: 6px; font-style: normal; font-size: 11px; font-weight: 700; color: var(--warn); }
+.days { font-size: 12.5px; color: var(--fg-2); white-space: nowrap; }
+.days .num { font-size: 15px; color: var(--fg); }
+.injNow .when, .injNow .days { color: var(--bad); font-weight: 700; }
+.injNow b { color: var(--bad); }
+.injSum { margin-top: 8px; font-size: 12px; color: var(--fg-3); }
+.injSum .num { color: var(--fg-2); font-size: 13px; }
+
+/* ── 수상 ── */
+.award { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.award svg { color: var(--gold); }
+.award .num { font-size: 16px; }
+
+/* ───────── broadcast ───────── */
+:global([data-theme='broadcast']) .board { border-radius: 0; }
+:global([data-theme='broadcast']) .bCell b { font-style: italic; font-weight: 800; font-size: 17px; }
+:global([data-theme='broadcast']) .headCell b { font-size: 38px; }
+:global([data-theme='broadcast']) .bar { fill: var(--surface-3); }
+:global([data-theme='broadcast']) .barNote { fill: var(--fg-4); }
+:global([data-theme='broadcast']) .hlItem { border-radius: 0; box-shadow: inset 0 0 0 1.5px var(--line-2); }
+:global([data-theme='broadcast']) .hlOn { background: var(--inv); box-shadow: none; }
+:global([data-theme='broadcast']) .hlOn b { color: var(--inv-fg); }
+:global([data-theme='broadcast']) .hlOn span { color: var(--inv-fg-2); }
+:global([data-theme='broadcast']) .log th { background: var(--inv); color: var(--inv-fg-2); border-bottom: 0; padding-left: 6px; }
+:global([data-theme='broadcast']) .log td:first-child { padding-left: 6px; }
+:global([data-theme='broadcast']) .log th:last-child, :global([data-theme='broadcast']) .log td:last-child { padding-right: 6px; }
+
+/* ───────── classic — 수동 점수판(초록 나무판 + 흰 페인트) · 기록지 연필 ───────── */
+:global([data-theme='classic']) .board { border-radius: 0; box-shadow: inset 0 0 0 3px var(--inv-2), 0 1px 0 var(--line-3); }
+:global([data-theme='classic']) .bCell b { font-family: var(--font-num-display); font-weight: 800; font-size: 19px; }
+:global([data-theme='classic']) .bCell span { color: var(--inv-fg-2); }
+:global([data-theme='classic']) .bar { fill: color-mix(in srgb, var(--fg) 26%, transparent); }
+:global([data-theme='classic']) .barNote { fill: color-mix(in srgb, var(--fg) 45%, transparent); }
+:global([data-theme='classic']) .barLast { fill: var(--club); }
+:global([data-theme='classic']) .xLine { font-family: var(--font-hand); font-size: 16px; font-weight: 400; color: var(--fg-2); }
+:global([data-theme='classic']) .xLast .xLine { color: var(--accent); }
+:global([data-theme='classic']) .hlItem { border-radius: 0; }
+:global([data-theme='classic']) .range { fill: color-mix(in srgb, var(--club) 14%, transparent); stroke: var(--club); }
+:global([data-theme='classic']) .stage { background: var(--field-sky); }
+:global([data-theme='classic']) .stageCap { background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--inv) 92%, transparent) 46%); }
+:global([data-theme='classic']) .ball { fill: #F6F4EE; stroke: #1D1E21; }
+:global([data-theme='classic']) .noteRow td { background: color-mix(in srgb, var(--club) 9%, transparent); }
+:global([data-theme='classic']) .award svg { color: var(--accent); }

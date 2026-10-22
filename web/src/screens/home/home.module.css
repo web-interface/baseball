@@ -1,0 +1,113 @@
+.home { display: flex; flex-direction: column; gap: 30px; padding-bottom: 44px; }
+
+/* ───────── 구단 머리 ───────── */
+.mast { position: relative; isolation: isolate; overflow: hidden; padding: 18px var(--gutter) 16px; }
+.mastArt { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.beamL, .beamR {
+  position: absolute;
+  top: -40px;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--field-light) 13%, transparent), transparent);
+  filter: blur(2px);
+}
+.beamL { left: -120px; }
+.beamR { right: -110px; }
+.waterWrap { position: absolute; right: -70px; top: 6px; opacity: .05; }
+.water { display: block; }
+.mast::after {
+  content: '';
+  position: absolute;
+  left: var(--gutter);
+  right: var(--gutter);
+  bottom: 0;
+  height: 1px;
+  background: var(--line-2);
+}
+
+.kicker { display: flex; justify-content: space-between; gap: 10px; font-size: 11.5px; color: var(--fg-3); letter-spacing: -.01em; }
+.kicker b { color: var(--fg-2); }
+.club { display: flex; align-items: center; gap: 14px; margin-top: 12px; }
+.em { flex: none; }
+.clubText { min-width: 0; }
+.name {
+  font-family: var(--font-head);
+  font-weight: var(--head-weight);
+  letter-spacing: var(--head-tracking);
+  font-size: 30px;
+  line-height: 1.08;
+  text-shadow: var(--misreg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mgr { margin-top: 4px; font-size: 13px; color: var(--fg-2); letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mgr b { color: var(--fg); font-weight: 700; }
+.mgr i { margin: 0 6px; color: var(--fg-4); }
+
+.stats { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr); margin-top: 16px; }
+.stats > div { display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; padding: 0 14px; border-left: 1px solid var(--line); }
+.stats > div:first-child { padding-left: 0; border-left: 0; }
+.stats dt { font-size: 11px; color: var(--fg-3); white-space: nowrap; }
+.stats dd { display: flex; align-items: baseline; gap: 2px; margin: 0; line-height: 1; }
+.stats dd b { font-size: 21px; font-weight: 600; color: var(--fg); }
+.stats dd :global(.num-display) { font-size: 34px; }
+.stats dd > span { font-size: 13px; color: var(--fg-2); font-weight: 600; }
+.formCell dd { align-items: flex-end; gap: 8px; }
+.form { display: inline-flex; align-items: flex-end; gap: 2px; height: 16px; }
+.form i { display: block; width: 5px; }
+.fw { height: 100%; background: var(--accent); }
+.fl { height: 35%; background: var(--fg-4); }
+.fd { height: 62%; background: var(--fg-3); }
+.formCell small { font-size: 12px; font-weight: 700; color: var(--fg-2); white-space: nowrap; }
+
+/* broadcast — 검은 중계 띠 */
+:global([data-theme='broadcast']) .mast { background: var(--inv); color: var(--inv-fg); padding-bottom: 0; }
+:global([data-theme='broadcast']) .mast::after { left: 0; right: 0; height: 4px; background: var(--accent); }
+:global([data-theme='broadcast']) .beamL, :global([data-theme='broadcast']) .beamR { display: none; }
+:global([data-theme='broadcast']) .waterWrap { opacity: .06; }
+:global([data-theme='broadcast']) .kicker { color: var(--inv-fg-3); }
+:global([data-theme='broadcast']) .kicker b, :global([data-theme='broadcast']) .mgr { color: var(--inv-fg-2); }
+:global([data-theme='broadcast']) .mgr b { color: var(--inv-fg); }
+:global([data-theme='broadcast']) .em { --emblem-edge: rgba(243, 241, 236, .5); }
+:global([data-theme='broadcast']) .stats { margin: 16px calc(var(--gutter) * -1) 0; padding: 0 var(--gutter); background: var(--inv-2); }
+:global([data-theme='broadcast']) .stats > div { padding-top: 9px; padding-bottom: 11px; border-left-color: var(--inv-line); }
+:global([data-theme='broadcast']) .stats dt { color: var(--inv-fg-3); }
+:global([data-theme='broadcast']) .stats dd b { color: var(--inv-fg); font-style: italic; font-weight: 800; }
+:global([data-theme='broadcast']) .stats dd > span, :global([data-theme='broadcast']) .formCell small { color: var(--inv-fg-2); }
+:global([data-theme='broadcast']) .fl { background: rgba(243, 241, 236, .25); }
+:global([data-theme='broadcast']) .fd { background: rgba(243, 241, 236, .5); }
+
+/* classic — 인쇄 머리: 겹줄 · 망점 엠블럼 · 기록지 칸 */
+:global([data-theme='classic']) .beamL, :global([data-theme='classic']) .beamR { display: none; }
+:global([data-theme='classic']) .waterWrap { opacity: .075; filter: grayscale(1) contrast(1.3); mix-blend-mode: multiply; }
+:global([data-theme='classic']) .mast::after { height: 4px; background: none; border-top: 1px solid var(--line-3); border-bottom: 1px solid var(--line-3); }
+:global([data-theme='classic']) .kicker { text-transform: none; font-weight: 600; color: var(--fg-2); }
+:global([data-theme='classic']) .name { font-size: 32px; }
+:global([data-theme='classic']) .stats { border-top: 1px solid var(--line-2); margin-top: 14px; padding-top: 10px; }
+:global([data-theme='classic']) .stats > div { border-left-color: var(--line-2); }
+:global([data-theme='classic']) .stats dd :global(.num-display) { font-size: 36px; color: var(--club-text); }
+:global([data-theme='classic']) .fw { background: var(--fg); }
+:global([data-theme='classic']) .fl { background: transparent; box-shadow: inset 0 0 0 1px var(--fg-3); }
+:global([data-theme='classic']) .fd { background: var(--fg-4); }
+
+@media (max-width: 370px) {
+  .stats > div { padding: 0 10px; }
+  .name { font-size: 26px; }
+}
+
+/* ───────── 구단 금고 ───────── */
+.vault { margin: 0 var(--gutter); padding-top: 14px; border-top: 1px solid var(--line-2); }
+.vh { font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 15px; color: var(--fg-2); }
+.money { margin-top: 8px; }
+.money > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 40px; border-bottom: 1px solid var(--line); }
+.money dt { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--fg-2); }
+.money dd { margin: 0; font-size: 21px; color: var(--fg); letter-spacing: .01em; }
+.vaultNote { margin-top: 10px; font-size: 12px; color: var(--fg-3); line-height: 1.55; letter-spacing: -.02em; }
+.vaultNote b { color: var(--fg-2); }
+.notice { display: flex; gap: 10px; margin-top: 12px; padding: 10px 12px; border-left: 2px solid var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); font-size: 12.5px; color: var(--fg-2); line-height: 1.5; }
+.notice svg { flex: none; margin-top: 2px; color: var(--warn); }
+.notice b { display: block; color: var(--fg); font-size: 13.5px; }
+:global([data-theme='classic']) .vault { border-top: 1px solid var(--line-3); }
+:global([data-theme='classic']) .money dd { font-family: var(--font-num-display); font-weight: 700; }
+:global([data-theme='broadcast']) .money dd { font-style: italic; font-weight: 800; }

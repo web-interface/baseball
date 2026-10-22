@@ -1,0 +1,51 @@
+.wrap {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0 var(--gutter);
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 420px;
+  min-height: 46px;
+  padding: 10px 14px 10px 16px;
+  background: var(--fg);
+  color: var(--bg);
+  border-radius: var(--r-2);
+  box-shadow: var(--shadow-2);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -.03em;
+  position: relative;
+  overflow: hidden;
+  animation: up 240ms var(--ease-out) both;
+}
+.toast::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--info); }
+.good::before { background: var(--good); }
+.bad::before { background: var(--bad); }
+.accent::before { background: var(--accent); }
+.text { flex: 1; min-width: 0; }
+.action { flex: none; font-weight: 800; color: var(--accent); padding: 6px 2px; }
+.leaving { animation: down 200ms var(--ease-in-out) both; }
+
+/* night — 밝은 띠 대신 깊은 면 + 헤어라인 */
+:global([data-theme='night']) .toast { background: var(--surface-3); color: var(--fg); box-shadow: 0 0 0 1px var(--line-2), var(--shadow-2); }
+:global([data-theme='night']) .action { color: var(--accent-2); }
+/* broadcast — 잉크 띠 */
+:global([data-theme='broadcast']) .toast { background: var(--inv); color: var(--inv-fg); border-radius: 0; }
+/* classic — 잉크 종이 */
+:global([data-theme='classic']) .toast { background: var(--fg); color: var(--surface); border-radius: var(--r-1); }
+:global([data-theme='classic']) .action { color: var(--gold-2); }
+
+@keyframes up { from { opacity: 0; transform: translateY(12px); } }
+@keyframes down { to { opacity: 0; transform: translateY(8px); } }

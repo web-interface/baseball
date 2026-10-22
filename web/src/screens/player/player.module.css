@@ -1,0 +1,97 @@
+/* 선수 상세 — 화면 틀 · 끈적한 탭 · 아래 버튼 줄 · 공통 구역 머리 */
+.screen { position: relative; min-height: calc(100dvh - var(--header-h)); }
+
+/* 탭 — 내려 읽으면 위에 붙고, 붙으면 왼쪽에 작은 얼굴·이름 */
+.sentinel { height: 1px; margin-top: 14px; }
+.tabsBar {
+  position: sticky;
+  top: calc(var(--header-h) + env(safe-area-inset-top));
+  z-index: 8;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  padding: 0 var(--gutter);
+  background: var(--bg);
+  background-image: var(--texture);
+  background-size: var(--texture-size);
+}
+.tabsBar::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--line); }
+.mini {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-width 260ms var(--ease-out), opacity 200ms;
+  white-space: nowrap;
+}
+.stuck .mini { max-width: 132px; opacity: 1; }
+.miniFace { width: 30px; height: 30px; flex: none; border-radius: 50%; overflow: hidden; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line-2); }
+.miniText { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+.miniText b { font-size: 13px; font-weight: 800; letter-spacing: -.03em; overflow: hidden; text-overflow: ellipsis; }
+.miniText span { font-size: 11px; color: var(--fg-3); }
+.tabs { flex: 1; min-width: 0; border-bottom: 0 !important; }
+.stuck .tabsBar { box-shadow: 0 10px 20px -18px rgba(0, 0, 0, .55); }
+
+/* 아래 버튼 줄 — 앱식 탭바가 아니라 이 화면의 행동 버튼 */
+.cta {
+  position: sticky;
+  bottom: 0;
+  z-index: 8;
+  display: flex;
+  gap: 8px;
+  padding: 18px var(--gutter) calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, transparent, var(--bg) 30%);
+  pointer-events: none;
+}
+.cta > * { pointer-events: auto; }
+.ctaSide { flex: 0 0 34%; }
+.ctaMain { flex: 1; }
+.ctaNote { flex: 1; display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 12.5px; color: var(--fg-3); }
+
+/* 공통 구역 */
+.sec { min-width: 0; }
+.secHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 34px;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--line-2);
+}
+.secHead h3 { font-size: 17px; line-height: 1.2; }
+.secMeta { font-size: 12px; color: var(--fg-3); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.secMeta b { color: var(--fg-2); font-weight: 700; }
+.secMeta .num { font-size: 13px; color: var(--fg-2); }
+
+/* 별 · 칸 */
+.stars { display: inline-flex; gap: 1px; }
+.starEmpty { fill: none; stroke: var(--fg-4); stroke-width: 1.6; stroke-linejoin: round; }
+.starFull { fill: var(--gold); stroke: var(--gold); stroke-width: 1.6; stroke-linejoin: round; }
+.pips { display: inline-flex; gap: 2px; }
+.pips i { display: block; width: 8px; height: 4px; background: var(--line-2); }
+.pips .pipOn { background: var(--pip-on, var(--fg-2)); }
+
+/* 남의 선수 안내 */
+.fogNote { margin: 18px var(--gutter) 0; padding: 11px 14px; font-size: 12.5px; color: var(--fg-2); box-shadow: inset 3px 0 0 var(--line-3); background: var(--surface); }
+.fogNote b { color: var(--fg); }
+
+/* ───────── broadcast ───────── */
+:global([data-theme='broadcast']) .secHead { border-bottom: 2px solid var(--fg); }
+:global([data-theme='broadcast']) .secHead h3 { font-size: 18px; }
+:global([data-theme='broadcast']) .starFull { fill: var(--accent); stroke: var(--accent); }
+:global([data-theme='broadcast']) .tabsBar::after { height: 2px; background: var(--fg); }
+:global([data-theme='broadcast']) .fogNote { background: var(--surface-2); box-shadow: inset 4px 0 0 var(--fg); }
+
+/* ───────── classic — 인쇄 양식의 이중 괘선 ───────── */
+:global([data-theme='classic']) .secHead { border-bottom: 1.5px solid var(--fg); box-shadow: 0 3px 0 -1px var(--bg), 0 4px 0 -1px var(--line-2); }
+:global([data-theme='classic']) .secHead h3 { font-size: 18px; }
+:global([data-theme='classic']) .starFull { fill: var(--club); stroke: var(--club); }
+:global([data-theme='classic']) .starEmpty { stroke: var(--fg-3); }
+:global([data-theme='classic']) .miniFace img { filter: grayscale(1) contrast(1.1); }
+:global([data-theme='classic']) .tabsBar::after { background: var(--line-2); }
+:global([data-theme='classic']) .fogNote { background: transparent; box-shadow: inset 0 0 0 1px var(--line-2); }

@@ -1,0 +1,173 @@
+/* 대전 경기 — 경기 전 · 경기 중(점수판 + 경기장 + 강조 문구) · 결과 */
+.screen { padding-bottom: 36px; }
+.topRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px var(--gutter) 0; }
+.back { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; margin-left: -6px; font-size: 13px; font-weight: 700; color: var(--fg-2); }
+.mode { font-size: 11.5px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.up { color: var(--up); }
+.down { color: var(--down); }
+.block { padding: 22px var(--gutter) 0; }
+.h { display: flex; align-items: baseline; gap: 8px; padding-bottom: 8px; margin-bottom: 10px; font-size: 16px; border-bottom: 1px solid var(--line-2); }
+.hSub { font-family: var(--font-body); font-size: 11.5px; font-weight: 500; letter-spacing: -.01em; color: var(--fg-3); text-shadow: none; }
+
+/* ── 경기 전 ── */
+.match {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px minmax(0, 1fr);
+  margin: 12px var(--gutter) 0;
+  padding: 18px 14px 16px;
+  background:
+    linear-gradient(100deg, color-mix(in srgb, var(--a) 22%, transparent), transparent 46%),
+    linear-gradient(-100deg, color-mix(in srgb, var(--b) 22%, transparent), transparent 46%),
+    var(--inv);
+  color: var(--inv-fg);
+  border-radius: var(--r-3);
+  overflow: hidden;
+}
+.side { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.sideR { align-items: flex-end; text-align: right; }
+.sTag { margin-top: 6px; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; color: var(--inv-fg-3); }
+.sName { font-size: 18px; line-height: 1.15; color: var(--inv-fg); word-break: keep-all; }
+.sUser { font-size: 11.5px; color: var(--inv-fg-2); white-space: nowrap; }
+.sUser .num { color: var(--inv-fg); font-size: 12.5px; }
+.sOvr { display: flex; align-items: baseline; gap: 5px; margin-top: 6px; }
+.sideR .sOvr { flex-direction: row-reverse; }
+.sOvr b { font-size: 36px; line-height: .86; }
+.sOvr span { font-size: 11px; color: var(--inv-fg-3); }
+.vs { display: grid; place-items: center; }
+.vs span { font-size: 18px; color: var(--inv-fg-3); letter-spacing: .04em; }
+.expect { margin: 14px var(--gutter) 0; }
+.expHead { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: var(--fg-3); }
+.expHead b { font-size: 18px; color: var(--fg); }
+.expBar { display: flex; gap: 2px; height: 8px; margin-top: 6px; }
+.expBar i { display: block; height: 100%; }
+.expSub { margin-top: 6px; font-size: 11.5px; color: var(--fg-3); }
+.duel { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sp { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.spR { flex-direction: row-reverse; text-align: right; }
+.face { flex: none; width: 52px; height: 52px; border-radius: 50%; overflow: hidden; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line-2); }
+.spBody { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.spR .spBody { align-items: flex-end; }
+.spBody b { font-size: 15px; font-weight: 800; letter-spacing: -.03em; }
+.spBody > span { font-size: 11px; color: var(--fg-3); white-space: nowrap; }
+.spBody > span .num { color: var(--fg-2); font-size: 12px; }
+.spBody em { font-style: normal; font-size: 11.5px; font-weight: 700; padding-left: 6px; box-shadow: inset 3px 0 0 var(--sig); }
+.spR .spBody em { padding: 0 6px 0 0; box-shadow: inset -3px 0 0 var(--sig); }
+.park { display: flex; gap: 14px; align-items: center; }
+.parkField { flex: none; width: 128px; aspect-ratio: 1; border-radius: var(--r-2); overflow: hidden; background: var(--field-sky); }
+.parkBody { min-width: 0; font-size: 12.5px; color: var(--fg-2); }
+.parkBody b { display: block; font-size: 15px; font-weight: 800; color: var(--fg); margin-bottom: 3px; }
+.parkNote { margin-top: 5px; color: var(--fg); font-weight: 650; }
+.parkDist { margin-top: 5px; font-size: 13px; color: var(--fg-3); }
+.order li { display: grid; grid-template-columns: minmax(0, 1fr) 30px 22px 30px minmax(0, 1fr); align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.oL, .oR { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.oR { justify-content: flex-end; flex-direction: row-reverse; }
+.oL b, .oR b { font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.oL span, .oR span { font-size: 11px; color: var(--fg-3); white-space: nowrap; }
+.oOvr { font-size: 15px; text-align: center; color: var(--fg-3); }
+.oWin { color: var(--fg); font-weight: 700; }
+.oNo { font-size: 11px; text-align: center; color: var(--fg-4); }
+.reward { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 14px; margin: 16px var(--gutter) 0; padding: 11px 0; font-size: 12px; color: var(--fg-3); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.reward b { color: var(--fg); font-size: 14px; }
+.startBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 16px var(--gutter) calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, transparent, var(--bg) 28%);
+}
+.startBtn { flex: 1; }
+
+/* ── 경기 중 ── */
+.live { padding-top: 10px; }
+.score { margin: 0 var(--gutter); padding: 8px 10px 6px; background: var(--inv); color: var(--inv-fg); border-radius: var(--r-2); }
+.sRow { display: grid; grid-template-columns: 62px repeat(var(--cols), minmax(0, 1fr)) 30px 22px; align-items: center; min-height: 26px; }
+.sRow > span { text-align: center; font-size: 14px; }
+.sHead > span { font-size: 10.5px; color: var(--inv-fg-3); }
+.sTeam { display: flex; align-items: center; gap: 6px; text-align: left !important; font-size: 12.5px !important; font-weight: 750; white-space: nowrap; overflow: hidden; }
+.sTeam i { width: 4px; height: 14px; flex: none; }
+.sR { font-size: 19px !important; color: var(--inv-fg); }
+.sHead .sR { font-size: 10.5px !important; color: var(--inv-fg-3); }
+.sNow { box-shadow: inset 0 -2px 0 var(--accent-2); color: var(--inv-fg); }
+.stage { margin: 10px var(--gutter) 0; border-radius: var(--r-3); background: var(--field-sky); }
+.fieldBox { position: relative; aspect-ratio: 1 / .86; overflow: hidden; }
+.fieldIn { position: absolute; left: 0; right: 0; top: -12%; }
+.hud { position: absolute; left: 10px; top: 10px; display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: rgba(4, 6, 10, .72); color: #F2F4F8; border-radius: var(--r-2); }
+.inn { font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.inn b { font-size: 15px; margin-right: 1px; }
+.bases { width: 34px; height: 24px; overflow: visible; }
+.base { fill: none; stroke: rgba(242, 244, 248, .55); stroke-width: 1.2; }
+.baseOn { fill: #FFC53D; stroke: #FFC53D; stroke-width: 1.2; }
+.outs { display: flex; gap: 3px; }
+.outs i { width: 8px; height: 8px; border-radius: 50%; box-shadow: inset 0 0 0 1.2px rgba(242, 244, 248, .5); }
+.outs .outOn { background: #FF5045; box-shadow: none; }
+.range { fill: color-mix(in srgb, var(--accent) 18%, transparent); stroke: var(--accent); stroke-width: 1.4; }
+.flight { fill: none; stroke: var(--field-line); stroke-width: 1.6; opacity: .55; }
+.ball { fill: #FFFFFF; stroke: #0B0E12; stroke-width: 1.6; }
+.runner { fill: #FFC53D; stroke: #0B0E12; stroke-width: 1.4; }
+.final { position: absolute; inset: auto 0 0 0; display: flex; align-items: baseline; justify-content: space-between; padding: 30px 16px 12px; background: linear-gradient(180deg, transparent, rgba(3, 6, 12, .86) 50%); color: #F2F4F8; animation: rise 360ms var(--ease-out) both; }
+.final b { font-size: 34px; letter-spacing: -.04em; }
+.final span { font-size: 40px; line-height: .9; }
+.fW b { color: #FFB27A; }
+.fL b { color: #A6B1C3; }
+.ticker { min-height: 92px; margin: 10px var(--gutter) 0; }
+.tkIdle { font-size: 12.5px; color: var(--fg-3); padding: 8px 0; }
+.tk { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; color: var(--fg-3); }
+.tkNew { color: var(--fg); animation: rise 260ms var(--ease-out) both; }
+.tkNew .tkBody > p:first-child { font-weight: 700; font-size: 13.5px; }
+.tkInn { font-size: 12px; color: var(--fg-3); padding-top: 1px; }
+.tkBody b { color: var(--accent); }
+.cause { margin-top: 2px; font-size: 12px; color: var(--fg-3); font-weight: 500; }
+.wp { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: 12px; margin: 10px var(--gutter) 0; }
+.wpHead { display: flex; flex-direction: column; gap: 2px; font-size: 11.5px; color: var(--fg-3); }
+.wpHead b { font-size: 22px; color: var(--fg); }
+.wpSpark { color: var(--accent); --spark-ring: var(--bg); }
+.liveBar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 12px var(--gutter) 0; }
+.paceNote { font-size: 11.5px; color: var(--fg-3); }
+.hls li + li { border-top: 1px solid var(--line); }
+.hl { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 0; text-align: left; color: inherit; }
+.hlKind { width: 4px; align-self: stretch; flex: none; }
+.hlBody { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.hlBody b { font-size: 15px; font-weight: 850; letter-spacing: -.04em; }
+.hlBody span { font-size: 11.5px; color: var(--fg-3); }
+
+/* ── 결과 ── */
+.result { padding-top: 6px; }
+.resList { margin: 14px var(--gutter) 0; }
+.resList div { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+.resList dt { color: var(--fg-3); }
+.resList dd { margin: 0; color: var(--fg-2); text-align: right; }
+.resList dd b { font-size: 17px; color: var(--fg); }
+.resList em { font-style: normal; font-weight: 800; margin-left: 4px; }
+.factors li { padding: 6px 0; font-size: 12.5px; color: var(--fg-2); }
+.factors em { font-style: normal; color: var(--accent); font-weight: 700; }
+.resBtns { display: flex; gap: 8px; margin: 20px var(--gutter) 0; }
+.resBtns > * { flex: 1; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+
+/* ───────── broadcast ───────── */
+:global([data-theme='broadcast']) .match { border-radius: 0; }
+:global([data-theme='broadcast']) .score { border-radius: 0; box-shadow: inset 0 3px 0 var(--accent); padding-top: 10px; }
+:global([data-theme='broadcast']) .sR { font-style: italic; }
+:global([data-theme='broadcast']) .stage { border-radius: 0; }
+:global([data-theme='broadcast']) .h { border-bottom: 2px solid var(--fg); }
+:global([data-theme='broadcast']) .hud { border-radius: 0; background: #0B0E12; }
+
+/* ───────── classic — 수동 점수판 · 별색 ───────── */
+:global([data-theme='classic']) .match { border-radius: 0; background: var(--inv); box-shadow: inset 0 0 0 3px var(--inv-2); }
+:global([data-theme='classic']) .score { border-radius: 0; box-shadow: inset 0 0 0 3px var(--inv-2); padding: 10px 12px 8px; }
+:global([data-theme='classic']) .sRow > span.num { font-family: var(--font-num-display); font-weight: 800; font-size: 16px; }
+:global([data-theme='classic']) .sR { font-size: 21px !important; }
+:global([data-theme='classic']) .sNow { box-shadow: inset 0 -2px 0 var(--inv-fg); }
+:global([data-theme='classic']) .stage { border-radius: 0; }
+:global([data-theme='classic']) .h { border-bottom: 1.5px solid var(--fg); }
+:global([data-theme='classic']) .range { fill: color-mix(in srgb, var(--club) 14%, transparent); stroke: var(--club); }
+:global([data-theme='classic']) .hud { border-radius: 0; background: var(--inv); }
+:global([data-theme='classic']) .ball { fill: #F6F4EE; stroke: #1D1E21; }
+:global([data-theme='classic']) .tkBody b { color: var(--accent); }
+:global([data-theme='classic']) .wpSpark { color: var(--club); }
+:global([data-theme='classic']) .parkField { border-radius: 0; box-shadow: inset 0 0 0 1px var(--line-3); }

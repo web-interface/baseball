@@ -1,0 +1,165 @@
+/* ───────── 회별 점수 ───────── */
+.board {
+  --cell: minmax(15px, 21px);
+  background: var(--inv);
+  background-image: var(--texture);
+  background-size: var(--texture-size);
+  color: var(--inv-fg);
+  padding: 6px max(12px, env(safe-area-inset-right)) 7px max(12px, env(safe-area-inset-left));
+}
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(70px, 1fr) repeat(var(--inn), var(--cell)) 27px 21px 17px 19px;
+  align-items: center;
+  height: 25px;
+}
+.head { height: 17px; }
+.head .c { font-size: 10.5px; color: var(--inv-fg-3); font-weight: 600; }
+.head .R { color: var(--inv-fg-2); }
+.c { text-align: center; font-size: 15px; line-height: 1; }
+.cur { position: relative; color: var(--inv-fg) !important; }
+.cur::after { content: ''; position: absolute; left: 50%; bottom: -3px; width: 10px; height: 2px; margin-left: -5px; background: var(--accent); }
+.R { margin-left: 6px; font-size: 18px; font-weight: 700; }
+.head .R { margin-left: 6px; }
+.sub { color: var(--inv-fg-2); font-size: 13.5px; }
+.v { color: var(--inv-fg-2); }
+.scored { color: var(--inv-fg); font-weight: 700; }
+.curCell { background: color-mix(in srgb, var(--inv-fg) 6%, transparent); }
+.now { animation: cellIn 260ms var(--ease-snap) both; }
+.rv { animation: cellIn 320ms var(--ease-snap) both; }
+@keyframes cellIn { from { transform: scale(1.35); color: var(--accent); } }
+
+.team { display: flex; align-items: center; gap: 6px; min-width: 0; padding-left: 8px; position: relative; }
+.team b { font-size: 13px; font-weight: 700; letter-spacing: -.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--inv-fg-2); }
+.tbar { position: absolute; left: 0; top: 4px; bottom: 4px; width: 2px; opacity: .45; }
+.bat .team b { color: var(--inv-fg); }
+.bat .tbar { opacity: 1; width: 3px; }
+
+/* ───────── 자막 ───────── */
+.cap { padding: 10px var(--gutter) 11px; min-height: 60px; border-bottom: 1px solid var(--line); }
+.capRow { display: flex; align-items: baseline; gap: 10px; }
+.tag { flex: none; min-width: 36px; }
+.tagIn {
+  display: inline-block;
+  font-family: var(--font-num);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: .02em;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.t-event .tagIn { color: var(--warn); font-family: var(--font-body); font-size: 12px; letter-spacing: -.02em; }
+.t-half .tagIn { color: var(--fg-2); font-family: var(--font-body); font-size: 12px; font-weight: 700; letter-spacing: -.02em; }
+.capText { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 650; letter-spacing: -.03em; line-height: 1.38; color: var(--fg); }
+.t-result .capText { font-weight: 750; }
+.why { margin: 4px 0 0 46px; font-size: 12px; line-height: 1.4; color: var(--fg-3); letter-spacing: -.02em; }
+
+/* ───────── 승리 확률 막대 ───────── */
+.scrub {
+  position: relative;
+  height: 40px;
+  margin: 0 var(--gutter);
+  cursor: pointer;
+  touch-action: pan-y;
+  user-select: none;
+}
+.scrub:focus-visible { outline-offset: 2px; }
+.scrubSvg { position: absolute; left: 0; right: 0; top: 4px; width: 100%; height: 24px; overflow: visible; }
+.mid { stroke: var(--line-2); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.tick { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.wpLine { fill: none; stroke: var(--fg-2); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.innNo { position: absolute; bottom: 0; transform: translateX(-50%); font-size: 10px; color: var(--fg-4); line-height: 1; padding-left: 1px; }
+.hl {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--bg);
+  transform: translateY(4px);
+}
+.phead {
+  position: absolute;
+  top: 0;
+  height: 30px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--accent);
+  transition: left 120ms linear;
+}
+.phead::before { content: ''; position: absolute; top: -2px; left: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+
+/* ───────── 재생 손잡이 ───────── */
+.transport { padding: 4px var(--gutter) 2px; }
+.tRow { display: flex; align-items: center; gap: 10px; }
+.play { flex: none; margin: 0 -2px 0 -8px; color: var(--fg); }
+.modes { flex: 1; }
+.tSub { display: flex; align-items: center; justify-content: space-between; height: 34px; }
+.hint { display: inline-flex; align-items: center; gap: 0; white-space: pre; font-size: 12px; color: var(--fg-3); letter-spacing: -.02em; }
+.hint b { color: var(--fg-2); font-size: 13px; }
+.speed { display: inline-flex; align-items: baseline; gap: 1px; height: 34px; padding: 0 2px; font-size: 12px; color: var(--fg-2); font-weight: 600; }
+.speed b { font-size: 15px; color: var(--fg); }
+.skip { display: inline-flex; align-items: center; gap: 4px; height: 34px; padding: 0 2px; font-size: 12.5px; font-weight: 700; color: var(--fg-2); letter-spacing: -.02em; }
+.skip:disabled { opacity: .4; }
+
+/* ───────── broadcast ───────── */
+:global([data-theme='broadcast']) .board { background: var(--inv); }
+:global([data-theme='broadcast']) .c { font-family: var(--font-num); font-style: italic; font-weight: 800; }
+:global([data-theme='broadcast']) .head .c { font-style: normal; font-weight: 700; }
+:global([data-theme='broadcast']) .R { background: var(--inv-2); align-self: stretch; display: grid; place-items: center; }
+:global([data-theme='broadcast']) .cur::after { height: 3px; }
+:global([data-theme='broadcast']) .curCell { background: var(--accent); color: var(--accent-ink); }
+:global([data-theme='broadcast']) .team { padding-left: 10px; }
+:global([data-theme='broadcast']) .tbar { top: 3px; bottom: 3px; width: 5px; opacity: .55; }
+:global([data-theme='broadcast']) .bat .tbar { width: 5px; }
+:global([data-theme='broadcast']) .team b { font-weight: 800; }
+:global([data-theme='broadcast']) .cap { background: var(--inv); color: var(--inv-fg); border-bottom: 0; box-shadow: inset 0 -3px 0 var(--accent); }
+:global([data-theme='broadcast']) .capText { color: var(--inv-fg); }
+:global([data-theme='broadcast']) .why { color: var(--inv-fg-2); }
+:global([data-theme='broadcast']) .tagIn { background: var(--accent); color: var(--accent-ink); padding: 3px 5px 2px; font-style: italic; font-weight: 800; }
+:global([data-theme='broadcast']) .t-half .tagIn, :global([data-theme='broadcast']) .t-event .tagIn { background: var(--inv-fg); color: var(--inv); font-style: normal; }
+:global([data-theme='broadcast']) .wpLine { stroke: var(--fg); stroke-width: 2; }
+
+/* ───────── classic — 손으로 숫자판을 끼우는 수동 점수판 ───────── */
+:global([data-theme='classic']) .board {
+  padding-top: 8px;
+  padding-bottom: 9px;
+  box-shadow: inset 0 0 0 3px var(--inv-2), inset 0 0 0 4px color-mix(in srgb, #000 30%, var(--inv));
+}
+:global([data-theme='classic']) .row { height: 27px; gap: 0 2px; }
+:global([data-theme='classic']) .head { height: 17px; }
+:global([data-theme='classic']) .head .c { font-family: var(--font-body); font-weight: 700; font-size: 9.5px; color: var(--inv-fg-2); letter-spacing: .04em; }
+:global([data-theme='classic']) .v,
+:global([data-theme='classic']) .rv,
+:global([data-theme='classic']) .sub {
+  font-family: var(--font-num-display);
+  font-weight: 800;
+  color: var(--inv-fg);
+  background: color-mix(in srgb, #000 22%, var(--inv));
+  box-shadow: inset 0 1px 0 rgba(0, 0, 0, .25), inset 0 -1px 0 rgba(255, 255, 255, .05);
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  text-shadow: none;
+}
+:global([data-theme='classic']) .v:empty { background: color-mix(in srgb, #000 12%, var(--inv)); }
+:global([data-theme='classic']) .rv { font-size: 19px; background: color-mix(in srgb, #000 30%, var(--inv)); }
+:global([data-theme='classic']) .scored { color: #fff; }
+:global([data-theme='classic']) .curCell { background: color-mix(in srgb, #000 8%, var(--inv)); box-shadow: inset 0 0 0 1px var(--inv-fg-3); }
+:global([data-theme='classic']) .cur::after { background: var(--inv-fg); }
+:global([data-theme='classic']) .tbar { display: none; }
+:global([data-theme='classic']) .team { padding-left: 2px; }
+:global([data-theme='classic']) .team b { font-family: var(--font-head); font-weight: 800; color: var(--inv-fg-2); letter-spacing: -.02em; }
+:global([data-theme='classic']) .bat .team b { color: var(--inv-fg); }
+:global([data-theme='classic']) .bat .team::before { content: ''; position: absolute; left: -7px; top: 50%; width: 4px; height: 4px; margin-top: -2px; border-radius: 50%; background: var(--inv-fg); }
+@keyframes cellInClassic { from { opacity: 0; transform: translateY(-3px); } }
+:global([data-theme='classic']) .now, :global([data-theme='classic']) .rv { animation: cellInClassic 300ms var(--ease-out) both; }
+:global([data-theme='classic']) .tagIn { font-family: var(--font-hand); font-weight: 400; font-size: 21px; letter-spacing: 0; color: var(--club-text); line-height: .8; }
+:global([data-theme='classic']) .t-event .tagIn,
+:global([data-theme='classic']) .t-half .tagIn { font-family: var(--font-body); font-size: 12px; font-weight: 700; color: var(--fg-2); }
+:global([data-theme='classic']) .cap { border-bottom-color: var(--line-2); }
+:global([data-theme='classic']) .wpLine { stroke: var(--fg); stroke-width: 1.3; }
+:global([data-theme='classic']) .head { }
+:global([data-theme='classic']) .head::after { display: none; }
+.hintIco { margin-right: 5px; }

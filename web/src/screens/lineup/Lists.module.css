@@ -1,0 +1,171 @@
+/* 타순 · 투수진 목록 — 상자 없이 헤어라인 줄 */
+.tab { padding: 2px var(--gutter) 8px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 46px; }
+.lead { min-width: 0; font-size: 12.5px; line-height: 1.4; color: var(--fg-3); letter-spacing: -.03em; }
+.lead b { color: var(--accent-2); font-weight: 800; }
+.lead b:global(.num) { font-size: 15px; }
+
+.list { position: relative; border-top: 1px solid var(--line-2); }
+.sec {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 22px;
+  padding-bottom: 8px;
+}
+.sec b { font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 15.5px; text-shadow: var(--misreg); }
+.sec span { font-size: 11.5px; color: var(--fg-3); letter-spacing: -.03em; text-align: right; }
+.top + .sec { margin-top: 6px; }
+
+/* 묶음 머리 (테이블세터 · 클린업 · 하위 타선) */
+.group {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 0 0 6px 18px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.group b { font-weight: 800; letter-spacing: -.03em; color: var(--fg); }
+.group span { font-size: 11px; color: var(--fg-3); }
+.groupChem { margin-left: auto; display: inline-flex; gap: 6px; font-size: 11px; font-weight: 600; color: var(--fg-3); }
+.groupChem i { font-weight: 800; }
+
+/* 줄 */
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 14px 1fr 44px;
+  align-items: stretch;
+  border-bottom: 1px solid var(--line);
+  transition: background-color var(--dur-2);
+}
+.pRow { grid-template-columns: 1fr 44px; }
+.body {
+  display: grid;
+  grid-template-columns: 26px 40px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  min-width: 0;
+  padding: 9px 0 9px 4px;
+  text-align: left;
+}
+.pRow .body { grid-template-columns: 50px 40px minmax(0, 1fr) auto; padding-left: 0; }
+.body:disabled { cursor: default; }
+.no { font-size: 25px; color: var(--fg); text-align: center; }
+.role { font-size: 12px; font-weight: 700; letter-spacing: -.04em; color: var(--fg-2); line-height: 1.2; }
+.face {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: var(--r-3);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.name { font-size: 15px; font-weight: 750; letter-spacing: -.035em; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meta, .fit { display: flex; align-items: center; gap: 0; font-size: 11.5px; line-height: 1.35; color: var(--fg-3); letter-spacing: -.025em; white-space: nowrap; overflow: hidden; }
+.meta > span + span::before, .fit > span + span::before { content: '·'; margin: 0 5px; color: var(--fg-4); }
+.meta :global(.num) { font-size: 12px; font-weight: 700; color: var(--fg-2); }
+.f-good { color: var(--good); font-weight: 700; }
+.f-ok { color: var(--fg-2); font-weight: 600; }
+.f-poor { color: var(--bad); font-weight: 700; }
+.warn { color: var(--warn); font-weight: 700; }
+.stat { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; padding-left: 4px; }
+.stat b { font-size: 18px; line-height: 1; color: var(--fg); }
+.stat small { font-size: 11px; color: var(--fg-3); white-space: nowrap; }
+
+.handle { display: grid; place-items: center; width: 44px; color: var(--fg-4); transition: color var(--dur-1); }
+.handle:hover { color: var(--fg-2); }
+.handleIco { transform: rotate(90deg); }
+.picked { background: var(--accent-weak); }
+.picked .handle { color: var(--accent); }
+.picking .row:not(.picked) .body:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.picking .row:not(.picked) .handle { color: var(--accent-2); }
+.blocked { opacity: .34; }
+
+.hurt .name { color: var(--fg-2); }
+.hurtText { color: var(--bad); gap: 4px; }
+.sig { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; color: var(--fg-2); }
+.sig::before { content: ''; width: 3px; height: 10px; background: var(--sig); }
+.sigFx { color: var(--fg-3); }
+.emptyRow { grid-column: 2 / -1; display: flex; align-items: center; gap: 6px; min-height: 40px; font-size: 13px; font-weight: 600; color: var(--fg-3); }
+
+/* 케미 사슬 (타순) */
+.rail { position: relative; }
+.node {
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  z-index: 2;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--bg);
+  box-shadow: inset 0 0 0 2px var(--fg-2);
+}
+.chain {
+  position: absolute;
+  left: 7px;
+  top: 50%;
+  z-index: 1;
+  height: var(--link-h);
+  transform: translateX(-50%);
+  transition: width 240ms var(--ease-out), background-color 240ms;
+}
+.c0 { width: 0; border-left: 1.5px dashed color-mix(in srgb, var(--bad) 75%, transparent); }
+.c1 { width: 1.5px; background: color-mix(in srgb, var(--fg) 38%, transparent); }
+.c2 { width: 3px; background: color-mix(in srgb, var(--fg) 62%, transparent); }
+.c3 { width: 4.5px; background: color-mix(in srgb, var(--fg) 92%, transparent); }
+.c4 { width: 4.5px; background: var(--volt); box-shadow: 0 0 0 3px color-mix(in srgb, var(--volt) 18%, transparent); }
+
+/* 케미 글자 · 선 견본 */
+.t0 { color: var(--bad); }
+.t1 { color: var(--fg-3); }
+.t2 { color: var(--fg-2); }
+.t3 { color: var(--fg); }
+.t4 { color: var(--volt); }
+.chemMark { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 11px; font-weight: 600; color: var(--fg-3); white-space: nowrap; }
+.chemMark b { font-weight: 800; }
+.chemMark svg { overflow: visible; }
+.chemMark path { fill: none; stroke-linecap: round; stroke: var(--fg); }
+.m0 path { stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 2 3; }
+.m1 path { stroke-opacity: .38; stroke-width: 1.5; }
+.m2 path { stroke-opacity: .62; stroke-width: 3; }
+.m3 path { stroke-opacity: .92; stroke-width: 4.5; }
+.m4 path { stroke: var(--volt); stroke-width: 4.5; }
+
+.foot { margin-top: 14px; font-size: 11.5px; line-height: 1.5; color: var(--fg-4); letter-spacing: -.03em; }
+
+/* broadcast — 굵은 잉크 선, 형광은 형광펜 밑줄 */
+:global([data-theme='broadcast']) .list { border-top: 2px solid var(--fg); }
+:global([data-theme='broadcast']) .face { border-radius: 0; }
+:global([data-theme='broadcast']) .t4, :global([data-theme='broadcast']) .groupChem .t4 {
+  color: var(--fg);
+  background: linear-gradient(transparent 52%, var(--volt) 52%, var(--volt) 92%, transparent 92%);
+}
+:global([data-theme='broadcast']) .c4 { box-shadow: 0 0 0 1.5px var(--fg); }
+:global([data-theme='broadcast']) .m4 path { stroke: var(--volt); }
+:global([data-theme='broadcast']) .chemMark .m4 { filter: drop-shadow(0 0 .6px var(--fg)) drop-shadow(0 0 .6px var(--fg)); }
+:global([data-theme='broadcast']) .group b { font-style: italic; }
+:global([data-theme='broadcast']) .picked { background: color-mix(in srgb, var(--accent) 12%, transparent); box-shadow: inset 3px 0 0 var(--accent); }
+
+/* classic — 기록지 괘선, 먹 얼굴틀, 형광 대신 별색 */
+:global([data-theme='classic']) .list { border-top: 1px solid var(--line-3); }
+:global([data-theme='classic']) .face { border-radius: 0; box-shadow: inset 0 0 0 1px var(--line-3); background: var(--surface-2); }
+:global([data-theme='classic']) .face::after { content: ''; position: absolute; inset: 0; background-image: var(--halftone); background-size: var(--halftone-size); mix-blend-mode: multiply; pointer-events: none; }
+:global([data-theme='classic']) .node { box-shadow: inset 0 0 0 1.5px var(--fg); }
+:global([data-theme='classic']) .c1 { width: 0; background: none; border-left: 1.5px dotted var(--fg-2); }
+:global([data-theme='classic']) .c4 { background: var(--club); box-shadow: none; }
+:global([data-theme='classic']) .t4 { color: var(--accent); }
+:global([data-theme='classic']) .m4 path { stroke: var(--club); }
+:global([data-theme='classic']) .group { border-bottom-color: var(--line-2); }
+:global([data-theme='classic']) .picked { background: color-mix(in srgb, var(--club) 10%, transparent); }
+
+/* 오른쪽 숫자 칸 안 케미 표시는 작게 */
+.stat .chemMark { margin-top: 4px; }
+.stat .chemMark b { font-size: 11.5px; line-height: 1.2; }
+.meta > span:last-child { overflow: hidden; text-overflow: ellipsis; }

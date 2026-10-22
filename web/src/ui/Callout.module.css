@@ -1,0 +1,192 @@
+/* 강조 문구 무대 */
+.stage { position: relative; overflow: hidden; isolation: isolate; }
+.inner { position: relative; }
+
+.layer {
+  --co-tint: color-mix(in srgb, var(--co-team) 55%, #fff);
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* 뒤를 살짝 어둡게 — 띠가 떠 보이게 */
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 70% at 50% 50%, rgba(0, 0, 0, .16), rgba(0, 0, 0, .5));
+  animation: coFadeIn 200ms var(--ease-out) both;
+}
+.out .scrim { animation: coFadeOut var(--co-out) var(--ease-in-out) both; }
+
+/* 빛 — 한 번 번쩍 */
+.flash {
+  position: absolute;
+  inset: -10%;
+  background: radial-gradient(55% 42% at 50% 47%, rgba(255, 251, 240, .92), rgba(255, 236, 200, .3) 45%, transparent 72%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation: coFlash 600ms ease-out 30ms both;
+}
+
+/* 위아래 검은 띠 — 느린 재생 느낌 */
+.lb {
+  position: absolute;
+  left: 0; right: 0;
+  height: 9%;
+  min-height: 24px;
+  max-height: 64px;
+  background: #000;
+  animation: coLbIn 320ms var(--ease-out) both;
+}
+.lbTop { top: 0; transform-origin: top; }
+.lbBot { bottom: 0; transform-origin: bottom; }
+.out .lb { animation: coLbOut var(--co-out) var(--ease-in-out) both; }
+.slow {
+  position: absolute;
+  left: 14px; top: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 700 10.5px/1 var(--font-body);
+  letter-spacing: .02em;
+  color: rgba(255, 255, 255, .78);
+  animation: coFadeIn 300ms 200ms both;
+}
+
+.block {
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%;
+  transform: translateY(-54%);
+  display: flex;
+  flex-direction: column;
+}
+
+/* 구단색 띠 — 왼쪽에서 밀려 들어와 오른쪽으로 빠진다 */
+.band {
+  position: relative;
+  background: var(--co-team);
+  color: var(--co-ink);
+  padding: 14px 20px 13px 28px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28);
+  clip-path: inset(-14px 0 -14px 0);
+  animation: coWipeIn var(--co-wipe) cubic-bezier(.2, .8, .2, 1) 40ms both;
+}
+.band::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 9px;
+  background: var(--co-team2);
+}
+.band::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  bottom: -7px;
+  height: 3px;
+  background: var(--co-tint);
+}
+.out .band { animation: coWipeOut var(--co-out) cubic-bezier(.6, 0, .4, 1) both; }
+
+/* 끝내기·역전 — 위에 반대로 들어오는 두 번째 줄 */
+.band2 {
+  position: absolute;
+  left: 0; right: 0;
+  top: -11px;
+  height: 4px;
+  background: var(--co-tint);
+  clip-path: inset(0 0 0 0);
+  animation: coWipeRev calc(var(--co-wipe) + 80ms) cubic-bezier(.2, .8, .2, 1) 120ms both;
+}
+
+.bandIn { max-width: var(--col); margin: 0 auto; }
+.title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-head);
+  font-weight: 900;
+  font-size: clamp(36px, 11.5vw, 58px);
+  line-height: 1;
+  letter-spacing: -.05em;
+  white-space: nowrap;
+  animation: coTitle 380ms var(--ease-snap) calc(var(--co-wipe) * .45) both;
+}
+.ico { flex: none; }
+.sub {
+  margin-top: 7px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -.03em;
+  opacity: .86;
+  animation: coRise 300ms var(--ease-out) calc(var(--co-wipe) * .8) both;
+}
+.out .title, .out .sub { animation: coFadeOut 180ms ease-in both; }
+
+/* 띠 아래 — 숫자(확률)와 원인 표시 */
+.under {
+  width: 100%;
+  max-width: var(--col);
+  margin: 14px auto 0;
+  padding: 10px 20px 11px 28px;
+  background: linear-gradient(90deg, rgba(4, 6, 10, .78), rgba(4, 6, 10, .5) 62%, rgba(4, 6, 10, 0));
+}
+.meta {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-stretch: var(--num-stretch);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: .01em;
+  color: #fff;
+  animation: coRise 300ms var(--ease-out) calc(var(--co-wipe) + 60ms) both;
+}
+.cause {
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, .7);
+  letter-spacing: -.02em;
+  animation: coRise 300ms var(--ease-out) calc(var(--co-wipe) + 160ms) both;
+}
+.out .under { animation: coFadeOut 180ms ease-in both; }
+
+.big .title { font-size: clamp(46px, 16vw, 76px); }
+.big .band { padding-top: 18px; padding-bottom: 16px; }
+
+/* 대기록 — 띠 없이 위아래 줄만 */
+.record {
+  margin: 0 28px;
+  padding: 14px 8px;
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, .55);
+  border-bottom: 1px solid rgba(255, 255, 255, .55);
+  animation: coFadeIn 420ms ease-out 100ms both;
+}
+.recordTitle { font-family: var(--font-head); font-weight: 800; font-size: 28px; letter-spacing: -.04em; color: #fff; }
+.recordSub { margin-top: 5px; font-size: 13px; color: rgba(255, 255, 255, .76); }
+.out .record { animation: coFadeOut var(--co-out) ease-in both; }
+
+/* 빨리 보기 — 글자를 조금 줄여 화면을 덜 가린다 */
+.p-quick .title { font-size: clamp(32px, 10vw, 50px); }
+.p-quick .big .title, .p-quick.big .title { font-size: clamp(40px, 13vw, 64px); }
+.p-quick .under { margin-top: 12px; }
+
+/* 테마 */
+:global([data-theme='classic']) .title { font-weight: 800; letter-spacing: -.035em; }
+:global([data-theme='classic']) .band { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), inset 0 -1px 0 rgba(0, 0, 0, .18); }
+:global([data-theme='broadcast']) .band::before { width: 12px; }
+
+@keyframes coFadeIn { from { opacity: 0; } }
+@keyframes coFadeOut { to { opacity: 0; } }
+@keyframes coFlash { 0% { opacity: 0; } 16% { opacity: .95; } 100% { opacity: 0; } }
+@keyframes coLbIn { from { transform: scaleY(0); } }
+@keyframes coLbOut { to { transform: scaleY(0); } }
+@keyframes coWipeIn { from { clip-path: inset(-14px 100% -14px 0); } to { clip-path: inset(-14px 0 -14px 0); } }
+@keyframes coWipeOut { from { clip-path: inset(-14px 0 -14px 0); } to { clip-path: inset(-14px 0 -14px 100%); } }
+@keyframes coWipeRev { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0 0 0 0); } }
+@keyframes coTitle { from { opacity: 0; transform: translateX(-18px) scale(1.06); } }
+@keyframes coRise { from { opacity: 0; transform: translateY(6px); } }

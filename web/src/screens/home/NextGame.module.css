@@ -1,0 +1,208 @@
+/* 다음 경기 */
+.next { padding: 0 var(--gutter); }
+
+.head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.h { font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 17px; }
+.count { font-size: 12px; color: var(--fg-3); white-space: nowrap; }
+.count b { font-size: 15px; color: var(--fg); margin-left: 3px; }
+
+/* 판 — night 는 꺼진 전광판, broadcast 는 주황 중계 띠, classic 은 수동 점수판 */
+.board {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  padding: 16px 16px 14px;
+  border-radius: var(--r-3);
+  background: var(--inv);
+  color: var(--inv-fg);
+  box-shadow: inset 0 0 0 1px var(--inv-line);
+}
+.board::before {
+  /* 전광판 위쪽의 은은한 조명 반사 */
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(90% 70% at 50% -20%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%);
+}
+
+.when { display: flex; align-items: flex-end; gap: 12px; }
+.time { display: inline-flex; font-size: 56px; color: var(--inv-fg); letter-spacing: -.02em; }
+.colon { margin: 0 .02em; transform: translateY(-.04em); }
+.whenText { display: flex; flex-direction: column; gap: 2px; padding-bottom: 3px; font-size: 12px; color: var(--inv-fg-2); letter-spacing: -.02em; }
+.whenText > span:first-child { font-weight: 700; color: var(--inv-fg); font-size: 13px; }
+
+.match {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--inv-line);
+}
+.side { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 10px; align-items: center; min-width: 0; }
+.side .em { grid-row: 1 / 3; --emblem-edge: rgba(237, 241, 247, .5); }
+.side b { font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 18px; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.side small { font-size: 12px; color: var(--inv-fg-2); white-space: nowrap; }
+.away { grid-template-columns: minmax(0, 1fr) auto; text-align: right; }
+.away .em { grid-column: 2; grid-row: 1 / 3; }
+.away b, .away small { grid-column: 1; grid-row: auto; }
+.vs { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.vs span { font-family: var(--font-num); font-weight: 700; font-size: 13px; letter-spacing: .12em; color: var(--inv-fg-3); padding-left: .12em; }
+.vs small { font-size: 10px; color: var(--inv-fg-3); white-space: nowrap; }
+
+/* 승리 예상 막대 — 우리 팀만 강조, 상대는 회색 (사이 2px 틈) */
+.wp {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  margin-top: 14px;
+}
+.wpNum { font-size: 12px; color: var(--inv-fg-2); white-space: nowrap; }
+.wpNum b { font-size: 20px; color: var(--inv-fg); margin-right: 1px; }
+.wpNumOpp b { color: var(--inv-fg-2); }
+.wpBar { display: flex; gap: 2px; height: 6px; }
+.wpBar i { display: block; height: 100%; }
+.wpMine { background: var(--accent); border-radius: 2px 0 0 2px; }
+.wpOpp { flex: 1; background: color-mix(in srgb, var(--inv-fg) 22%, transparent); border-radius: 0 2px 2px 0; }
+.wpLabel { grid-column: 1 / -1; margin-top: 6px; font-size: 11px; color: var(--inv-fg-3); letter-spacing: -.02em; }
+
+/* 예상 선발 */
+.starters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.starter { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px 0; }
+.starter + .starter { padding-left: 12px; border-left: 1px solid var(--line); }
+.face {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: var(--r-2);
+  background: var(--surface-2);
+  color: var(--fg-3);
+}
+.starterText { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.starterText small { font-size: 11px; color: var(--fg-3); }
+.starterText b { font-size: 15px; font-weight: 700; letter-spacing: -.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pline { font-size: 12px; color: var(--fg-2); white-space: nowrap; }
+.pline .num { font-size: 13px; color: var(--fg); }
+.pline i { margin: 0 4px; color: var(--fg-4); }
+
+/* 오늘의 구장 + 날씨 */
+.venue { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 14px; align-items: start; padding: 12px 0 4px; }
+.mini { width: 116px; margin-top: -2px; overflow: hidden; border-radius: var(--r-2); }
+.wind { pointer-events: none; }
+.windLine { fill: none; stroke: var(--info); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 18 12; animation: windFlow 1.6s linear infinite; opacity: .95; }
+.windHead { fill: none; stroke: var(--info); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+@keyframes windFlow { to { stroke-dashoffset: -30; } }
+
+.wx { display: flex; flex-direction: column; gap: 6px; min-width: 0; font-size: 13px; letter-spacing: -.02em; }
+.wx li { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--fg-2); }
+.wx li > svg { flex: none; color: var(--fg-3); }
+.wx b { font-size: 15px; color: var(--fg); margin: 0 1px 0 3px; }
+.wx small { font-size: 11.5px; color: var(--fg-3); }
+.cause { font-size: 12px; color: var(--fg-3) !important; padding-left: 25px; }
+.park { display: block !important; margin-top: 2px; padding-top: 7px; border-top: 1px solid var(--line); font-size: 12px; color: var(--fg-2) !important; }
+.park .num { font-size: 13px; color: var(--fg); }
+.park small { display: block; margin-top: 2px; font-size: 11.5px; }
+
+.cta { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 12px; }
+
+/* ───────── broadcast — 주황 중계 띠 + 검은 탭 ───────── */
+:global([data-theme='broadcast']) .head { margin-bottom: 0; }
+:global([data-theme='broadcast']) .h {
+  display: inline-flex; align-items: center; height: 28px; padding: 0 12px;
+  background: var(--inv); color: var(--inv-fg); font-size: 14px; letter-spacing: -.02em;
+}
+:global([data-theme='broadcast']) .board {
+  border-radius: 0;
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: none;
+}
+:global([data-theme='broadcast']) .board::before {
+  background: repeating-linear-gradient(115deg, rgba(255, 255, 255, .07) 0 2px, transparent 2px 9px);
+  -webkit-mask-image: linear-gradient(90deg, transparent 40%, #000);
+  mask-image: linear-gradient(90deg, transparent 40%, #000);
+}
+:global([data-theme='broadcast']) .time { font-size: 64px; color: var(--accent-ink); }
+:global([data-theme='broadcast']) .whenText,
+:global([data-theme='broadcast']) .whenText > span:first-child { color: var(--accent-ink); }
+:global([data-theme='broadcast']) .whenText > span:last-child { opacity: .72; }
+:global([data-theme='broadcast']) .match { border-top-color: rgba(22, 7, 0, .22); }
+:global([data-theme='broadcast']) .side .em { --emblem-edge: rgba(22, 7, 0, .3); }
+:global([data-theme='broadcast']) .side b { font-size: 19px; }
+:global([data-theme='broadcast']) .side small,
+:global([data-theme='broadcast']) .vs span,
+:global([data-theme='broadcast']) .vs small,
+:global([data-theme='broadcast']) .wpNum,
+:global([data-theme='broadcast']) .wpLabel { color: rgba(22, 7, 0, .66); }
+:global([data-theme='broadcast']) .wpNum b { color: var(--accent-ink); font-style: italic; }
+:global([data-theme='broadcast']) .wpMine { background: var(--accent-ink); border-radius: 0; }
+:global([data-theme='broadcast']) .wpOpp { background: rgba(22, 7, 0, .2); border-radius: 0; }
+:global([data-theme='broadcast']) .wpBar { height: 8px; }
+:global([data-theme='broadcast']) .starters { border-top: 0; border-bottom: 2px solid var(--fg); margin-top: 0; background: var(--surface); padding: 0 12px; }
+:global([data-theme='broadcast']) .face { border-radius: 0; background: var(--inv-2); }
+:global([data-theme='broadcast']) .windLine, :global([data-theme='broadcast']) .windHead { stroke: #FFFFFF; }
+
+/* ───────── classic — 수동 점수판: 초록 나무판 + 흰 페인트 숫자판 ───────── */
+:global([data-theme='classic']) .board {
+  border-radius: 2px;
+  padding: 14px 14px 12px;
+  background-color: var(--inv);
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 21px, rgba(0, 0, 0, .16) 21px 22px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .025) 0 1px, transparent 1px 7px);
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--inv) 70%, #000), inset 0 0 0 4px rgba(242, 239, 230, .16);
+}
+:global([data-theme='classic']) .board::before { display: none; }
+:global([data-theme='classic']) .time { gap: 3px; font-size: 44px; text-shadow: none; }
+:global([data-theme='classic']) .digit {
+  display: inline-grid;
+  place-items: center;
+  width: .78em;
+  height: 1.12em;
+  padding-top: .06em;
+  background: color-mix(in srgb, var(--inv) 55%, #000);
+  box-shadow: inset 0 0 0 1px rgba(242, 239, 230, .12), 0 1px 0 rgba(0, 0, 0, .35);
+  color: var(--inv-fg);
+}
+:global([data-theme='classic']) .colon { align-self: center; color: var(--inv-fg); }
+:global([data-theme='classic']) .match { border-top: 0; margin-top: 12px; padding-top: 0; }
+:global([data-theme='classic']) .side b {
+  justify-self: start;
+  max-width: 100%;
+  padding: 3px 7px 2px;
+  background: var(--inv-fg);
+  color: var(--fg);
+  font-size: 16px;
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, .3);
+}
+:global([data-theme='classic']) .away b { justify-self: end; }
+:global([data-theme='classic']) .side small { margin-top: 4px; }
+:global([data-theme='classic']) .vs span { color: var(--inv-fg-2); font-family: var(--font-hand); font-size: 22px; letter-spacing: 0; padding: 0; }
+:global([data-theme='classic']) .wpMine { background: var(--inv-fg); border-radius: 0; }
+:global([data-theme='classic']) .wpOpp { border-radius: 0; background: rgba(242, 239, 230, .2); }
+:global([data-theme='classic']) .wpNum b { font-family: var(--font-num-display); font-weight: 800; }
+:global([data-theme='classic']) .starters { border-top-color: var(--line-3); border-bottom-color: var(--line-2); }
+:global([data-theme='classic']) .face { border-radius: 0; background: var(--surface-3); }
+:global([data-theme='classic']) .windLine, :global([data-theme='classic']) .windHead { stroke: var(--fg); stroke-width: 3; }
+:global([data-theme='classic']) .park { border-top-color: var(--line-2); }
+
+@media (min-width: 560px) {
+  .venue { grid-template-columns: 150px minmax(0, 1fr); }
+  .mini { width: 150px; }
+}
+
+/* night — 꺼진 전광판의 전구 점 */
+:global([data-theme='night']) .board {
+  background-image: radial-gradient(circle, rgba(237, 241, 247, .05) .9px, transparent 1.2px);
+  background-size: 5px 5px;
+}

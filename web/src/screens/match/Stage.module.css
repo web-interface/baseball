@@ -1,0 +1,261 @@
+/* 2D 경기장 무대 — 경기장 + 매 프레임 층 + 중계 그래픽 */
+.stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 400 / 378;
+  overflow: hidden;
+  background: var(--field-stands);
+  isolation: isolate;
+}
+.fieldBox { position: absolute; left: 0; right: 0; }
+.layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
+
+/* ── 야수 · 주자 ── */
+.fielder circle { stroke: var(--field-line); stroke-width: 1.3; }
+.hot circle { stroke-width: 1.7; }
+.dive { fill: var(--field-line); }
+.runner circle { stroke: #fff; stroke-width: 1.6; }
+.out circle { opacity: .55; }
+.x { fill: none; stroke: var(--out); stroke-width: 1.8; stroke-linecap: round; }
+
+/* ── 공 ── */
+.ballCore { fill: #fff; stroke: rgba(0, 0, 0, .35); stroke-width: .5; }
+.glow { fill: rgba(255, 252, 238, .16); }
+.shadow { fill: #000; }
+.trace { fill: none; stroke: rgba(255, 250, 235, .5); stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; }
+.tail { fill: none; stroke: rgba(255, 255, 255, .75); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ── 수비 범위 원 (요구 30) ── */
+.circles { --cl: color-mix(in srgb, var(--cc) 50%, #fff); }
+.cStrong { fill: color-mix(in srgb, var(--cl) 13%, transparent); stroke: color-mix(in srgb, var(--cl) 85%, transparent); stroke-width: .9; }
+.cFaint { fill: color-mix(in srgb, var(--cl) 4%, transparent); stroke: color-mix(in srgb, var(--cl) 22%, transparent); stroke-width: .6; }
+
+/* ── 낙구 · 표시 ── */
+.landing { fill: none; stroke: #fff; stroke-width: 1.2; }
+.l-hit path { fill: var(--accent); stroke: #fff; stroke-width: .8; }
+.l-hr circle { stroke: var(--gold); stroke-width: 1.6; }
+.l-wall path { stroke: var(--accent); stroke-width: 2.6; stroke-linecap: round; }
+
+.mark text {
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: -.02em;
+  fill: #fff;
+  paint-order: stroke;
+  stroke: rgba(3, 6, 11, .88);
+  stroke-width: 3.2px;
+  stroke-linejoin: round;
+}
+.m-hit text { fill: var(--accent-2); }
+.m-hr text { fill: var(--gold); font-size: 12.5px; }
+.m-run text { fill: var(--accent); font-family: var(--font-num); font-size: 14px; }
+.m-error text { fill: var(--warn); }
+.m-info text { fill: rgba(255, 255, 255, .92); font-weight: 700; font-size: 10px; }
+.kLook { }
+
+.cause text {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: -.02em;
+  fill: rgba(255, 255, 255, .86);
+  paint-order: stroke;
+  stroke: rgba(3, 6, 11, .85);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.hotName {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: -.02em;
+  fill: #fff;
+  paint-order: stroke;
+  stroke: rgba(3, 6, 11, .85);
+  stroke-width: 2.8px;
+}
+
+/* 지나간 타구 (같은 반 이닝) */
+.residue polyline { fill: none; stroke-width: .8; stroke-linecap: round; }
+.residue circle { stroke: none; }
+.rHit polyline { stroke: rgba(255, 250, 235, .3); }
+.rHit circle { fill: rgba(255, 250, 235, .55); }
+.rOut polyline { stroke: rgba(255, 250, 235, .14); }
+.rOut circle { fill: none; stroke: rgba(255, 250, 235, .35); stroke-width: .7; }
+.residue text { font-size: 12px; fill: var(--fg-2); }
+
+/* ── 바람 결 ── */
+.wind { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.windRot { position: absolute; inset: -30%; transform: rotate(var(--wdeg)); }
+.windRot i {
+  position: absolute;
+  width: 1px;
+  height: 38px;
+  background: linear-gradient(to top, transparent, rgba(214, 230, 255, .28), transparent);
+  animation: windGo var(--wdur) linear infinite;
+  will-change: transform, opacity;
+}
+@keyframes windGo {
+  0% { transform: translateY(60px); opacity: 0; }
+  25% { opacity: 1; }
+  80% { opacity: .6; }
+  100% { transform: translateY(-150px); opacity: 0; }
+}
+
+/* ── 중계 그래픽 공통 판 ── */
+.bug, .zone, .wx, .readout {
+  position: absolute;
+  z-index: 2;
+  background: color-mix(in srgb, var(--inv) 84%, transparent);
+  box-shadow: inset 0 0 0 1px var(--inv-line);
+  color: var(--inv-fg);
+  border-radius: var(--r-2);
+}
+
+/* 볼카운트 */
+.bug { left: 8px; top: 8px; display: flex; align-items: center; gap: 9px; height: 32px; padding: 0 10px 0 9px; }
+.inn { display: inline-flex; align-items: center; gap: 4px; }
+.inn b { font-size: 19px; line-height: 1; }
+.up, .down { width: 0; height: 0; border-left: 4.5px solid transparent; border-right: 4.5px solid transparent; }
+.up { border-bottom: 6px solid var(--accent); }
+.down { border-top: 6px solid var(--accent); }
+.bases rect { fill: none; stroke: var(--inv-fg-3); stroke-width: 1.2; }
+.bases .bOn { fill: var(--accent); stroke: var(--accent); }
+.bso { display: grid; gap: 2.5px; }
+.lamps { display: flex; align-items: center; gap: 3.5px; height: 7px; }
+.lamps em { width: 8px; font-size: 9.5px; font-style: normal; color: var(--inv-fg-3); line-height: 1; }
+.lamps i { width: 6.5px; height: 6.5px; border-radius: 50%; background: color-mix(in srgb, var(--inv-fg) 14%, transparent); }
+.lb .on { background: var(--ball); }
+.ls .on { background: var(--strike); }
+.lo .on { background: var(--out); }
+.pc { display: flex; flex-direction: column; align-items: flex-end; line-height: 1; gap: 2px; margin-left: 1px; }
+.pc small { font-size: 9px; color: var(--inv-fg-3); font-weight: 600; }
+.pc b { font-size: 15px; }
+
+/* 투구 위치 */
+.zone { right: 8px; top: 8px; width: 98px; padding: 6px 7px 6px; }
+.zsvg { width: 100%; height: auto; display: block; overflow: visible; }
+.zbox { fill: color-mix(in srgb, var(--inv-fg) 4%, transparent); stroke: var(--inv-fg-2); stroke-width: .9; }
+.zgrid line { stroke: var(--inv-fg); stroke-width: .5; opacity: .14; }
+.plate { fill: none; stroke: var(--inv-fg-3); stroke-width: .8; }
+.pm circle { stroke: var(--inv); stroke-width: .8; }
+.pm text { font-family: var(--font-num); font-weight: 700; font-size: 4.6px; fill: var(--inv); }
+.r-ball circle { fill: var(--ball); }
+.r-called circle, .r-swing circle, .r-foul circle { fill: var(--strike); }
+.r-inplay circle { fill: var(--accent); }
+.r-hbp circle { fill: var(--bad); }
+.pm:not(.pmLast) { opacity: .62; }
+.pmLast circle { stroke: var(--inv-fg); stroke-width: 1; }
+.ptail { fill: none; stroke: var(--inv-fg); stroke-width: 2.2; stroke-linecap: round; opacity: .55; }
+.zcap { display: flex; align-items: baseline; gap: 4px; margin-top: 4px; font-size: 10px; font-weight: 700; letter-spacing: -.03em; white-space: nowrap; overflow: hidden; }
+.zcap b { margin-left: auto; font-size: 13px; }
+.sigBar { flex: none; width: 3px; height: 9px; align-self: center; border-radius: 1px; }
+.sigName { overflow: hidden; text-overflow: ellipsis; }
+.zwait { color: var(--inv-fg-3); font-weight: 600; }
+
+/* 날씨 */
+.wx { left: 8px; bottom: 8px; padding: 6px 9px 6px 8px; font-size: 10.5px; }
+.wxTop { display: flex; align-items: center; gap: 5px; color: var(--inv-fg); }
+.wxTop b { font-size: 17px; line-height: 1; }
+.wxTop span { color: var(--inv-fg-2); font-weight: 600; }
+.wxRow { display: flex; align-items: baseline; gap: 3px; margin-top: 3px; color: var(--inv-fg-2); }
+.wxRow b { font-size: 13px; color: var(--inv-fg); }
+.wxRow small { font-size: 9.5px; margin-right: 5px; }
+.arrow { align-self: center; fill: var(--inv-fg); }
+.dim { color: var(--inv-fg-3); }
+
+/* 타구 정보 */
+.readout { right: 8px; bottom: 8px; width: 112px; padding: 5px 9px 4px; font-size: 10px; animation: rdIn 220ms var(--ease-out) both; }
+.readout p { display: flex; justify-content: space-between; align-items: baseline; height: 17px; color: var(--inv-fg-3); font-weight: 600; }
+.readout p + p { box-shadow: inset 0 1px 0 var(--inv-line); }
+.readout b { font-size: 14px; color: var(--inv-fg); }
+.readout small { font-size: 9px; margin-left: 1px; color: var(--inv-fg-3); }
+.cp b { color: var(--accent); }
+@keyframes rdIn { from { opacity: 0; transform: translateY(4px); } }
+
+/* ───────── broadcast — TV 중계 그래픽 ───────── */
+:global([data-theme='broadcast']) .bug,
+:global([data-theme='broadcast']) .zone,
+:global([data-theme='broadcast']) .wx,
+:global([data-theme='broadcast']) .readout { background: var(--inv); box-shadow: none; border-radius: 0; }
+:global([data-theme='broadcast']) .bug { border-left: 3px solid var(--accent); }
+:global([data-theme='broadcast']) .bug b,
+:global([data-theme='broadcast']) .zone b,
+:global([data-theme='broadcast']) .wx b,
+:global([data-theme='broadcast']) .readout b { font-style: italic; font-weight: 800; }
+:global([data-theme='broadcast']) .readout { border-top: 3px solid var(--accent); }
+:global([data-theme='broadcast']) .trace { stroke: var(--strike); stroke-width: 1.2; opacity: .9; }
+:global([data-theme='broadcast']) .glow { display: none; }
+:global([data-theme='broadcast']) .mark text { stroke: #0B0E12; }
+:global([data-theme='broadcast']) .m-hit text { fill: var(--strike); }
+:global([data-theme='broadcast']) .wind i { background: linear-gradient(to top, transparent, rgba(255, 255, 255, .26), transparent); }
+
+/* ───────── classic — 기록지 위 연필 그림 ───────── */
+:global([data-theme='classic']) .stage { background: var(--field-stands); }
+:global([data-theme='classic']) .wind { display: none; }
+:global([data-theme='classic']) .bug,
+:global([data-theme='classic']) .zone,
+:global([data-theme='classic']) .wx,
+:global([data-theme='classic']) .readout {
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: inset 0 0 0 1px var(--line-3);
+  border-radius: 0;
+}
+:global([data-theme='classic']) .lamps em,
+:global([data-theme='classic']) .pc small,
+:global([data-theme='classic']) .readout p,
+:global([data-theme='classic']) .readout small,
+:global([data-theme='classic']) .dim,
+:global([data-theme='classic']) .zwait { color: var(--fg-3); }
+:global([data-theme='classic']) .readout b,
+:global([data-theme='classic']) .wxRow b,
+:global([data-theme='classic']) .wxTop { color: var(--fg); }
+:global([data-theme='classic']) .wxRow, :global([data-theme='classic']) .wxTop span { color: var(--fg-2); }
+:global([data-theme='classic']) .arrow { fill: var(--fg); }
+:global([data-theme='classic']) .readout p + p { box-shadow: inset 0 1px 0 var(--line); }
+:global([data-theme='classic']) .lamps i { background: none; box-shadow: inset 0 0 0 1px var(--fg-3); }
+:global([data-theme='classic']) .lamps .on { box-shadow: none; }
+:global([data-theme='classic']) .bases rect { stroke: var(--fg-2); }
+:global([data-theme='classic']) .bases .bOn { fill: var(--club); stroke: var(--fg); }
+:global([data-theme='classic']) .up { border-bottom-color: var(--club); }
+:global([data-theme='classic']) .down { border-top-color: var(--club); }
+:global([data-theme='classic']) .zbox { fill: none; stroke: var(--fg); }
+:global([data-theme='classic']) .zgrid line { stroke: var(--fg); opacity: .2; }
+:global([data-theme='classic']) .plate { stroke: var(--fg-2); }
+:global([data-theme='classic']) .pm circle { stroke: var(--fg); fill: var(--surface); }
+:global([data-theme='classic']) .pm text { fill: var(--fg); }
+:global([data-theme='classic']) .r-called circle, :global([data-theme='classic']) .r-swing circle, :global([data-theme='classic']) .r-foul circle { fill: var(--fg); }
+:global([data-theme='classic']) .r-called text, :global([data-theme='classic']) .r-swing text, :global([data-theme='classic']) .r-foul text { fill: var(--surface); }
+:global([data-theme='classic']) .r-inplay circle { fill: var(--club); }
+:global([data-theme='classic']) .ptail { stroke: var(--club); opacity: .8; }
+:global([data-theme='classic']) .fielder circle { stroke: var(--fg); stroke-width: 1.1; }
+:global([data-theme='classic']) .runner circle { stroke: var(--fg); stroke-width: 1.3; }
+:global([data-theme='classic']) .dive { fill: var(--fg-3); }
+:global([data-theme='classic']) .ballCore { fill: var(--fg); stroke: none; }
+:global([data-theme='classic']) .glow { display: none; }
+:global([data-theme='classic']) .shadow { fill: var(--fg); }
+:global([data-theme='classic']) .tail { stroke: var(--fg-2); stroke-width: 1.2; }
+:global([data-theme='classic']) .trace { stroke: var(--fg-2); stroke-width: .9; }
+:global([data-theme='classic']) .landing { stroke: var(--fg); }
+:global([data-theme='classic']) .l-hit path { fill: var(--club); stroke: var(--fg); }
+:global([data-theme='classic']) .l-wall path { stroke: var(--club); }
+:global([data-theme='classic']) .l-hr circle { stroke: var(--club); }
+:global([data-theme='classic']) .circles { --cl: var(--fg); }
+:global([data-theme='classic']) .cStrong { fill: color-mix(in srgb, var(--club) 10%, transparent); stroke: var(--fg-2); stroke-width: .7; }
+:global([data-theme='classic']) .cFaint { fill: none; stroke: var(--fg-4); stroke-width: .5; }
+:global([data-theme='classic']) .mark text,
+:global([data-theme='classic']) .cause text,
+:global([data-theme='classic']) .hotName { fill: var(--fg); stroke: var(--bg); }
+:global([data-theme='classic']) .mark text { font-family: var(--font-hand); font-weight: 400; font-size: 15px; letter-spacing: 0; }
+:global([data-theme='classic']) .m-hit text, :global([data-theme='classic']) .m-run text, :global([data-theme='classic']) .m-hr text { fill: var(--club-text); }
+:global([data-theme='classic']) .m-run text { font-family: var(--font-hand); font-size: 17px; }
+:global([data-theme='classic']) .m-error text { fill: var(--bad); }
+:global([data-theme='classic']) .kLook { transform-box: fill-box; transform-origin: center; }
+:global([data-theme='classic']) .cause text { fill: var(--fg-2); }
+:global([data-theme='classic']) .rHit polyline { stroke: var(--fg-2); stroke-width: .7; }
+:global([data-theme='classic']) .rHit circle { fill: var(--fg-2); }
+:global([data-theme='classic']) .rOut polyline { stroke: var(--fg-3); stroke-width: .6; stroke-dasharray: 2 2.4; }
+:global([data-theme='classic']) .rOut circle { stroke: var(--fg-3); }
+:global([data-theme='classic']) .residue text { fill: var(--fg-2); font-size: 13px; }

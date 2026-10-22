@@ -1,0 +1,134 @@
+/* 장비 탭 */
+.panel { display: flex; flex-direction: column; gap: 32px; padding: 22px var(--gutter) 28px; }
+.none { font-size: 13px; color: var(--fg-3); padding: 6px 0; }
+.note { margin-top: 10px; font-size: 11.5px; color: var(--fg-3); }
+
+/* ── 전신 그림 + 슬롯 표시 ── */
+.doll { position: relative; margin: 2px 0 14px; }
+.figure { position: absolute; }
+.figure::before {
+  content: '';
+  position: absolute;
+  left: -30%; right: -30%; bottom: -5px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, .38), transparent);
+}
+.art { position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; }
+.leaders { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.lead { fill: none; stroke: var(--line-3); stroke-width: 1; }
+.leadOff { fill: none; stroke: var(--line-2); stroke-width: 1; stroke-dasharray: 2 3; }
+.pin { position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--bg); }
+.pinOff { background: var(--fg-4); }
+.mark {
+  position: absolute;
+  width: 58px;
+  height: 54px;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--fg);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-2), var(--shadow-1);
+  border-radius: var(--r-3);
+  transition: transform var(--dur-1) var(--ease-out);
+}
+.mark:active { transform: translateY(-50%) scale(.96); }
+.mark .num { font-size: 13px; font-weight: 700; color: var(--accent); }
+.mEmpty { color: var(--fg-4); background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+.mEmpty .num { color: var(--fg-4); }
+
+/* ── 상한 ── */
+.cap { padding: 12px 0 4px; border-top: 1px solid var(--line); }
+.capHead { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; font-size: 12.5px; color: var(--fg-2); }
+.capHead > span:first-child { font-weight: 700; color: var(--fg); }
+.capHead b { font-size: 20px; color: var(--fg); }
+.capOf { color: var(--fg-3); font-size: 12px; }
+.capOf .num { color: var(--fg-2); }
+.capBar { display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); gap: 2px; margin-top: 8px; }
+.capBar i { height: 6px; background: var(--line-2); }
+.capBar .capOn { background: var(--accent); }
+.capOver { margin-top: 6px; font-size: 11.5px; color: var(--warn); }
+
+/* ── 슬롯 목록 ── */
+.list { margin-top: 12px; border-top: 1px solid var(--line-2); }
+.item { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 62px; padding: 9px 0; text-align: left; color: inherit; border-bottom: 1px solid var(--line); }
+.iIcon { display: grid; place-items: center; flex: none; width: 38px; height: 38px; color: var(--fg-2); box-shadow: inset 0 0 0 1px var(--line-2); border-radius: var(--r-2); }
+.iBody { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.iSlot { font-size: 11.5px; color: var(--fg-3); font-weight: 650; }
+.iName { font-size: 14px; font-weight: 750; letter-spacing: -.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.iEmpty { color: var(--fg-4); font-weight: 600; }
+.iMeta { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--fg-3); }
+.iMeta .num { font-size: 12.5px; color: var(--accent); font-weight: 700; }
+.tierPips i { width: 6px !important; height: 6px !important; transform: rotate(45deg); }
+.iStat { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex: none; min-width: 52px; }
+.iStat b { font-size: 19px; line-height: 1; }
+.iStat small { font-size: 11px; color: var(--fg-3); }
+
+/* ── 세트 ── */
+.sets li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.brand { display: grid; place-items: center; flex: none; width: 34px; height: 34px; font: 800 12px/1 var(--font-num); letter-spacing: .06em; color: var(--fg-2); box-shadow: inset 0 0 0 1px var(--line-3); }
+.setOn .brand { color: var(--accent-ink); background: var(--accent); box-shadow: none; }
+.setBody { flex: 1; min-width: 0; font-size: 13px; }
+.setBody b { font-weight: 750; }
+.setBody .num { color: var(--fg-3); font-size: 13.5px; }
+.setFx { margin-top: 2px; font-size: 12px; color: var(--fg-3); }
+.setFx b { color: var(--fg); font-size: 13.5px; }
+.setOn .setFx { color: var(--fg-2); }
+
+/* ── 시트 ── */
+.sheetItem { display: flex; align-items: center; gap: 12px; padding: 4px 0 14px; border-bottom: 1px solid var(--line); }
+.sIcon { display: grid; place-items: center; flex: none; width: 52px; height: 52px; color: var(--fg); box-shadow: inset 0 0 0 1px var(--line-2); border-radius: var(--r-3); }
+.sBody { flex: 1; min-width: 0; }
+.sName { font-size: 16px; font-weight: 800; letter-spacing: -.03em; }
+.sMeta { margin-top: 3px; font-size: 12px; color: var(--fg-3); }
+.sVal { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.sVal b { font-size: 30px; line-height: .9; }
+.sVal small { font-size: 11.5px; color: var(--fg-3); }
+.enh { padding: 14px 0 6px; }
+.enhHead { font-size: 13px; font-weight: 700; }
+.enhHead .num { margin-left: 4px; font-size: 15px; color: var(--accent); }
+.ladder { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; margin-top: 10px; }
+.rung { display: flex; flex-direction: column; gap: 4px; padding: 8px 8px 9px; background: var(--sunk); color: var(--fg-3); }
+.rung i { font-style: normal; font-size: 10.5px; }
+.rung b { font-size: 16px; color: var(--fg-2); }
+.rungOn { background: var(--accent); color: var(--accent-ink); }
+.rungOn b { color: var(--accent-ink); }
+.rungDone { opacity: .5; text-decoration: line-through; }
+.enhNote { margin-top: 9px; font-size: 12px; color: var(--fg-3); }
+.enhCost { margin-top: 6px; font-size: 12.5px; color: var(--fg-2); }
+.enhCost .num { font-size: 14px; color: var(--fg); }
+.ok, .fail { margin-top: 10px; padding: 9px 12px; font-size: 13px; font-weight: 700; }
+.ok { color: var(--good); box-shadow: inset 3px 0 0 var(--good); background: color-mix(in srgb, var(--good) 9%, transparent); }
+.fail { color: var(--fg); box-shadow: inset 3px 0 0 var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); }
+.maxed, .emptyNote { padding: 14px 0 4px; font-size: 13px; color: var(--fg-2); }
+.bagHead { margin-top: 16px; padding-bottom: 6px; font-size: 12px; font-weight: 700; color: var(--fg-3); border-bottom: 1px solid var(--line-2); }
+.bag li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.bagName { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.bagName b { font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bagName > span { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--fg-3); }
+
+/* ───────── broadcast ───────── */
+:global([data-theme='broadcast']) .mark { border-radius: 0; background: var(--inv); color: var(--inv-fg); box-shadow: none; }
+:global([data-theme='broadcast']) .mark .num { color: var(--accent-2); }
+:global([data-theme='broadcast']) .mEmpty { background: transparent; color: var(--fg-4); box-shadow: inset 0 0 0 1.5px var(--line-2); }
+:global([data-theme='broadcast']) .iIcon,
+:global([data-theme='broadcast']) .sIcon { border-radius: 0; box-shadow: inset 0 0 0 1.5px var(--fg); color: var(--fg); }
+:global([data-theme='broadcast']) .brand { box-shadow: inset 0 0 0 1.5px var(--fg); color: var(--fg); }
+:global([data-theme='broadcast']) .rung { background: var(--surface-2); }
+
+/* ───────── classic — 먹 한 판 인쇄 선수 + 망점 ───────── */
+
+:global([data-theme='classic']) .art img { filter: grayscale(1) contrast(1.15) brightness(1.04); }
+:global([data-theme='classic']) .figure::before { background: radial-gradient(closest-side, rgba(29, 30, 33, .22), transparent); }
+:global([data-theme='classic']) .mark { border-radius: 0; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line-3); }
+:global([data-theme='classic']) .mark .num { color: var(--accent); }
+:global([data-theme='classic']) .pin { background: var(--club); }
+:global([data-theme='classic']) .capBar .capOn { background: var(--club); }
+:global([data-theme='classic']) .iIcon, :global([data-theme='classic']) .sIcon { border-radius: 0; box-shadow: inset 0 0 0 1px var(--line-3); }
+:global([data-theme='classic']) .setOn .brand { background: var(--club); color: var(--club-ink); }
+:global([data-theme='classic']) .rungOn { background: var(--club); color: var(--club-ink); }
+:global([data-theme='classic']) .rungOn b { color: var(--club-ink); }

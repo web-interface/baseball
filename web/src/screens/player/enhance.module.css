@@ -1,0 +1,124 @@
+/* 강화 탭 */
+.panel { display: flex; flex-direction: column; gap: 32px; padding: 22px var(--gutter) 28px; }
+.r { text-align: right; }
+
+/* 다음 단계 */
+.step { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr); align-items: center; gap: 10px; }
+.from { font-size: 40px; line-height: .9; color: var(--fg-3); letter-spacing: .02em; }
+.to { font-size: 56px; line-height: .86; color: var(--accent); letter-spacing: .02em; }
+.arrow { color: var(--fg-3); }
+.gain { padding-left: 8px; font-size: 12.5px; line-height: 1.5; color: var(--fg-2); }
+.gain b { font-size: 15px; color: var(--fg); }
+
+/* 확률 + 보정 사다리 */
+.odds { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 16px; align-items: end; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.big { display: flex; flex-direction: column; gap: 6px; }
+.oddsLab { font-size: 12px; font-weight: 700; color: var(--fg-3); }
+.big > b { font-size: 60px; line-height: .84; color: var(--fg); font-variant-numeric: proportional-nums; }
+.big > b small { font-size: .42em; margin-left: 2px; color: var(--fg-2); }
+.carry { font-size: 11.5px; color: var(--fg-3); }
+.carry b { color: var(--accent); }
+.ladder { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; align-items: end; height: 108px; }
+.ladder li { display: flex; flex-direction: column; align-items: stretch; gap: 4px; height: 100%; justify-content: flex-end; }
+.col { position: relative; flex: 1; display: flex; align-items: flex-end; }
+.col i { display: block; width: 100%; height: var(--h); background: var(--line-2); border-radius: 3px 3px 0 0; }
+.ladder b { font-size: 13px; text-align: center; color: var(--fg-2); }
+.nth { font-size: 10.5px; text-align: center; color: var(--fg-4); }
+.now .col i { background: var(--accent); }
+.now b { color: var(--fg); }
+.now .nth { color: var(--fg-2); font-weight: 700; }
+.done .col i { background: var(--fg-4); opacity: .45; }
+.done b { color: var(--fg-4); text-decoration: line-through; }
+.rule { margin-top: 12px; font-size: 12px; line-height: 1.6; color: var(--fg-3); }
+.rule b { color: var(--fg-2); }
+.done10 { display: flex; align-items: center; gap: 12px; font-size: 14px; }
+.done10 b { font-size: 48px; color: var(--accent); }
+
+/* 재료 */
+.mats li + li { border-top: 1px solid var(--line); }
+.mat { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 8px 0; text-align: left; color: inherit; }
+.mat:disabled { opacity: .45; }
+.radio { flex: none; width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--line-3); }
+.matOn .radio, .styleOn .radio { box-shadow: inset 0 0 0 5px var(--accent); }
+.matBody { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.matBody b { font-size: 14px; font-weight: 750; letter-spacing: -.03em; }
+.matBody > span { font-size: 11.5px; color: var(--fg-3); }
+.count { flex: none; font-size: 12px; color: var(--fg-3); }
+.count b { font-size: 18px; color: var(--fg); margin-right: 1px; }
+.ticket { display: grid; place-items: center; flex: none; width: 40px; height: 56px; color: var(--fg-2); box-shadow: inset 0 0 0 1px var(--line-3); border-radius: 4px; background: repeating-linear-gradient(135deg, var(--line) 0 2px, transparent 2px 6px); }
+.gp { margin-top: 10px; font-size: 12.5px; color: var(--fg-3); }
+.gp b { font-size: 14.5px; color: var(--fg); }
+
+/* 플레이스타일 */
+.styles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.style { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 58px; padding: 10px 12px; text-align: left; color: inherit; box-shadow: inset 0 0 0 1px var(--line-2); border-radius: var(--r-3); }
+.style:disabled { cursor: default; }
+.styleOn { box-shadow: inset 0 0 0 1.5px var(--accent); background: var(--accent-weak); }
+.sIcon { flex: none; color: var(--fg-2); }
+.styleOn .sIcon { color: var(--accent); }
+.sBody { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.sBody b { font-size: 14px; font-weight: 800; letter-spacing: -.03em; }
+.sBody span { font-size: 11.5px; color: var(--fg-3); }
+.locked { opacity: .55; }
+.lockNote { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: var(--fg-3); }
+
+/* 단계표 */
+.table { width: 100%; font-size: 12.5px; }
+.table th { padding: 6px 4px; font-size: 11px; font-weight: 650; color: var(--fg-3); text-align: left; border-bottom: 1px solid var(--line-2); }
+.table td { padding: 7px 4px; border-bottom: 1px solid var(--line); color: var(--fg-2); }
+.table th:first-child, .table td:first-child { padding-left: 0; }
+.table th:last-child, .table td:last-child { padding-right: 0; }
+.table .num { color: var(--fg); font-size: 13.5px; }
+.rn { font-weight: 700; letter-spacing: .03em; width: 48px; }
+.got td { color: var(--fg-3); }
+.got .rn { color: var(--accent); }
+.nextRow td { background: var(--accent-weak); }
+.nextRow .rn { color: var(--fg); }
+.tNote { margin-top: 8px; font-size: 11.5px; color: var(--fg-3); }
+
+/* 레벨 */
+.level { display: flex; align-items: center; gap: 16px; }
+.level > b { font-size: 40px; line-height: .86; font-variant-numeric: proportional-nums; }
+.lvRight { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 0; }
+.lvBar { position: relative; height: 4px; background: var(--line-2); }
+.lvBar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+.lvSub { font-size: 12px; color: var(--fg-3); }
+
+/* 결과 시트 */
+.res { display: flex; flex-direction: column; align-items: stretch; gap: 14px; padding-bottom: 4px; }
+.stamp { align-self: center; display: grid; place-items: center; width: 132px; height: 132px; margin: 4px 0 2px; border-radius: 50%; }
+.stamp span { font-size: 58px; line-height: 1; letter-spacing: .02em; }
+.stampOk { color: var(--accent-ink); background: var(--accent); box-shadow: 0 0 0 6px var(--accent-weak); animation: stampIn 520ms var(--ease-snap) both; }
+.stampNo { color: var(--fg-3); box-shadow: inset 0 0 0 2px var(--line-3); animation: shake 420ms ease-out both; }
+.resList { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
+.resList div { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+.resList dt { color: var(--fg-3); }
+.resList dd { margin: 0; color: var(--fg); font-weight: 650; }
+.resList .num { font-size: 15px; }
+.nextC dd { color: var(--accent); }
+.pickStyle { padding-top: 4px; }
+.pickHead { margin-bottom: 10px; font-size: 13.5px; font-weight: 800; }
+.pickHead span { font-weight: 500; font-size: 12px; color: var(--fg-3); }
+@keyframes stampIn { from { transform: scale(1.5); opacity: 0; } 60% { transform: scale(.94); opacity: 1; } }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+
+/* ───────── broadcast ───────── */
+:global([data-theme='broadcast']) .to { font-style: italic; }
+:global([data-theme='broadcast']) .col i { border-radius: 0; }
+:global([data-theme='broadcast']) .style { border-radius: 0; box-shadow: inset 0 0 0 1.5px var(--line-2); }
+:global([data-theme='broadcast']) .styleOn { box-shadow: inset 0 0 0 2px var(--fg); background: transparent; }
+:global([data-theme='broadcast']) .styleOn .sIcon { color: var(--fg); }
+:global([data-theme='broadcast']) .table th { background: var(--inv); color: var(--inv-fg-2); padding-left: 6px; border-bottom: 0; }
+:global([data-theme='broadcast']) .table td:first-child { padding-left: 6px; }
+:global([data-theme='broadcast']) .stamp { border-radius: 0; }
+
+/* ───────── classic — 별색 한 판 ───────── */
+:global([data-theme='classic']) .to { color: var(--accent); }
+:global([data-theme='classic']) .now .col i { background: var(--club); }
+:global([data-theme='classic']) .col i { border-radius: 0; background: color-mix(in srgb, var(--fg) 18%, transparent); }
+:global([data-theme='classic']) .style { border-radius: 0; box-shadow: inset 0 0 0 1px var(--line-2); }
+:global([data-theme='classic']) .styleOn { box-shadow: inset 0 0 0 1.5px var(--fg); background: color-mix(in srgb, var(--club) 9%, transparent); }
+:global([data-theme='classic']) .matOn .radio, :global([data-theme='classic']) .styleOn .radio { box-shadow: inset 0 0 0 5px var(--club); }
+:global([data-theme='classic']) .stampOk { background: var(--club); color: var(--club-ink); box-shadow: 0 0 0 1px var(--line-3), 0 0 0 5px var(--bg), 0 0 0 6px var(--line-2); }
+:global([data-theme='classic']) .lvBar i { background: var(--club); }
+:global([data-theme='classic']) .ticket { border-radius: 0; }

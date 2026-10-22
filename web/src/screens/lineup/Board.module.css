@@ -1,0 +1,390 @@
+/* 라인업 판 — 경기장 + 케미 선 + 카드. 판 좌표 390×480, 카드 60px(=15.38%) */
+.board {
+  --ln: var(--field-line);
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  aspect-ratio: 390 / 496;
+  -webkit-user-select: none;
+  user-select: none;
+  isolation: isolate;
+}
+.fieldWrap { position: absolute; inset: 0; overflow: hidden; z-index: 0; }
+.svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* ── 경기장 ── */
+.stands { fill: var(--field-stands); }
+.foul { fill: var(--field-grass); }
+.g1 { fill: var(--field-grass); }
+.g2 { fill: var(--field-grass-2); }
+.mowStripes, .mowPlain { display: none; }
+.mowPlain { fill: var(--field-grass); }
+.track { fill: none; stroke: var(--field-track); stroke-width: 20; }
+.dirt { fill: var(--field-dirt); }
+.inkEdge { display: none; fill: none; stroke: var(--field-line); stroke-width: .8; }
+.infield { stroke: var(--field-dirt-2); stroke-width: 1.5; stroke-linejoin: round; }
+.paths { fill: none; stroke: var(--field-dirt); stroke-width: 7; stroke-linejoin: round; }
+.mound { fill: var(--field-dirt); stroke: var(--field-dirt-2); stroke-width: 1; }
+.base { fill: var(--field-line); }
+.box { fill: none; stroke: var(--field-line); stroke-width: .7; opacity: .45; }
+.lines { fill: none; stroke: var(--field-line); stroke-width: 1.4; opacity: .82; }
+.wall { fill: none; stroke: var(--field-wall); }
+.wallTop { fill: none; stroke: var(--gold); stroke-width: 1; opacity: .75; transition: stroke var(--dur-3); }
+.dist text { font-family: var(--font-num); font-weight: 600; font-size: 9.5px; fill: var(--field-line); opacity: .58; letter-spacing: .02em; }
+.dist .hiWall { font-family: var(--font-body); font-size: 8.5px; font-weight: 700; opacity: .7; }
+.lights { mix-blend-mode: screen; }
+.ht, .htTrack { display: none; }
+.htDot { fill: var(--fg); fill-opacity: .2; }
+.htTrack { fill: none; stroke-width: 20; }
+.vignette { opacity: 1; }
+.board[data-exploded] .wallTop { stroke: var(--club-c); opacity: 1; stroke-width: 1.6; }
+
+/* ── 케미 선 ── 0 끊김 · 1~3단 · 4 형광 */
+.links path { fill: none; stroke-linecap: round; }
+.core { stroke: var(--ln); transition: stroke-width 240ms var(--ease-out), stroke-opacity 240ms var(--ease-out), stroke 240ms; }
+.case { display: none; }
+.inner { display: none; }
+.l0 .core { stroke: var(--bad); stroke-opacity: .7; stroke-width: 1.5; stroke-dasharray: 3 4; }
+.l1 .core { stroke-opacity: .38; stroke-width: 1.5; }
+.l2 .core { stroke-opacity: .62; stroke-width: 3; }
+.l3 .core { stroke-opacity: .92; stroke-width: 4.5; }
+.l4 .core { stroke: var(--volt); stroke-opacity: 1; stroke-width: 4.5; }
+.glowA, .glowB { stroke: var(--volt); fill: none; stroke-linecap: round; }
+.glowA { stroke-width: 14; stroke-opacity: .1; animation: glowA 2.4s ease-in-out infinite; }
+.glowB { stroke-width: 9; stroke-opacity: .22; animation: glowB 2.4s ease-in-out infinite; }
+@keyframes glowA { 50% { stroke-opacity: .2; } }
+@keyframes glowB { 50% { stroke-opacity: .34; } }
+
+.flashUp, .flashDown { fill: none; stroke-linecap: round; pointer-events: none; }
+.flashUp { stroke: var(--ln); animation: flashUp 900ms var(--ease-out) both; }
+.flashDown { stroke: var(--bad); animation: flashDown 700ms ease-out both; }
+@keyframes flashUp { 0% { stroke-opacity: 0; stroke-width: 4; } 18% { stroke-opacity: .75; stroke-width: 12; } 100% { stroke-opacity: 0; stroke-width: 18; } }
+@keyframes flashDown { 0% { stroke-opacity: .8; stroke-width: 6; } 100% { stroke-opacity: 0; stroke-width: 2; } }
+
+/* 이름 붙은 선 (3단 이상) */
+.tag {
+  position: absolute;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+  padding: 2px 5px 1px;
+  font-size: 9.5px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -.02em;
+  white-space: nowrap;
+  color: var(--field-line);
+  background: color-mix(in srgb, var(--bg-deep) 84%, transparent);
+  pointer-events: none;
+  animation: tagIn 300ms var(--ease-out) both;
+}
+.tag i { font-weight: 600; }
+.tagVolt { color: var(--volt); }
+@keyframes tagIn { from { opacity: 0; transform: translate(-50%, -30%); } }
+
+/* ── 카드 ── */
+.cards { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.slot {
+  position: absolute;
+  width: calc(60 / 390 * 100%);
+  transform: translate(-50%, -50%);
+  border-radius: 6px;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+.slot:focus-visible { outline: 2px solid var(--focus); outline-offset: 5px; }
+/* 바닥 그림자 — 카드가 잔디 위에 서 있게 */
+.slot::before {
+  content: '';
+  position: absolute;
+  left: 6%; right: 6%;
+  bottom: -7%;
+  height: 16%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--bg-deep) 70%, transparent), transparent);
+  pointer-events: none;
+}
+.lift { position: relative; display: block; transition: transform var(--dur-2) var(--ease-out); }
+.slot:hover .lift { transform: translateY(-2px); }
+.slot:active .lift { transform: translateY(0) scale(.97); }
+.on .lift { transform: translateY(-4px); }
+.cardIn { display: block; animation: cardIn 380ms var(--ease-snap) both; }
+.intro { animation-delay: calc(var(--i) * 42ms + 60ms); }
+@keyframes cardIn { from { opacity: 0; transform: translateY(10px) scale(.88); } }
+
+.empty {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  aspect-ratio: 5 / 7;
+  border-radius: 6px;
+  color: var(--field-line);
+  background: color-mix(in srgb, var(--field-line) 6%, transparent);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--field-line) 32%, transparent);
+}
+.empty small { font-size: 9.5px; font-weight: 700; opacity: .75; }
+
+/* 카드 아래 — 타순 번호 네모 + 조합으로 오른 종합 */
+.under {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 4px);
+  z-index: 3;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: stretch;
+  height: 16px;
+  white-space: nowrap;
+}
+.ord {
+  display: grid;
+  place-items: center;
+  min-width: 16px;
+  padding: 1px 3px 0;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--bg);
+  background: var(--fg);
+}
+
+.bonus {
+  display: grid;
+  place-items: center;
+  padding: 1px 4px 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent-2);
+  background: color-mix(in srgb, var(--bg-deep) 82%, transparent);
+  animation: bonusIn 420ms var(--ease-snap) both;
+}
+.bad { font-family: var(--font-body); font-size: 10px; letter-spacing: -.02em; color: var(--bad); }
+.boomed { color: var(--volt); }
+@keyframes bonusIn { from { opacity: 0; transform: translateY(3px) scale(.85); } }
+
+/* 구장 이름 */
+.caption {
+  position: absolute;
+  right: 10px;
+  bottom: 9px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  pointer-events: none;
+}
+.caption span { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.caption b { font-size: 11.5px; font-weight: 700; letter-spacing: -.03em; color: var(--field-line); }
+.caption small { font-size: 10px; letter-spacing: -.02em; color: color-mix(in srgb, var(--field-line) 58%, transparent); }
+
+/* ── 능력치 폭발 ── 판 아래층(어둠·충전되는 선)은 카드 밑, 제목은 카드 위 */
+/* .boom 은 쌓임 맥락을 만들지 않는다 — 어둠(4) < 카드(6) < 제목(7) < 건너뛰기(8) */
+.boom { position: absolute; inset: 0; pointer-events: none; }
+.boomCatch { position: absolute; inset: 0; z-index: 8; cursor: pointer; pointer-events: auto; }
+.boomScrim {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: color-mix(in srgb, var(--bg-deep) 62%, transparent);
+  animation: bIn 300ms 120ms var(--ease-out) both;
+}
+.charge { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; overflow: visible; }
+.charge path {
+  fill: none;
+  stroke: var(--volt);
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: 1;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--volt) 70%, transparent));
+  animation: charge 260ms var(--ease-out) var(--d) forwards, chargeDim 900ms ease-out calc(var(--d) + 900ms) forwards;
+}
+@keyframes charge { to { stroke-dashoffset: 0; } }
+@keyframes chargeDim { to { stroke-opacity: .35; } }
+.board[data-boom] .cards { z-index: 6; }
+.board[data-boom] .lift { animation: boomPop 460ms var(--ease-snap) calc(380ms + var(--hop) * 130ms + var(--i) * 16ms) both; }
+@keyframes boomPop {
+  0% { transform: none; }
+  40% { transform: translateY(-7px) scale(1.07); }
+  100% { transform: none; }
+}
+.board[data-boom] .lift::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 9px;
+  box-shadow: 0 0 0 2px var(--club-c), 0 0 18px 2px color-mix(in srgb, var(--club-c) 55%, transparent);
+  opacity: 0;
+  animation: rim 1500ms ease-out calc(380ms + var(--hop) * 130ms) both;
+  pointer-events: none;
+}
+@keyframes rim { 12% { opacity: 1; } 100% { opacity: 0; } }
+
+.boomTitle {
+  position: absolute;
+  left: 0; right: 0;
+  top: 41%;
+  z-index: 7;
+  transform: translateY(-50%);
+  padding: 18px 16px 20px;
+  text-align: center;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--bg-deep) 86%, transparent) 22%, color-mix(in srgb, var(--bg-deep) 86%, transparent) 78%, transparent);
+  animation: bIn 260ms 520ms both;
+}
+.boomKicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  color: var(--fg);
+  animation: rise 300ms 560ms var(--ease-out) both;
+}
+.boomKicker b { font-size: 15px; color: var(--volt); }
+.boomBig {
+  margin-top: 6px;
+  font-family: var(--font-head);
+  font-weight: 950;
+  font-size: clamp(40px, 12.4vw, 62px);
+  line-height: 1;
+  letter-spacing: -.055em;
+  /* 문서에서 유일하게 허용된 그라디언트 글자 (아트 디렉션 8-7) */
+  background: linear-gradient(180deg, var(--fg) 28%, var(--volt) 96%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: bigIn 460ms var(--ease-snap) 650ms both;
+}
+.boomSub { margin-top: 10px; font-size: 14px; font-weight: 600; letter-spacing: -.03em; color: var(--fg-2); animation: rise 320ms 900ms var(--ease-out) both; }
+.boomSub b { font-size: 20px; color: var(--volt); margin-left: 2px; }
+.boomOut .boomScrim, .boomOut .charge, .boomOut .boomTitle { animation: bOut 420ms var(--ease-in-out) forwards; }
+
+@keyframes bIn { from { opacity: 0; } }
+@keyframes bOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+@keyframes bigIn { from { opacity: 0; transform: scale(1.32); letter-spacing: .02em; } }
+
+/* ── 범례 ── */
+.legend {
+  --ln: var(--field-line);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-3);
+  letter-spacing: -.02em;
+}
+.legendH { font-weight: 800; color: var(--fg-2); }
+.legendItem { display: inline-flex; align-items: center; gap: 5px; }
+.legend svg { overflow: visible; }
+.legend path { fill: none; stroke-linecap: round; }
+.legend .glowA { stroke-width: 9; }
+.legend .glowB { stroke-width: 6; }
+
+/* ───────── broadcast — TV 수비 위치 그래픽: 줄무늬 잔디, 흰 선 + 검은 테 ───────── */
+:global([data-theme='broadcast']) .mowRings { display: none; }
+:global([data-theme='broadcast']) .mowStripes { display: inline; }
+:global([data-theme='broadcast']) .wallTop { stroke: var(--accent); opacity: .95; stroke-width: 1.4; }
+:global([data-theme='broadcast']) .lights,
+:global([data-theme='broadcast']) .vignette { display: none; }
+:global([data-theme='broadcast']) .case { display: inline; stroke: var(--inv); stroke-opacity: .45; }
+:global([data-theme='broadcast']) .l1 .case { stroke-width: 3; }
+:global([data-theme='broadcast']) .l2 .case { stroke-width: 5; }
+:global([data-theme='broadcast']) .l3 .case, :global([data-theme='broadcast']) .l4 .case { stroke-width: 6.5; stroke-opacity: .55; }
+:global([data-theme='broadcast']) .l0 .case { display: none; }
+:global([data-theme='broadcast']) .l1 .core { stroke-opacity: .7; }
+:global([data-theme='broadcast']) .l2 .core { stroke-opacity: .9; }
+:global([data-theme='broadcast']) .l3 .core { stroke-opacity: 1; }
+:global([data-theme='broadcast']) .glowA { stroke-opacity: .16; }
+:global([data-theme='broadcast']) .tag { background: var(--inv); color: var(--inv-fg); padding: 3px 6px 2px; box-shadow: inset 2px 0 0 var(--accent); }
+:global([data-theme='broadcast']) .tagVolt { color: var(--volt); box-shadow: inset 2px 0 0 var(--volt); }
+:global([data-theme='broadcast']) .ord { background: var(--accent); color: var(--accent-ink); }
+:global([data-theme='broadcast']) .bonus { background: var(--inv); color: var(--inv-fg); }
+:global([data-theme='broadcast']) .boomed { color: var(--volt); }
+:global([data-theme='broadcast']) .caption { right: 0; bottom: 0; padding: 7px 10px 6px 12px; background: var(--inv); box-shadow: inset 3px 0 0 var(--accent); }
+:global([data-theme='broadcast']) .caption b { color: var(--inv-fg); }
+:global([data-theme='broadcast']) .caption small { color: var(--inv-fg-2); }
+:global([data-theme='broadcast']) .legend { --ln: var(--fg); }
+:global([data-theme='broadcast']) .legend .case { display: none; }
+/* 폭발 — 방송 자막처럼: 검은 띠 + 주황 줄, 기울인 굵은 글자 */
+:global([data-theme='broadcast']) .boomScrim { background: color-mix(in srgb, var(--inv) 55%, transparent); }
+:global([data-theme='broadcast']) .boomTitle {
+  left: 0; right: 0;
+  padding: 14px 18px 15px 22px;
+  text-align: left;
+  background: var(--inv);
+  box-shadow: inset 6px 0 0 var(--accent), 0 3px 0 var(--volt);
+  animation: wipe 380ms cubic-bezier(.2, .8, .2, 1) 520ms both;
+}
+:global([data-theme='broadcast']) .boomKicker { color: var(--inv-fg-2); }
+:global([data-theme='broadcast']) .boomBig {
+  background: none;
+  color: var(--inv-fg);
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -.04em;
+}
+:global([data-theme='broadcast']) .boomSub { color: var(--inv-fg-2); }
+@keyframes wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+
+/* ───────── classic — 기록지에 그린 판: 종이 · 먹 선 · 크라프트 흙 · 별색 ───────── */
+:global([data-theme='classic']) .mowRings { display: none; }
+:global([data-theme='classic']) .mowPlain { display: inline; }
+:global([data-theme='classic']) .infield { fill: var(--field-grass); stroke: var(--field-line); stroke-width: .8; }
+:global([data-theme='classic']) .inkEdge { display: inline; }
+:global([data-theme='classic']) .paths { stroke-width: 5; }
+:global([data-theme='classic']) .mound { stroke: var(--field-line); stroke-width: .8; }
+:global([data-theme='classic']) .base { fill: var(--surface); stroke: var(--field-line); stroke-width: 1; }
+:global([data-theme='classic']) .lines { opacity: 1; stroke-width: 1.2; }
+:global([data-theme='classic']) .wallTop { stroke: var(--field-line); opacity: 1; }
+:global([data-theme='classic']) .track { stroke-width: 16; }
+/* 판 어긋남 — 별색 판이 먹 판보다 아주 살짝 밀림 */
+:global([data-theme='classic']) .ink { filter: drop-shadow(.7px .5px 0 color-mix(in srgb, var(--club) 55%, transparent)); }
+:global([data-theme='classic']) .lights,
+:global([data-theme='classic']) .vignette { display: none; }
+:global([data-theme='classic']) .dist text { opacity: .85; font-family: var(--font-hand); font-weight: 400; font-size: 15px; }
+:global([data-theme='classic']) .dist .hiWall { font-size: 13px; }
+:global([data-theme='classic']) .ht, :global([data-theme='classic']) .htTrack { display: inline; }
+:global([data-theme='classic']) .l1 .core { stroke-dasharray: 1 3.2; stroke-opacity: .75; stroke-width: 1.4; }
+:global([data-theme='classic']) .l2 .core { stroke-width: 1.8; stroke-opacity: .9; }
+:global([data-theme='classic']) .l3 .core { stroke-width: 2.8; stroke-opacity: 1; }
+:global([data-theme='classic']) .l4 .core { stroke-width: 5; }
+:global([data-theme='classic']) .inner { display: inline; stroke: var(--surface); stroke-width: 1.2; }
+:global([data-theme='classic']) .glowA, :global([data-theme='classic']) .glowB { display: none; }
+:global([data-theme='classic']) .tag { background: var(--surface); color: var(--fg); box-shadow: 0 0 0 1px var(--line-3); font-weight: 700; }
+:global([data-theme='classic']) .tagVolt { color: var(--accent); }
+:global([data-theme='classic']) .slot::before { display: none; }
+:global([data-theme='classic']) .ord { background: var(--surface); color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg); }
+:global([data-theme='classic']) .bonus { background: none; color: var(--accent); font-weight: 800; }
+:global([data-theme='classic']) .boomed { color: var(--accent); }
+:global([data-theme='classic']) .empty { color: var(--fg-2); background: none; box-shadow: inset 0 0 0 1px var(--line-3); }
+:global([data-theme='classic']) .legend { --ln: var(--fg); }
+/* 폭발 — 신문 1면처럼: 종이 띠 + 위아래 겹줄, 별색 큰 글자 */
+:global([data-theme='classic']) .boomScrim { background: color-mix(in srgb, var(--bg) 62%, transparent); }
+:global([data-theme='classic']) .charge path { filter: none; stroke-width: 4; }
+:global([data-theme='classic']) .boomTitle {
+  margin: 0 18px;
+  padding: 14px 10px 16px;
+  background: var(--surface);
+  box-shadow: 0 -1px 0 var(--fg), 0 -4px 0 -2px var(--surface), 0 -5px 0 -2px var(--fg), 0 1px 0 var(--fg), 0 4px 0 -2px var(--surface), 0 5px 0 -2px var(--fg);
+}
+:global([data-theme='classic']) .boomKicker { color: var(--fg-2); }
+:global([data-theme='classic']) .boomKicker b { color: var(--accent); }
+:global([data-theme='classic']) .boomBig {
+  background: none;
+  color: var(--club);
+  font-weight: 900;
+  letter-spacing: -.045em;
+  text-shadow: .9px .7px 0 color-mix(in srgb, var(--fg) 70%, transparent);
+}
+:global([data-theme='classic']) .boomSub b { color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .glowA, .glowB { animation: none; }
+}

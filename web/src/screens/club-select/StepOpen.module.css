@@ -1,0 +1,80 @@
+/* 개막 포스터 */
+.poster { position: relative; isolation: isolate; overflow: hidden; margin: 12px var(--gutter) 22px; padding: 20px 18px 18px; border-radius: var(--r-3); background: var(--inv); color: var(--inv-fg); box-shadow: inset 0 0 0 1px var(--inv-line); }
+.beams {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(60% 50% at 12% -8%, color-mix(in srgb, var(--field-light) 22%, transparent), transparent 70%),
+    radial-gradient(60% 50% at 88% -8%, color-mix(in srgb, var(--field-light) 22%, transparent), transparent 70%),
+    linear-gradient(180deg, transparent 55%, color-mix(in srgb, var(--club) 18%, transparent));
+}
+.posterTop { display: grid; grid-template-columns: auto 1fr; align-items: end; column-gap: 12px; }
+.posterKicker { grid-column: 1 / -1; font-size: 11.5px; color: var(--inv-fg-3); letter-spacing: -.01em; }
+.year { line-height: .82; margin-top: 8px; }
+.year :global(.num-display) { font-size: 92px; letter-spacing: -.03em; color: var(--inv-fg); }
+.opening { padding-bottom: 8px; font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 24px; line-height: 1.05; color: var(--accent); }
+.posterClub { display: flex; align-items: center; gap: 14px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--inv-line); --emblem-edge: rgba(237, 241, 247, .5); }
+.crest { flex: none; }
+.crest figcaption { border-top-color: var(--inv-line); }
+.crest figcaption span:first-child { color: var(--inv-fg); }
+.club { font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 22px; line-height: 1.1; }
+.mgr { margin-top: 4px; font-size: 12.5px; color: var(--inv-fg-2); }
+.mgr b { color: var(--inv-fg); }
+.dates { margin-top: 2px; font-size: 12px; color: var(--inv-fg-3); }
+
+/* 선수단 */
+.squad { display: grid; grid-template-columns: 124px minmax(0, 1fr); gap: 14px; align-items: end; }
+.picks { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.edit { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 2px; font-size: 12px; font-weight: 600; color: var(--fg-3); }
+.starter { margin-top: 12px; font-size: 12.5px; color: var(--fg-3); line-height: 1.55; }
+.starter b { color: var(--fg); font-size: 14px; }
+
+/* AI 난이도 사다리 */
+.ladder { border-top: 1px solid var(--line-2); }
+.ladder li { border-bottom: 1px solid var(--line); }
+.rung { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; padding: 10px 10px 10px 0; text-align: left; color: var(--fg); transition: background-color var(--dur-1); }
+.step { align-self: start; padding-top: 2px; font-size: 13px; color: var(--fg-4); text-align: right; }
+.rungMain { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rungMain b { display: flex; align-items: center; gap: 8px; font-size: 15px; letter-spacing: -.03em; }
+.rungMain em { font-size: 11px; font-weight: 700; color: var(--accent); }
+.rungMain small { font-size: 12px; color: var(--fg-3); }
+.grades { display: flex; flex-wrap: wrap; gap: 3px 10px; margin-top: 3px; }
+.grades span { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--fg-2); }
+.grades i { width: 8px; height: 8px; border-radius: 1px; }
+.reward { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.05; }
+.reward b { font-size: 18px; }
+.reward small { font-size: 10.5px; color: var(--fg-4); }
+.rungOn { background: color-mix(in srgb, var(--club) 12%, transparent); box-shadow: inset 3px 0 0 var(--club); }
+.rungOn .step { color: var(--fg); }
+.fair { margin-top: 10px; font-size: 12px; color: var(--fg-3); line-height: 1.55; }
+.fair b { color: var(--fg-2); }
+
+.funds > div { display: flex; align-items: center; justify-content: space-between; height: 42px; border-bottom: 1px solid var(--line); }
+.funds dt { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--fg-2); }
+.funds dd { margin: 0; font-size: 21px; }
+.funds { margin-bottom: 24px; border-top: 1px solid var(--line-2); }
+
+/* broadcast — 개막 중계 그래픽 */
+:global([data-theme='broadcast']) .poster { border-radius: 0; box-shadow: inset 0 -5px 0 var(--accent); }
+:global([data-theme='broadcast']) .beams { background: repeating-linear-gradient(115deg, rgba(255, 255, 255, .04) 0 2px, transparent 2px 10px); }
+:global([data-theme='broadcast']) .year :global(.num-display) { font-size: 100px; }
+:global([data-theme='broadcast']) .ladder { border-top: 2px solid var(--fg); }
+:global([data-theme='broadcast']) .rungOn { background: var(--inv); color: var(--inv-fg); box-shadow: inset 6px 0 0 var(--accent); }
+:global([data-theme='broadcast']) .rungOn small, :global([data-theme='broadcast']) .rungOn .grades span { color: var(--inv-fg-2); }
+:global([data-theme='broadcast']) .rungOn .step { color: var(--inv-fg); }
+:global([data-theme='broadcast']) .reward b, :global([data-theme='broadcast']) .funds dd { font-style: italic; font-weight: 800; }
+
+/* classic — 인쇄 프로그램 표지: 종이 + 별색 큰 숫자 */
+:global([data-theme='classic']) .poster { background: var(--bg); color: var(--fg); border-radius: 0; box-shadow: inset 0 0 0 1px var(--line-3), inset 0 0 0 4px var(--bg), inset 0 0 0 5px var(--line-3); }
+:global([data-theme='classic']) .beams { background: none; }
+:global([data-theme='classic']) .posterKicker, :global([data-theme='classic']) .dates { color: var(--fg-3); }
+:global([data-theme='classic']) .year :global(.num-display) { color: var(--club-text); font-size: 104px; }
+:global([data-theme='classic']) .opening { color: var(--fg); }
+:global([data-theme='classic']) .posterClub { border-top-color: var(--line-3); --emblem-edge: rgba(29, 30, 33, .3); }
+:global([data-theme='classic']) .crest figcaption span:first-child { color: var(--fg); }
+:global([data-theme='classic']) .mgr { color: var(--fg-2); }
+:global([data-theme='classic']) .mgr b { color: var(--fg); }
+:global([data-theme='classic']) .rungOn { background: color-mix(in srgb, var(--club) 9%, transparent); }
+:global([data-theme='classic']) .funds dd { font-family: var(--font-num-display); font-weight: 700; }
+:global([data-theme='classic']) .step { font-family: var(--font-hand); font-size: 18px; font-weight: 400; }

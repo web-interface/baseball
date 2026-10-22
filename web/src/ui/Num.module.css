@@ -1,0 +1,20 @@
+.n { white-space: nowrap; line-height: 1; }
+.unit { margin-left: .14em; font-size: .62em; font-weight: 600; opacity: .62; letter-spacing: .02em; font-style: normal; }
+
+.xs { font-size: 12px; }
+.s { font-size: 14px; }
+.m { font-size: 17px; }
+.l { font-size: 22px; }
+.xl { font-size: 30px; }
+.xxl { font-size: 44px; }
+.xxxl { font-size: 56px; }
+
+.t-fg { color: var(--fg); }
+.t-fg2 { color: var(--fg-2); }
+.t-fg3 { color: var(--fg-3); }
+.t-accent { color: var(--accent); }
+.t-good { color: var(--good); }
+.t-bad { color: var(--bad); }
+.t-gold { color: var(--gold); }
+.t-up { color: var(--up); }
+.t-down { color: var(--down); }
