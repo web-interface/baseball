@@ -3,6 +3,7 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 html {
+  overscroll-behavior-y: none; /* 화면을 끝까지 당겨도 고무줄처럼 튕기며 헤더·메뉴가 위아래로 흔들리지 않게 */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   background: var(--bg);
@@ -10,6 +11,7 @@ html {
 
 body {
   margin: 0;
+  overscroll-behavior-y: none;
   min-height: 100dvh;
   background-color: var(--bg);
   background-image: var(--texture), var(--page-glow);
