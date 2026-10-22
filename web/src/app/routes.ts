@@ -40,6 +40,7 @@ export const ROUTES: RouteDef[] = [
   { key: 'player', path: '/player/:id', title: '선수 정보', sample: '/player/p03', back: '/cards', chrome: 'bare', owner: '선수 화면 개발자', desc: 'FM 식 상세 능력치 · 고유 구종 · 시즌 기록 · 폼 · 날씨 체질', load: () => import('../screens/player') },
   { key: 'club-select', path: '/club-select', title: '구단 선택', back: '/home', chrome: 'bare', owner: '구단 선택 화면 개발자', desc: '2027 시즌을 함께할 구단 고르기 · 엠블럼·연고·구장·난이도', load: () => import('../screens/club-select') },
   { key: 'settings', path: '/settings', title: '설정', back: '/home', chrome: 'bare', owner: '설정 화면 개발자', desc: '테마 · 경기 보기 방식 · 소리 · 로그아웃', load: () => import('../screens/settings') },
+  { key: 'fx', path: '/fx', title: '홈런 연출', back: '/preview', chrome: 'bare', owner: '연출 개발자', desc: '홈런 폭죽 · 큰 글자 · 만루 세리머니 — 종류 17가지 재생 · ?play=grandslam&t=900 (src/fx/homerun)', load: () => import('../fx/homerun/FxLab') },
 ];
 
 /** 위쪽 메뉴 */

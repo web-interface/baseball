@@ -1,0 +1,434 @@
+/* 홈런 연출 판 — 경기장 위에 덮는다 (부모는 position: relative)
+   층: 어둡게(scrim) → 폭죽 캔버스 → 세리머니 캔버스 → 빛 번쩍 → 위아래 검은 띠 → 큰 글자 → 건너뛰기
+   테마: night = 전광판 흰 글자 + 구단색 선 · broadcast = 중계 자막(검정 판 + 구단색 기둥, 기울임) · classic = 신문 호외(종이 판 · 먹 · 별색) */
+.root {
+  --hr-gutter: 20px;
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  overflow: hidden;
+  isolation: isolate;
+  container-type: size;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  /* React 부품의 바깥 div 는 누름을 통과시키니(pointer-events: none) 여기서 다시 받는다 — 눌러서 건너뛰기 */
+  pointer-events: auto;
+  cursor: pointer;
+  color: #fff;
+  font-family: var(--font-body);
+}
+
+/* ── 바탕 어둡게 — 불꽃이 떠 보이게 ── */
+.scrim {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  /* 구장 조명이 꺼진 듯 — 밤하늘처럼 깊게, 아래(글자 자리)는 더 어둡게 */
+  background:
+    radial-gradient(120% 80% at 50% 28%, rgba(4, 7, 16, .56), rgba(2, 4, 10, .84) 72%),
+    linear-gradient(180deg, rgba(2, 4, 10, .3), transparent 38%, rgba(2, 4, 10, .5));
+}
+.th-broadcast .scrim {
+  background:
+    radial-gradient(120% 80% at 50% 28%, rgba(9, 11, 15, .54), rgba(8, 10, 14, .82) 74%),
+    linear-gradient(180deg, transparent 50%, rgba(8, 10, 14, .55));
+}
+/* classic — 종이를 한 장 덮은 듯 (망점 결) */
+.th-classic .scrim {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(29, 30, 33, .07) 0 .8px, transparent 1.2px) 0 0 / 4px 4px,
+    color-mix(in srgb, #EEEBE3 80%, transparent);
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+.cerCanvas { z-index: 1; }
+
+/* ── 빛 번쩍 ── */
+.flash {
+  position: absolute;
+  inset: -12%;
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: radial-gradient(58% 44% at 50% 34%, rgba(255, 255, 255, .95), rgba(226, 236, 255, .36) 46%, transparent 76%);
+  z-index: 2;
+}
+.flash.warm { background: radial-gradient(58% 44% at 50% 32%, rgba(255, 251, 238, .96), rgba(255, 210, 140, .4) 46%, transparent 76%); }
+
+/* ── 위아래 검은 띠 (끝내기 · 만루) ── */
+.lb {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 8.5%;
+  min-height: 22px;
+  max-height: 56px;
+  background: #000;
+  transform: scaleY(0);
+  z-index: 3;
+}
+.lbTop { top: 0; transform-origin: top; }
+.lbBot { bottom: 0; transform-origin: bottom; }
+.th-classic .lb { background: #1D1E21; }
+
+/* ── 큰 글자 ── */
+.text {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 56%;
+  z-index: 4;
+  padding: 0 var(--hr-gutter);
+  pointer-events: none;
+}
+.lk-band .text { top: 54%; padding: 0; }
+.inner { position: relative; max-width: 600px; margin: 0 auto; }
+
+.kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font: 800 11.5px/1 var(--font-body);
+  letter-spacing: .03em;
+  color: rgba(255, 255, 255, .84);
+  white-space: nowrap;
+}
+.kicker::after { content: ''; flex: 0 0 44px; height: 1px; background: currentColor; opacity: .45; }
+
+.titleBox { position: relative; }
+.title {
+  position: relative;
+  width: max-content;
+  font-family: var(--font-head);
+  font-weight: 900;
+  font-size: clamp(34px, 12.5cqw, 66px);
+  line-height: 1;
+  letter-spacing: -.055em;
+  color: #fff;
+  white-space: nowrap;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, .5);
+}
+.big .title { font-size: clamp(38px, 14cqw, 76px); }
+.short .title { font-size: clamp(30px, 11cqw, 58px); }
+.short.big .title { font-size: clamp(34px, 12.5cqw, 66px); }
+
+.sub {
+  margin-top: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -.02em;
+  color: rgba(255, 255, 255, .88);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, .55);
+}
+.short .sub { font-size: 12.5px; margin-top: 7px; }
+
+.word { display: inline-block; }
+
+/* wipe — 솔로: 지우개처럼 열리고 구단색 선이 따라온다 */
+.rule { display: block; width: 72px; height: 3px; margin-top: 10px; background: var(--hr-fire); transform-origin: left; }
+
+/* slam — 투런 · 스리런: 구단색 판 위에 글자가 꽂힌다 */
+.lk-slam .titleBox { display: inline-block; padding: 6px 14px 8px 12px; }
+.block { position: absolute; inset: 0; background: var(--hr-team); transform-origin: left; z-index: -1; box-shadow: inset 4px 0 0 var(--hr-team2); }
+.lk-slam .title { color: var(--hr-ink); text-shadow: none; }
+
+/* letters — 그랜드슬램: 한 글자씩 떨어지고 금줄 · 4타점 */
+.over {
+  display: block;
+  margin-bottom: 7px;
+  font: 700 11px/1 var(--font-num);
+  letter-spacing: .34em;
+  color: #F2C35A;
+}
+.ch { display: inline-block; }
+.goldRule { display: block; height: 2px; margin-top: 10px; width: min(100%, 320px); background: #E8BE62; transform-origin: left; }
+.stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  margin-left: .32em;
+  vertical-align: .32em;
+  padding: .12em .3em .1em;
+  font-family: var(--font-num-display);
+  font-size: .36em;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: #1A1206;
+  background: #F2C35A;
+  text-shadow: none;
+}
+.stat small { font-family: var(--font-body); font-size: .5em; font-weight: 800; letter-spacing: -.02em; }
+
+/* 꼬리표 (역전 · 장외 · 선두타자 · 역전 그랜드슬램의 '역전') */
+.tag {
+  display: inline-block;
+  margin-right: .2em;
+  padding: .06em .2em .08em;
+  background: var(--hr-team);
+  color: var(--hr-ink);
+  text-shadow: none;
+  box-shadow: inset 0 -.06em 0 var(--hr-team2);
+}
+.lk-count .tag, .lk-ticker .tag, .lk-letters .tag { font-size: .46em; vertical-align: .5em; padding: .22em .36em .24em; letter-spacing: -.02em; }
+
+/* band — 끝내기: 화면 폭 구단색 띠 */
+.band {
+  position: relative;
+  overflow: hidden;
+  padding: 14px var(--hr-gutter) 16px 28px;
+  background: var(--hr-team);
+  color: var(--hr-ink);
+}
+.band::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background: var(--hr-team2); }
+.band .title { color: var(--hr-ink); text-shadow: none; }
+.pre { opacity: .92; }
+.sheen {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 30%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .3) 45%, rgba(255, 255, 255, .05) 60%, transparent);
+  pointer-events: none;
+}
+.lk-band .kicker { padding: 0 var(--hr-gutter); }
+.lk-band .sub { padding: 0 var(--hr-gutter); }
+
+/* meet — 동점: 양쪽에서 와서 '=' 로 맞물림 */
+.eq {
+  display: inline-block;
+  width: .46em;
+  height: .3em;
+  margin: 0 .2em 0 .24em;
+  vertical-align: .22em;
+  border-top: .075em solid var(--hr-fire);
+  border-bottom: .075em solid var(--hr-fire);
+}
+
+/* rise — 앞서가는: 아래에서 솟고 비스듬한 선 */
+.lineClip { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: .06em; }
+.riseRule { display: block; width: 120px; height: 3px; margin-top: 9px; background: var(--hr-fire); transform-origin: left bottom; }
+
+/* count — 장외: 거리 숫자가 차오르고 줄자처럼 선이 뻗는다 */
+.cnum, .cunit {
+  font-family: var(--font-num-display);
+  font-weight: 800;
+  letter-spacing: -.01em;
+  font-variant-numeric: tabular-nums;
+}
+.cnum { display: inline-block; font-size: 1.3em; line-height: .8; text-align: left; }
+.cunit { font-size: .7em; margin-left: .04em; }
+.track {
+  display: block;
+  height: 2px;
+  margin-top: 8px;
+  width: min(100%, 300px);
+  background: repeating-linear-gradient(90deg, var(--hr-fire) 0 2px, transparent 2px 12px), linear-gradient(var(--hr-fire), var(--hr-fire)) 0 100% / 100% 1px no-repeat;
+  height: 7px;
+  transform-origin: left;
+}
+
+/* echo — 백투백: 앞 홈런의 윤곽이 남아 있고 그 위에 다시 */
+.echoBox { position: relative; }
+.ghost {
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: transparent;
+  -webkit-text-stroke: 1.3px color-mix(in srgb, var(--hr-fire) 75%, #fff);
+  opacity: .8;
+  text-shadow: none;
+  pointer-events: none;
+}
+.echoBox .word { position: relative; z-index: 1; }
+
+/* ticker — 선두타자: 오른쪽에서 밀려 들어오는 한 줄 */
+.tickRule { display: block; height: 2px; width: 100%; margin-bottom: 9px; background: var(--hr-fire); transform-origin: right; }
+
+/* card — 대타: 교체 판이 뒤집힌다 */
+.card {
+  display: inline-block;
+  margin-right: .24em;
+  padding: .3em .45em .32em;
+  font-size: .42em;
+  vertical-align: .55em;
+  letter-spacing: -.02em;
+  color: #111;
+  background: #F3F1EC;
+  box-shadow: inset 4px 0 0 var(--hr-team);
+  text-shadow: none;
+}
+
+/* mark — 시즌 n호: 큰 숫자 · 금빛 고리 */
+.mpre { display: inline-block; font-size: .44em; vertical-align: .9em; margin-right: .2em; letter-spacing: -.02em; }
+.mnum {
+  position: relative;
+  display: inline-block;
+  padding: 0 .16em;
+  font-family: var(--font-num-display);
+  font-size: 1.32em;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  line-height: .9;
+}
+.lk-mark .titleBox { padding-top: .14em; }
+.mnum svg { position: absolute; left: 50%; top: 50%; width: 1.26em; height: 1.26em; transform: translate(-50%, -50%) rotate(-90deg); overflow: visible; }
+.mnum circle { fill: none; stroke: #F2C35A; stroke-width: 2.2; stroke-dasharray: 100; stroke-dashoffset: 100; }
+.munit { font-size: .6em; margin-left: .06em; }
+
+/* ── 건너뛰기 ── */
+.skip {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 12px;
+  font: 700 12px/1 var(--font-body);
+  letter-spacing: -.01em;
+  color: rgba(255, 255, 255, .88);
+  opacity: 0;
+  transition: opacity .2s;
+  pointer-events: none;
+}
+.skip i { position: relative; width: 9px; height: 9px; }
+.skip i::before, .skip i::after { content: ''; position: absolute; top: 1px; border: 3.5px solid transparent; border-left: 4.5px solid currentColor; }
+.skip i::before { left: 0; }
+.skip i::after { left: 4.5px; }
+.skip:focus-visible { outline: 2px solid currentColor; outline-offset: -4px; }
+.skipOn { opacity: 1; pointer-events: auto; }
+.skip span { border-bottom: 1px solid rgba(255, 255, 255, .4); padding-bottom: 2px; }
+
+.sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ───────── broadcast — 중계 자막 ───────── */
+.th-broadcast .kicker { color: #fff; }
+.th-broadcast .kicker span { background: #111; padding: 5px 8px 4px; margin-left: -2px; }
+.th-broadcast .kicker::after { opacity: .35; }
+.th-broadcast .title { font-style: italic; letter-spacing: -.06em; }
+.th-broadcast:not(.lk-band):not(.lk-slam) .titleBox {
+  display: inline-block;
+  padding: 9px 30px 11px 18px;
+  background: #0B0E12;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 100%, 0 100%);
+  box-shadow: inset 7px 0 0 var(--hr-team);
+}
+.th-broadcast .title { text-shadow: none; }
+.th-broadcast .sub {
+  display: inline-block;
+  margin-top: 0;
+  padding: 6px 12px 6px 18px;
+  color: #111;
+  background: #F3F1EC;
+  text-shadow: none;
+  box-shadow: inset 0 -3px 0 var(--hr-team);
+}
+.th-broadcast.lk-band .sub { margin-left: var(--hr-gutter); }
+.th-broadcast .band { margin-right: 22px; clip-path: polygon(0 0, 100% 0, calc(100% - 22px) 100%, 0 100%); }
+.th-broadcast .band::before { width: 12px; }
+.th-broadcast .rule, .th-broadcast .riseRule { height: 2px; }
+.th-broadcast .over { color: #F2C35A; }
+.th-broadcast .skip { color: #F3F1EC; background: #0B0E12; min-height: 32px; bottom: 10px; right: 10px; padding: 0 10px; font-size: 11.5px; box-shadow: inset 3px 0 0 var(--hr-team); }
+.th-broadcast .skip span { border: 0; padding: 0; }
+
+/* ───────── classic — 신문 호외 (종이 · 먹 · 별색 한 가지) ───────── */
+.th-classic { color: #1D1E21; }
+.th-classic .text { padding: 0 12px; }
+.th-classic .inner {
+  padding: 10px 14px 12px;
+  background: #F6F1E6;
+  border-top: 3px double #1D1E21;
+  border-bottom: 1px solid #1D1E21;
+  box-shadow: 0 1px 0 #F6F1E6, 0 2px 0 rgba(29, 30, 33, .5);
+}
+.th-classic .kicker { color: var(--hr-spot); letter-spacing: .1em; }
+.th-classic .kicker::before { content: '홈런'; color: #1D1E21; letter-spacing: .04em; font-weight: 900; }
+.th-classic .kicker::after { background: #1D1E21; opacity: .5; flex: 1; }
+.th-classic .title {
+  color: #1D1E21;
+  text-shadow: .8px .6px 0 color-mix(in srgb, var(--hr-spot) 65%, transparent);
+}
+.th-classic .sub { color: rgba(29, 30, 33, .76); text-shadow: none; }
+.th-classic .rule, .th-classic .riseRule, .th-classic .tickRule { background: var(--hr-spot); }
+.th-classic .block { background: var(--hr-spot); box-shadow: none; }
+.th-classic.lk-slam .title { color: #F6F1E6; text-shadow: none; }
+.th-classic .over { color: #1D1E21; }
+.th-classic .goldRule { background: #1D1E21; height: 1px; box-shadow: 0 3px 0 -1px #F6F1E6, 0 3px 0 0 #1D1E21; }
+.th-classic .stat { background: transparent; color: #1D1E21; border: 1.5px solid #1D1E21; }
+.th-classic .tag { background: var(--hr-spot); color: #F6F1E6; box-shadow: none; }
+.th-classic .eq { border-color: var(--hr-spot); }
+.th-classic .track { background: repeating-linear-gradient(90deg, #1D1E21 0 1px, transparent 1px 10px), linear-gradient(#1D1E21, #1D1E21) 0 100% / 100% 1px no-repeat; }
+.th-classic .ghost { -webkit-text-stroke: 1px rgba(29, 30, 33, .55); }
+.th-classic .card { background: transparent; border: 1.5px solid #1D1E21; box-shadow: none; }
+.th-classic .mnum circle { stroke: var(--hr-spot); stroke-width: 2; }
+.th-classic.lk-band .text { padding: 0 12px; top: 50%; }
+.th-classic .band { background: transparent; color: #1D1E21; padding: 4px 0 6px; }
+.th-classic .band::before { display: none; }
+.th-classic .band .title { color: #1D1E21; text-shadow: .8px .6px 0 color-mix(in srgb, var(--hr-spot) 65%, transparent); }
+.th-classic .sheen { display: none; }
+.th-classic.lk-band .kicker, .th-classic.lk-band .sub { padding: 0; }
+.th-classic .skip { color: #1D1E21; }
+/* classic — 아래는 종이 판이 차지하니 위 오른쪽 */
+.th-classic:not(.hasLb) .skip { top: 4px; bottom: auto; }
+/* 위아래 검은 띠가 있으면 건너뛰기는 띠 위 — 밝은 글자 */
+.hasLb .skip { color: rgba(255, 255, 255, .9); top: 0; bottom: auto; min-height: max(36px, min(56px, 8.5cqh)); background: transparent; box-shadow: none; }
+.th-broadcast.hasLb .skip { color: #F3F1EC; }
+.th-classic.hasLb .skip { color: #F6F1E6; }
+.th-classic.hasLb .skip span { border-color: rgba(246, 241, 230, .5); }
+.th-classic .skip span { border-color: rgba(29, 30, 33, .45); }
+
+/* ───────── 움직임 줄이기 — 흔들림·번쩍임 없이 글자와 정지된 빛만 ───────── */
+.reduced .flash, .reduced .lb { display: none; }
+.reduced .title { text-shadow: 0 1px 6px rgba(0, 0, 0, .45); }
+.th-classic.reduced .title { text-shadow: none; }
+
+/* ───────── 만루 세리머니 자막 (+4) ───────── */
+.cer {
+  position: absolute;
+  left: var(--hr-gutter);
+  top: calc(clamp(22px, 8.5%, 56px) + 12px);
+  z-index: 4;
+  pointer-events: none;
+}
+.cerKick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 800 11.5px/1 var(--font-body);
+  letter-spacing: .03em;
+  color: rgba(255, 255, 255, .82);
+}
+.cerKick::after { content: ''; width: 36px; height: 1px; background: currentColor; opacity: .45; }
+.cerBig {
+  margin-top: 6px;
+  font-family: var(--font-num-display);
+  font-weight: 800;
+  font-size: clamp(46px, 16cqw, 88px);
+  line-height: .86;
+  letter-spacing: -.01em;
+  color: #fff;
+  transform-origin: left bottom;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .45);
+}
+.cerBig b { font-weight: 800; }
+.cerWho { margin-top: 7px; font-size: 13px; font-weight: 700; letter-spacing: -.02em; color: rgba(255, 255, 255, .88); }
+.th-broadcast .cerKick span, .th-broadcast .cerKick { color: #fff; }
+.th-broadcast .cerBig { font-style: italic; text-shadow: none; }
+.th-broadcast .cerWho { display: inline-block; padding: 5px 10px; color: #111; background: #F3F1EC; box-shadow: inset 0 -3px 0 var(--hr-team); }
+.th-classic .cerKick { color: var(--hr-spot); letter-spacing: .1em; }
+.th-classic .cerKick::after { background: #1D1E21; }
+.th-classic .cerBig { color: #1D1E21; text-shadow: 1px .7px 0 color-mix(in srgb, var(--hr-spot) 70%, transparent); }
+.th-classic .cerWho { color: rgba(29, 30, 33, .78); }
