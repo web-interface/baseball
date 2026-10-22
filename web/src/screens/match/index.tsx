@@ -9,9 +9,9 @@ import { useTheme } from '../../theme/ThemeProvider';
 import { GAME, LAST_GAME } from './local-mock';
 import { activate, activateLast } from './active';
 import { EndBar, MatchLoading, type MatchCtx } from './EndBar';
-import { homerunFx } from './hr-fx';
+import { homerunFx, hrInfoOf, type HrHandle } from './hr-fx';
 import {
-  PLAYS, beatIndexForPlay, beatsFor, calloutPace, cursorOf, liveOf, totalMs, type Beat, type Cursor, type Mode,
+  PLAYS, beatIndexForPlay, beatsFor, calloutPace, cursorOf, liveOf, scriptOf, totalMs, type Beat, type Cursor, type Mode,
 } from './timeline';
 import { Player, useSnapValue } from './player';
 import { Stage } from './Stage';
@@ -137,17 +137,50 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
       return () => window.clearTimeout(t);
     }
   }, [ended, phase]);
-  // 홈런 장면 — 홈런 연출 모듈(fx/homerun)이 있으면 부른다 (빨리 보기는 짧은 판)
+  // 홈런 — 공이 담장을 넘는 순간(빨리 보기는 그 장면이 번쩍일 때) 홈런 연출(fx/homerun)을 무대 위에 띄운다.
+  // 긴 판(주요 장면·이닝별·자세히)은 연출이 끝날 때까지 경기를 멈췄다가 이어 가고, 빨리 보기는 짧은 판을 얹기만 한다.
+  const hrAt = useSnapValue(player, (x) => {
+    const b = player.beats[x.idx];
+    if (!x.playing || !b) return -1;
+    if (b.k === 'fill') return b.flash != null && PLAYS[b.flash]?.code === 'HR' ? b.flash : -1;
+    if (b.k !== 'bip' || PLAYS[b.play]?.code !== 'HR') return -1;
+    const land = scriptOf(b.play).landing;
+    return !land || x.local >= (land.t / b.rate) * 1000 ? b.play : -1;
+  });
   const hrDone = useRef(new Set<string>());
+  const fxNow = useRef<{ h: HrHandle; resume: boolean; idx: number } | null>(null);
+  const alive = useRef(true);
+  /** 띄운 연출을 걷는다 — resume 이면 연출 때문에 멈췄던 경기를 다시 굴린다 */
+  const stopFx = useCallback((resume = false) => {
+    const r = fxNow.current;
+    fxNow.current = null;
+    r?.h.stop();
+    if (resume && r?.resume && alive.current) player.play();
+  }, [player]);
+  /** 사용자가 장면을 옮기면 — 연출은 걷고(멈췄던 경기는 이어서), 다시 지나는 홈런은 또 보여 준다 */
+  const resetFx = useCallback(() => { stopFx(true); hrDone.current.clear(); }, [stopFx]);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; stopFx(); }; }, [stopFx]);
   useEffect(() => {
-    const pi = beat?.k === 'bip' ? beat.play : beat?.k === 'fill' && beat.flash != null ? beat.flash : -1;
-    if (pi < 0 || !playing) return;
-    const p = PLAYS[pi];
-    if (!p || p.code !== 'HR' || hrDone.current.has(p.id)) return;
+    const p = hrAt >= 0 ? PLAYS[hrAt] : undefined;
+    if (!p || hrDone.current.has(p.id)) return;
     hrDone.current.add(p.id);
-    const t = teamById(p.half === 'top' ? GAME.match.awayId : GAME.match.homeId);
-    void homerunFx({ runs: p.rbi || 1, grandSlam: p.rbi >= 4, short: mode === 'quick', batterId: p.batterId, teamColor: t.colors.primary, walkoff: p.highlight?.kind === 'walkoff', host: document.querySelector<HTMLElement>('[data-stage]') });
-  }, [beat, playing]); // eslint-disable-line react-hooks/exhaustive-deps
+    const long = mode !== 'quick';
+    void homerunFx(document.querySelector<HTMLElement>('[data-stage]'), hrInfoOf(PLAYS, hrAt), long ? 'long' : 'short').then((h) => {
+      if (!h) return;
+      if (!alive.current) { h.stop(); return; }
+      stopFx();
+      const snap = player.getSnap();
+      const rec = { h, resume: long && snap.playing, idx: snap.idx };
+      if (rec.resume) player.pause();
+      fxNow.current = rec;
+      void h.done.then(() => {
+        if (fxNow.current !== rec) return;
+        fxNow.current = null;
+        const now = player.getSnap();
+        if (rec.resume && alive.current && !now.playing && now.idx === rec.idx) player.play();
+      });
+    });
+  }, [hrAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 끝 — 시즌 경기는 그날 결과를 넣는다(한 번만)
   const doneOnce = useRef(false);
@@ -159,6 +192,7 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
 
   const switchMode = useCallback((m: Mode) => {
     queue.clear();
+    resetFx();
     const beats = beatsFor(m);
     if (phase === 'done' || ended) {
       player.swap(beats, 0);
@@ -169,16 +203,18 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
       if (m === 'quick') player.setSpeed(1);
     }
     setMode(m);
-  }, [phase, ended, cursor.play, player, queue]);
+  }, [phase, ended, cursor.play, player, queue, resetFx]);
 
-  const start = () => { setPhase('play'); player.seekBeat(0); player.play(); };
+  const start = () => { resetFx(); setPhase('play'); player.seekBeat(0); player.play(); };
   const seekPlay = (play: number) => {
     queue.clear();
+    resetFx();
     if (phase !== 'play') setPhase('play');
     player.seekBeat(beatIndexForPlay(player.beats, play));
   };
   const toScene = (play: number) => {
     queue.clear();
+    resetFx();
     const beats = beatsFor('key');
     let k = beats.findIndex((b) => b.k === 'scene' && b.play === play);
     if (k < 0) k = beatIndexForPlay(beats, play);
@@ -190,6 +226,7 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
   };
   const skip = () => {
     queue.clear();
+    stopFx(true);
     const bs = player.beats;
     if (blocked === 'halfsum') { player.release(true); return; }
     if (mode === 'quick') { player.seekBeat(bs.length - 1); return; }
