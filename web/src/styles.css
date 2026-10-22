@@ -34,12 +34,6 @@ h3 { font-size: 14px; color: var(--muted); margin: 0 0 8px; }
 .row { display: flex; justify-content: space-between; align-items: center; }
 .ping { margin-top: 16px; padding: 14px; background: var(--bg); border-radius: 12px; line-height: 1.6; }
 .ping p { margin: 0 0 6px; }
-.status { margin-top: 24px; padding: 0 4px; }
-.status ul { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px; }
-.status b { font-weight: 600; color: var(--muted); }
-.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--line); margin-right: 6px; vertical-align: 1px; }
-.dot.ok { background: var(--ok); }
-.dot.bad { background: var(--bad); }
 
 /* 휴대폰 우선 — 노치·홈 막대 피하기, 손가락 크기(44px) 터치, 탭 시 파란 번쩍임 없애기 */
 html { -webkit-text-size-adjust: 100%; }
@@ -49,10 +43,8 @@ body { -webkit-tap-highlight-color: transparent; min-height: 100dvh; }
 .link { min-height: 44px; display: inline-flex; align-items: center; }
 .primary { touch-action: manipulation; }
 .primary:active, .link:active { transform: scale(0.98); }
-.status ul li { min-height: 28px; display: flex; align-items: center; gap: 4px; }
 @media (max-width: 360px) {
   .card { padding: 18px 16px; border-radius: 16px; }
   .code { font-size: 17px; letter-spacing: 0.03em; }
-  .status ul { grid-template-columns: 1fr; }
 }
 @media (min-width: 768px) { .page { padding-top: 32px; } }

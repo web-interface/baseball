@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, ApiError, session, type Health, type Ping } from './api';
+import { api, ApiError, session, type Ping } from './api';
 
 type Mode = 'login' | 'register' | 'reset';
 
@@ -33,7 +33,6 @@ export default function App() {
       <main>
         {recovery && <RecoveryNotice code={recovery} onDone={() => setRecovery(null)} />}
         {checking ? <p className="muted">확인하는 중…</p> : user ? <Home /> : <AuthForm onAuth={onAuth} />}
-        <Status />
       </main>
     </div>
   );
@@ -120,26 +119,6 @@ function Home() {
           <p className="muted small">{ping.model} · 입력 {ping.usage.input} / 출력 {ping.usage.output} 토큰 · 오늘 남은 횟수 {ping.left}</p>
         </div>
       )}
-    </section>
-  );
-}
-
-function Status() {
-  const [h, setH] = useState<Health | null>(null);
-  const [down, setDown] = useState(false);
-  useEffect(() => { api.health().then(setH).catch(() => setDown(true)); }, []);
-  const item = (label: string, ok: boolean | undefined) => (
-    <li><span className={ok ? 'dot ok' : ok === false ? 'dot bad' : 'dot'} aria-hidden />{label} <b>{ok ? '연결됨' : ok === false ? '안 됨' : '…'}</b></li>
-  );
-  return (
-    <section className="status">
-      <h3>연결 상태</h3>
-      <ul>
-        {item('서버', down ? false : h ? h.ok : undefined)}
-        {item('저장소(D1)', down ? false : h?.db)}
-        {item('로그인 보안', down ? false : h?.pepper)}
-        {item('Claude', down ? false : h?.ai)}
-      </ul>
     </section>
   );
 }
