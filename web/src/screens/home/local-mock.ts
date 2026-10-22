@@ -2,7 +2,13 @@
 import { LAST_MATCH, ME, NEXT_GAME, PACKS, SCOUT_SHOP, STANDINGS, cardById, playerById, teamById } from '../../game/mock';
 import { LEAGUE } from '../../game/world';
 import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
-import type { Play, Player, StandingRow, Team } from '../../game/types';
+import type { Play, Player, StandingRow, Team, Weather } from '../../game/types';
+import { TEAMS } from '../../game/mock';
+import { getSeason, standingsOf } from '../../season/store';
+import { nextMyGame } from '../../season/run';
+import { clubRoster, myRoster, LEVEL_OVR, aiLevel } from '../../season/rosters';
+import { weatherOf } from '../../season/weather';
+import { startTime } from '../../season/schedule';
 
 /** 정규 시즌 경기 수 (세계관: 상대마다 15경기 × 9) */
 export const SEASON_GAMES = 135;
@@ -16,15 +22,48 @@ export interface ClubLine {
   nextNo: number;
 }
 
+/** 순위 · 전적 — 시즌 진행(season/store)에서. 시작은 목업 순위표(71경기) */
 export function clubLine(teamId: string): ClubLine {
-  const i = Math.max(0, STANDINGS.findIndex((r) => r.teamId === teamId));
-  const row = STANDINGS[i];
-  const played = row.w + row.d + row.l;
-  return { rank: i + 1, row, played, left: SEASON_GAMES - played, nextNo: played + 1 };
+  const rows = standingsOf(getSeason());
+  const i = Math.max(0, rows.findIndex((r) => r.teamId === teamId));
+  const r = rows[i];
+  const row: StandingRow = { teamId: r.teamId, w: r.w, d: r.d, l: r.l, pct: Math.round(r.pct * 1000) / 1000, gb: r.gb, streak: r.streak, last10: [...r.last10].reverse().join('') || (STANDINGS.find((x) => x.teamId === teamId)?.last10 ?? '') };
+  const played = r.w + r.d + r.l;
+  return { rank: i + 1, row, played, left: Math.max(0, SEASON_GAMES - played), nextNo: played + 1 };
 }
 
-/* ── 다음 경기 ── */
+/* ── 다음 경기 — 시즌 진행의 다음 내 경기 (비로 취소되는 날은 건너뜀) ── */
 export function nextGameView() {
+  const nx = nextMyGame();
+  if (nx) {
+    const me = teamById(ME.teamId);
+    const isHome = nx.home === me.id;
+    const opp = teamById(isHome ? nx.away : nx.home);
+    const home = isHome ? me : opp;
+    const s = getSeason();
+    const time = startTime(nx.day.date);
+    const w = weatherOf(nx.day.date, nx.home, s.seed);
+    const night = Number(time.slice(0, 2)) >= 18;
+    const weather: Weather = {
+      city: home.region, sky: night ? 'night-clear' : 'clear', skyKo: w.dome ? '돔' : '맑음', tempC: w.tC, humidity: 60,
+      windMps: w.windMs, windTo: w.windMs < 1 ? 'calm' : 'out-cf', windKo: w.windMs < 1 ? '바람 없음' : '가운데 담장 쪽으로', rainPct: 10, dust: '보통',
+      effects: [w.dome ? '돔 — 바람 영향 없음' : w.windMs >= 3 ? `가운데 비거리 +${Math.round(w.windMs)}m` : '바람 영향 거의 없음'],
+    };
+    // 예상 선발 — 날마다 다섯 명이 돌아가며 (엔진과 같은 규칙)
+    const ti = (id: string) => TEAMS.findIndex((t) => t.id === id);
+    const mineR = myRoster();
+    const oppR = clubRoster(opp.id);
+    const pickSp = (rot: Player[], id: string) => (rot.length ? rot[((nx.day.day + ti(id)) % rot.length + rot.length) % rot.length] : undefined);
+    const myOvr = mineR.ovr, oppOvr = LEVEL_OVR[aiLevel()] + (opp.tier === '강' ? 2 : opp.tier === '약' ? -2 : 0);
+    const wp = 1 / (1 + Math.exp(-((myOvr - oppOvr) / 7 + (isHome ? 0.08 : -0.08))));
+    const h2hList = s.my.filter((g) => g.opp === opp.id);
+    return {
+      me, opp, venue: home.stadium, isHome, time, weather, wp,
+      mine: pickSp(mineR.rotation, me.id), theirs: pickSp(oppR.rotation, opp.id), oppLine: clubLine(opp.id),
+      h2h: { w: h2hList.filter((g) => g.res === 'W').length, d: h2hList.filter((g) => g.res === 'D').length, l: h2hList.filter((g) => g.res === 'L').length },
+      date: nx.day.date, rainedBefore: nx.rainedBefore, over: false,
+    };
+  }
   const me = teamById(ME.teamId);
   const opp = teamById(NEXT_GAME.opponentId);
   const home = NEXT_GAME.home ? me : opp;
@@ -37,6 +76,7 @@ export function nextGameView() {
     mine, theirs, oppLine: clubLine(opp.id),
     /** 맞대결 (목업) */
     h2h: { w: 5, d: 0, l: 3 },
+    date: '', rainedBefore: 0, over: true,
   };
 }
 

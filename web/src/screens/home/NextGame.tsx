@@ -6,7 +6,7 @@ import { navigate } from '../../app/router';
 import { polarToField } from '../../game/field';
 import type { Player, Team, Weather } from '../../game/types';
 import { clubLine, nextGameView, pitchLine } from './local-mock';
-import { untilKickoff, useClock } from './useClock';
+import { longDate, shortDate } from '../../season/schedule';
 import s from './NextGame.module.css';
 
 const SKY_ICON: Record<Weather['sky'], IconName> = {
@@ -78,8 +78,6 @@ function Starter({ p, team, label }: { p?: Player; team: Team; label: string }) 
 
 export function NextGame() {
   const g = nextGameView();
-  const now = useClock();
-  const ko = untilKickoff(now, g.time);
   const myLine = clubLine(g.me.id);
   const w = g.weather;
   const st = g.venue;
@@ -91,7 +89,7 @@ export function NextGame() {
       <header className={s.head}>
         <h2 id="next-h" className={s.h}>다음 경기</h2>
         <p className={s.count}>
-          {ko.today ? <>시작까지 <b className="num">{ko.text}</b></> : <>내일 <b className="num">{g.time}</b></>}
+          {g.over ? '정규 시즌 끝' : <>{longDate(g.date)} <b className="num">{g.time}</b></>}
         </p>
       </header>
 
@@ -101,7 +99,7 @@ export function NextGame() {
             {g.time.split('').map((ch, i) => <span key={i} className={ch === ':' ? s.colon : s.digit} aria-hidden>{ch}</span>)}
           </b>
           <p className={s.whenText}>
-            <span>{ko.today ? '오늘' : '내일'} · {g.isHome ? '홈' : '원정'}</span>
+            <span>{g.over ? '시즌 끝' : shortDate(g.date)} · {g.isHome ? '홈' : '원정'}</span>
             <span><span className="num">{myLine.nextNo}</span>번째 경기 · {st.name}</span>
           </p>
         </div>
@@ -130,7 +128,7 @@ export function NextGame() {
             <i className={s.wpOpp} />
           </span>
           <span className={[s.wpNum, s.wpNumOpp].join(' ')}><b className="num">{100 - wpMine}</b>%</span>
-          <small className={s.wpLabel}>승리 예상 — 엔진이 오늘 라인업·날씨·구장으로 계산</small>
+          <small className={s.wpLabel}>승리 예상 — 오늘 라인업 팀 종합 · 상대 전력 · 홈 이점으로{g.rainedBefore ? ` · 사이에 비로 밀린 경기 ${g.rainedBefore}` : ''}</small>
         </div>
       </div>
 
@@ -165,8 +163,11 @@ export function NextGame() {
       </div>
 
       <div className={s.cta}>
-        <Button size="l" block icon="play" onClick={() => navigate('/match')}>경기장 입장</Button>
+        {g.over
+          ? <Button size="l" block icon="arrow-right" onClick={() => navigate('/season')}>시즌 결과 보기</Button>
+          : <Button size="l" block icon="play" onClick={() => navigate('/match?g=season')}>지금 바로 경기</Button>}
         <Button size="l" variant="secondary" onClick={() => navigate('/lineup')}>라인업</Button>
+        <Button size="l" variant="ghost" icon="fast" className={s.ff} onClick={() => navigate('/season')}>남은 시즌 빨리 감기</Button>
       </div>
     </section>
   );

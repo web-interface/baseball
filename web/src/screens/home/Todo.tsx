@@ -19,7 +19,7 @@ export function Todo() {
     { key: 'shop', to: '/shop', icon: 'shop', label: '스카우트 상점', value: <b className="num">{n.shop.left}<i>명</i></b>, note: <>오늘 더 데려올 수 있어요</> },
     { key: 'pvp', to: '/pvp', icon: 'versus', label: '대전', value: <b className="num">{n.pvp.left}<i>번</i></b>, note: <>레이팅 <span className="num">{int(n.pvp.rating)}</span></> },
     { key: 'cards', to: '/cards', icon: 'card', label: '카드', value: <b className="num">{int(n.cards.have)}</b>, note: <>도감 <span className="num">{Math.round((n.cards.have / n.cards.total) * 100)}</span>%</> },
-    { key: 'season', icon: 'fast', label: '시즌 자동 진행', value: <b className="num">{line.left}<i>경기</i></b>, note: '남은 시즌 한 번에' },
+    { key: 'season', to: '/season', icon: 'fast', label: '시즌 빨리 감기', value: <b className="num">{line.left}<i>경기</i></b>, note: '남은 시즌 한 번에' },
   ];
   return (
     <section className={s.todo} aria-labelledby="todo-h">

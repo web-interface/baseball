@@ -1,0 +1,120 @@
+/* 시즌 빨리 감기 — 점수판 같은 머리 · 날짜 막대 · 소식 띠 · 순위 경쟁 · 순위표 */
+.screen { padding-bottom: 40px; }
+.top { padding: 18px var(--gutter) 6px; }
+.kicker { font-size: 11.5px; font-weight: 700; color: var(--fg-3); }
+.title { margin-top: 4px; font-size: 24px; text-shadow: var(--misreg); }
+.meRow { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 12px 14px; background: var(--inv); color: var(--inv-fg); border-radius: var(--r-3); }
+.meMain { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.meMain b { font-size: 16px; font-weight: 800; letter-spacing: -.03em; }
+.meMain small { font-size: 11.5px; color: var(--inv-fg-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rankBig { font-size: 40px; line-height: .9; }
+.rankBig i { font-style: normal; font-size: 14px; margin-left: 2px; color: var(--inv-fg-2); font-family: var(--font-body); }
+
+.prog { padding: 14px var(--gutter) 2px; }
+.progTop { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 13px; }
+.progTop b { font-weight: 800; }
+.progTop .num { color: var(--fg-2); }
+.busy { font-style: normal; margin-left: 6px; font-size: 11px; color: var(--accent); }
+.bar { height: 8px; margin-top: 8px; background: var(--line-2); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); transition: width var(--dur-2) var(--ease-out); }
+.progEnds { display: flex; justify-content: space-between; margin-top: 4px; font-size: 10.5px; color: var(--fg-3); }
+
+.ctrl { padding: 12px var(--gutter) 0; display: grid; gap: 10px; }
+.ctrlBtns { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+
+/* 하이라이트 카드 */
+.hl { --tc: var(--accent); margin: 14px var(--gutter) 0; padding: 12px 14px; background: var(--inv); color: var(--inv-fg); border-left: 5px solid var(--tc); animation: hlIn 280ms var(--ease-out) both; }
+@keyframes hlIn { from { transform: translateY(8px); opacity: 0; } }
+.hlKind { font-size: 11px; font-weight: 800; letter-spacing: .06em; color: var(--inv-fg-2); }
+.hlText { margin-top: 2px; font-family: var(--font-head); font-weight: var(--head-weight); font-size: 18px; letter-spacing: var(--head-tracking); }
+.hlLine { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 11.5px; }
+.hlLine th, .hlLine td { padding: 3px 2px; text-align: center; }
+.hlLine thead th { font-size: 10px; color: var(--inv-fg-3); font-weight: 600; }
+.hlLine tbody th { text-align: left; white-space: nowrap; font-weight: 700; display: flex; align-items: center; gap: 4px; }
+.hlR { font-weight: 800; border-left: 1px solid var(--inv-line); }
+.hlSub { margin-top: 6px; font-size: 11px; color: var(--inv-fg-2); }
+@media (prefers-reduced-motion: reduce) { .hl { animation: none; } }
+
+/* 소식 띠 */
+.news { padding: 16px var(--gutter) 0; }
+.secH { display: flex; align-items: baseline; gap: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line-2); font-size: 15px; font-weight: 800; font-family: var(--font-head); letter-spacing: var(--head-tracking); }
+.secH small { font-family: var(--font-body); font-size: 11px; font-weight: 500; color: var(--fg-3); letter-spacing: 0; }
+.nl { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; align-items: baseline; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; animation: nlIn 260ms var(--ease-out) both; }
+@keyframes nlIn { from { opacity: 0; transform: translateX(-6px); } }
+.nlKind { font-size: 11px; font-weight: 800; color: var(--fg-3); }
+.nlText { color: var(--fg); letter-spacing: -.02em; min-width: 0; }
+.nlDate { font-size: 11px; color: var(--fg-3); }
+.nlMine { box-shadow: inset 3px 0 0 var(--accent); padding-left: 8px; }
+.k-hot .nlKind { color: var(--accent); }
+.k-rec .nlKind { color: var(--info); }
+.k-bad .nlKind { color: var(--bad); }
+.k-rain .nlKind { color: var(--fg-2); }
+.empty { padding: 12px 0; font-size: 12.5px; color: var(--fg-3); }
+@media (prefers-reduced-motion: reduce) { .nl { animation: none; } }
+
+/* 순위 경쟁 그래프 */
+.sec { padding: 18px var(--gutter) 0; }
+.chart { margin: 8px 0 0; }
+.chartSvg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+.grid { stroke: var(--line); stroke-width: 1; }
+.cut { stroke: var(--fg-3); stroke-width: 1; stroke-dasharray: 3 3; }
+.axis { font-size: 9.5px; fill: var(--fg-3); font-family: var(--font-num); }
+.line { fill: none; stroke: var(--line-3); stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
+.mine { stroke-width: 3; }
+.picked { stroke-width: 2.2; }
+.endDot { fill: var(--fg-4); stroke: var(--bg); stroke-width: 1.5; }
+.lbl { font-size: 10px; fill: var(--fg-3); }
+.lblOn { fill: var(--fg); font-weight: 800; }
+.endLabel { cursor: pointer; }
+.hit { fill: transparent; }
+.cross { stroke: var(--fg-2); stroke-width: 1; }
+.tip, .cap { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 6px; font-size: 11.5px; color: var(--fg-2); min-height: 18px; }
+.tip b { color: var(--fg); }
+.tipMe { color: var(--fg); font-weight: 800; }
+.cap { color: var(--fg-3); }
+
+/* 순위표 */
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
+.tbl th { padding: 7px 4px; font-size: 11px; font-weight: 650; color: var(--fg-3); text-align: left; border-bottom: 1px solid var(--line-2); }
+.tbl td { padding: 7px 4px; border-bottom: 1px solid var(--line); }
+.cR { text-align: right !important; }
+.rk { width: 30px; color: var(--fg-2); }
+.who { display: flex; align-items: center; gap: 6px; }
+.who b { font-weight: 750; }
+.pct { font-weight: 700; }
+.streak { font-size: 12px; color: var(--fg-2); }
+.tbl .mine td { background: var(--accent-weak); }
+.tbl .mine td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.tbl .cut td { border-bottom: 2px solid var(--fg-2); }
+@media (max-width: 380px) { .hideS { display: none; } }
+
+/* 개인 기록 */
+.leaders { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; margin-top: 4px; }
+.leaders li { display: grid; grid-template-columns: auto 1fr; grid-template-areas: 'l v' 'w w' 's s'; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.leaders li.mine { box-shadow: inset 3px 0 0 var(--accent); padding-left: 8px; }
+.ldLabel { grid-area: l; font-size: 11px; font-weight: 800; color: var(--fg-3); }
+.ldVal { grid-area: v; justify-self: end; font-size: 24px; line-height: 1; }
+.ldWho { grid-area: w; display: flex; align-items: center; gap: 5px; margin-top: 4px; min-width: 0; }
+.ldWho b { font-size: 13.5px; font-weight: 750; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ldWho small { font-size: 11px; color: var(--fg-3); }
+.ldSub { grid-area: s; font-size: 11px; color: var(--fg-3); }
+.endBtns { display: grid; gap: 8px; }
+
+/* broadcast — 검정 띠 · 굵은 막대 */
+:global([data-theme='broadcast']) .meRow { border-radius: 0; box-shadow: inset 5px 0 0 var(--accent); }
+:global([data-theme='broadcast']) .bar { height: 10px; background: var(--surface-3); }
+:global([data-theme='broadcast']) .secH { border-bottom: 2px solid var(--fg); }
+:global([data-theme='broadcast']) .tbl th { background: var(--inv); color: var(--inv-fg-2); border-bottom: 0; }
+:global([data-theme='broadcast']) .hl { border-left-width: 7px; }
+
+/* classic — 초록 점수판 · 기록지 괘선 · 별색 */
+:global([data-theme='classic']) .meRow { border-radius: 0; box-shadow: inset 0 0 0 3px var(--inv-2); }
+:global([data-theme='classic']) .bar { box-shadow: inset 0 0 0 1px var(--fg); background: none; }
+:global([data-theme='classic']) .bar i { background: var(--club); background-image: var(--halftone); background-size: var(--halftone-size); }
+:global([data-theme='classic']) .secH { border-bottom: 1.5px solid var(--fg); }
+:global([data-theme='classic']) .tbl th { border-bottom: 1.5px solid var(--fg); color: var(--fg-2); }
+:global([data-theme='classic']) .tbl .mine td { background: color-mix(in srgb, var(--club) 10%, transparent); }
+:global([data-theme='classic']) .tbl .mine td:first-child { box-shadow: inset 3px 0 0 var(--club); }
+:global([data-theme='classic']) .busy, :global([data-theme='classic']) .k-hot .nlKind { color: var(--club-text); }
+:global([data-theme='classic']) .nlMine, :global([data-theme='classic']) .leaders li.mine { box-shadow: inset 3px 0 0 var(--club); }
+:global([data-theme='classic']) .hl { border-radius: 0; }

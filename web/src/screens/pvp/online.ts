@@ -6,6 +6,7 @@ import { useAuth } from '../../app/auth';
 import { TEAMS, teamById } from '../../game/mock';
 import { loadStart } from '../club-select/local-mock';
 import { mySide } from './local-mock';
+import { getSlot, initialLineup, store as lineupStore, unit } from '../lineup/calc';
 
 /** 서버 구단 코드 → 세계관 구단 (모르는 코드면 독수리스) */
 export const clubTeam = (code: string) => (TEAMS.some((t) => t.id === code) ? teamById(code) : teamById('dj'));
@@ -15,16 +16,25 @@ export function mySnapshot(): PvpSnapshot {
   const side = mySide();
   let club = side.team.id;
   try { if (localStorage.getItem('bb.start')) club = loadStart().club; } catch { /* 이 기기에 저장 없음 */ }
+  // 라인업 화면의 1군 엔트리 (타순 9 · 선발 · 불펜 · 마무리)
+  const st = lineupStore.get() ?? initialLineup();
+  const item = (id: string | null, pos: string) => {
+    if (!id) return null;
+    const u = unit(id);
+    return { id: u.player.id, pos, ovr: u.card.ovr ?? u.player.ovr, name: u.player.name.slice(0, 16), ...(u.card.year != null ? { y: u.card.year % 100 } : {}), c: u.player.teamId };
+  };
+  const lineup = [
+    ...st.order.map((slot) => item(st.field[slot], slot)),
+    item(getSlot(st, 'R0'), 'SP'),
+    ...st.bullpen.map((id) => item(id, 'RP')),
+    item(st.closer, 'CP'),
+  ].filter((x): x is NonNullable<typeof x> => !!x);
   return {
     club,
     teamName: clubTeam(club).name,
     power: side.power,
     ovr: side.ovr,
-    lineup: [
-      ...side.batting.map((b) => ({ id: b.player.id, pos: b.pos, ovr: b.player.ovr })),
-      { id: side.sp.player.id, pos: 'SP', ovr: side.sp.player.ovr },
-      ...(side.closer ? [{ id: side.closer.player.id, pos: 'CP', ovr: side.closer.player.ovr }] : []),
-    ],
+    lineup,
   };
 }
 

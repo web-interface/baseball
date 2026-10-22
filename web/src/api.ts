@@ -66,7 +66,8 @@ export const api = {
 
 /* ───────── 대전 · 순위 타입 ───────── */
 export type PvpResult = 'W' | 'D' | 'L';
-export interface PvpLineupItem { id: string; pos: string; ovr: number }
+/** 라인업 한 칸 — 이름 · 카드 연도(2자리) · 선수 구단은 다시 보기 이름표용 */
+export interface PvpLineupItem { id: string; pos: string; ovr: number; name?: string; y?: number; c?: string }
 /** PUT /pvp/me — 대전 상대로 보일 내 구단 스냅샷 */
 export interface PvpSnapshot { club: string; teamName: string; power: number; ovr: number; lineup: PvpLineupItem[] }
 export interface PvpClub {

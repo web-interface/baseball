@@ -15,7 +15,8 @@ import type { PvpClub } from '../../api';
 import { Battle } from './Battle';
 import { Spark } from './Spark';
 import { ME, MY_RANK, PVP_OPPONENTS, myLog, oppSide, ratingSeries, vsClubs } from './local-mock';
-import { clubTeam, usePvpOnline, type SessionGame } from './online';
+import { clubTeam, mySnapshot, usePvpOnline, type SessionGame } from './online';
+import { listBattles, saveBattle, type BattleRec } from './battles';
 import s from './pvp.module.css';
 
 type Tab = 'opp' | 'log';
@@ -51,7 +52,6 @@ function Lobby({ query, left, extra }: { query: URLSearchParams; left: number; e
   const [tab, setTabS] = useState<Tab>(t === 'log' ? 'log' : 'opp');
   const [peek, setPeek] = useState<PvpOpponent | null>(null);
   const [peekReal, setPeekReal] = useState<PvpClub | null>(null);
-  const [result, setResult] = useState<SessionGame | null>(null);
   const setTab = (v: Tab) => { setTabS(v); setQueryQuiet({ tab: v === 'opp' ? null : v }); };
   const demo = query.get('demo') === '1';
   const on = usePvpOnline(demo);
@@ -67,8 +67,24 @@ function Lobby({ query, left, extra }: { query: URLSearchParams; left: number; e
   const start = async (o: PvpClub) => {
     setPeekReal(null);
     const r = await on.fight(o);
-    if (r.ok) setResult(r.game);
-    else toast({ text: r.msg, tone: 'bad' });
+    if (!r.ok) { toast({ text: r.msg, tone: 'bad' }); return; }
+    // 서버가 정한 결과를 이 기기에 남기고, 경기 화면에서 그 점수에 꼭 맞는 경기로 보여 준다
+    const g = r.game.res.game;
+    const snap = mySnapshot();
+    const meNow = r.game.res.me;
+    const oppNow = r.game.res.opponent;
+    const rec: BattleRec = {
+      id: g.id, at: g.createdAt ? g.createdAt * 1000 : Date.now(),
+      me: { userId: real?.userId, username: real?.username ?? user ?? '나', club: snap.club, teamName: snap.teamName, lineup: snap.lineup, ovr: snap.ovr, power: snap.power },
+      opp: { userId: o.userId, username: o.username, club: o.club, teamName: o.teamName, lineup: o.lineup ?? [], ovr: o.ovr, power: o.power },
+      line: g.line, myScore: g.myScore, oppScore: g.oppScore, result: g.result,
+      ratingBefore: r.game.before, ratingDelta: g.ratingDelta,
+      meRecord: meNow ? { w: meNow.w, d: meNow.d, l: meNow.l } : undefined,
+      oppRecord: oppNow ? { w: oppNow.w, d: oppNow.d, l: oppNow.l, rating: oppNow.rating } : undefined,
+      replay: g.replay,
+    };
+    saveBattle(rec);
+    navigate(`/match?pvp=${encodeURIComponent(g.id)}`);
   };
 
   return (
@@ -137,7 +153,6 @@ function Lobby({ query, left, extra }: { query: URLSearchParams; left: number; e
 
       <OpponentSheet opp={peek} onClose={() => setPeek(null)} disabled={left <= 0} />
       <RealSheet opp={peekReal} onClose={() => setPeekReal(null)} onStart={start} busy={on.busy != null} />
-      <ResultSheet game={result} onClose={() => setResult(null)} onAgain={(o) => { setResult(null); void start(o); }} busy={on.busy != null} />
     </div>
   );
 }
@@ -312,58 +327,6 @@ function RealSheet({ opp, onClose, onStart, busy }: { opp: PvpClub | null; onClo
   );
 }
 
-/* ───────── 결과 ───────── */
-function ResultSheet({ game, onClose, onAgain, busy }: { game: SessionGame | null; onClose: () => void; onAgain: (o: PvpClub) => void; busy: boolean }) {
-  const g = game?.res.game;
-  const me = game?.res.me;
-  const myTm = me ? clubTeam(me.club) : null;
-  const opTm = game ? clubTeam(game.opp.club) : null;
-  const n = g ? Math.max(9, g.line.away.length) : 9;
-  const cols = Array.from({ length: n }, (_, i) => i);
-  const after = me?.rating ?? (game ? game.before + (g?.ratingDelta ?? 0) : 0);
-  return (
-    <Sheet
-      open={!!game}
-      onClose={onClose}
-      title={g ? (g.result === 'W' ? '이겼어요' : g.result === 'L' ? '졌어요' : '비겼어요') : ''}
-      sub={game ? <>{game.opp.username} 감독의 {game.opp.teamName} · 상대 구장{g?.replay ? ' · 저장된 결과' : ''}</> : undefined}
-      footer={game ? (
-        <div className={s.resFoot}>
-          <Button variant="secondary" onClick={onClose}>닫기</Button>
-          <Button disabled={busy} onClick={() => onAgain(game.opp)}>한 번 더</Button>
-        </div>
-      ) : undefined}
-    >
-      {g && game && myTm && opTm && (
-        <div className={s.result}>
-          <div className={s.final}>
-            <span className={s.fSide}><Emblem team={myTm} size={30} /><small>{myTm.short} · 나</small></span>
-            <b className="num-display">{g.myScore}</b>
-            <span className={[s.res, s['r' + g.result], s.fRes].join(' ')}>{RES_KO[g.result]}</span>
-            <b className="num-display">{g.oppScore}</b>
-            <span className={[s.fSide, s.fSideR].join(' ')}><Emblem team={opTm} size={30} /><small>{opTm.short}</small></span>
-          </div>
-          <div className={s.lineWrap}>
-            <table className={s.line}>
-              <thead><tr><th />{cols.map((i) => <th key={i} className="num">{i + 1}</th>)}<th className={['num', s.lR].join(' ')}>R</th></tr></thead>
-              <tbody>
-                <tr><th>{myTm.short}</th>{cols.map((i) => <td key={i} className="num">{g.line.away[i] ?? ''}</td>)}<td className={['num', s.lR].join(' ')}>{g.myScore}</td></tr>
-                <tr><th>{opTm.short}</th>{cols.map((i) => { const v = g.line.home[i]; return <td key={i} className="num">{v === null ? 'X' : v ?? ''}</td>; })}<td className={['num', s.lR].join(' ')}>{g.oppScore}</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <dl className={s.resDl}>
-            <div><dt>레이팅</dt><dd><span className="num">{fmt.int(game.before)}</span> → <b className="num">{fmt.int(after)}</b> <em className={['num', g.ratingDelta >= 0 ? s.up : s.down].join(' ')}>{fmt.signed(g.ratingDelta)}</em></dd></div>
-            {me && <div><dt>내 전적</dt><dd className="num">{me.w}승 {me.d}무 {me.l}패 · 승률 {pctOf(me.w, me.l)}</dd></div>}
-            {game.res.opponent && <div><dt>{game.opp.username} 감독</dt><dd className="num">{game.res.opponent.w}승 {game.res.opponent.d}무 {game.res.opponent.l}패 · 레이팅 {fmt.int(game.res.opponent.rating)}</dd></div>}
-          </dl>
-          {n > 9 && <p className={s.note}>{g.result === 'D' ? '12회까지 승부가 안 나 무승부예요.' : `연장 ${n}회까지 갔어요.`}</p>}
-        </div>
-      )}
-    </Sheet>
-  );
-}
-
 /* ───────── AI 상대 라인업 미리 보기 ───────── */
 function OpponentSheet({ opp, onClose, disabled }: { opp: PvpOpponent | null; onClose: () => void; disabled: boolean }) {
   const side = useMemo(() => (opp ? oppSide(opp) : null), [opp]);
@@ -405,29 +368,29 @@ function OpponentSheet({ opp, onClose, disabled }: { opp: PvpOpponent | null; on
 /* ───────── 내 기록 ───────── */
 function MyLog({ games }: { games: SessionGame[] }) {
   const log = useMemo(() => myLog(), []);
+  const saved = useMemo(() => listBattles(), [games.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const clubs = useMemo(() => vsClubs(), []);
   const maxG = Math.max(...clubs.map((c) => c.w + c.d + c.l));
   return (
     <>
-      {games.length > 0 && (
+      {saved.length > 0 && (
         <section className={s.sec}>
           <header className={s.secHead}>
-            <h3 className="head">방금 한 대전</h3>
-            <span className={s.secMeta}>다른 감독과 · 서버 기록</span>
+            <h3 className="head">다른 감독과 한 대전</h3>
+            <span className={s.secMeta}>누르면 그 경기를 다시 봐요 · 서버 기록</span>
           </header>
           <ul className={s.log}>
-            {games.map((x) => {
-              const g = x.res.game;
-              return (
-                <li key={g.id}>
-                  <b className={[s.res, s['r' + g.result]].join(' ')}>{RES_KO[g.result]}</b>
-                  <span className={['num', s.lgScore].join(' ')}>{g.myScore}<i>:</i>{g.oppScore}</span>
-                  <span className={s.lgWho}><b>{x.opp.username}</b><span>{clubTeam(x.opp.club).short}{g.line.away.length > 9 ? <em> · 연장 {g.line.away.length}회</em> : null}</span></span>
-                  <span className={['num', s.lgDelta, g.ratingDelta >= 0 ? s.up : s.down].join(' ')}>{fmt.signed(g.ratingDelta)}</span>
-                  <span className={['num', s.lgDate].join(' ')}>{new Date(g.createdAt * 1000).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
-                </li>
-              );
-            })}
+            {saved.map((x) => (
+              <li key={x.id} className={s.logRow}>
+                <button type="button" className={s.logBtn} onClick={() => navigate(`/match?pvp=${encodeURIComponent(x.id)}`)} aria-label={`${x.opp.username} 감독과 한 경기 다시 보기`}>
+                  <b className={[s.res, s['r' + x.result]].join(' ')}>{RES_KO[x.result]}</b>
+                  <span className={['num', s.lgScore].join(' ')}>{x.myScore}<i>:</i>{x.oppScore}</span>
+                  <span className={s.lgWho}><b>{x.opp.username}</b><span>{clubTeam(x.opp.club).short}{x.line.away.length > 9 ? <em> · 연장 {x.line.away.length}회</em> : null}</span></span>
+                  <span className={['num', s.lgDelta, x.ratingDelta >= 0 ? s.up : s.down].join(' ')}>{fmt.signed(x.ratingDelta)}</span>
+                  <span className={['num', s.lgDate].join(' ')}>{new Date(x.at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+                </button>
+              </li>
+            ))}
           </ul>
         </section>
       )}

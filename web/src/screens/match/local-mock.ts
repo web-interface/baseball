@@ -13,6 +13,9 @@ import { PITCH_KO } from '../../game/labels';
 import { fenceAt, mToField, polarToField } from '../../game/field';
 import type { Cause, HalfInning, MatchRecord, PitchType, Play, Player, Pos, Weather } from '../../game/types';
 
+/** 담장 거리를 잴 구장 (지금 경기의 홈) — GAME 보다 먼저 있어야 build() 안에서 쓸 수 있다 */
+let fenceHome: string = LAST_MATCH.homeId;
+
 /* ───────── 타입 ───────── */
 export type Bases = [string | null, string | null, string | null];
 export type PitchRes = 'ball' | 'called' | 'swing' | 'foul' | 'inplay' | 'hbp';
@@ -106,6 +109,8 @@ export interface FullGame {
   wx: WxState[];
   /** 다시 센 줄 점수 */
   line: { away: SideLine; home: SideLine };
+  /** 선수 이름표 옆 카드 표시 (선수 id → '’27' · 'FR') — 없으면 그 선수 카드에서 찾는다 */
+  tags?: Record<string, string>;
 }
 
 export interface SideLine { inn: (number | null)[]; r: number; h: number; e: number; b: number }
@@ -165,7 +170,7 @@ const WX: WxState[] = [
 ];
 
 /* ───────── 계획표 — 반 이닝마다 타석 (공용 플레이는 ref 로) ───────── */
-type Code = Play['code'];
+export type Code = Play['code'];
 interface Filler {
   id: string;
   b: string;
@@ -319,7 +324,7 @@ const PINCH: Record<string, GameEvent> = {
 };
 
 /* ───────── 주자 규칙 (after 를 안 적은 타석) ───────── */
-function defaultAfter(code: Code, before: Bases, batter: string): { after: Bases; runs: number; outs: number } {
+export function defaultAfter(code: Code, before: Bases, batter: string): { after: Bases; runs: number; outs: number } {
   const [r1, r2, r3] = before;
   switch (code) {
     case 'K': case 'FO': case 'LO': return { after: before, runs: 0, outs: 1 };
@@ -343,12 +348,12 @@ function defaultAfter(code: Code, before: Bases, batter: string): { after: Bases
 }
 
 /* ───────── 투구 ───────── */
-const HIT_CODES: Code[] = ['1B', '2B', '3B', 'HR'];
+export const HIT_CODES: Code[] = ['1B', '2B', '3B', 'HR'];
 const IN_PLAY: Code[] = ['1B', '2B', '3B', 'HR', 'GO', 'FO', 'LO', 'DP', 'SF', 'SAC', 'E', 'FC'];
 
-interface Arsenal { type: PitchType; name: string; kmh: number; usage: number; sig?: string }
+export interface Arsenal { type: PitchType; name: string; kmh: number; usage: number; sig?: string }
 
-function arsenalOf(p: Player): Arsenal[] {
+export function arsenalOf(p: Player): Arsenal[] {
   const sig = cardsOfPlayer(p.id).map((c) => c.signaturePitch).find(Boolean);
   return (p.pitches ?? [{ type: 'FF' as PitchType, ko: '포심', stuff: 50, command: 50, usage: 1, kmh: 140 }]).map((x) => ({
     type: x.type,
@@ -362,13 +367,13 @@ function arsenalOf(p: Player): Arsenal[] {
 const BREAKING: PitchType[] = ['SL', 'SW', 'CU', 'CH', 'FS', 'KN'];
 
 /** 마지막 공 (위치는 없어도 됨 — 없으면 결과에 맞게 고른다) */
-interface LastIn { type: PitchType | 'SIG'; name: string; kmh: number; zone?: [number, number] }
-const lastOf = (seq: PitchEv[]): Play['lastPitch'] => {
+export interface LastIn { type: PitchType | 'SIG'; name: string; kmh: number; zone?: [number, number] }
+export const lastOf = (seq: PitchEv[]): Play['lastPitch'] => {
   const l = seq[seq.length - 1];
   return l ? { type: l.sig ? 'SIG' : l.type, name: l.name, kmh: l.kmh, zone: l.zone } : undefined;
 };
 
-function pickPitch(ars: Arsenal[], rnd: () => number, prefer?: 'break' | 'fast'): Arsenal {
+export function pickPitch(ars: Arsenal[], rnd: () => number, prefer?: 'break' | 'fast'): Arsenal {
   let list = ars;
   if (prefer === 'break') { const b = ars.filter((a) => BREAKING.includes(a.type)); if (b.length) list = b; }
   if (prefer === 'fast') { const f = ars.filter((a) => !BREAKING.includes(a.type)); if (f.length) list = f; }
@@ -405,7 +410,7 @@ function locate(res: PitchRes, rnd: () => number, bats: 'R' | 'L', type: PitchTy
   }
 }
 
-function genSeq(
+export function genSeq(
   pl: { id: string; code: Code; count: { b: number; s: number }; pitches: number; text: string; lastPitch?: LastIn },
   pitcher: Player, batter: Player, startNo: number, start: [number, number], late: number,
 ): PitchEv[] {
@@ -492,7 +497,7 @@ function reactOf(p: Player | undefined, rnd: () => number) {
   return r3(clamp(0.62 - (fs - 50) * 0.006 + (rnd() - 0.5) * 0.06, 0.22, 0.7));
 }
 
-function makeDefense(play: { id: string; code: Code; notation?: string; hit: NonNullable<Play['hit']> }, def: GameSide['defense'], pitcherId: string): Defense | undefined {
+export function makeDefense(play: { id: string; code: Code; notation?: string; hit: NonNullable<Play['hit']> }, def: GameSide['defense'], pitcherId: string): Defense | undefined {
   if (play.hit.kind === 'ground') return undefined;
   const rnd = rng('def:' + play.id);
   const L = play.hit;
@@ -530,7 +535,7 @@ function makeDefense(play: { id: string; code: Code; notation?: string; hit: Non
 }
 
 /* ───────── 승리 확률 — 고정 플레이 사이를 매끄럽게 잇는다 ───────── */
-function bridgeWp(segment: { good: boolean; top: boolean; lev: number }[], from: number, to: number): [number, number][] {
+export function bridgeWp(segment: { good: boolean; top: boolean; lev: number }[], from: number, to: number): [number, number][] {
   if (!segment.length) return [];
   const raw = segment.map((e) => {
     const toBat = e.good ? 0.022 * e.lev : -0.011 * e.lev;
@@ -735,7 +740,11 @@ function build(): FullGame {
   return { match: m, away: AWAY, home: HOME, plays, wx: WX, line };
 }
 
-export const GAME: FullGame = build();
+/** 지금 화면에 띄운 경기 — 처음엔 공용 목업 '어제 경기'. 시즌 경기 · 대전 경기는 setGame 으로 바꿔 끼운다 (timeline 은 active.ts 가 다시 계산) */
+export let GAME: FullGame = build();
+/** 공용 목업 '어제 경기' (바꿔 끼우기 전 원래 경기) */
+export const LAST_GAME: FullGame = GAME;
+export function setGame(g: FullGame) { GAME = g; fenceHome = g.match.homeId; }
 
 /* ───────── 쓰기 편한 도우미 ───────── */
 export const awayTeam = () => teamById(GAME.match.awayId);
@@ -743,4 +752,4 @@ export const homeTeam = () => teamById(GAME.match.homeId);
 export const IN_PLAY_CODES = IN_PLAY;
 export const HIT_CODE_LIST = HIT_CODES;
 /** 담장까지 거리 (이 경기 구장) */
-export function fenceOf(angle: number) { return fenceAt(teamById(LAST_MATCH.homeId).stadium.fence, angle); }
+export function fenceOf(angle: number) { return fenceAt(teamById(fenceHome).stadium.fence, angle); }

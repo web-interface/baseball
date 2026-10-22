@@ -6,7 +6,8 @@ import type { ScreenProps } from '../../app/screen';
 import { navigate, setQueryQuiet } from '../../app/router';
 import { useAuth } from '../../app/auth';
 import { Button, Emblem, Icon, Tabs, fmt } from '../../ui';
-import { STANDINGS, TEAMS, myTeam, teamById } from '../../game/mock';
+import { TEAMS, myTeam, teamById } from '../../game/mock';
+import { standingsOf, useSeason } from '../../season/store';
 import { ApiError, api, type RankingBy, type RankingsRes } from '../../api';
 import { demoRankings } from './demo';
 import s from './rank.module.css';
@@ -157,6 +158,8 @@ function Managers({ by, setBy, demo }: { by: RankingBy; setBy: (v: RankingBy) =>
 /* ───────── 리그 순위 (구단 10개 · 목업) ───────── */
 function League() {
   const mine = myTeam().id;
+  const season = useSeason();
+  const rows = standingsOf(season);
   return (
     <section className={s.sec}>
       <header className={s.head}>
@@ -175,10 +178,10 @@ function League() {
           </tr>
         </thead>
         <tbody>
-          {STANDINGS.map((r, i) => {
+          {rows.map((r, i) => {
             const tm = teamById(r.teamId);
             return (
-              <tr key={r.teamId} className={[r.teamId === mine && s.me, i === 4 && s.cut].filter(Boolean).join(' ') || undefined}>
+              <tr key={r.teamId} className={[r.teamId === mine && s.me, i === 5 && s.cut].filter(Boolean).join(' ') || undefined}>
                 <td className={['num', s.cRank, s.rk].join(' ')}>{i + 1}</td>
                 <td>
                   <span className={s.who}>
@@ -195,7 +198,7 @@ function League() {
           })}
         </tbody>
       </table>
-      <p className={s.note}><Icon name="info" size={13} /> 5위 아래 굵은 선까지 가을야구. 리그 순위는 아직 예시 값이에요.</p>
+      <p className={s.note}><Icon name="info" size={13} /> 굵은 선 위 6위까지 가을야구. 지금 바로 경기 · 시즌 빨리 감기 결과가 그대로 반영돼요(이 기기).</p>
     </section>
   );
 }

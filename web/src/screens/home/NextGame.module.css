@@ -206,3 +206,6 @@
   background-image: radial-gradient(circle, rgba(237, 241, 247, .05) .9px, transparent 1.2px);
   background-size: 5px 5px;
 }
+
+/* 빨리 감기 — 버튼 줄 아래 한 줄 */
+.ff { grid-column: 1 / -1; }

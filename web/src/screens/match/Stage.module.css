@@ -262,3 +262,12 @@
 :global([data-theme='classic']) .lb .on { background: var(--ball); }
 :global([data-theme='classic']) .ls .on { background: var(--strike); }
 :global([data-theme='classic']) .lo .on { background: var(--out); }
+
+/* 이름표 — 이름 ’연도. 관여한 야수는 진하게, 나머지는 옅게 (잔디 위에서도 읽히게 테두리) */
+.labels text { font-family: var(--font-body); letter-spacing: -.03em; paint-order: stroke; stroke-linejoin: round; pointer-events: none; }
+.lblHot { font-weight: 800; fill: #fff; stroke: rgba(3, 6, 11, .9); stroke-width: 3px; }
+.lblRun { font-weight: 700; fill: rgba(255, 255, 255, .92); stroke: rgba(3, 6, 11, .8); stroke-width: 2.6px; }
+.lblDim { font-weight: 600; fill: rgba(255, 255, 255, .62); stroke: rgba(3, 6, 11, .55); stroke-width: 2.2px; }
+:global([data-theme='classic']) .lblHot { fill: var(--fg); stroke: var(--bg); }
+:global([data-theme='classic']) .lblRun { fill: var(--fg); stroke: var(--bg); opacity: .9; }
+:global([data-theme='classic']) .lblDim { fill: var(--fg-2); stroke: var(--bg); }

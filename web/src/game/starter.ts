@@ -288,6 +288,24 @@ function upsertCard(c: CardInst) {
   registerPlayers([], [c]);
 }
 
+/**
+ * 가상 선수 한 명 — 같은 자리 목업 선수를 본으로 종합 ovr 에 맞춰 만든다 (시즌 AI 구단 선수단 등).
+ * 같은 seed 면 늘 같은 선수. 이름이 겹치지 않게 usedNames 를 넘기면 거기에 더한다.
+ */
+export function synthPlayer(o: { id: string; teamId: string; pos: Pos; role?: PitcherRole; sub?: Pos[]; ovr: number; seed: string; usedNames?: Set<string> }): Player {
+  const tpls = templates(o.pos, o.role);
+  const tpl = tpls[hashStr(`tpl:${o.seed}`) % tpls.length];
+  const used = o.usedNames ?? new Set(PLAYERS.map((p) => p.name));
+  let name = '';
+  for (let k = 0; k < 16 && (!name || used.has(name)); k++) {
+    const h = hashStr(`name:${o.seed}:${k}`);
+    name = SURNAMES[h % SURNAMES.length] + GIVEN[(h >>> 8) % GIVEN.length];
+  }
+  used.add(name);
+  const p = fixOps(scaled(tpl, o.ovr, { id: o.id, name, teamId: o.teamId, number: 2 + (hashStr(`no:${o.id}`) % 96), seed: o.seed, pos: o.pos, role: o.role, subPos: o.sub }));
+  return p;
+}
+
 let current: Starter | null = null;
 /**
  * 기본 선수단을 (다시) 만든다 — 시작 설정이 바뀌었으면 새로. 공용 목업 MY_CARD_IDS · LINEUP 도 이 선수단으로 바꾼다.

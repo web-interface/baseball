@@ -11,6 +11,7 @@ import { breakOf, type Frame } from './script';
 import { frameOf, residuesFor, cursorOf, PLAYS, type Live, type Residue } from './timeline';
 import { useSnap, type Player } from './player';
 import { useReducedMotion } from './hooks';
+import { nameOf, tagOf } from './tags';
 import s from './Stage.module.css';
 
 const StaticField = memo(function StaticField({ stadium }: { stadium: Stadium }) {
@@ -30,7 +31,7 @@ export function Stage({ player, live, showZone, children, idle }: StageProps) {
   const home = teamById(GAME.match.homeId);
   const wx = GAME.wx[live.play.wx] ?? GAME.wx[0];
   return (
-    <div className={s.stage}>
+    <div className={s.stage} data-stage="">
       <div className={s.fieldBox} style={{ top: FIELD_BOX.top, height: FIELD_BOX.height }}>
         <StaticField stadium={home.stadium} />
       </div>
@@ -100,7 +101,7 @@ function FieldLayer({ player, idle }: { player: Player; idle?: boolean }) {
           {r.out && <path className={s.x} d="M-3 -3 3 3M3 -3-3 3" />}
         </g>
       ))}
-      <HotLabel frame={frame} />
+      <ActorLabels frame={frame} idle={idle} />
       {frame.tail && <polyline className={s.tail} points={pts(frame.tail)} style={frame.tailColor && !classic ? { stroke: frame.tailColor } : undefined} />}
       {frame.ball && <Ball b={frame.ball} />}
       {frame.marks.map((m, i) => <MarkText key={i + m.text} m={m} />)}
@@ -163,7 +164,48 @@ function Ball({ b }: { b: NonNullable<Frame['ball']> }) {
   );
 }
 
-function HotLabel({ frame }: { frame: Frame }) {
+/**
+ * 이름표 — 야수 · 주자 · 타자 · 투수 옆에 '이름 ’연도'. 공에 관여한 야수(쫓고 · 잡고 · 던지는)는 진하게 크게, 나머지는 옅게.
+ * 좁은 화면이면 성을 빼고 이름만. 겹치면 아래 → 위 → 오른쪽 → 왼쪽으로 비켜 놓고, 그래도 자리가 없으면 옅은 이름표부터 뺀다.
+ */
+function ActorLabels({ frame, idle }: { frame: Frame; idle?: boolean }) {
+  if (idle) return null;
+  const compact = typeof window !== 'undefined' && window.innerWidth < 360;
+  const items = [
+    ...frame.fielders.map((f) => ({ id: f.id, p: f.p, hot: f.hot, run: false, alpha: 1 })),
+    ...frame.runners.filter((r) => r.alpha > 0.4).map((r) => ({ id: r.id, p: r.p, hot: false, run: true, alpha: r.alpha })),
+  ].sort((a, b) => Number(b.hot) - Number(a.hot) || Number(b.run) - Number(a.run));
+  const boxes: { x0: number; y0: number; x1: number; y1: number }[] = [];
+  // 점 자체도 비켜 갈 자리로
+  for (const it of items) boxes.push({ x0: it.p.x * S - 5, y0: it.p.y * S - 5, x1: it.p.x * S + 5, y1: it.p.y * S + 5 });
+  const out: ReactNode[] = [];
+  for (const it of items) {
+    const nm = nameOf(it.id, compact && !it.hot);
+    if (!nm) continue;
+    const txt = compact && !it.hot ? nm : `${nm} ${tagOf(it.id)}`;
+    const fs = it.hot ? 9.6 : it.run ? 8.6 : 8;
+    const w = [...txt].reduce((a, ch) => a + (/[가-힣]/.test(ch) ? fs * 0.98 : fs * 0.56), 0) + 3;
+    const h = fs + 2;
+    const x = it.p.x * S, y = it.p.y * S;
+    const cands: [number, number][] = [[0, 14], [0, -8], [w / 2 + 7, 3.5], [-(w / 2 + 7), 3.5], [0, 23]];
+    for (const [dx, dy] of cands) {
+      const bx = { x0: x + dx - w / 2, x1: x + dx + w / 2, y0: y + dy - fs, y1: y + dy + 2 };
+      const hit = boxes.some((o) => bx.x0 < o.x1 && bx.x1 > o.x0 && bx.y0 < o.y1 && bx.y1 > o.y0);
+      if (hit) continue;
+      boxes.push(bx);
+      out.push(
+        <text key={`${it.id}-${it.run ? 'r' : 'f'}`} x={x + dx} y={y + dy} textAnchor="middle" opacity={it.alpha}
+          className={it.hot ? s.lblHot : it.run ? s.lblRun : s.lblDim} style={{ fontSize: fs }}>{txt}</text>,
+      );
+      void h;
+      break;
+    }
+  }
+  return <g className={s.labels}>{out}</g>;
+}
+
+/** (예전) 다이빙한 야수 이름 — 이름표(ActorLabels)로 바뀜 */
+export function HotLabel({ frame }: { frame: Frame }) {
   const hot = frame.fielders.find((f) => f.hot && f.dive);
   const f = hot ?? frame.fielders.find((x) => x.hot && frame.marks.some((m) => m.tone === 'out'));
   if (!f) return null;

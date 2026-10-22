@@ -1,7 +1,8 @@
 // 화면 틀 — 위쪽 헤더(뒤로·제목·재화) + 가로 메뉴 + 본문. 아래 탭바는 없다(앱처럼 X).
 import { Component, Suspense, useEffect, useLayoutEffect, useRef, useState, type ErrorInfo, type ReactNode } from 'react';
 import { IconButton, TopBar, Emblem } from '../ui';
-import { STANDINGS, myTeam } from '../game/mock';
+import { myTeam } from '../game/mock';
+import { standingsOf, useSeason } from '../season/store';
 import { useWallet } from '../game/wallet';
 import { useTitleOverride } from './title';
 import { record } from '../ui/format';
@@ -14,8 +15,11 @@ export function Shell({ route, preview, children }: { route: RouteDef | null; pr
   const wallet = useWallet();
   const over = useTitleOverride();
   const team = myTeam();
-  const st = STANDINGS.findIndex((x) => x.teamId === team.id);
-  const row = STANDINGS[st];
+  // 순위 · 전적 — 시즌 진행(지금 바로 경기 · 빨리 감기)에 따라
+  const season = useSeason();
+  const rows = standingsOf(season);
+  const st = Math.max(0, rows.findIndex((x) => x.teamId === team.id));
+  const row = rows[st];
 
   const lead = (
     <Link to="/home" className={s.club} aria-label={`${team.name} 홈`}>

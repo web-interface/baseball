@@ -1,12 +1,15 @@
 // 경기 — 담당: 경기 화면 개발자 (이 폴더만 고친다)
 // 보기 방식 4가지(빨리 보기 기본 · 주요 장면 · 이닝별 · 자세히) · 2D 경기장 · 점수판 · 투구 위치 · 문자 중계 · 강조 문구 · 경기 끝 요약.
 // 주소로 장면 열기(스크린샷·공유): #/match?mode=detail&at=a21&beat=bip&ms=1800&pause=1 · state=pre|play|done · delay=ms
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { Button, CalloutAnnouncer, CalloutStage, useCalloutQueue, type CalloutData } from '../../ui';
 import { ME, teamById } from '../../game/mock';
 import { useTheme } from '../../theme/ThemeProvider';
-import { GAME } from './local-mock';
+import { GAME, LAST_GAME } from './local-mock';
+import { activate, activateLast } from './active';
+import { EndBar, MatchLoading, type MatchCtx } from './EndBar';
+import { homerunFx } from './hr-fx';
 import {
   PLAYS, beatIndexForPlay, beatsFor, calloutPace, cursorOf, liveOf, totalMs, type Beat, type Cursor, type Mode,
 } from './timeline';
@@ -52,7 +55,7 @@ function startBeat(beats: Beat[], at: string | null, kind: string | null) {
   return first;
 }
 
-export default function MatchScreen({ query }: ScreenProps) {
+function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar?: ReactNode }) {
   const { theme } = useTheme();
   const classic = theme === 'classic';
   const q0 = useRef(query).current;
@@ -134,6 +137,25 @@ export default function MatchScreen({ query }: ScreenProps) {
       return () => window.clearTimeout(t);
     }
   }, [ended, phase]);
+  // 홈런 장면 — 홈런 연출 모듈(fx/homerun)이 있으면 부른다 (빨리 보기는 짧은 판)
+  const hrDone = useRef(new Set<string>());
+  useEffect(() => {
+    const pi = beat?.k === 'bip' ? beat.play : beat?.k === 'fill' && beat.flash != null ? beat.flash : -1;
+    if (pi < 0 || !playing) return;
+    const p = PLAYS[pi];
+    if (!p || p.code !== 'HR' || hrDone.current.has(p.id)) return;
+    hrDone.current.add(p.id);
+    const t = teamById(p.half === 'top' ? GAME.match.awayId : GAME.match.homeId);
+    void homerunFx({ runs: p.rbi || 1, grandSlam: p.rbi >= 4, short: mode === 'quick', batterId: p.batterId, teamColor: t.colors.primary, walkoff: p.highlight?.kind === 'walkoff', host: document.querySelector<HTMLElement>('[data-stage]') });
+  }, [beat, playing]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 끝 — 시즌 경기는 그날 결과를 넣는다(한 번만)
+  const doneOnce = useRef(false);
+  useEffect(() => {
+    if (phase !== 'done' || doneOnce.current) return;
+    doneOnce.current = true;
+    ctx.onDone?.();
+  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const switchMode = useCallback((m: Mode) => {
     queue.clear();
@@ -219,6 +241,7 @@ export default function MatchScreen({ query }: ScreenProps) {
         </div>
       )}
       {pre && <Starters />}
+      {done && endBar}
       {done && <Summary onReplay={switchMode} onScene={toScene} />}
       {!pre && !done && mode !== 'quick' && <Matchup live={live} />}
       {!pre && !done && mode === 'detail' && <Tactics live={live} />}
@@ -227,4 +250,54 @@ export default function MatchScreen({ query }: ScreenProps) {
       {import.meta.env.DEV && mode === 'quick' && <span hidden data-quick-ms={totalMs(player.beats)} />}
     </div>
   );
+}
+
+/* ───────── 어떤 경기를 띄울지 — 주소로 ─────────
+   #/match            공용 목업 '어제 경기'
+   #/match?g=season   시즌 다음 내 경기 (지금 바로 경기 — 엔진이 계산, 그날 앞 경기들은 먼저 친다)
+   #/match?pvp=<id>   다른 감독과 한 대전 (서버가 정한 점수에 맞춘 기록)
+   그 밖의 주소 값(mode · at · beat · state …)은 그대로 MatchView 가 읽는다 */
+export default function MatchRoute(props: ScreenProps) {
+  const g = props.query.get('g');
+  const pvp = props.query.get('pvp');
+  const n = props.query.get('n') ?? '';
+  const [view, setView] = useState<{ key: string; ctx: MatchCtx } | null>(() => {
+    if (g || pvp) return null;
+    activateLast();
+    return { key: LAST_GAME.match.id, ctx: { kind: 'last' } };
+  });
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    if (!g && !pvp) { activateLast(); setView({ key: LAST_GAME.match.id, ctx: { kind: 'last' } }); return; }
+    let alive = true;
+    setView(null);
+    setErr(null);
+    (async () => {
+      try {
+        if (g === 'season') {
+          const { prepareSeasonGame } = await import('./season-game');
+          const r = await prepareSeasonGame();
+          if (!alive) return;
+          if (!r) { setView({ key: 'over', ctx: { kind: 'over' } }); return; }
+          activate(r.game);
+          setView({ key: r.game.match.id, ctx: r.ctx });
+        } else if (pvp) {
+          const { preparePvpGame } = await import('./pvp-game');
+          const r = await preparePvpGame(pvp);
+          if (!alive) return;
+          if (!r) { setErr('이 대전 기록을 찾지 못했어요'); return; }
+          activate(r.game);
+          setView({ key: r.game.match.id, ctx: r.ctx });
+        }
+      } catch (e) {
+        console.error(e);
+        if (alive) setErr('경기를 준비하지 못했어요');
+      }
+    })();
+    return () => { alive = false; };
+  }, [g, pvp, n]);
+  if (err) return <MatchLoading text={err} failed />;
+  if (!view) return <MatchLoading text={g === 'season' ? '경기 준비 중 — 선수단 · 날씨 · 구장을 맞추고 있어요' : '경기 기록을 불러오는 중이에요'} />;
+  if (view.ctx.kind === 'over') return <EndBar ctx={view.ctx} standalone />;
+  return <MatchView key={view.key} {...props} ctx={view.ctx} endBar={view.ctx.kind === 'last' ? undefined : <EndBar ctx={view.ctx} />} />;
 }

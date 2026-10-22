@@ -49,8 +49,8 @@ export interface GState {
   mom: number;
 }
 
-const plays = GAME.plays;
-const N = plays.length;
+let plays = GAME.plays;
+let N = plays.length;
 const HITS = ['1B', '2B', '3B', 'HR'];
 
 function computeStates() {
@@ -85,17 +85,18 @@ function computeStates() {
   });
   return { before, after };
 }
-export const STATES = computeStates();
+export let STATES = computeStates();
 
 /** 플레이 i 전에 그 투수가 던진 공 */
-export const PITCHES_BEFORE: number[] = (() => {
+const pitchesBefore = (): number[] => {
   const m = new Map<string, number>();
   return plays.map((p) => { const v = m.get(p.pitcherId) ?? 0; m.set(p.pitcherId, v + p.seq.length); return v; });
-})();
+};
+export let PITCHES_BEFORE: number[] = pitchesBefore();
 
 /** 반 이닝 목록 */
 export interface HalfInfo { key: string; inning: number; half: 'top' | 'bot'; first: number; last: number; runs: number }
-export const HALVES: HalfInfo[] = (() => {
+const halves = (): HalfInfo[] => {
   const out: HalfInfo[] = [];
   plays.forEach((p, i) => {
     const last = out[out.length - 1];
@@ -107,7 +108,8 @@ export const HALVES: HalfInfo[] = (() => {
     h.runs = h.half === 'top' ? s1[0] - s0[0] : s1[1] - s0[1];
   });
   return out;
-})();
+};
+export let HALVES: HalfInfo[] = halves();
 export const halfOf = (i: number) => HALVES.find((h) => i >= h.first && i <= h.last)!;
 
 /* ───────── 수비 위치 · 대본 ───────── */
@@ -164,10 +166,10 @@ export function pickCallouts(max: number): number[] {
     .map((x) => x.i)
     .sort((a, b) => a - b);
 }
-export const CALLOUTS_ALL = pickCallouts(4);
+export let CALLOUTS_ALL = pickCallouts(4);
 
 /** 주요 장면 — 승리 확률 변화가 큰 순간 (+ 강조 장면), 많아야 8개 */
-export const KEY_PLAYS: number[] = (() => {
+const keyPlays = (): number[] => {
   const c = plays
     .map((p, i) => ({ i, d: Math.abs(p.wp[1] - p.wp[0]) + (p.highlight ? 0.3 : 0) }))
     .filter((x) => x.d >= 0.08)
@@ -176,7 +178,8 @@ export const KEY_PLAYS: number[] = (() => {
     .map((x) => x.i)
     .sort((a, b) => a - b);
   return c;
-})();
+};
+export let KEY_PLAYS: number[] = keyPlays();
 
 /* ───────── 박자 길이 ───────── */
 export const PITCH_T = { windup: 0.62, flight: 0.42, settle: 0.6 };
@@ -326,6 +329,19 @@ export function beatsFor(m: Mode): Beat[] {
   return b;
 }
 export const totalMs = (b: Beat[]) => b.reduce((s, x) => s + x.dur, 0);
+
+/** 경기를 바꿔 끼운 뒤 — 상태 · 반 이닝 · 강조 장면 · 박자를 새로 (match/active.ts 가 부른다) */
+export function rebuildTimeline() {
+  plays = GAME.plays;
+  N = plays.length;
+  scriptCache.clear();
+  cache.clear();
+  STATES = computeStates();
+  PITCHES_BEFORE = pitchesBefore();
+  HALVES = halves();
+  CALLOUTS_ALL = pickCallouts(4);
+  KEY_PLAYS = keyPlays();
+}
 
 /** 박자가 다루는 플레이 (첫 플레이) */
 export function playOfBeat(b: Beat): number {

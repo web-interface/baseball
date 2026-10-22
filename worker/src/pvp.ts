@@ -19,7 +19,10 @@ interface ClubRow {
   user_id: number; username: string; club_code: string; team_name: string; power: number; ovr: number;
   lineup_json: string; rating: number; w: number; d: number; l: number; updated_at: number;
 }
-type LineupItem = { id: string; pos: string; ovr: number };
+/** 라인업 한 칸 — 이름 · 카드 연도(2자리) · 선수 구단 코드는 경기 다시 보기 이름표용(없어도 됨) */
+type LineupItem = { id: string; pos: string; ovr: number; name?: string; y?: number; c?: string };
+const NAME_RE = /^[가-힣A-Za-z .·'-]{1,16}$/;
+const CLUB_RE = /^[a-z]{2,4}$/;
 
 const isInt = (v: unknown, lo: number, hi: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi;
 
@@ -49,7 +52,11 @@ export async function putMe(req: Request, db: D1Database, u: User) {
     const o = x as Partial<LineupItem>;
     if (!o || typeof o.id !== 'string' || !ID_RE.test(o.id) || typeof o.pos !== 'string' || !POS.includes(o.pos) || !isInt(o.ovr, 1, 120))
       throw new PvpError(400, '라인업 선수 값이 잘못됐어요');
-    return { id: o.id, pos: o.pos, ovr: o.ovr };
+    const it: LineupItem = { id: o.id, pos: o.pos, ovr: o.ovr };
+    if (typeof o.name === 'string' && NAME_RE.test(o.name)) it.name = o.name;
+    if (isInt(o.y, 0, 99)) it.y = o.y;
+    if (typeof o.c === 'string' && CLUB_RE.test(o.c)) it.c = o.c;
+    return it;
   });
   const lineupJson = JSON.stringify(lineup);
   if (new TextEncoder().encode(lineupJson).length > MAX_LINEUP_BYTES) throw new PvpError(413, '라인업이 너무 커요');
