@@ -64,23 +64,21 @@
 .item:hover { color: var(--menu-fg-on); }
 .on { color: var(--menu-fg-on); }
 .menuList { position: relative; }
-/* 미끄러지는 밑줄 */
-.bar {
+.on::after { /* 지금 메뉴 밑줄 — 그 자리에 고정, 움직이지 않음 */
+  content: '';
   position: absolute;
-  left: 0;
-  bottom: -1px;
+  left: 0; right: 0; bottom: -1px;
   height: 2px;
   background: var(--menu-bar);
   pointer-events: none;
 }
-.barMove { transition: transform 280ms var(--ease-out), width 280ms var(--ease-out); }
 
 :global([data-theme='broadcast']) .chrome { border-bottom: 0; }
-:global([data-theme='broadcast']) .bar { height: 3px; }
+:global([data-theme='broadcast']) .on::after { height: 3px; }
 :global([data-theme='broadcast']) .menu { border-bottom-color: transparent; box-shadow: inset 0 1px 0 var(--header-line); }
 :global([data-theme='classic']) .menu { border-bottom: 0; box-shadow: inset 0 -1px 0 var(--line-3), inset 0 -4px 0 -2px var(--bg), inset 0 -4px 0 -1px var(--line-2); padding-bottom: 3px; }
 :global([data-theme='classic']) .item { font-weight: 600; }
-:global([data-theme='classic']) .bar { bottom: 0; }
+:global([data-theme='classic']) .on::after { bottom: 0; }
 :global([data-theme='night']) .chrome { background-color: color-mix(in srgb, var(--header-bg) 94%, transparent); }
 
 /* 내려 읽을 때 헤더 아래 그림자 */
@@ -89,9 +87,9 @@
 :global([data-theme='broadcast']) .scrolled { box-shadow: 0 8px 20px -14px rgba(0, 0, 0, .55); }
 :global([data-theme='classic']) .scrolled { box-shadow: 0 1px 0 var(--line-3), 0 8px 18px -16px rgba(29, 30, 33, .4); }
 
-/* 화면 들어올 때 — 살짝 떠오름 */
-.enter { animation: screenIn 260ms var(--ease-out) backwards; }
-@keyframes screenIn { from { opacity: 0; transform: translateY(6px); } }
+/* 화면 들어올 때 — 제자리에서 짧게 나타남(위아래로 움직이지 않음) */
+.enter { animation: screenIn 140ms linear backwards; }
+@keyframes screenIn { from { opacity: 0; } }
 
 /* 본문 */
 .main { flex: 1; width: 100%; max-width: var(--col-now); margin: 0 auto; padding-bottom: env(safe-area-inset-bottom); }

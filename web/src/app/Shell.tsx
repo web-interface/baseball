@@ -75,14 +75,16 @@ export function Shell({ route, preview, children }: { route: RouteDef | null; pr
 
 function NavMenu({ current }: { current?: string }) {
   const list = useRef<HTMLUListElement>(null);
-  const [bar, setBar] = useState<{ x: number; w: number; ready: boolean } | null>(null);
-  // 밑줄이 메뉴 사이를 미끄러져 옮겨 간다
+  // 메뉴는 누른 자리에 가만히 있는다 — 지금 메뉴가 화면 밖에 완전히 숨어 있을 때만(주소로 바로 들어온 경우 등)
+  // 메뉴 줄 안에서만, 움직임 없이 보이게 옮긴다. (예전엔 누를 때마다 줄이 굴러가고 밑줄이 미끄러져 날아다녔다)
   useLayoutEffect(() => {
-    const el = list.current?.querySelector<HTMLElement>('[aria-current="page"]');
-    if (!el || !list.current) { setBar(null); return; }
-    const x = el.offsetLeft, w = el.offsetWidth;
-    setBar((b) => ({ x, w, ready: !!b }));
-    el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    const ul = list.current;
+    const el = ul?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!ul || !el) return;
+    const left = el.offsetLeft, right = left + el.offsetWidth;
+    const viewL = ul.scrollLeft, viewR = viewL + ul.clientWidth;
+    if (right <= viewL + 8) ul.scrollLeft = Math.max(0, left - 16);
+    else if (left >= viewR - 8) ul.scrollLeft = right - ul.clientWidth + 16;
   }, [current]);
   return (
     <nav className={s.menu} aria-label="주 메뉴">
@@ -94,7 +96,6 @@ function NavMenu({ current }: { current?: string }) {
             </Link>
           </li>
         ))}
-        {bar && <li aria-hidden className={[s.bar, bar.ready && s.barMove].filter(Boolean).join(' ')} style={{ transform: `translateX(${bar.x}px)`, width: bar.w }} />}
       </ul>
     </nav>
   );
