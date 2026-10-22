@@ -24,6 +24,9 @@ export const session = {
 
 export class ApiError extends Error { constructor(public status: number, msg: string) { super(msg); } }
 
+/** 로비 채팅 WebSocket 주소 — 로그인 토큰은 주소에 넣지 않고 연결 뒤 첫 메시지로 보낸다 (screens/chat) */
+export const chatSocketUrl = () => API.replace(/^http/, 'ws') + '/chat/ws';
+
 async function call<T>(method: 'GET' | 'POST' | 'PUT', path: string, data?: unknown): Promise<T> {
   const headers: Record<string, string> = {};
   if (data !== undefined) headers['Content-Type'] = 'application/json';

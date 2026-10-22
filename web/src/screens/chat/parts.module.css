@@ -1,0 +1,131 @@
+/* 로비 채팅 공용 조각 — 이름표 · 상태 점 · 입력칸 · 메시지 메뉴 */
+
+/* ── 이름표 ── */
+.who { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }
+.em { flex: none; }
+.noClub {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--r-2);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  color: var(--fg-3);
+}
+.name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  color: var(--fg-2);
+}
+.mineName { color: var(--accent); }
+.meTag { flex: none; font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: 0; }
+:global([data-theme='broadcast']) .name { font-weight: 800; color: var(--fg); }
+:global([data-theme='broadcast']) .mineName { color: var(--accent-deep); }
+:global([data-theme='broadcast']) .noClub { border-radius: 0; }
+:global([data-theme='classic']) .mineName, :global([data-theme='classic']) .meTag { color: var(--club-text); }
+:global([data-theme='classic']) .noClub { border-radius: 0; box-shadow: inset 0 0 0 1px var(--line-3); }
+
+/* ── 상태 점 (작게) ── */
+.dot { display: inline-block; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--fg-4); }
+.on { background: var(--good); }
+.wait { background: var(--warn); animation: blink 1.2s steps(2, jump-none) infinite; }
+.offDot { background: var(--fg-4); }
+@keyframes blink { 50% { opacity: .35; } }
+:global([data-theme='classic']) .dot { border-radius: 0; }
+
+/* ── 입력칸 ── */
+.composer { display: flex; flex-direction: column; gap: 6px; }
+.row { display: flex; align-items: stretch; gap: 8px; }
+.field { position: relative; flex: 1; min-width: 0; display: flex; }
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 46px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-2);
+  background: var(--sunk);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  color: var(--fg);
+  font-size: 16px; /* 16px 미만이면 아이폰이 확대함 */
+  letter-spacing: -.01em;
+  transition: box-shadow var(--dur-2);
+  -webkit-appearance: none;
+  appearance: none;
+}
+.input::placeholder { color: var(--fg-4); }
+.input:focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--accent); }
+.count {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding-left: 6px;
+  font-size: 12px;
+  color: var(--fg-3);
+  background: inherit;
+  pointer-events: none;
+}
+.field:has(.count) .input { padding-right: 64px; }
+.over .count { color: var(--bad); }
+.over .input, .over .input:focus { box-shadow: inset 0 0 0 1.5px var(--bad); }
+.send { flex: none; }
+.note { font-size: 12.5px; color: var(--fg-2); letter-spacing: -.02em; }
+.link { font-weight: 700; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+/* 로그인 전 */
+.gate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--line-3);
+  background: var(--surface);
+}
+.gate p { flex: 1; min-width: 0; font-size: 13px; color: var(--fg-2); letter-spacing: -.02em; line-height: 1.45; }
+.gateBtn { flex: none; }
+.gate.compact { padding: 8px 0 8px 12px; background: transparent; }
+
+:global([data-theme='broadcast']) .input { background: #fff; box-shadow: inset 0 0 0 1px var(--line-2); border-radius: 0; }
+:global([data-theme='broadcast']) .input:focus { box-shadow: inset 0 0 0 2px var(--fg); }
+:global([data-theme='broadcast']) .gate { border-left: 4px solid var(--fg); background: #fff; }
+:global([data-theme='classic']) .input {
+  height: 46px;
+  padding: 0 2px;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: inset 0 -1px 0 var(--line-3);
+}
+:global([data-theme='classic']) .input:focus { box-shadow: inset 0 -2px 0 var(--accent); }
+:global([data-theme='classic']) .over .input { box-shadow: inset 0 -2px 0 var(--bad); }
+:global([data-theme='classic']) .gate { background: transparent; border-left-color: var(--club); }
+:global([data-theme='classic']) .link { color: var(--club-text); }
+
+/* ── 메시지 메뉴 ── */
+.quote {
+  margin: 0;
+  padding: 12px 14px;
+  border-left: 2px solid var(--line-3);
+  background: var(--sunk);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+.help { margin-top: 12px; font-size: 12.5px; line-height: 1.6; color: var(--fg-3); letter-spacing: -.02em; }
+.grow { flex: 1; }
+:global([data-theme='broadcast']) .quote { border-left: 4px solid var(--fg); background: #fff; }
+:global([data-theme='classic']) .quote { background: transparent; border-left-color: var(--club); }
+
+.hiddenList li { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 58px; border-bottom: 1px solid var(--line); }
+.hiddenName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; letter-spacing: -.02em; }
+
+/* ── 5분 안내 ── */
+.ttl { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-3); letter-spacing: -.02em; }
+.ttl svg { flex: none; }
+.ttl b { color: var(--fg-2); font-size: 13px; }

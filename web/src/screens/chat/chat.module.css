@@ -1,0 +1,187 @@
+/* 로비 채팅 #/chat — 헤더 아래 '지금 보이는 화면' 크기의 고정 칸(포털). 위: 5분 안내 · 가운데: 문자 중계처럼 시각 칸 + 말 · 아래: 입력칸 */
+
+.holder { height: 1px; }
+
+.layer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: calc(var(--header-h) + env(safe-area-inset-top));
+  bottom: 0;
+  z-index: 20; /* 헤더(30)·시트(60) 아래 */
+  width: 100%;
+  max-width: var(--col);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 위 줄 — 5분 안내 · 숨긴 감독 */
+.bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 38px;
+  padding: 0 var(--gutter);
+  border-bottom: 1px solid var(--line);
+}
+.hiddenBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 38px;
+  padding-left: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-2);
+}
+.hiddenBtn b { color: var(--fg); }
+
+/* 목록 */
+.listWrap { position: relative; flex: 1; min-height: 0; display: flex; }
+.scroller {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 var(--gutter) 14px;
+}
+.rules { padding: 10px 0 8px 48px; font-size: 11.5px; line-height: 1.55; color: var(--fg-4); letter-spacing: -.02em; }
+.empty { padding: 18px 0 8px 48px; font-size: 13.5px; color: var(--fg-3); letter-spacing: -.02em; }
+.list { display: flex; flex-direction: column; }
+
+.line { display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: 8px; }
+.head { margin-top: 12px; }
+.time { padding-top: 4px; font-size: 12px; line-height: 18px; color: var(--fg-4); white-space: nowrap; }
+.body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+  width: 100%;
+  padding: 3px 8px 3px 0;
+  border-radius: var(--r-2);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-1);
+}
+.body:active { background: var(--line); }
+.text {
+  display: block;
+  max-width: 100%;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--fg);
+  letter-spacing: -.02em;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+/* 내 말 — 왼쪽 강조 줄 */
+.mine .body { padding-left: 10px; box-shadow: inset 2px 0 0 var(--accent); border-radius: 0; }
+.pending { opacity: .55; }
+.sending { font-size: 11px; color: var(--fg-3); }
+
+/* 날짜가 바뀔 때 (밤 12시 무렵에만) */
+.day { display: flex; align-items: center; gap: 10px; margin: 18px 0 2px; font-size: 11.5px; font-weight: 600; color: var(--fg-3); }
+.day::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+/* 시스템 — 왕조 완성 같은 알림 (구단색 줄) */
+.sys { display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: 8px; margin: 14px 0 2px; }
+.sysBody {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 12px 9px 10px;
+  background: var(--surface);
+  box-shadow: inset 2px 0 0 var(--sys-c, var(--accent));
+}
+.sysIcon { flex: none; margin-top: 2px; color: var(--gold); }
+.sysText { font-size: 13.5px; line-height: 1.5; color: var(--fg-2); letter-spacing: -.02em; }
+.sysText b { color: var(--fg); font-weight: 700; }
+
+/* 5분이 다 되어 가면 조용히 흐려진다 */
+.fading { animation: chatFade 6000ms linear forwards; }
+@keyframes chatFade { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .fading { animation: none; opacity: .45; }
+}
+
+/* 새 메시지 단추 */
+.jump {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: var(--r-2);
+  background: var(--fg);
+  color: var(--bg);
+  box-shadow: var(--shadow-2);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  white-space: nowrap;
+  animation: jumpIn var(--dur-2) var(--ease-out) both;
+}
+.jump b { font-weight: 800; }
+@keyframes jumpIn { from { opacity: 0; transform: translate(-50%, 6px); } }
+
+/* 아래 — 입력칸 */
+.dock {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px var(--gutter) calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line-2);
+  background-color: var(--bg);
+  background-image: var(--texture);
+  background-size: var(--texture-size);
+}
+.conn { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--fg-3); }
+.connBtn { min-height: 32px; padding: 0 2px; font-size: 12.5px; font-weight: 700; color: var(--accent); }
+
+/* ── broadcast · 중계 자막 ── */
+:global([data-theme='broadcast']) .bar { border-bottom: 2px solid var(--fg); }
+:global([data-theme='broadcast']) .time {
+  justify-self: start;
+  align-self: start;
+  margin-top: 3px;
+  padding: 0 4px;
+  line-height: 17px;
+  background: var(--inv);
+  color: var(--inv-fg);
+  font-style: italic;
+  font-weight: 700;
+}
+:global([data-theme='broadcast']) .line:not(.head) .time { display: none; }
+:global([data-theme='broadcast']) .line:not(.head) .body { grid-column: 2; }
+:global([data-theme='broadcast']) .mine .body { box-shadow: inset 3px 0 0 var(--accent); }
+:global([data-theme='broadcast']) .sysBody { background: var(--inv); box-shadow: inset 4px 0 0 var(--sys-c, var(--accent)); }
+:global([data-theme='broadcast']) .sysText { color: var(--inv-fg-2); }
+:global([data-theme='broadcast']) .sysText b { color: var(--inv-fg); }
+:global([data-theme='broadcast']) .sys .time { visibility: hidden; }
+:global([data-theme='broadcast']) .jump { border-radius: 0; background: var(--inv); color: var(--inv-fg); }
+:global([data-theme='broadcast']) .dock { background: var(--surface); border-top: 2px solid var(--fg); }
+
+/* ── classic · 기록지 ── */
+:global([data-theme='classic']) .bar { border-bottom: 1px solid var(--line-3); box-shadow: 0 2px 0 -1px var(--line-2); }
+:global([data-theme='classic']) .time { font-family: var(--font-hand); font-size: 16px; line-height: 18px; color: var(--fg-3); padding-top: 3px; }
+:global([data-theme='classic']) .line { border-bottom: 1px solid var(--line); }
+:global([data-theme='classic']) .head { margin-top: 6px; padding-top: 4px; }
+:global([data-theme='classic']) .body { border-radius: 0; padding-top: 4px; padding-bottom: 5px; }
+:global([data-theme='classic']) .mine .body { box-shadow: inset 2px 0 0 var(--club); }
+:global([data-theme='classic']) .sysBody { background: transparent; box-shadow: inset 0 1px 0 var(--line-3), inset 0 -1px 0 var(--line-3), inset 3px 0 0 var(--sys-c, var(--club)); }
+:global([data-theme='classic']) .sysIcon { color: var(--fg); }
+:global([data-theme='classic']) .day::after { background: var(--line-2); }
+:global([data-theme='classic']) .jump { border-radius: 0; background: var(--inv); color: var(--inv-fg); box-shadow: var(--shadow-1); }
+:global([data-theme='classic']) .dock { border-top: 1px solid var(--line-3); }
+:global([data-theme='classic']) .connBtn { color: var(--club-text); }

@@ -13,3 +13,12 @@ AI_DAILY_CALLS = "20"
 binding = "DB"
 database_name = "baseball"
 database_id = "ebb6c16f-580d-4101-82cb-bd1c0144447b"
+
+# 로비 채팅 — Durable Object 하나 = 방 하나. SQLite 저장소라 무료 플랜에서 된다(키-값 저장소는 유료 전용).
+[[durable_objects.bindings]]
+name = "CHAT"
+class_name = "LobbyChat"
+
+[[migrations]]
+tag = "chat-v1"
+new_sqlite_classes = ["LobbyChat"]

@@ -36,6 +36,7 @@ export const ROUTES: RouteDef[] = [
   { key: 'shop', path: '/shop', title: '스카우트 상점', menu: '상점', owner: '상점 화면 개발자', desc: 'AI 스카우트가 매일 진열 · 하루 살 수 있는 인원 제한', load: () => import('../screens/shop') },
   { key: 'pvp', path: '/pvp', title: '대전', menu: '대전', owner: '대전 화면 개발자', desc: '다른 감독 구단과 혼자 대결(상대 접속 필요 없음) · AI 구단 연습 · 레이팅 · 내 기록', load: () => import('../screens/pvp') },
   { key: 'rank', path: '/rank', title: '순위', menu: '순위', owner: '대전 화면 개발자', desc: '감독 순위(레이팅 · 승률 · 구단 전력, 실제 가입자) · 리그 순위', load: () => import('../screens/rank') },
+  { key: 'chat', path: '/chat', title: '로비 채팅', back: '/home', chrome: 'bare', owner: '채팅 개발자', desc: '로비 실시간 채팅 · 대화는 5분 뒤 사라짐 · 신고 · 이 감독 숨기기 · ?demo=1 예시', load: () => import('../screens/chat') },
   { key: 'player', path: '/player/:id', title: '선수 정보', sample: '/player/p03', back: '/cards', chrome: 'bare', owner: '선수 화면 개발자', desc: 'FM 식 상세 능력치 · 고유 구종 · 시즌 기록 · 폼 · 날씨 체질', load: () => import('../screens/player') },
   { key: 'club-select', path: '/club-select', title: '구단 선택', back: '/home', chrome: 'bare', owner: '구단 선택 화면 개발자', desc: '2027 시즌을 함께할 구단 고르기 · 엠블럼·연고·구장·난이도', load: () => import('../screens/club-select') },
   { key: 'settings', path: '/settings', title: '설정', back: '/home', chrome: 'bare', owner: '설정 화면 개발자', desc: '테마 · 경기 보기 방식 · 소리 · 로그아웃', load: () => import('../screens/settings') },

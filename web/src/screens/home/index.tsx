@@ -12,6 +12,7 @@ import { Todo } from './Todo';
 import { Feed } from './Feed';
 import { TeamPower } from './TeamPower';
 import { LastGame } from './LastGame';
+import { LobbyChat } from '../chat/LobbyChat';
 import s from './home.module.css';
 
 function Masthead({ manager }: { manager: string }) {
@@ -108,6 +109,7 @@ export default function HomeScreen({ query }: ScreenProps) {
       <Masthead manager={user ?? ME.user} />
       <NextGame />
       <Todo />
+      <LobbyChat />
       <Feed />
       <TeamPower />
       <LastGame />

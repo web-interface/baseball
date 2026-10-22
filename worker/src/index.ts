@@ -2,9 +2,13 @@
 // 비밀값(Claude 열쇠 ANTHROPIC_API_KEY, 비밀번호 후추 PEPPER)은 Worker 비밀값으로만 둔다. 사이트에는 없다.
 import Anthropic from '@anthropic-ai/sdk';
 import { PvpError, battle, opponents, putMe, rankings } from './pvp';
+import { LobbyChat, chatConnect } from './chat';
+
+export { LobbyChat }; // 로비 채팅 방 (Durable Object, SQLite 저장소)
 
 export interface Env {
   DB: D1Database;
+  CHAT: DurableObjectNamespace<LobbyChat>;
   ANTHROPIC_API_KEY?: string;
   PEPPER?: string;
   ALLOWED_ORIGINS?: string; // 쉼표로 구분
@@ -238,6 +242,8 @@ export default {
           return json(await battle(req, env.DB, await currentUser(req, env)), 200, cors);
         }
         case 'GET /rankings': return json(await rankings(url, env.DB, await currentUser(req, env)), 200, cors);
+        // 로비 채팅 (WebSocket — 로그인은 연결 뒤 첫 메시지로)
+        case 'GET /chat/ws': return await chatConnect(req, env);
         default: throw new HttpError(404, '없는 경로예요');
       }
     } catch (e) {
