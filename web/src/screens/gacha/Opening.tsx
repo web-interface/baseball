@@ -9,6 +9,7 @@ import { teamById } from '../../game/mock';
 import { navigate } from '../../app/router';
 import { Button, IconButton, Sheet, StatBar, fmt } from '../../ui';
 import { yearTag } from '../../ui/format';
+import { lockScroll } from '../../ui/scrollLock';
 import { PackArt } from './PackArt';
 import { PACK_LOOK, isSynthetic } from './local-mock';
 import { packTitle, rarity, type PullResult, type PulledCard } from './draw';
@@ -63,12 +64,10 @@ export function Opening({ result, step, onClose, onAgain, onCombo }: OpeningProp
 
   // 뒤 화면 스크롤 막기 + 처음 초점
   useEffect(() => {
-    const html = document.documentElement;
-    const prev = html.style.overflow;
-    html.style.overflow = 'hidden';
+    const unlock = lockScroll();
     const last = document.activeElement as HTMLElement | null;
     root.current?.focus();
-    return () => { html.style.overflow = prev; last?.focus?.(); };
+    return () => { unlock(); last?.focus?.(); };
   }, []);
 
   /* ── 뒤집기 ── */

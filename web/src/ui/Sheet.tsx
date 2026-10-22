@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { IconButton } from './Button';
+import { lockScroll } from './scrollLock';
 import s from './Sheet.module.css';
 
 export interface SheetProps {
@@ -45,14 +46,12 @@ export function Sheet({ open, onClose, title, sub, footer, dismissible = true, h
   // 열려 있는 동안 뒤 화면 스크롤 막기 + Esc
   useEffect(() => {
     if (!mounted || closing) return;
-    const html = document.documentElement;
-    const prev = html.style.overflow;
-    html.style.overflow = 'hidden';
+    const unlock = lockScroll();
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && dismissible) onClose(); };
     window.addEventListener('keydown', onKey);
     requestAnimationFrame(() => panel.current?.focus());
     return () => {
-      html.style.overflow = prev;
+      unlock();
       window.removeEventListener('keydown', onKey);
       (lastFocus.current as HTMLElement | null)?.focus?.();
     };

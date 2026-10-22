@@ -1,5 +1,6 @@
 // 해시 라우터 — GitHub Pages(/baseball/)에서 새로고침해도 안 깨지게 #/경로?쿼리
 import { useSyncExternalStore, type AnchorHTMLAttributes, type ReactNode } from 'react';
+import { resetScrollLock } from '../ui/scrollLock';
 
 export interface Loc {
   /** '/player/p03' */
@@ -29,7 +30,7 @@ function emit() {
   listeners.forEach((l) => l());
 }
 window.addEventListener('hashchange', emit);
-window.addEventListener('popstate', emit);
+window.addEventListener('popstate', () => { resetScrollLock(); emit(); });
 
 export function useLocation(): Loc {
   return useSyncExternalStore(
@@ -48,6 +49,7 @@ export function navigate(to: string, opts: { replace?: boolean } = {}) {
     history.pushState(history.state, '', hash);
     depth += 1;
   }
+  resetScrollLock(); // 시트·뽑기 화면이 걸어 둔 스크롤 잠금이 다음 화면까지 남지 않게
   emit();
   window.scrollTo(0, 0);
 }
