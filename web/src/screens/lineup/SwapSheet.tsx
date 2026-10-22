@@ -24,13 +24,35 @@ const fitText = (f: Fit, slot: Slot) => {
 };
 
 type Fx = { text: string; tone?: 'boom' | 'bad' | 'up' | 'down' };
-/** 바꾸면 달라지는 것 — 폭발 · 팀컬러 인원 · 케미 선 */
+/** 바꾸면 달라지는 것 — 왕조 · 세트 단계 · 세트 인원 · 케미 선 */
 function effects(cur: Eval, nx: Eval): Fx[] {
   const out: Fx[] = [];
-  if (nx.exploded && !cur.exploded) out.push({ text: '능력치 폭발', tone: 'boom' });
-  else if (cur.exploded && !nx.exploded) out.push({ text: '폭발 풀림', tone: 'bad' });
-  else if (nx.club.id !== cur.club.id) out.push({ text: `팀컬러 ${nx.club.short} ${nx.clubCount}/9`, tone: 'down' });
-  else if (nx.clubCount !== cur.clubCount) out.push({ text: `${nx.club.short} ${nx.clubCount}/9`, tone: nx.clubCount > cur.clubCount ? 'up' : 'down' });
+  if (nx.exploded && !cur.exploded) out.push({ text: '왕조 — 능력치 폭발', tone: 'boom' });
+  else if (cur.exploded && !nx.exploded) out.push({ text: '왕조 풀림', tone: 'bad' });
+  else {
+    const a = new Map(cur.sets.map((x) => [x.id, x]));
+    const b = new Map(nx.sets.map((x) => [x.id, x]));
+    const ids = [...new Set([...a.keys(), ...b.keys()])];
+    // 켜진 세트의 단계가 바뀐 것
+    const changed = ids.map((id) => ({ o: a.get(id), n: b.get(id) }))
+      .filter(({ o, n }) => (o?.active || n?.active) && ((o?.active ? o.tier : -1) !== (n?.active ? n.tier : -1)));
+    changed.slice(0, 2).forEach(({ o, n }) => {
+      const up = (n?.active ? n.tier : -1) > (o?.active ? o.tier : -1);
+      const x = (n ?? o)!;
+      out.push({ text: `세트 ${x.name} ${up ? `+${n!.cur!.v} 켜짐` : '꺼짐'}`, tone: up ? 'up' : 'down' });
+    });
+    if (!changed.length) {
+      // 모으는 중 — 인원이 바뀐 세트 중 다음 단계에 가장 가까운 것
+      const moved = ids.map((id) => ({ o: a.get(id), n: b.get(id) }))
+        .filter(({ o, n }) => (o?.have ?? 0) !== (n?.have ?? 0) && (n?.next || o?.next))
+        .sort((p, q) => ((p.n?.next?.at ?? 99) - (p.n?.have ?? 0)) - ((q.n?.next?.at ?? 99) - (q.n?.have ?? 0)))[0];
+      if (moved) {
+        const x = (moved.n ?? moved.o)!;
+        const up = (moved.n?.have ?? 0) > (moved.o?.have ?? 0);
+        out.push({ text: `${x.name} ${moved.n?.have ?? 0}/${(moved.n ?? moved.o)!.next?.at ?? 20}`, tone: up ? 'up' : 'down' });
+      }
+    }
+  }
   const all = (e: Eval) => [...e.links, ...e.orderLinks, ...e.battery.filter((l): l is Link => !!l), ...(e.backdoor ? [e.backdoor] : [])];
   const before = new Map(all(cur).map((l) => [l.id, l.level as number]));
   let up = 0;
@@ -118,12 +140,12 @@ export function SwapSheet({ slot, st, ev, onClose, onApply }: SwapSheetProps) {
             </p>
             <p className={s.sum}>
               <span>기본 <b className="num">{Math.round(ue.base)}</b></span>
-              <span>팀컬러 <b className="num">+{ue.tc % 1 ? ue.tc.toFixed(1) : ue.tc}</b></span>
+              <span>세트 <b className="num">+{ue.tc % 1 ? ue.tc.toFixed(1) : ue.tc}</b></span>
               <span>케미 <b className="num">+{ue.chem.toFixed(1)}</b></span>
               <span className={s.eq}>= <b className="num">{Math.round(ue.total)}</b></span>
             </p>
             {links.length > 0 && <p className={s.curLinks}>케미 선 · {links.join(' · ')}</p>}
-            {ue.tcText.length > 0 && <p className={s.curLinks}>받는 팀컬러 · {ue.tcText.join(' · ')}</p>}
+            {ue.tcText.length > 0 && <p className={s.curLinks}>받는 세트 · {ue.tcText.join(' · ')}</p>}
           </div>
         </div>
       )}
@@ -160,7 +182,7 @@ export function SwapSheet({ slot, st, ev, onClose, onApply }: SwapSheetProps) {
         {!list.length && <li className={s.emptyList}>넣을 수 있는 선수가 없어요. 영입에서 데려와요.</li>}
       </ul>
       {list.some((c) => c.ev.exploded && !ev.exploded) && (
-        <p className={s.note}>능력치 폭발 — 타자 9명이 모두 한 구단이면 1군 전원 전 능력치 +{BOOM}</p>
+        <p className={s.note}>왕조 — 엔트리 20명이 모두 한 구단·한 연도면 전원 능력치 폭발 (단계 가치 +{BOOM})</p>
       )}
     </Sheet>
   );

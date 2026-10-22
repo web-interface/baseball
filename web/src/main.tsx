@@ -5,10 +5,13 @@ import './theme/tokens.css';
 import './theme/base.css';
 import { applyClubColors, applyTheme, initialTheme } from './theme/themes';
 import { myTeam } from './game/mock';
+import { ensureStarter } from './game/starter';
 import App from './app/App';
 
 // 첫 그림 전에 테마 (index.html 의 작은 스크립트와 같은 규칙)
 applyTheme(initialTheme());
+// 기본 선수단 (구단 선택에서 고른 구단·지명·특별 선수) — 내 카드 · 개막 라인업
+ensureStarter();
 // 내 구단 색 (지금은 목업 — 서버가 붙으면 로그인한 구단으로)
 { const t = myTeam(); applyClubColors(t.colors.primary, t.colors.secondary); }
 

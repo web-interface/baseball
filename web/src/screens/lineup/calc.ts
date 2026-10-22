@@ -5,13 +5,15 @@
 //  · 케미 선: 이웃한 두 자리의 공통점 — 같은 구단 2 · 같은 권역 1 · 같은 시즌 카드 1
 //            + 자리 짝(키스톤·배터리·외야·테이블세터·클린업·뒷문)은 공통점이 하나라도 있으면 1 더
 //            점수 1·2·3 = 1~3단, 4 이상 = 형광. 공통점이 없거나 한쪽이 적성 밖 자리면 끊김.
-//  · 팀컬러: 타자 9명 기준. 구단 3·5·7명 = 전 능력치 +1·+3·+5, 9명 = 능력치 폭발(1군 전원 +12)
-//            권역 5·7·9 = 수비 +1·2·3 · 시즌 5·7·9 = 타격 +2·3·5 · 더비(라이벌 구단 2명) = 주루 +2
-//  · 팀 종합: 선발 10명(타자 9 + 1선발)의 '기본(종합 + 강화) + 팀컬러 + 케미' 평균. 최대 99.
+//  · 세트덱: 1군 엔트리 20명 기준 — 구단+연도 5·9·14·20명, 구단 5·9·14·20명, 연도 9·14·20명 (game/sets)
+//            동시에 2개까지, 한 선수는 가장 센 세트 하나. 오르는 능력치는 조합마다 다르다.
+//  · 팀 종합: 선발 10명(타자 9 + 1선발)의 '기본(종합 + 강화) + 세트덱 + 케미' 평균. 최대 99.
 import type { CardInst, Player, Team } from '../../game/types';
 import { ME, TEAMS, teamById } from '../../game/mock';
+import { DYNASTY_V, computeSets, faceBonus, sideLine, type EntryMember, type SetProgress } from '../../game/sets';
+import { fullYear } from '../../game/clubSeasons';
 import { yearTag } from '../../ui/format';
-import { OWNED, START, getCard, getPlayer } from './local-mock';
+import { OWNED, getCard, getPlayer, startLayout } from './local-mock';
 
 /* ───────── 자리 ───────── */
 export type BatSlot = 'C' | '1B' | '2B' | '3B' | 'SS' | 'LF' | 'CF' | 'RF' | 'DH';
@@ -50,6 +52,7 @@ export interface LineupState {
 
 export function initialLineup(): LineupState {
   const field = Object.fromEntries(BAT_SLOTS.map((s) => [s, null])) as Record<BatSlot, string | null>;
+  const START = startLayout();
   START.batting.forEach((b) => { field[b.pos as BatSlot] = b.cardId; });
   return {
     field,
@@ -136,6 +139,8 @@ export function unit(id: string): Unit {
 }
 export const face = (p: Player, code: string, d = 55) => p.face.find((f) => f.code === code)?.v ?? d;
 const enhBonus = (c: CardInst) => Math.round(c.enhance * 0.5);
+/** 이 카드의 종합 — 카드에 따로 적혀 있으면 그것, 없으면 선수 종합 */
+export const cardOvr = (u: Unit) => u.card.ovr ?? u.player.ovr;
 
 /* ───────── 자리 적성 ───────── */
 export type Fit = 'main' | 'sub' | 'near' | 'any' | 'off';
@@ -196,46 +201,27 @@ export const FIELD_LINKS: [BoardSlot, BoardSlot, string?][] = [
 ];
 const ORDER_NAMES: Record<number, string> = { 0: '테이블세터', 2: '클린업', 3: '클린업' };
 
-/* ───────── 팀컬러 ───────── */
-export interface Step { at: number; v: number; text: string }
-export type TcKind = 'club' | 'zone' | 'season' | 'rival';
-export interface TcSet {
-  id: string;
-  kind: TcKind;
-  kindKo: string;
-  label: string;
-  team?: Team;
-  have: number;
-  need: number;
-  steps: Step[];
-  /** 지금 단계 (없으면 −1) */
-  idx: number;
-  current: Step | null;
-  next: Step | null;
-  members: BatSlot[];
-}
-export const CLUB_STEPS: Step[] = [
-  { at: 3, v: 1, text: '전 능력치 +1' }, { at: 5, v: 3, text: '전 능력치 +3' },
-  { at: 7, v: 5, text: '전 능력치 +5' }, { at: 9, v: 12, text: '능력치 폭발 +12' },
-];
-const ZONE_STEPS: Step[] = [{ at: 5, v: 1, text: '수비 +1' }, { at: 7, v: 2, text: '수비 +2' }, { at: 9, v: 3, text: '수비 +3' }];
-const SEASON_STEPS: Step[] = [{ at: 5, v: 2, text: '타격 +2' }, { at: 7, v: 3, text: '타격 +3' }, { at: 9, v: 5, text: '타격 +5' }];
-const RIVAL_STEPS: Step[] = [{ at: 2, v: 2, text: '주루 +2' }];
-export const BOOM = 12;
+/* ───────── 세트덱 (game/sets) ───────── */
+// 1군 엔트리 20명(타자 9 · 선발 5 · 불펜 5 · 마무리 1) 안에서 같은 구단·같은 연도 카드 수로 단계가 켜진다.
+// 동시에 2개까지(센 것부터), 한 선수는 받는 세트 중 가장 센 것 하나. 오르는 능력치는 조합마다 다르다.
+export { ENTRY_SIZE, DYNASTY_V, TIERS, SET_KIND_KO } from '../../game/sets';
+export type { SetProgress } from '../../game/sets';
+/** 예전 이름 — 왕조(엔트리 전원 구단+연도) 때 오르는 값 */
+export const BOOM = DYNASTY_V;
 
-function tcSet(id: string, kind: TcKind, kindKo: string, label: string, steps: Step[], members: BatSlot[], need: number, team?: Team): TcSet {
-  const have = members.length;
-  let idx = -1;
-  steps.forEach((s, i) => { if (have >= s.at) idx = i; });
-  return { id, kind, kindKo, label, team, have, need, steps, idx, current: idx >= 0 ? steps[idx] : null, next: steps[idx + 1] ?? null, members };
+/** 라인업 → 엔트리 구성원 (빈 자리 빼고) */
+export function entryMembers(st: LineupState): EntryMember[] {
+  const out: EntryMember[] = [];
+  const push = (key: Slot, id: string | null) => {
+    if (!id) return;
+    const u = unit(id);
+    out.push({ key, code: u.team.code, year: u.card.year != null ? fullYear(u.card.year) : undefined, isP: u.player.pos === 'P' });
+  };
+  BAT_SLOTS.forEach((s) => push(s, st.field[s]));
+  STAFF_SLOTS.forEach((s) => push(s, getSlot(st, s)));
+  return out;
 }
 
-function maxKey<K>(m: Map<K, number>, prefer?: K): K | undefined {
-  let best: K | undefined;
-  let bv = -1;
-  m.forEach((v, k) => { if (v > bv || (v === bv && k === prefer)) { best = k; bv = v; } });
-  return best;
-}
 
 /* ───────── 타순 적성 ───────── */
 export type OrderFit = 'good' | 'ok' | 'poor';
@@ -262,12 +248,14 @@ export interface UnitEval {
   fit: Fit;
   /** 종합 + 강화 − 적성 */
   base: number;
-  /** 팀컬러 (종합 기준) */
+  /** 세트덱 (종합 기준 단계 가치) */
   tc: number;
   chem: number;
   total: number;
-  /** 받는 팀컬러 글 ('전 능력치 +5', '수비 +2') */
+  /** 받는 세트 글 ("’27 독수리스 · 파워 +4 · 장타 +3") */
   tcText: string[];
+  /** 받는 세트 */
+  set?: SetProgress;
   orderIdx?: number;
   orderFit?: OrderFit;
   injured?: boolean;
@@ -287,13 +275,16 @@ export interface Eval {
   orderLinks: Link[];
   battery: (Link | null)[];
   backdoor: Link | null;
-  sets: TcSet[];
+  /** 세트 진행 — 켜진 것 → 다음 단계까지 적게 남은 것 순 */
+  sets: SetProgress[];
+  /** 지금 켜진 세트 (최대 2) */
+  active: SetProgress[];
+  /** 엔트리 인원 (빈 자리 뺀) */
+  entry: number;
+  /** 대표 구단 — 켜진 세트(없으면 가장 많이 모은 구단)의 구단 */
   club: Team;
-  clubCount: number;
+  /** 왕조 — 엔트리 전원이 한 구단·한 연도 */
   exploded: boolean;
-  remain: number;
-  /** 구단 팀컬러에 안 맞는 타순 자리 */
-  missing: BatSlot[];
 }
 
 const clamp99 = (v: number) => Math.max(1, Math.min(99, Math.round(v)));
@@ -308,30 +299,13 @@ export function evaluate(st: LineupState): Eval {
   bat.forEach(({ s, u }) => { fits[s] = fitOf(u.player, s); });
   STAFF_SLOTS.forEach((s) => { const u = U(getSlot(st, s)); if (u) fits[s] = fitOf(u.player, s); });
 
-  /* 팀컬러 — 타자 9명 */
-  const byClub = new Map<string, number>();
-  bat.forEach(({ u }) => byClub.set(u.player.teamId, (byClub.get(u.player.teamId) ?? 0) + 1));
-  const clubId = maxKey(byClub, ME.teamId) ?? ME.teamId;
-  const club = teamById(clubId);
-  const clubMembers = bat.filter(({ u }) => u.player.teamId === clubId).map(({ s }) => s);
-  const clubSet = tcSet('club', 'club', '구단', club.name, CLUB_STEPS, clubMembers, 9, club);
-  const exploded = clubMembers.length >= 9;
-
-  const byZone = new Map<string, number>();
-  bat.forEach(({ u }) => byZone.set(u.team.zone, (byZone.get(u.team.zone) ?? 0) + 1));
-  const zone = maxKey(byZone, club.zone) ?? club.zone;
-  const zoneSet = tcSet('zone', 'zone', '권역', zone, ZONE_STEPS, bat.filter(({ u }) => u.team.zone === zone).map(({ s }) => s), 9);
-
-  const byYear = new Map<number, number>();
-  bat.forEach(({ u }) => { if (u.card.year != null) byYear.set(u.card.year, (byYear.get(u.card.year) ?? 0) + 1); });
-  const year = maxKey(byYear, 27) ?? 27;
-  const seasonSet = tcSet('season', 'season', '시즌', `${yearTag(year)} 시즌 카드`, SEASON_STEPS, bat.filter(({ u }) => u.card.year === year).map(({ s }) => s), 9);
-
-  const rival = TEAMS.find((t) => t.code === club.rival) ?? club;
-  const rivalSet = tcSet('rival', 'rival', '더비', `${club.rivalry} · ${rival.short}`, RIVAL_STEPS,
-    bat.filter(({ u }) => u.player.teamId === rival.id).map(({ s }) => s), 2, rival);
-
-  const sets = [clubSet, zoneSet, seasonSet, rivalSet];
+  /* 세트덱 — 엔트리 20명 */
+  const members = entryMembers(st);
+  const sets = computeSets(members);
+  const exploded = !!sets.dynasty;
+  const lead = sets.dynasty ?? sets.active[0] ?? sets.all.find((x) => x.kind !== 'year' && x.code);
+  const club = lead?.code ? (TEAMS.find((t) => t.code === lead.code) ?? teamById(ME.teamId)) : teamById(ME.teamId);
+  const setOf = (s: Slot) => sets.bonusOf.get(s);
 
   /* 케미 선 */
   const at = (b: BoardSlot) => (b === 'P' ? P : U(st.field[b]));
@@ -350,29 +324,20 @@ export function evaluate(st: LineupState): Eval {
     const mine = [...links.filter((l) => l.a === key || l.b === key), ...extra];
     return mine.length ? r1(mean(mine.map((l) => l.level)) * 0.45) : 0;
   };
+  const setText = (sp: SetProgress | undefined, isP: boolean) => (sp?.cur ? [`${sp.dynasty ? '왕조 · ' : ''}${sp.name} · ${sideLine(sp.cur, isP)}`] : []);
 
   /* 선수마다 */
   const units: Partial<Record<Slot, UnitEval>> = {};
-  const half = (v: number) => v * 0.5;
-  const zoneV = zoneSet.current?.v ?? 0;
-  const seasonV = seasonSet.current?.v ?? 0;
-  const rivalV = rivalSet.current?.v ?? 0;
-  const clubV = exploded ? BOOM : clubSet.current?.v ?? 0;
-
   bat.forEach(({ s, u }) => {
     const fit = fits[s]!;
     const idx = st.order.indexOf(s);
     const of = orderFit(u.player, idx);
-    const tcText: string[] = [];
-    let tc = 0;
-    if (exploded) { tc += BOOM; tcText.push(`능력치 폭발 +${BOOM}`); } else if (clubV && u.player.teamId === clubId) { tc += clubV; tcText.push(clubSet.current!.text); }
-    if (zoneV && s !== 'DH' && zoneSet.members.includes(s)) { tc += half(zoneV); tcText.push(zoneSet.current!.text); }
-    if (seasonV && seasonSet.members.includes(s)) { tc += half(seasonV); tcText.push(seasonSet.current!.text); }
-    if (rivalV && (u.player.teamId === rival.id || u.player.teamId === clubId)) { tc += half(rivalV); tcText.push(rivalSet.current!.text); }
+    const sp = setOf(s);
+    const tc = sp?.cur?.v ?? 0;
     const orderL = orderLinks.filter((l) => l.a === String(idx + 1) || l.b === String(idx + 1));
     const ch = chemOf(s, orderL);
-    const base = u.player.ovr + enhBonus(u.card) - FIT_PENALTY[fit] + (of === 'good' ? 0.5 : of === 'poor' ? -0.5 : 0);
-    units[s] = { slot: s, id: u.id, fit, base, tc: r1(tc), chem: ch, total: base + tc + ch, tcText, orderIdx: idx, orderFit: of };
+    const base = cardOvr(u) + enhBonus(u.card) - FIT_PENALTY[fit] + (of === 'good' ? 0.5 : of === 'poor' ? -0.5 : 0);
+    units[s] = { slot: s, id: u.id, fit, base, tc, chem: ch, total: base + tc + ch, tcText: setText(sp, false), set: sp, orderIdx: idx, orderFit: of };
   });
 
   STAFF_SLOTS.forEach((s, i) => {
@@ -380,15 +345,14 @@ export function evaluate(st: LineupState): Eval {
     if (!u) return;
     const fit = fits[s]!;
     const injured = !!u.player.injury;
-    const base = u.player.ovr + enhBonus(u.card) - FIT_PENALTY[fit] - (injured ? 10 : 0);
-    let tc = 0;
-    const tcText: string[] = [];
-    if (exploded) { tc += BOOM; tcText.push(`능력치 폭발 +${BOOM}`); } else if (s === 'R0' && clubV && u.player.teamId === clubId) { tc += clubV; tcText.push(clubSet.current!.text); }
+    const base = cardOvr(u) + enhBonus(u.card) - FIT_PENALTY[fit] - (injured ? 10 : 0);
+    const sp = setOf(s);
+    const tc = sp?.cur?.v ?? 0;
     let ch = 0;
     if (s === 'R0') ch = chemOf('P');
     else if (s[0] === 'R') ch = r1((battery[i]?.level ?? 0) * 0.45);
     else if (s === 'B0' || s === 'CL') ch = r1((backdoor?.level ?? 0) * 0.45);
-    units[s] = { slot: s, id: u.id, fit, base, tc: r1(tc), chem: ch, total: base + tc + ch, tcText, injured };
+    units[s] = { slot: s, id: u.id, fit, base, tc, chem: ch, total: base + tc + ch, tcText: setText(sp, true), set: sp, injured };
   });
 
   /* 팀 종합 — 선발 10명 */
@@ -397,36 +361,29 @@ export function evaluate(st: LineupState): Eval {
   const baseAvg = mean(starters.map((x) => x.base));
   const tcAvg = mean(starters.map((x) => x.tc));
   const chemAvg = mean(starters.map((x) => x.chem));
-  const potRaw = exploded ? raw : mean(starters.map((x) => {
-    const clubPart = x.tcText.some((t) => t.startsWith('전 능력치')) ? clubSet.current!.v : 0;
-    return x.total - clubPart + BOOM;
-  }));
+  const potRaw = exploded ? raw : mean(starters.map((x) => x.total - x.tc + DYNASTY_V));
 
-  /* 묶음 점수 */
-  const tcOf = (s: BatSlot, kind: 'bat' | 'def' | 'run') => {
-    const all = exploded ? BOOM : clubV && units[s] && unit(units[s]!.id).player.teamId === clubId ? clubV : 0;
-    const u = unit(units[s]!.id);
-    const extra = kind === 'def' ? (zoneV && zoneSet.members.includes(s) ? zoneV : 0)
-      : kind === 'bat' ? (seasonV && seasonSet.members.includes(s) ? seasonV : 0)
-        : (rivalV && (u.player.teamId === rival.id || u.player.teamId === clubId) ? rivalV : 0);
-    return all + extra;
-  };
+  /* 묶음 점수 — 받는 세트의 능력치 칸만큼 */
+  const fb = (s: Slot, isP: boolean) => faceBonus(setOf(s)?.cur, isP);
   const batPart = mean(bat.map(({ s, u }) => {
     const x = units[s]!;
-    return (face(u.player, 'CON') + face(u.player, 'POW') + face(u.player, 'EYE')) / 3 + enhBonus(u.card) + tcOf(s, 'bat') + x.chem
+    const b = fb(s, false);
+    return (face(u.player, 'CON') + face(u.player, 'POW') + face(u.player, 'EYE') + (b.CON ?? 0) + (b.POW ?? 0) + (b.EYE ?? 0)) / 3 + enhBonus(u.card) + x.chem
       + (x.orderFit === 'good' ? 1.5 : x.orderFit === 'poor' ? -1.5 : 0);
   }));
   const defPart = mean(bat.filter(({ s }) => s !== 'DH').map(({ s, u }) => {
     const x = units[s]!;
-    const d = s === 'C' ? (face(u.player, 'BLK') + face(u.player, 'FRM') + face(u.player, 'CS')) / 3 : (face(u.player, 'DEF') + face(u.player, 'ARM')) / 2;
-    return d + enhBonus(u.card) + tcOf(s, 'def') + x.chem - FIT_PENALTY[x.fit] * 1.5;
+    const b = fb(s, false);
+    const d = s === 'C'
+      ? (face(u.player, 'BLK') + face(u.player, 'FRM') + face(u.player, 'CS') + (b.BLK ?? 0) + (b.FRM ?? 0) + (b.CS ?? 0)) / 3
+      : (face(u.player, 'DEF') + face(u.player, 'ARM') + (b.DEF ?? 0) + (b.ARM ?? 0)) / 2;
+    return d + enhBonus(u.card) + x.chem - FIT_PENALTY[x.fit] * 1.5;
   }));
-  const runPart = mean(bat.map(({ s, u }) => face(u.player, 'SPD') + enhBonus(u.card) + tcOf(s, 'run')));
+  const runPart = mean(bat.map(({ s, u }) => face(u.player, 'SPD') + (fb(s, false).SPD ?? 0) + enhBonus(u.card)));
   const rot = ROT_SLOTS.slice(1).map((s) => units[s]?.total).filter((v): v is number => v != null);
   const pen = [...PEN_SLOTS, 'CL' as const].map((s) => units[s]?.total).filter((v): v is number => v != null);
   const pitPart = 0.5 * (units.R0?.total ?? 60) + 0.3 * (rot.length ? mean(rot) : 60) + 0.2 * (pen.length ? mean(pen) : 60);
 
-  const missing = BAT_SLOTS.filter((s) => !clubMembers.includes(s));
   return {
     overall: clamp99(raw),
     raw,
@@ -445,14 +402,14 @@ export function evaluate(st: LineupState): Eval {
     orderLinks,
     battery,
     backdoor,
-    sets,
+    sets: sets.all,
+    active: sets.active,
+    entry: members.length,
     club,
-    clubCount: clubMembers.length,
     exploded,
-    remain: Math.max(0, 9 - clubMembers.length),
-    missing,
   };
 }
+
 
 /* ───────── 바꿀 후보 ───────── */
 export type CandSrc = 'bench' | 'box' | 'swap';

@@ -1,22 +1,17 @@
-// 팀컬러 진행 — 구단(주인공 줄) + 권역 · 시즌 · 더비.
-// 구단 단계 3·5·7·9명을 베이스 1루·2루·3루·홈에 빗대어: 7명이면 만루, 9명이면 그랜드슬램 = 능력치 폭발.
+// 세트덱 진행 — 1군 엔트리 20명 기준. 켜진 세트(최대 2)는 주인공 줄로, 그다음 가까운 세트는 헤어라인 줄로.
+// 단계 4개(5·9·14·전원)를 베이스 1루·2루·3루·홈에 빗대어: 전원이면 홈 = 왕조(능력치 폭발).
 import type { CSSProperties } from 'react';
 import { Emblem, Icon } from '../../ui';
-import { BOOM, SLOT_KO, type BatSlot, type Eval, type TcSet } from './calc';
+import { navigate } from '../../app/router';
+import { TEAMS } from '../../game/mock';
+import { ENTRY_SIZE, SET_KIND_KO, TIERS, statLine, type SetProgress } from '../../game/sets';
+import type { BatSlot, Eval } from './calc';
 import s from './TeamColor.module.css';
 
-const RUNNERS = ['', '1루', '1·2루', '만루', '그랜드슬램'];
+const teamOf = (sp: SetProgress) => (sp.code ? TEAMS.find((t) => t.code === sp.code) : undefined);
+const goal = (sp: SetProgress) => sp.next?.at ?? ENTRY_SIZE;
 
-function clubNote(set: TcSet) {
-  const lit = set.idx + 1;
-  if (set.have >= set.need) return { lead: '그랜드슬램', text: `1군 전원 전 능력치 +${BOOM}` };
-  const n = set.next!;
-  const more = n.at - set.have;
-  const goal = n.at >= 9 ? '능력치 폭발' : n.text;
-  return { lead: lit ? RUNNERS[lit] : '', text: `${more}명 더 모으면 ${goal}` };
-}
-
-/** 칸 막대 — 칸 수 = 목표 인원, 단계 문턱에 눈금 */
+/** 칸 막대 — 칸 수 = 엔트리 20, 단계 문턱에 눈금 */
 function Segments({ have, need, ticks, tone }: { have: number; need: number; ticks: number[]; tone?: string }) {
   return (
     <span className={s.seg} style={tone ? ({ ['--tc' as string]: tone } as CSSProperties) : undefined} aria-hidden>
@@ -41,71 +36,90 @@ export function Bases({ lit, size = 34 }: { lit: number; size?: number }) {
   );
 }
 
-export interface TeamColorProps {
-  ev: Eval;
-  /** 폭발까지 남은 자리 고르기 */
-  onHint: (slot: BatSlot) => void;
+/** 효과 두 줄 (타자 · 투수) + 상황 효과 */
+function EffectLines({ sp, eff }: { sp: SetProgress; eff: NonNullable<SetProgress['cur']> }) {
+  return (
+    <span className={s.eff}>
+      <span><i>타자</i>{statLine(eff.bat, 4)}</span>
+      <span><i>투수</i>{statLine(eff.pit, 4)}</span>
+      {eff.special && <span className={s.sp}><i>특수</i>{eff.special.side === 'bat' ? '타자' : '투수'} · {eff.special.text}</span>}
+      {sp.dynasty && <span className={s.sp}><i>왕조</i>엔트리 전원 능력치 폭발</span>}
+    </span>
+  );
 }
 
-export function TeamColorPanel({ ev, onHint }: TeamColorProps) {
-  const [club, ...rest] = ev.sets;
-  const note = clubNote(club);
-  const tone = club.team?.colors.primary;
-  const missing = ev.missing.slice(0, 3);
+function Hero({ sp }: { sp: SetProgress }) {
+  const t = teamOf(sp);
+  const tone = t?.colors.primary;
+  const tiers = TIERS[sp.kind];
+  const more = sp.next ? sp.next.at - sp.have : 0;
   return (
-    <section className={s.panel} aria-label="팀컬러">
-      <div className={[s.hero, ev.exploded && s.done].filter(Boolean).join(' ')} style={{ ['--tc' as string]: tone } as CSSProperties}>
-        {club.team && <Emblem team={club.team} size={34} className={s.emb} />}
-        <div className={s.heroMain}>
-          <p className={s.heroTop}>
-            <b className={s.heroName}>{club.label}</b>
-            <span className={s.kind}>구단 팀컬러</span>
-          </p>
-          <div className={s.track}>
-            <Segments have={club.have} need={club.need} ticks={[2, 4, 6]} tone={tone} />
-            <span className={s.scale} aria-hidden>
-              {club.steps.map((st, i) => (
-                <i key={st.at} className={['num', i <= club.idx && s.reached].filter(Boolean).join(' ')} style={{ left: `${(st.at / club.need) * 100}%` }}>
-                  {st.at >= 9 ? '폭발' : `+${st.v}`}
-                </i>
-              ))}
-            </span>
-          </div>
-          <p className={s.note}>
-            {club.current ? <b className={s.cur}>{ev.exploded ? `전 능력치 +${BOOM}` : club.current.text}</b> : <b className={s.cur}>{club.steps[0].at}명부터 {club.steps[0].text}</b>}
-            {note.lead && <span className={s.lead}>{note.lead}</span>}
-            {!ev.exploded && club.current && <span>{note.text}</span>}
-            {ev.exploded && <span>{note.text}</span>}
-          </p>
+    <div className={[s.hero, sp.dynasty && s.done].filter(Boolean).join(' ')} style={tone ? ({ ['--tc' as string]: tone } as CSSProperties) : undefined}>
+      {t ? <Emblem team={t} size={34} className={s.emb} /> : <span className={['num-display', s.yearMark].join(' ')}>{sp.name.replace(' 시즌', '')}</span>}
+      <div className={s.heroMain}>
+        <p className={s.heroTop}>
+          <b className={s.heroName}>{sp.name}</b>
+          <span className={s.kind}>{SET_KIND_KO[sp.kind]} 세트{sp.cur ? ` · ${sp.cur.trait}` : ''}</span>
+        </p>
+        <div className={s.track}>
+          <Segments have={sp.have} need={ENTRY_SIZE} ticks={tiers.map((x) => x.at - 1).filter((x) => x < ENTRY_SIZE - 1)} tone={tone} />
+          <span className={s.scale} aria-hidden>
+            {tiers.map((x, i) => (
+              <i key={x.at} className={['num', i <= sp.tier && s.reached].filter(Boolean).join(' ')} style={{ left: `${(x.at / ENTRY_SIZE) * 100}%` }}>
+                {x.at >= ENTRY_SIZE ? (sp.kind === 'teamYear' ? '왕조' : '전원') : `+${x.v}`}
+              </i>
+            ))}
+          </span>
         </div>
-        <div className={s.count}>
-          <span><b className="num-display">{club.have}</b><i className="num">/{club.need}</i></span>
-          <Bases lit={club.idx + 1} />
-        </div>
+        {sp.cur && <EffectLines sp={sp} eff={sp.cur} />}
+        {sp.next && <p className={s.note}><span className={s.lead}>{more}명 더</span><span>모으면 +{sp.next.v} 단계 — {statLine(sp.next.bat, 2)} · {statLine(sp.next.pit, 2)}</span></p>}
       </div>
+      <div className={s.count}>
+        <span><b className="num-display">{sp.have}</b><i className="num">/{goal(sp)}</i></span>
+        <Bases lit={sp.tier + 1} />
+      </div>
+    </div>
+  );
+}
 
-      {!ev.exploded && ev.remain <= 3 && missing.length > 0 && (
-        <button type="button" className={s.hint} onClick={() => onHint(missing[0])}>
-          <span className={s.hintN}>폭발까지 <b className="num">{ev.remain}</b>명</span>
-          <span className={s.hintT}>{missing.map((m) => SLOT_KO[m]).join(' · ')} 자리를 {club.team?.short ?? ''}로</span>
-          <Icon name="chevron" size={16} className={s.hintIco} />
-        </button>
+export interface TeamColorProps {
+  ev: Eval;
+  /** (예전) 폭발까지 남은 자리 고르기 — 지금은 세트덱 페이지로 */
+  onHint?: (slot: BatSlot) => void;
+}
+
+export function TeamColorPanel({ ev }: TeamColorProps) {
+  const active = ev.active;
+  const rest = ev.sets.filter((x) => !x.active && x.next).slice(0, active.length ? 3 : 4);
+  return (
+    <section className={s.panel} aria-label="세트덱">
+      <header className={s.head}>
+        <h3 className={s.h}>세트덱 <small>엔트리 <span className="num">{ev.entry}</span>/<span className="num">{ENTRY_SIZE}</span> · 켜진 세트 <span className="num">{active.length}</span>/2</small></h3>
+        <button type="button" className={s.more} onClick={() => navigate('/sets')}>효과 표 <Icon name="chevron" size={14} /></button>
+      </header>
+      {active.map((sp) => <Hero key={sp.id} sp={sp} />)}
+      {!active.length && (
+        <p className={s.empty}>아직 켜진 세트가 없어요. 같은 구단·같은 연도 카드를 엔트리에 <b className="num">5</b>명 모으면 첫 단계가 켜져요.</p>
       )}
-
       <ul className={s.rows}>
-        {rest.map((set) => (
-          <li key={set.id} className={s.row} style={set.team ? ({ ['--tc' as string]: set.team.colors.primary } as CSSProperties) : undefined}>
-            <span className={s.rowKind}>{set.kindKo}</span>
-            <span className={s.rowLabel}>{set.label}</span>
-            <span className={['num', s.rowN].join(' ')}>{set.have}<i>/{set.need}</i></span>
-            <Segments have={set.have} need={set.need} ticks={set.steps.map((x) => x.at - 1).filter((x) => x < set.need - 1)} />
-            <span className={s.rowBonus}>
-              {set.current ? <b>{set.current.text}</b> : <span className={s.none}>아직 없음</span>}
-              {set.next && <small>{set.next.at - set.have}명 더 → {set.next.text}</small>}
-            </span>
-          </li>
-        ))}
+        {rest.map((sp) => {
+          const t = teamOf(sp);
+          const need = sp.next!.at;
+          return (
+            <li key={sp.id} className={s.row} style={t ? ({ ['--tc' as string]: t.colors.primary } as CSSProperties) : undefined}>
+              <span className={s.rowKind}>{SET_KIND_KO[sp.kind]}</span>
+              <span className={s.rowLabel}>{sp.name}<small> · {sp.next!.trait}</small></span>
+              <span className={['num', s.rowN].join(' ')}>{sp.have}<i>/{need}</i></span>
+              <Segments have={sp.have} need={need} ticks={[]} />
+              <span className={s.rowBonus}>
+                {sp.cur ? <b>+{sp.cur.v} 단계</b> : <span className={s.none}>아직 없음</span>}
+                <small>{need - sp.have}명 더 → +{sp.next!.v} · 타자 {statLine(sp.next!.bat, 2)} · 투수 {statLine(sp.next!.pit, 2)}</small>
+              </span>
+            </li>
+          );
+        })}
       </ul>
+      <p className={s.rule}>세트는 동시에 2개까지(센 것부터) 켜지고, 한 선수는 받는 세트 중 가장 센 것 하나만 받아요.</p>
     </section>
   );
 }

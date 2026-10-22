@@ -4,6 +4,7 @@
 
 import { CARDS, LINEUP, ME, PLAYERS, PVP_OPPONENTS, USER_RANKING, cardById, playerOfCard, teamById } from '../../game/mock';
 import { FIELD_SPOTS, fenceAt, polarToField } from '../../game/field';
+import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
 import type { CardInst, Cause, HighlightKind, Player, Pos, PvpOpponent, Team } from '../../game/types';
 
 /* ───────── 시드 난수 ───────── */
@@ -48,9 +49,17 @@ export interface Side {
 
 const pc = (id: string) => { const c = cardById(id)!; return { card: c, player: playerOfCard(c) }; };
 
+/** 내 팀 종합 · 전력(엔트리 선수 점수 합) — 라인업 화면과 같은 계산 */
+export function myStrength() {
+  const ev = evaluate(lineupStore.get() ?? initialLineup());
+  const power = Math.round(Object.values(ev.units).reduce((a, u) => a + (u ? u.total : 0), 0));
+  return { ovr: ev.overall, power };
+}
+
 export function mySide(): Side {
+  const { ovr, power } = myStrength();
   return {
-    key: 'me', user: ME.user, team: teamById(ME.teamId), rating: ME.rating, ovr: 91, power: 1012,
+    key: 'me', user: ME.user, team: teamById(ME.teamId), rating: ME.rating, ovr, power,
     batting: LINEUP.batting.map((b) => ({ order: b.order, pos: b.pos, ...pc(b.cardId) })),
     sp: pc(LINEUP.sp), closer: pc(LINEUP.closer), lineupName: LINEUP.name,
   };

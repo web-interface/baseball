@@ -5,7 +5,7 @@
 // 선수를 누르면 먼저 선수 정보 시트(능력치·성적), 거기서 '교체'로 바꾸기 시트. 빈 자리는 바로 바꾸기 시트.
 //
 // 주소 (미리보기·스크린샷용): ?tab=order|pitch · ?slot=LF (그 자리 바꾸기 시트) · ?info=CF · ?info=S1 (그 자리 선수 정보 시트, S1~S5 = 1~5선발) · ?bench=lc1 (벤치 카드 시트)
-//   ?demo=8 (독수리스 8/9) · ?demo=boom (잠시 뒤 9/9 → 폭발 연출) · ?demo=done (폭발한 상태) · ?pick=2 (타순 고르는 중)
+//   ?demo=set (’27 독수리스 5명 — 세트 +2) · ?demo=set9 (9명 — +4) · ?demo=boom (5명 → 잠시 뒤 9명, 단계가 오르는 순간) · ?pick=2 (타순 고르는 중)
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { CardMini } from '../../cards';
@@ -33,12 +33,14 @@ const TABS: { value: Tab; label: string }[] = [
 ];
 const ALL_SLOTS = [...BAT_SLOTS, ...STAFF_SLOTS] as string[];
 
+/** 미리보기 — ’27 독수리스 카드로 세트덱 켜 보기 (목업 카드: 연이준·표건우·탁민재·진서율·사공린 / 서문혁·도하람·독고현·황보결) */
+const SET_DEMO: [Slot, string][] = [['CF', 'c03'], ['SS', 'c06'], ['C', 'c07'], ['2B', 'c08'], ['LF', 'lc1'], ['DH', 'lc2'], ['R1', 'c10'], ['B0', 'c11'], ['B1', 'c12']];
 function demoStart(q: URLSearchParams): LineupState | null {
   const d = q.get('demo');
   if (!d) return null;
   let st = initialLineup();
-  if (d === '8' || d === 'boom' || d === 'done') st = place(st, 'LF', 'lc1');
-  if (d === 'done') st = place(st, 'DH', 'lc2');
+  const n = d === 'set9' ? 9 : d === 'set' || d === 'boom' ? 5 : 0;
+  for (const [slot, id] of SET_DEMO.slice(0, n)) st = place(st, slot, id);
   return st;
 }
 
@@ -103,7 +105,7 @@ export default function LineupScreen({ query }: ScreenProps) {
   // 미리보기: 잠시 뒤 마지막 한 명을 채워 폭발 연출을 본다
   useEffect(() => {
     if (q.get('demo') !== 'boom') return;
-    const t = window.setTimeout(() => commit(place(stRef.current, 'DH', 'lc2')), Number(q.get('at') ?? 1100));
+    const t = window.setTimeout(() => { let nx = stRef.current; for (const [slot, id] of SET_DEMO.slice(5)) nx = place(nx, slot, id); commit(nx); }, Number(q.get('at') ?? 1100));
     return () => window.clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

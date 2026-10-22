@@ -295,9 +295,9 @@ function Boom({ ev, onDone }: { ev: Eval; onDone: () => void }) {
         ))}
       </svg>
       <div className={s.boomTitle} role="status">
-        <p className={s.boomKicker}><Emblem team={ev.club} size={18} /><span>{ev.club.name}</span><b className="num">9/9</b></p>
-        <p className={s.boomBig}>능력치 폭발</p>
-        <p className={s.boomSub}>1군 전원 전 능력치 <b className="num">+{BOOM}</b></p>
+        <p className={s.boomKicker}><Emblem team={ev.club} size={18} /><span>{ev.active[0]?.name ?? ev.club.name}</span><b className="num">20/20</b></p>
+        <p className={s.boomBig}>왕조 — 능력치 폭발</p>
+        <p className={s.boomSub}>엔트리 전원 세트 <b className="num">+{BOOM}</b> 단계</p>
       </div>
       <button type="button" className={s.boomCatch} onClick={skip} aria-label="연출 건너뛰기" />
     </div>

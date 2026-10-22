@@ -8,7 +8,7 @@ import { GRADES } from '../../game/grades';
 import { spend, useWallet } from '../../game/wallet';
 import { PITCH_KO, POS_KO } from '../../game/labels';
 import type { CardInst, ClubCode, GradeId, Pack, PitchType, Player, SignaturePitch } from '../../game/types';
-import { CLUB_TIER, LEGEND_SEASONS, YEAR_OPTIONS, clubPool } from './local-mock';
+import { CLUB_TIER, LEGEND_SEASONS, YEAR_OPTIONS, clubPool, clubTitleYears } from './local-mock';
 
 export type Pick = { kind: 'year'; year: number } | { kind: 'club'; club: ClubCode };
 
@@ -206,6 +206,11 @@ function yearFor(g: GradeId, pick: Pick | null, r: () => number): number | undef
   if (pick?.kind === 'year') return pick.year % 100;
   if (k === 'award') return r() < 0.72 ? 26 : 25; // 수상은 시상이 끝난 해만
   const x = r();
+  if (pick?.kind === 'club' && x >= 0.9) {
+    // 구단팩 — 열 장에 한 장꼴로 그 구단 우승 연도 카드 (’99 독수리스 우승 같은)
+    const ys = clubTitleYears(pick.club);
+    if (ys.length) return ys[Math.floor(r() * Math.min(ys.length, 8))] % 100;
+  }
   return x < 0.8 ? 27 : x < 0.94 ? 26 : 25;
 }
 

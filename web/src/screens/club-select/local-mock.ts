@@ -33,99 +33,9 @@ export function clubTip(t: Team) {
   return '전력과 모으는 속도가 고르게 섞인 구단이에요.';
 }
 
-/* ───────── 2. 지명 후보 (구단마다 10명) ───────── */
-type Tmpl = { pos: Pos; role?: PitcherRole; ovr: number };
-const TEMPLATE: Tmpl[] = [
-  { pos: 'P', role: 'SP', ovr: 84 }, { pos: 'SS', ovr: 82 }, { pos: 'CF', ovr: 81 }, { pos: 'P', role: 'CL', ovr: 80 },
-  { pos: 'C', ovr: 78 }, { pos: '3B', ovr: 79 }, { pos: 'RF', ovr: 77 }, { pos: '2B', ovr: 75 }, { pos: 'P', role: 'RP', ovr: 74 }, { pos: '1B', ovr: 73 },
-];
-
-/** 희귀한 성 + 요즘 이름 — 실제 선수와 겹치지 않게 손으로 고른 가상 이름 */
-const NAMES: Record<string, string[]> = {
-  dj: ['경다온', '함로운', '빙하담', '묵시안', '견도율', '사공태이', '감이솔', '단새온'],
-  gj: ['곽해찬', '도윤슬', '명가람', '범라온', '소다인', '채누리', '추하율', '탄무진'],
-  dg: ['강마루', '계한솔', '마도겸', '봉이든', '변시우', '엽서강', '온유찬', '종태윤'],
-  bs: ['강해솔', '나도헌', '류시온', '부지환', '서문결', '연다빈', '하태율', '형민결'],
-  sb: ['곽은찬', '남궁이안', '마하준', '반지오', '복태림', '선우람', '안도경', '예서준'],
-  st: ['감리안', '공태하', '동방윤', '묘시헌', '변하늘', '상도윤', '신다율', '왕이결'],
-  sh: ['권새율', '길태오', '도은결', '매로아', '석가람', '어도현', '육시원', '진하온'],
-  ic: ['갈태호', '경이안', '단우진', '모하람', '섭다온', '엄시후', '펠릭스 오르다', '팽도율'],
-  cw: ['국도한', '기라온', '금태산', '담서후', '명지안', '봉도하', '순태겸', '여울찬'],
-  sw: ['견이수', '계도람', '마시헌', '반하율', '설윤찬', '편도경', '하라온', '은새결'],
-};
-
-function genPlayer(team: Team, name: string, t: Tmpl, i: number): Player {
-  const r = rng(`draft:${team.id}:${i}`);
-  const isP = t.pos === 'P';
-  const throws: Hand = r() < (isP ? 0.3 : 0.12) && !['C', 'SS', '2B', '3B'].includes(t.pos) ? 'L' : 'R';
-  const bats: BatSide = isP ? throws : r() < 0.3 ? 'L' : r() < 0.08 ? 'S' : 'R';
-  const v = (d: number) => clamp(Math.round(t.ovr + d + (r() - 0.5) * 10), 40, 97);
-  const face: Player['face'] = isP
-    ? [
-        { code: 'VEL', ko: '구속', v: v(t.role === 'CL' ? 6 : 0) }, { code: 'STF', ko: '구위', v: v(2) },
-        { code: 'BRK', ko: '변화', v: v(-1) }, { code: 'CTL', ko: '제구', v: v(-2) },
-        t.role === 'SP' ? { code: 'STA', ko: '체력', v: v(4) } : { code: 'REC', ko: '회복', v: v(2) },
-        { code: 'MNT', ko: '위기관리', v: v(-4) },
-      ]
-    : t.pos === 'C'
-      ? [{ code: 'CON', ko: '컨택', v: v(-6) }, { code: 'POW', ko: '파워', v: v(-2) }, { code: 'EYE', ko: '선구', v: v(-4) },
-          { code: 'BLK', ko: '블로킹', v: v(6) }, { code: 'FRM', ko: '프레이밍', v: v(5) }, { code: 'CS', ko: '도루저지', v: v(3) }]
-      : [{ code: 'CON', ko: '컨택', v: v(0) }, { code: 'POW', ko: '파워', v: v(['1B', 'RF', '3B'].includes(t.pos) ? 6 : -6) },
-          { code: 'EYE', ko: '선구', v: v(-3) }, { code: 'SPD', ko: '주루', v: v(['CF', 'SS', '2B'].includes(t.pos) ? 6 : -4) },
-          { code: 'DEF', ko: '수비', v: v(['SS', 'CF', '2B'].includes(t.pos) ? 5 : -2) }, { code: 'ARM', ko: '송구', v: v(t.pos === 'RF' ? 8 : 0) }];
-  return {
-    id: `d-${team.id}-${i}`,
-    name,
-    teamId: team.id,
-    number: 10 + Math.floor(r() * 80),
-    pos: t.pos,
-    role: t.role,
-    bats,
-    throws,
-    age: 21 + Math.floor(r() * 12),
-    heightCm: 174 + Math.round(r() * 16),
-    weightKg: 72 + Math.round(r() * 24),
-    origin: name.includes(' ') ? 'LATAM' : 'KR',
-    draftYear: 2014 + Math.floor(r() * 12),
-    ovr: t.ovr + Math.round((r() - 0.5) * 4),
-    face,
-    attrs: {},
-    potential: 2.5 + Math.round(r() * 5) / 2,
-    traits: [],
-    personality: '',
-    weather: {},
-    form: {},
-    look: `look:draft:${team.id}:${i}`,
-    season: {},
-    condition: 3,
-    fatigue: 20,
-  };
-}
-
-const POOLS = new Map<string, Player[]>();
-/** 그 구단 지명 후보 — 실제 목업 선수 + 모자라면 만든 선수 (10명) */
-export function draftPool(teamId: string): Player[] {
-  const hit = POOLS.get(teamId);
-  if (hit) return hit;
-  const team = TEAMS.find((t) => t.id === teamId) ?? TEAMS[0];
-  const own = PLAYERS.filter((p) => p.teamId === teamId && p.id !== 'p41').slice(0, 12);
-  const out = [...own];
-  const names = NAMES[teamId] ?? [];
-  let k = 0;
-  for (const t of TEMPLATE) {
-    if (out.length >= 10) break;
-    const covered = out.some((p) => p.pos === t.pos && (p.role ?? null) === (t.role ?? null));
-    if (covered) continue;
-    out.push(genPlayer(team, names[k % names.length], t, k));
-    k++;
-  }
-  out.sort((a, b) => b.ovr - a.ovr);
-  POOLS.set(teamId, out);
-  return out;
-}
-
-/** 지명하면 오는 카드 — '27 레어 (모두 같은 등급이라 공정) */
-export const DRAFT_GRADE: GradeId = 'rare';
+/* ───────── 2. 지명 후보 (구단마다 8명 — 유망주) ───────── */
+// 만드는 곳은 game/starter (기본 선수단과 같이 맞춘다). 지명 카드는 스페셜, 연도는 지명 순서대로 ’27 · ’26 · ’25.
+export { DRAFT_GRADE, DRAFT_YEARS, draftPool } from '../../game/starter';
 
 /* ───────── 3. 특별 선수 (요구 29) ───────── */
 export type SpecialName = (typeof SPECIAL_PLAYER_NAMES)[number];
@@ -341,7 +251,8 @@ export const AI_LEVELS: { id: AiLevel; ko: string; grades: GradeId[]; reward: nu
 ];
 /** 지금 전력으로 추천 — 막 창단한 구단(팀 종합 74 안팎)은 2군 */
 export const RECOMMENDED: AiLevel = 'futures';
-export const STARTER_OVR = 74;
+/** 처음 팀 종합 목표 — 실제 값은 기본 선수단으로 계산 (game/starter) */
+export const STARTER_OVR = 66;
 
 /* ───────── 저장 (이 기기) ───────── */
 export interface StartState {

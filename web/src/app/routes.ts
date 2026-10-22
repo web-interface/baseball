@@ -27,7 +27,8 @@ export interface RouteDef {
 
 export const ROUTES: RouteDef[] = [
   { key: 'home', path: '/home', title: '홈', menu: '홈', owner: '홈 화면 개발자', desc: '다음 경기 · 날씨 · 구단 소식 · 바로가기', load: () => import('../screens/home') },
-  { key: 'lineup', path: '/lineup', title: '라인업', menu: '라인업', owner: '라인업 화면 개발자', desc: '경기장 위 카드 배치 · 팀컬러 · 케미 선 · 능력치 폭발 · 팀 종합 게이지', load: () => import('../screens/lineup') },
+  { key: 'lineup', path: '/lineup', title: '라인업', menu: '라인업', owner: '라인업 화면 개발자', desc: '경기장 위 카드 배치 · 세트덱 진행 · 케미 선 · 왕조(능력치 폭발) · 팀 종합 게이지 · 선수 정보 시트', load: () => import('../screens/lineup') },
+  { key: 'sets', path: '/sets', title: '세트덱', menu: '세트덱', owner: '라인업 화면 개발자', desc: '세트 종류별 조건 · 단계별 효과 표 · 내 엔트리 진행 · 모을 카드 · 구단·연도 조합별 효과', load: () => import('../screens/sets') },
   { key: 'match', path: '/match', title: '경기', menu: '경기', owner: '경기 화면 개발자', desc: '빨리 보기(10초) · 주요 장면 · 이닝별 · 자세히(2D) · 강조 문구 · 원인 표시', load: () => import('../screens/match') },
   { key: 'cards', path: '/cards', title: '카드', menu: '카드', owner: '카드 화면 개발자', desc: '보관함 · 등급 11종 · 강화 I~X · 레벨 · 도감', load: () => import('../screens/cards') },
   { key: 'gacha', path: '/gacha', title: '영입', menu: '영입', owner: '뽑기 화면 개발자', desc: '스카우트(카드 뽑기) · 확률 공개 · 천장 · 레전드 이펙트', load: () => import('../screens/gacha') },

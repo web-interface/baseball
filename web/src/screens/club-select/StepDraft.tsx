@@ -6,7 +6,7 @@ import { PlayerArt } from '../../art/PlayerArt';
 import { teamById } from '../../game/mock';
 import { POS_KO, ROLE_KO, handKo } from '../../game/labels';
 import type { Player } from '../../game/types';
-import { DRAFT_GRADE, draftPool } from './local-mock';
+import { DRAFT_GRADE, DRAFT_YEARS, draftPool } from './local-mock';
 import type { StepProps } from './index';
 import s from './cs.module.css';
 import d from './StepDraft.module.css';
@@ -32,7 +32,7 @@ export function StepDraft({ st, set, go, Dock }: StepProps) {
       <header className={s.head}>
         <p className={s.kicker}>클럽 창단 · {t.name}</p>
         <h1 className={s.title}>{t.short}에서 세 명을 데려와요</h1>
-        <p className={s.lead}>지명한 선수는 <b>’27 레어</b> 카드로 와요. 나머지 기본 선수단 22장은 따로 채워 드려요.</p>
+        <p className={s.lead}>지명한 선수는 <b>스페셜</b> 카드로 와요 — 연도는 지명 순서대로 <b>’27 · ’26 · ’25</b>. 나머지 기본 선수단 22장은 여러 구단·연도로 채워 드려요.</p>
       </header>
 
       <div className={d.slots} aria-label="지명한 선수">
@@ -42,7 +42,7 @@ export function StepDraft({ st, set, go, Dock }: StepProps) {
             <div key={i} className={d.slot}>
               {p ? (
                 <button type="button" className={d.slotCard} onClick={() => toggle(p)} aria-label={`${p.name} 지명 취소`}>
-                  <Card player={p} team={t} grade={DRAFT_GRADE} year={27} level={1} width={98} showStats={false} />
+                  <Card player={p} team={t} grade={DRAFT_GRADE} year={DRAFT_YEARS[i]} level={1} width={98} showStats={false} />
                 </button>
               ) : (
                 <span className={d.empty}><span className="num-display">{i + 1}</span><small>지명</small></span>
@@ -95,7 +95,7 @@ export function StepDraft({ st, set, go, Dock }: StepProps) {
         })}
       </ul>
       <p className={d.note}>
-        같은 구단 선수가 많을수록 팀컬러가 올라요 — 세 명을 다 고르면 <b>{t.short} <span className="num">3/9</span></b>, 전 능력치 +1 로 시작해요.
+        지명 세 명 + 특별 선수면 <b>{t.short} <span className="num">4/5</span></b> — 같은 구단 카드 한 장만 더 모으면 구단 세트가 켜져요. 연도가 서로 달라 처음엔 세트덱이 없어요.
       </p>
 
       <Dock note={<span><b>지명 <span className="num">{st.picks.length}</span>/3</b><small>{picked.map((p) => p.name).join(' · ') || '세 명을 골라 주세요'}</small></span>}>

@@ -1,0 +1,105 @@
+/* 세트덱 — 규칙 표 · 내 진행 · 조합별 효과. 표는 헤어라인, 구단색(--tc)은 칸·막대에만 */
+.screen { padding-bottom: 40px; }
+.top { padding: 18px var(--gutter) 4px; }
+.title { font-size: 24px; text-shadow: var(--misreg); }
+.lead { margin-top: 8px; font-size: 13.5px; line-height: 1.6; color: var(--fg-2); }
+.lead b { color: var(--fg); }
+
+.sec { padding: 22px var(--gutter) 4px; }
+.secHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line-2); }
+.secHead h3 { font-size: 17px; flex: none; }
+.meta { font-size: 11.5px; color: var(--fg-3); text-align: right; min-width: 0; }
+.note { padding: 12px 0 4px; font-size: 12.5px; color: var(--fg-2); }
+
+/* 단계 표 */
+.tiers { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tiers th, .tiers td { padding: 10px 4px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.tiers thead th { font-size: 11px; font-weight: 650; color: var(--fg-3); text-align: left; }
+.tiers tbody th { text-align: left; font-weight: 500; }
+.tiers tbody th b { display: block; font-size: 14px; font-weight: 750; }
+.tiers tbody th small { display: block; margin-top: 2px; font-size: 11px; color: var(--fg-3); line-height: 1.4; }
+.tiers td { font-size: 16px; font-weight: 700; white-space: nowrap; }
+.tiers td em { display: block; font-style: normal; font-size: 10.5px; font-weight: 700; color: var(--accent); }
+.cR { text-align: right !important; }
+.dim { color: var(--fg-4); font-weight: 400 !important; }
+.best td { color: var(--fg); }
+.best th b { color: var(--accent); }
+.ruleList { margin-top: 10px; display: grid; gap: 6px; }
+.ruleList li { position: relative; padding-left: 12px; font-size: 12.5px; line-height: 1.55; color: var(--fg-2); }
+.ruleList li::before { content: ''; position: absolute; left: 0; top: .62em; width: 5px; height: 1px; background: var(--fg-3); }
+.ruleList b { color: var(--fg); }
+
+/* 내 진행 */
+.mine { display: grid; }
+.mineRow { --tc: var(--fg-2); padding: 12px 0; border-bottom: 1px solid var(--line); }
+.mineRow.on { box-shadow: inset 3px 0 0 var(--tc); padding-left: 10px; }
+.mineTop { display: flex; align-items: center; gap: 10px; }
+.mineName { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.mineName b { font-size: 14.5px; font-weight: 750; letter-spacing: -.03em; }
+.mineName small { font-size: 11px; color: var(--fg-3); }
+.mineN { font-size: 18px; font-weight: 700; }
+.mineN i { font-style: normal; font-size: 12px; color: var(--fg-3); }
+.yy { display: inline-grid; place-items: center; width: 34px; height: 26px; font-size: 15px; color: var(--fg); box-shadow: inset 0 0 0 1.5px var(--line-3); flex: none; }
+.bar { display: flex; gap: 2px; height: 6px; margin: 8px 0 6px; }
+.bar i { flex: 1; background: var(--line-2); }
+.bar .fill { background: var(--tc); }
+.effNow, .effNext { font-size: 12.5px; line-height: 1.5; color: var(--fg-2); letter-spacing: -.02em; }
+.effNow b { color: var(--fg); margin-right: 4px; }
+.effNext b { color: var(--fg); }
+.cands { margin-top: 8px; display: grid; gap: 6px; }
+.candsH { font-size: 11px; font-weight: 700; color: var(--fg-3); }
+.candList { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; }
+.cand { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 44px; }
+.cand small { font-size: 10px; color: var(--fg-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.candNote { font-size: 11.5px; color: var(--fg-3); }
+.toLineup { margin-top: 12px; }
+
+/* 구단 고르기 — 엠블럼 줄 (가로로 미는 목록) */
+.clubs { display: flex; gap: 4px; overflow-x: auto; margin: 12px calc(var(--gutter) * -1) 0; padding: 0 var(--gutter) 6px; scrollbar-width: none; }
+.clubs::-webkit-scrollbar { display: none; }
+.clubBtn { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: none; width: 62px; min-height: 64px; padding: 6px 0; font-size: 11px; color: var(--fg-3); border-bottom: 2px solid transparent; }
+.clubOn { color: var(--fg); font-weight: 750; border-bottom-color: var(--accent); }
+.clubHead { display: flex; gap: 12px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.clubName { font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 18px; }
+.clubStyle { font-size: 12.5px; color: var(--fg-2); margin-top: 2px; }
+.titles { font-size: 11.5px; color: var(--fg-3); margin-top: 3px; }
+.h4 { margin: 18px 0 6px; font-size: 14px; font-weight: 750; }
+.h4 small { margin-left: 6px; font-size: 11px; font-weight: 500; color: var(--fg-3); }
+
+.yearList { display: grid; }
+.yearRow { --tc: var(--fg-2); border-bottom: 1px solid var(--line); }
+.yearRow summary { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 0; cursor: pointer; list-style: none; }
+.yearRow summary::-webkit-details-marker { display: none; }
+.yrMain { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.yrMain b { font-size: 13.5px; font-weight: 750; letter-spacing: -.03em; }
+.yrMain small { font-size: 11.5px; color: var(--fg-2); line-height: 1.45; }
+.chev { flex: none; color: var(--fg-3); transform: rotate(90deg); transition: transform var(--dur-1) var(--ease-out); }
+.yearRow details[open] .chev { transform: rotate(-90deg); }
+.champ .yy { box-shadow: inset 0 0 0 1.5px var(--tc); color: var(--tc); }
+
+/* 단계별 효과 표 */
+.effWrap { --tc: var(--fg-2); margin: 4px 0 12px; overflow-x: auto; }
+.eff { width: 100%; border-collapse: collapse; font-size: 12px; }
+.eff th, .eff td { padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: top; text-align: left; }
+.eff thead th { font-size: 11px; font-weight: 650; color: var(--fg-3); }
+.eff tbody th { width: 52px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.eff tbody th small { display: block; font-size: 10.5px; color: var(--fg-3); font-weight: 600; }
+.eff td { line-height: 1.6; color: var(--fg-2); }
+.eff td span { display: inline-block; margin-right: 8px; white-space: nowrap; }
+.eff td b { color: var(--fg); }
+.spx { color: var(--tc) !important; font-weight: 700; }
+
+/* broadcast — 굵은 줄 · 검정 머리 */
+:global([data-theme='broadcast']) .secHead { border-bottom: 2px solid var(--fg); }
+:global([data-theme='broadcast']) .tiers thead th, :global([data-theme='broadcast']) .eff thead th { background: var(--inv); color: var(--inv-fg-2); padding-left: 6px; }
+:global([data-theme='broadcast']) .bar { gap: 3px; height: 8px; }
+:global([data-theme='broadcast']) .clubOn { border-bottom-width: 3px; }
+
+/* classic — 기록지 · 별색 */
+:global([data-theme='classic']) .secHead { border-bottom: 1.5px solid var(--fg); box-shadow: 0 3px 0 -1px var(--bg), 0 4px 0 -1px var(--line-2); }
+:global([data-theme='classic']) .tiers thead th, :global([data-theme='classic']) .eff thead th { border-bottom: 1.5px solid var(--fg); color: var(--fg-2); }
+:global([data-theme='classic']) .tiers td em, :global([data-theme='classic']) .best th b { color: var(--club-text); }
+:global([data-theme='classic']) .bar { box-shadow: inset 0 0 0 1px var(--fg); gap: 0; height: 8px; }
+:global([data-theme='classic']) .bar i { background: none; box-shadow: inset -1px 0 0 var(--line-2); }
+:global([data-theme='classic']) .bar .fill { background: var(--tc); background-image: var(--halftone); background-size: var(--halftone-size); }
+:global([data-theme='classic']) .clubOn { border-bottom-color: var(--club); }

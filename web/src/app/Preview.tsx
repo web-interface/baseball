@@ -25,13 +25,13 @@ const SCREEN_LIST = [
 const SCENES: { k: string; title: string; desc: string; path: string }[] = [
   { k: '6-4-3', title: '호수비 강조 문구', desc: '7회초 2사, 잡을 확률 18% 다이빙 캐치', path: '/match?mode=key&at=a21&beat=callout&ms=0' },
   { k: 'W/O', title: '끝내기', desc: '9회말 우중간 끝내기 안타 — 승리 확률 80 → 100%', path: '/match?mode=key&at=a29&beat=callout&ms=0' },
-  { k: '9/9', title: '능력치 폭발', desc: '독수리스 9명을 다 맞추는 순간', path: '/lineup?demo=boom' },
+  { k: 'SET', title: '세트덱 켜짐', desc: '’27 독수리스 5명 → 9명, 세트 단계가 오르는 순간', path: '/lineup?demo=boom' },
   { k: 'SIG', title: '등급 갤러리', desc: '같은 선수로 11등급 테두리를 한 번에 비교', path: '/cards?gallery=1&same=1' },
   { k: 'BLK', title: '레전드 이펙트', desc: '레전드팩 30장 — 블랙 카드가 나오는 장면', path: '/gacha?demo=open&pack=legend&best=black' },
   { k: '1/1', title: '특별 선수 만들기', desc: '투타·포지션·팔 각도·고유 구종 고르기', path: '/club-select?step=special' },
 ];
 function order(k: string) {
-  return ['club-select', 'home', 'lineup', 'match', 'cards', 'player', 'gacha', 'shop', 'pvp', 'rank', 'settings'].indexOf(k);
+  return ['club-select', 'home', 'lineup', 'sets', 'match', 'cards', 'player', 'gacha', 'shop', 'pvp', 'rank', 'settings'].indexOf(k);
 }
 
 const team = (id: string) => {

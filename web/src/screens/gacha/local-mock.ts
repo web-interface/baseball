@@ -1,15 +1,33 @@
 // 뽑기 화면만 쓰는 목업 — game/mock 값을 이어 붙인다 (서버가 붙으면 응답으로 바뀜).
-// 연도팩 선택지(25·26·27 + 레전드 시즌)는 세계관 goldenEras, 구단팩 선수 풀은 구단마다 시즌 30명을 흉내 낸다.
+// 연도팩 선택지 = ’25·’26·’27 + 구단들의 우승 연도(game/clubSeasons — 실제 지역 구단 기록 파일이 있으면 그 연도),
+// 구단팩 선수 풀은 구단마다 시즌 30명을 흉내 낸다.
 
 import { PLAYERS, TEAMS, registerPlayers } from '../../game/mock';
 import { CLUBS } from '../../game/world';
+import { championOf, clubSeason, clubTitles, runnerUpOf } from '../../game/clubSeasons';
 import type { ClubCode, Player, Pos } from '../../game/types';
 
-/* ───────── 레전드 시즌 (세계관 goldenEras.legendSeason) ───────── */
+/* ───────── 우승 시즌 (구단별 우승 연도 — 레전드 카드가 나오는 해) ───────── */
 export interface LegendSeason { year: number; club: ClubCode; era: string; desc: string }
 
+/** 그 해 그 구단 기록 한 줄 — '정규 1위 · 85승 59패 · 우승' */
+function recordLine(code: ClubCode, year: number) {
+  const r = clubSeason(code, year);
+  if (!r) return '우승';
+  const bits: string[] = [];
+  if (r.rank) bits.push(`정규 ${r.rank}위`);
+  if (r.w != null && r.l != null) bits.push(`${r.w}승${r.d ? ` ${r.d}무` : ''} ${r.l}패`);
+  bits.push(r.post && /우승/.test(r.post) ? r.post : '우승');
+  const tag = r.tags.find((t) => !/^우승$|^준우승$/.test(t));
+  if (tag) bits.push(tag);
+  return bits.join(' · ');
+}
+
 export const LEGEND_SEASONS: LegendSeason[] = CLUBS.flatMap((c) =>
-  c.goldenEras.map((e) => ({ year: e.legendSeason, club: c.code as ClubCode, era: e.label, desc: e.desc })),
+  clubTitles(c.code as ClubCode).map((y) => {
+    const era = c.goldenEras.find((e) => e.legendSeason === y);
+    return { year: y, club: c.code as ClubCode, era: era?.label ?? `${y} 우승`, desc: recordLine(c.code as ClubCode, y) };
+  }),
 ).sort((a, b) => b.year - a.year);
 
 export interface YearOption {
@@ -19,22 +37,30 @@ export interface YearOption {
   /** 고를 때 아래 한 줄 */
   note: string;
   legends: LegendSeason[];
+  /** 그 해 우승 구단 */
+  champ?: ClubCode;
+  /** 그 해 준우승 구단 (기록에 있을 때) */
+  runnerUp?: ClubCode;
 }
 
 const yy = (y: number) => `’${String(y).slice(-2)}`;
 const BASE_YEARS: [number, string][] = [[2027, '이번 시즌 · 시상 전'], [2026, '지난 시즌 · 시상 끝'], [2025, '2년 전 시즌']];
 
-/** 연도팩 선택지 — 25·26·27 + 레전드 시즌 (요구사항 40번, 세계관 7절) */
+/** 연도팩 선택지 — 25·26·27 + 우승 연도 (요구사항 40번) */
 export const YEAR_OPTIONS: YearOption[] = (() => {
-  const out: YearOption[] = BASE_YEARS.map(([y, note]) => ({ year: y, tag: yy(y), note, legends: LEGEND_SEASONS.filter((l) => l.year === y) }));
+  const mk = (y: number, note: string): YearOption => ({ year: y, tag: yy(y), note, legends: LEGEND_SEASONS.filter((l) => l.year === y), champ: championOf(y), runnerUp: runnerUpOf(y) });
+  const out: YearOption[] = BASE_YEARS.map(([y, note]) => mk(y, note));
   const seen = new Set(out.map((o) => o.year));
   for (const l of LEGEND_SEASONS) {
     if (seen.has(l.year)) continue;
     seen.add(l.year);
-    out.push({ year: l.year, tag: yy(l.year), note: '레전드 시즌', legends: LEGEND_SEASONS.filter((x) => x.year === l.year) });
+    out.push(mk(l.year, '우승 시즌 — 레전드 카드가 나와요'));
   }
   return out;
 })();
+
+/** 그 구단 우승 연도 (최근 순) — 구단팩에서 가끔 그 해 카드가 나온다 */
+export const clubTitleYears = (code: ClubCode) => clubTitles(code).slice().reverse();
 
 /* ───────── 구단 전력 (카드 풀 크기 · 최상위 등급 유무) ───────── */
 export const CLUB_TIER = Object.fromEntries(TEAMS.map((t) => [t.code, t.tier])) as Record<ClubCode, '강' | '중' | '약'>;

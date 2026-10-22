@@ -9,7 +9,9 @@ import { ME, teamById } from '../../game/mock';
 import { GRADES } from '../../game/grades';
 import { int } from '../../ui/format';
 import type { Player } from '../../game/types';
-import { AI_LEVELS, DRAFT_GRADE, RECOMMENDED, STARTER_OVR, buildSpecial, draftPool, specialSignature } from './local-mock';
+import { AI_LEVELS, DRAFT_GRADE, DRAFT_YEARS, RECOMMENDED, buildSpecial, draftPool, specialSignature } from './local-mock';
+import { resetStarter } from '../../game/starter';
+import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
 import type { StepProps } from './index';
 import s from './cs.module.css';
 import o from './StepOpen.module.css';
@@ -23,8 +25,18 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
   const special = useMemo(() => buildSpecial(st.special, t), [st.special, t]);
   const sig = specialSignature(st.special);
   const level = AI_LEVELS.find((l) => l.id === st.level) ?? AI_LEVELS[1];
+  // 이 설정으로 받는 기본 선수단의 팀 종합 (지명·특별 선수를 넣고 계산)
+  const ovr = useMemo(() => {
+    try { localStorage.setItem('bb.special', JSON.stringify(special)); } catch { /* 이번 방문만 */ }
+    resetStarter();
+    lineupStore.clear();
+    return evaluate(initialLineup()).overall;
+  }, [special, st.picks, st.club]);
 
   const start = () => {
+    try { localStorage.setItem('bb.special', JSON.stringify(special)); } catch { /* 이번 방문만 */ }
+    resetStarter();
+    lineupStore.clear();
     toast({ text: `${t.name} 창단! 2027 시즌을 시작해요`, tone: 'good' });
     navigate('/home', { replace: true });
   };
@@ -55,13 +67,13 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
             <Card player={special} team={t} grade="unique" level={1} signaturePitch={special.pos === 'P' ? sig : null} width={124} />
           </div>
           <div className={o.picks}>
-            {picked.map((p) => <Card key={p.id} player={p} team={t} grade={DRAFT_GRADE} year={27} level={1} width={80} showStats={false} />)}
+            {picked.map((p, i) => <Card key={p.id} player={p} team={t} grade={DRAFT_GRADE} year={DRAFT_YEARS[i]} level={1} width={80} showStats={false} />)}
             <button type="button" className={o.edit} onClick={() => go('draft')}><Icon name="swap" size={14} /> 바꾸기</button>
           </div>
         </div>
         <p className={o.starter}>
-          나머지는 {t.short} ’27 노멀·스페셜 <span className="num">22</span>장 — 포수 <span className="num">2</span>명 포함, 빈자리 없이 채워 드려요.
-          지금 팀 종합 <b className="num">{STARTER_OVR}</b>.
+          나머지는 여러 구단·연도(’25~’27)의 노멀·스페셜 <span className="num">22</span>장 — 포수 <span className="num">2</span>명 포함, 빈자리 없이 채워 드려요.
+          처음엔 어떤 세트덱도 켜지지 않아요. 지금 팀 종합 <b className="num">{ovr}</b>.
         </p>
       </section>
 

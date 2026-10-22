@@ -198,3 +198,8 @@
   .stage { grid-template-columns: 200px 1fr; gap: 28px; padding: 28px var(--gutter); }
   .clubs { grid-template-columns: repeat(10, 1fr); }
 }
+
+/* 우승 연도 — 연도팩 선택지 강조 */
+.champYear small { color: var(--accent); font-weight: 700; }
+.champYear.on small { color: inherit; }
+:global([data-theme='classic']) .champYear small { color: var(--club-text); }

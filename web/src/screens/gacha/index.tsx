@@ -4,7 +4,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { navigate } from '../../app/router';
-import { LINEUP_EVAL, PACKS, TEAMS, myTeam, teamById } from '../../game/mock';
+import { PACKS, TEAMS, myTeam, teamById } from '../../game/mock';
+import { SET_KIND_KO, statLine } from '../../game/sets';
+import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
 import { GRADES } from '../../game/grades';
 import type { ClubCode, GradeId, Pack } from '../../game/types';
 import { Button, CoinGP, Emblem, GoldenBall, Icon, Tabs, fmt } from '../../ui';
@@ -20,20 +22,22 @@ import s from './Gacha.module.css';
 const TAB_LABEL: Record<string, string> = { basic: '일반', premium: '프리미엄', special: '스페셜', legend: '레전드', year: '연도', club: '구단' };
 
 
-/** 이 팩으로 맞출 수 있는 조합 — 지금 라인업 팀컬러 진행에서 */
+/** 이 팩으로 맞출 수 있는 세트덱 — 지금 라인업(엔트리 20명) 진행에서 */
 function combosFor(pick: Pick | null) {
+  const ev = evaluate(lineupStore.get() ?? initialLineup());
   const club = pick?.kind === 'club' ? pick.club : null;
   const year = pick?.kind === 'year' ? pick.year : null;
-  return LINEUP_EVAL.teamColors.filter((tc) => {
-    if (tc.kind === 'club') return !club || club === 'DJ';
-    if (tc.kind === 'zone') return !club || ['DJ', 'GJ', 'SW'].includes(club);
-    if (tc.kind === 'season') return (!club && (year == null || year === 2027));
-    if (tc.kind === 'rival') return club === 'SW';
-    return false;
-  }).map((tc) => {
-    const next = tc.steps.find((st) => st.at > tc.have) ?? tc.steps[tc.steps.length - 1];
-    return { ...tc, next, left: Math.max(0, next.at - tc.have) };
-  });
+  return ev.sets.filter((x) => x.next && (club ? x.code === club : year != null ? x.year === year : true))
+    .slice(0, 3)
+    .map((x) => ({
+      id: x.id,
+      label: `${x.name} · ${SET_KIND_KO[x.kind]}`,
+      have: x.have,
+      need: x.next!.at,
+      left: Math.max(0, x.next!.at - x.have),
+      next: { bonus: `+${x.next!.v} 단계 — ${statLine(x.next!.bat, 2)} · ${statLine(x.next!.pit, 1)}` },
+      current: x.cur ? `+${x.cur.v} 단계` : '',
+    }));
 }
 
 const DEMO_DONE = new Set<string>();
@@ -160,11 +164,11 @@ function Store({ query }: { query: URLSearchParams }) {
                 type="button"
                 role="radio"
                 aria-checked={o.year === year}
-                className={[s.yearBtn, o.year === year && s.on, o.year < 2025 && s.legendYear].filter(Boolean).join(' ')}
+                className={[s.yearBtn, o.year === year && s.on, o.year < 2025 && s.legendYear, !!o.champ && s.champYear].filter(Boolean).join(' ')}
                 onClick={() => setYear(o.year)}
               >
                 <b className="num-display">{o.tag}</b>
-                <small>{o.year >= 2025 ? (o.year === 2027 ? '이번' : o.year === 2026 ? '지난' : '2년 전') : '레전드'}</small>
+                <small>{o.year >= 2025 ? (o.year === 2027 ? '이번' : o.year === 2026 ? '지난' : '2년 전') : o.champ ? `${teamById(o.champ.toLowerCase()).short} 우승` : '레전드'}</small>
               </button>
             ))}
           </div>
@@ -256,7 +260,7 @@ function Store({ query }: { query: URLSearchParams }) {
             ))}
           </ul>
         ) : (
-          <p className={s.empty}>{team?.short} 카드로 새 팀컬러를 시작해요 — 같은 구단 3명부터 전 능력치 +1</p>
+          <p className={s.empty}>{team?.short ?? '이 팩'} 카드로 새 세트를 시작해요 — 같은 구단·같은 연도 5명부터 세트덱이 켜져요</p>
         )}
       </section>
 
@@ -290,7 +294,7 @@ function YearNote({ year }: { year: number }) {
   if (!o) return null;
   return (
     <div className={s.yearNote}>
-      <p><b className="num">{year}</b> · {o.note}</p>
+      <p><b className="num">{year}</b> · {o.note}{o.champ && o.year < 2027 ? <> · 우승 <b>{teamById(o.champ.toLowerCase()).short}</b>{o.runnerUp ? <> · 준우승 {teamById(o.runnerUp.toLowerCase()).short}</> : null}</> : null}</p>
       {o.legends.length > 0 && (
         <ul>
           {o.legends.map((l) => {
@@ -298,7 +302,7 @@ function YearNote({ year }: { year: number }) {
             return (
               <li key={l.club}>
                 <Emblem team={t} size={18} />
-                <span><b>{t.name}</b> ‘{l.era}’ — {l.desc}</span>
+                <span><b>{t.name}</b> {l.era.endsWith('우승') ? '' : `‘${l.era}’ `}— {l.desc}</span>
               </li>
             );
           })}

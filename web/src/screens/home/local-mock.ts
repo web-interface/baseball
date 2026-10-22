@@ -1,6 +1,7 @@
 // 홈 전용 목업 — game/mock 값을 이어 붙여 쓴다 (서버가 붙으면 같은 모양으로 채움)
-import { LAST_MATCH, LINEUP_EVAL, ME, NEXT_GAME, PACKS, SCOUT_SHOP, STANDINGS, cardById, playerById, teamById } from '../../game/mock';
+import { LAST_MATCH, ME, NEXT_GAME, PACKS, SCOUT_SHOP, STANDINGS, cardById, playerById, teamById } from '../../game/mock';
 import { LEAGUE } from '../../game/world';
+import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
 import type { Play, Player, StandingRow, Team } from '../../game/types';
 
 /** 정규 시즌 경기 수 (세계관: 상대마다 15경기 × 9) */
@@ -81,10 +82,16 @@ export const FEED: FeedItem[] = [
 ];
 
 /* ── 바로가기 숫자 ── */
+/** 라인업 — 팀 종합 · 다음 세트 단계까지 남은 인원 */
+function lineupShortcut() {
+  const ev = evaluate(lineupStore.get() ?? initialLineup());
+  const near = ev.sets.filter((x) => x.next).sort((a, b) => (a.next!.at - a.have) - (b.next!.at - b.have))[0];
+  return { overall: ev.overall, remain: near ? near.next!.at - near.have : 0, set: near?.name ?? '' };
+}
 export function shortcuts() {
   const premium = PACKS.find((p) => p.id === 'premium')!;
   return {
-    lineup: { overall: LINEUP_EVAL.overall, remain: LINEUP_EVAL.explosion.remain },
+    lineup: lineupShortcut(),
     gacha: { pity: premium.pity.count, max: premium.pity.max },
     shop: { left: SCOUT_SHOP.dailyLimit - SCOUT_SHOP.bought, limit: SCOUT_SHOP.dailyLimit },
     pvp: { left: ME.pvpLeft, rating: ME.rating },
