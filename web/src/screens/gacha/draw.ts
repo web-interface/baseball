@@ -3,12 +3,15 @@
 // 중복 카드는 당연히 나온다(강화·각성 재료). 막는 건 '한 번 산 팩을 두 번 처리하는 것' — requestId 로 한 번만.
 
 import { useSyncExternalStore } from 'react';
-import { CARDS, ME, MY_CARD_IDS, PACKS, PLAYERS, teamById } from '../../game/mock';
+import { CARDS, ME, MY_CARD_IDS, PACKS, PLAYERS, teamByCode } from '../../game/mock';
 import { GRADES } from '../../game/grades';
 import { spend, useWallet } from '../../game/wallet';
 import { PITCH_KO, POS_KO } from '../../game/labels';
+import { CURRENT_SEASON, eraOfCode, isOldCode, shortLabel } from '../../game/world';
+import { championOf } from '../../game/clubSeasons';
+import { seasonRoster, yearPool } from '../../game/history';
 import type { CardInst, ClubCode, GradeId, Pack, PitchType, Player, SignaturePitch } from '../../game/types';
-import { CLUB_TIER, LEGEND_SEASONS, YEAR_OPTIONS, clubPool, clubTitleYears } from './local-mock';
+import { CLUB_TIER, LEGEND_SEASONS, YEAR_OPTIONS, clubLegendPool, clubTitleYears, yearOption } from './local-mock';
 
 export type Pick = { kind: 'year'; year: number } | { kind: 'club'; club: ClubCode };
 
@@ -51,8 +54,11 @@ function whyMissing(g: GradeId, pick: Pick): string | null {
   const k = GRADES[g].kind;
   if (pick.kind === 'year') {
     if (k === 'season') return null;
-    if (k === 'award') return pick.year >= 2027 ? '’27 시상 전이라 아직 없어요' : null;
-    if (g === 'legend') return LEGEND_SEASONS.some((l) => l.year === pick.year) ? null : '이 해는 레전드 시즌이 아니에요';
+    if (k === 'award') return pick.year >= CURRENT_SEASON ? `’${String(pick.year).slice(-2)} 시상 전이라 아직 없어요` : null;
+    if (g === 'legend') {
+      if (LEGEND_SEASONS.some((l) => l.year === pick.year)) return null;
+      return yearOption(pick.year)?.live ? '한별 시리즈가 아직 끝나지 않았어요' : '이 해는 레전드 시즌이 아니에요';
+    }
     return '연도가 붙지 않는 등급이에요';
   }
   const tier = CLUB_TIER[pick.club];
@@ -186,8 +192,27 @@ function awardFor(p: Player, g: GradeId, r: () => number): string | undefined {
   return r() < 0.5 ? '타점왕' : '최다안타';
 }
 
-function poolFor(pick: Pick | null): Player[] {
-  if (pick?.kind === 'club') return clubPool(pick.club);
+/** 카드 연도(2자리) → 4자리 */
+const full = (y: number) => (y >= 100 ? y : y <= (CURRENT_SEASON % 100) + 1 ? 2000 + y : 1900 + y);
+
+/**
+ * 선수 풀 — 그 해 · 그 구단 선수단(game/history).
+ *  연도팩: 그 해 리그에 있던 모든 구단 (레전드는 그 해 우승 구단 주축) · 구단팩: 카드 연도의 그 구단 (연도 없는 등급은 구단 전설 풀)
+ *  기본 팩: 지금 목업 선수
+ */
+function poolFor(pick: Pick | null, g: GradeId, year?: number): Player[] {
+  if (pick?.kind === 'club') {
+    const list = year != null ? seasonRoster(pick.club, full(year)) : clubLegendPool(pick.club);
+    return list.length ? list : clubLegendPool(pick.club);
+  }
+  if (pick?.kind === 'year') {
+    if (g === 'legend') {
+      const ch = championOf(pick.year);
+      const stars = ch ? seasonRoster(ch, pick.year).filter((p) => p.ovr >= 78) : [];
+      if (stars.length) return stars;
+    }
+    return yearPool(pick.year);
+  }
   return PLAYERS.filter((p) => p.id !== 'p41');
 }
 
@@ -197,20 +222,35 @@ function sample<T extends { pct: number }>(rows: T[], r: () => number): T {
   return rows[rows.length - 1];
 }
 
+/**
+ * 구단팩 연도 — 그 구단이 있던 해만. 지금 구단은 열 장에 여섯 장꼴로 최근 세 시즌('27 위주),
+ * 나머지는 그 구단의 모든 해에서 고루(우승한 해는 세 배 자주). 수상 등급은 시상이 끝난 해(2026까지)만.
+ */
+function clubYear(code: ClubCode, r: () => number, award: boolean): number {
+  const [from, end] = eraOfCode(code);
+  const to = award ? Math.min(end, CURRENT_SEASON - 1) : end;
+  if (!isOldCode(code) && r() < 0.6) {
+    const x = r();
+    const y = award ? (x < 0.72 ? CURRENT_SEASON - 1 : CURRENT_SEASON - 2) : x < 0.8 ? CURRENT_SEASON : x < 0.94 ? CURRENT_SEASON - 1 : CURRENT_SEASON - 2;
+    return Math.max(from, Math.min(to, y));
+  }
+  const titles = new Set(clubTitleYears(code));
+  const ys: number[] = [];
+  for (let y = from; y <= to; y++) ys.push(y);
+  const ws = ys.map((y) => (titles.has(y) ? 3 : 1));
+  let x = r() * ws.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < ys.length; i++) { x -= ws[i]; if (x <= 0) return ys[i]; }
+  return ys[ys.length - 1];
+}
+
+/** 카드 연도 (2자리) — 레전드·프랜차이즈·블랙·시그니처는 연도를 붙이지 않는다 */
 function yearFor(g: GradeId, pick: Pick | null, r: () => number): number | undefined {
   const k = GRADES[g].kind;
-  if (k === 'icon') {
-    // 레전드는 레전드 시즌 연도로 나오지만 카드에는 연도를 붙이지 않는다
-    return undefined;
-  }
+  if (k === 'icon') return undefined;
   if (pick?.kind === 'year') return pick.year % 100;
+  if (pick?.kind === 'club') return clubYear(pick.club, r, k === 'award') % 100;
   if (k === 'award') return r() < 0.72 ? 26 : 25; // 수상은 시상이 끝난 해만
   const x = r();
-  if (pick?.kind === 'club' && x >= 0.9) {
-    // 구단팩 — 열 장에 한 장꼴로 그 구단 우승 연도 카드 (’99 독수리스 우승 같은)
-    const ys = clubTitleYears(pick.club);
-    if (ys.length) return ys[Math.floor(r() * Math.min(ys.length, 8))] % 100;
-  }
   return x < 0.8 ? 27 : x < 0.94 ? 26 : 25;
 }
 
@@ -250,16 +290,12 @@ export function pullPack(pack: Pack, pick: Pick | null, opt: { seed?: string; fo
   const requestId = `req-${Date.now().toString(36)}-${state.pulls}`;
   const r = rng(opt.seed ?? requestId);
   const odds = oddsFor(pack, pick).rows;
-  const pool = poolFor(pick);
 
-  const mk = (slot: number, g: GradeId, p: Player, year?: number) => makePulled(requestId, slot, g, p, year, r);
+  // 카드 한 장 — 등급 → 연도 → 그 해 · 그 구단 선수
+  const draw = (slot: number, g: GradeId, year = yearFor(g, pick, r)) => makePulled(requestId, slot, g, choosePlayer(poolFor(pick, g, year), g, r), year, r);
 
   const cards: PulledCard[] = [];
-  for (let i = 0; i < pack.size; i++) {
-    const g = sample(odds, r).grade;
-    const p = choosePlayer(pool, g, r);
-    cards.push(mk(i, g, p, yearFor(g, pick, r)));
-  }
+  for (let i = 0; i < pack.size; i++) cards.push(draw(i, sample(odds, r).grade));
 
   // 데모: 가장 좋은 카드를 정해서 보기 (개발 서버 스크린샷용)
   let forced = -1;
@@ -267,10 +303,8 @@ export function pullPack(pack: Pack, pick: Pick | null, opt: { seed?: string; fo
     const g = opt.forceBest;
     const slot = Math.floor(r() * pack.size);
     forced = slot;
-    const p = choosePlayer(pool, g, r);
-    const y = pick?.kind === 'year' ? pick.year % 100 : GRADES[g].kind === 'award' ? 26 : 27;
-    cards[slot] = mk(slot, g, p, y);
-    for (const c of cards) if (c.slot !== slot && rarity(c.card.grade) >= rarity(g)) cards[c.slot] = mk(c.slot, 'rare', choosePlayer(pool, 'rare', r), 27);
+    cards[slot] = draw(slot, g);
+    for (const c of cards) if (c.slot !== slot && rarity(c.card.grade) >= rarity(g)) cards[c.slot] = draw(c.slot, 'rare');
   }
 
   // 천장 — 이 팩 종류의 카운터 (서버 DB 에만 있는 숫자)
@@ -283,7 +317,7 @@ export function pullPack(pack: Pack, pick: Pick | null, opt: { seed?: string; fo
     const need: GradeId | null = pack.pity.guaranteed.startsWith('엘리트') ? 'elite' : pack.pity.guaranteed.startsWith('블랙') ? 'black' : null;
     if (need && !cards.some((c) => rankOf(c.card.grade) >= rankOf(need))) {
       const worst = [...cards].sort(better)[0];
-      cards[worst.slot] = mk(worst.slot, need, choosePlayer(pool, need, r), 27);
+      cards[worst.slot] = draw(worst.slot, need);
     }
   }
   state.pity[pack.id] = after;
@@ -328,7 +362,7 @@ export function rollCombo(slots: ComboSlot[], used: string[], seed?: string): { 
   const hitSlot = sample(slots, r);
   const k = slots.indexOf(hitSlot);
   const g = hitSlot.grade;
-  const p = choosePlayer(poolFor(null), g, r);
+  const p = choosePlayer(poolFor(null, g), g, r);
   const res = makePulled(requestId, 0, g, p, yearFor(g, null, r), r);
   receive(res);
   state.pulled = state.pulled.filter((c) => !used.includes(c.card.id));
@@ -340,8 +374,10 @@ export function rollCombo(slots: ComboSlot[], used: string[], seed?: string): { 
 export const yearLabel = (pick: Pick | null) => {
   if (!pick) return '';
   if (pick.kind === 'year') return YEAR_OPTIONS.find((y) => y.year === pick.year)?.tag ?? `’${String(pick.year).slice(-2)}`;
-  return teamById(pick.club.toLowerCase()).short;
+  return shortLabel(pick.club);
 };
+/** 그 구단 (구단팩 무대 · 결과 연출) */
+export const pickTeam = (pick: Pick | null) => (pick?.kind === 'club' ? teamByCode(pick.club) : undefined);
 
 /** 팩 이름 + 고른 것 ('구단팩 · 독수리스') */
 export const packTitle = (pack: Pack, pick: Pick | null) => (pick ? `${pack.name} · ${yearLabel(pick)}` : pack.name);

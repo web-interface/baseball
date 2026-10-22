@@ -28,6 +28,17 @@ const BAND: Record<ClubCode, { band: string; line: string }> = {
   IC: { band: '#D63A28', line: '#0E5E6F' },
   CW: { band: '#1D3557', line: '#B38B4D' },
   SW: { band: '#15151A', line: '#E0352F' },
+  // 옛 구단 (world.ts OLD_CLUBS)
+  DDG: { band: '#26386B', line: '#C9412F' },
+  MDH: { band: '#A8242C', line: '#F0E2C3' },
+  HBE: { band: '#B45417', line: '#22305A' },
+  SCR: { band: '#1E3F86', line: '#D23B3B' },
+  ISB: { band: '#2367A8', line: '#F3C641' },
+  IJR: { band: '#2F7556', line: '#F1E6CF' },
+  IDR: { band: '#17698A', line: '#EE7A33' },
+  SUC: { band: '#3A3F8F', line: '#D8A73A' },
+  JDR: { band: '#1E1C1A', line: '#D9A62B' },
+  IBY: { band: '#B23D22', line: '#E0A63A' },
 };
 
 const lum = (hex: string) => {
@@ -121,9 +132,10 @@ export const SERIAL_LIMIT: Partial<Record<GradeId, number>> = {
   legend: 99, franchise: 50, black: 25, signature: 10, mvp: 27, gg: 27, th: 27, unique: 1,
 };
 
-const PREFIX: Partial<Record<GradeId, string>> = { legend: 'LG', franchise: 'FR', black: 'BK', signature: 'SG', mvp: 'AW', gg: 'AW', th: 'AW', unique: 'OS' };
+// 레전드는 'LD' — 카드 번호 접두어는 실제 구단 약칭과 겹치는 글자를 쓰지 않는다
+const PREFIX: Partial<Record<GradeId, string>> = { legend: 'LD', franchise: 'FR', black: 'BK', signature: 'SG', mvp: 'AW', gg: 'AW', th: 'AW', unique: 'OS' };
 
-/** '27-DJ-011' · 'LG-DJ-052' · 'AW-GJ-044' · 'OS-DJ-001' */
+/** '27-DJ-011' · 'LD-DJ-052' · 'AW-GJ-044' · 'OS-DJ-001' · '95-DDG-018' */
 export function cardCode(grade: GradeId, team: Team, number: number, year?: number) {
   const pre = PREFIX[grade] ?? String(year ?? 27).slice(-2).padStart(2, '0');
   const no = grade === 'unique' ? 1 : number;
@@ -151,8 +163,9 @@ export function yearTag2(y: number) {
   return `’${String(y).slice(-2).padStart(2, '0')}`;
 }
 
-/** 레전드 활약 기간 — 서버가 주기 전까지 입단 연도 ~ 지난 시즌 */
+/** 레전드 활약 기간 — 서버가 주기 전까지 입단 연도 ~ 지난 시즌 (옛 시즌 선수는 그 구단에서 뛴 해) */
 export function legendSpan(p: Player) {
+  if (p.career) return `${yearTag2(p.career[0])}–${yearTag2(Math.max(p.career[0] + 1, p.career[1]))}`;
   const from = p.draftYear;
   return `${yearTag2(from)}–${yearTag2(Math.max(from + 1, 2026))}`;
 }

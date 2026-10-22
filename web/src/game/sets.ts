@@ -6,9 +6,9 @@
 //    (v = 단계 가치. 상황 효과는 반만 쳐서, +2v 상황 효과 하나가 v 만큼 예산을 쓴다)
 //    나누는 비율: 칸마다 평균의 0.3~2.2배 — 성향이 센 칸일수록 크게(구단·연도 색이 또렷하게), 한 칸에 몰리지는 않게
 //  · 동시에 2개까지(센 것부터), 한 선수는 받는 세트 중 가장 센 것 하나만. 케미 선 보너스는 따로.
-import { CLUBS } from './world';
+import { ALL_CLUBS, shortLabel } from './world';
 import type { ClubCode } from './types';
-import { clubSeason, clubTitles, fullYear, leagueYear, type RankKey, type SeasonRec } from './clubSeasons';
+import { clubSeason, clubTitles, fullYear, leagueYear, traitTag, type RankKey, type SeasonRec } from './clubSeasons';
 
 export const ENTRY_SIZE = 20;
 export type SetKind = 'teamYear' | 'team' | 'year';
@@ -62,8 +62,17 @@ const STYLE: Record<string, { bat: BatW; pit: PitW; label: string }> = {
   foreign: { label: '외국인 명가', bat: bw({ pow: 2.4, gap: 1.8, con: 1.4, spd: 0.8, stl: 0.6, def: 0.8 }), pit: pw({ vel: 2, stf: 2, sta: 1.8, brk: 1.2, rec: 0.8 }) },
   bullpen: { label: '철벽 불펜', bat: bw({ def: 1.4, arm: 1.2, con: 1.2, eye: 1.2, stl: 0.8 }), pit: pw({ rec: 2.8, mnt: 2.4, stf: 2, vel: 1.6, ctl: 1.4, brk: 1.2, sta: 0.6 }) },
   trick: { label: '작전 야구', bat: bw({ stl: 2.4, spd: 2, con: 1.6, eye: 1.4, gap: 0.8, pow: 0.6, arm: 0.8 }), pit: pw({ brk: 2.4, ctl: 2, mnt: 1.4, vel: 0.8 }) },
+  // 옛 구단 (world.ts OLD_CLUBS)
+  grit: { label: '뚝심 야구', bat: bw({ con: 2.2, eye: 1.8, def: 1.6, arm: 1.2, pow: 0.8, stl: 0.8 }), pit: pw({ ctl: 2.2, mnt: 2, sta: 1.4, stf: 1.2, vel: 0.8 }) },
+  dynasty: { label: '가을 왕조', bat: bw({ pow: 1.8, stl: 1.8, spd: 1.6, con: 1.4, def: 1.2, eye: 0.8 }), pit: pw({ mnt: 2.6, stf: 2.2, ctl: 1.8, sta: 1.6, rec: 0.8 }) },
+  dynamite: { label: '불꽃 타선', bat: bw({ pow: 2.8, gap: 2.4, con: 1.8, eye: 1, spd: 0.6, stl: 0.5, def: 0.8 }), pit: pw({ vel: 1.6, stf: 1.4, ctl: 0.8 }) },
+  underdog: { label: '언더독', bat: bw({ stl: 2, spd: 1.8, eye: 1.6, con: 1.2, pow: 0.6, gap: 0.8 }), pit: pw({ mnt: 2, brk: 2, sta: 1.6, ctl: 1.2, vel: 0.8 }) },
+  saltwater: { label: '짠물 마운드', bat: bw({ def: 1.4, eye: 1.2, stl: 1.2, pow: 0.7 }), pit: pw({ ctl: 2.6, stf: 2, brk: 1.6, mnt: 1.4, vel: 0.8 }) },
+  twoway: { label: '투타 완성', bat: bw({ pow: 2, gap: 1.8, con: 1.6, eye: 1.2, stl: 0.7 }), pit: pw({ stf: 2, sta: 2, ctl: 1.6, vel: 1.4 }) },
+  raid: { label: '돌격 야구', bat: bw({ stl: 2.6, spd: 2.4, con: 1.6, gap: 1, pow: 0.6, eye: 0.9 }), pit: pw({ brk: 1.4, rec: 1.4, mnt: 1.2 }) },
+  net: { label: '그물 수비', bat: bw({ def: 3, arm: 2, spd: 1.2, eye: 1.2, pow: 0.8, gap: 0.8 }), pit: pw({ rec: 2.4, mnt: 2, ctl: 1.6, brk: 1.2, sta: 0.8 }) },
 };
-const clubOf = (code: ClubCode) => CLUBS.find((c) => c.code === code);
+const clubOf = (code: ClubCode) => ALL_CLUBS.find((c) => c.code === code);
 const styleOf = (code: ClubCode) => STYLE[clubOf(code)?.styleKey ?? 'balance'] ?? STYLE.balance;
 
 /* ───────── 그 해 성격 ───────── */
@@ -94,6 +103,7 @@ const LEAGUE_TRAITS: Trait[] = [
 /** 태그 낱말 → 성향 */
 const TAG_RULES: [RegExp, Partial<BatW>, Partial<PitW>][] = [
   [/거포|홈런|장타|대포/, { pow: 3, gap: 1.5 }, {}],
+  [/핵타선|득점/, { con: 1.5, pow: 1.5, eye: 1, gap: 0.5 }, {}],
   [/타율|컨택|안타|불방망이|타격/, { con: 3, gap: 1 }, {}],
   [/출루|선구|볼넷/, { eye: 3, con: 0.8 }, {}],
   [/뛰는|도루|발야구|기동/, { stl: 3, spd: 2 }, {}],
@@ -152,7 +162,8 @@ export function seasonTrait(code: ClubCode, year: number): { label: string; bat:
       addW(bat, b, s); addW(pit, p, s);
       if (r === 1 && q > bestQ) { bestQ = q; bestLabel = `${ko} 1위`; }
     }
-    const tag = rec.tags.find((t) => !/^우승$|^준우승$/.test(t));
+    // 이름 = (우승·준우승) + 대표 성격 태그 — 정규 1위·가을야구·최하위 같은 결과 태그는 성격 이름으로 쓰지 않는다
+    const tag = traitTag(rec);
     if (tag) labels.push(tag);
     else if (bestLabel) labels.push(bestLabel);
     if (rec.post && /우승/.test(rec.post)) labels.unshift(/준우승/.test(rec.post) ? '준우승' : '우승');
@@ -281,9 +292,9 @@ export function sideLine(e: SetEffect, isP: boolean, n = 3): string {
   return l + sp;
 }
 
-/** 세트 이름 — "'27 독수리스" · '독수리스' · "'27 시즌" */
+/** 세트 이름 — "'27 독수리스" · '독수리스' · "'27 시즌" (옛 구단 중 별명이 같은 곳은 '동대문 곰스'처럼) */
 export function setName(kind: SetKind, code?: ClubCode, year?: number): string {
-  const short = code ? clubOf(code)?.short ?? code : '';
+  const short = code ? shortLabel(code) : '';
   const yy = year != null ? `’${String(fullYear(year) % 100).padStart(2, '0')}` : '';
   if (kind === 'teamYear') return `${yy} ${short}`;
   if (kind === 'team') return short;

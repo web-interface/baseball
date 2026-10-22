@@ -5,11 +5,12 @@ import { Card } from '../../cards';
 import { ClubCrest } from '../../art/emblems';
 import { useAuth } from '../../app/auth';
 import { navigate } from '../../app/router';
-import { ME, teamById } from '../../game/mock';
+import { ME, leagueChangesWith, teamById } from '../../game/mock';
+import { shortLabel } from '../../game/world';
 import { GRADES } from '../../game/grades';
 import { int } from '../../ui/format';
 import type { Player } from '../../game/types';
-import { AI_LEVELS, DRAFT_GRADE, DRAFT_YEARS, RECOMMENDED, buildSpecial, draftPool, specialSignature } from './local-mock';
+import { AI_LEVELS, DRAFT_GRADE, RECOMMENDED, buildSpecial, draftPool, draftYearOf, revivalSlot, specialSignature } from './local-mock';
 import { resetStarter } from '../../game/starter';
 import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
 import type { StepProps } from './index';
@@ -33,10 +34,17 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
     return evaluate(initialLineup()).overall;
   }, [special, st.picks, st.club]);
 
+  const slot = revivalSlot(t);
   const start = () => {
     try { localStorage.setItem('bb.special', JSON.stringify(special)); } catch { /* 이번 방문만 */ }
     resetStarter();
     lineupStore.clear();
+    if (leagueChangesWith(t.id)) {
+      // 부활 구단이 들어오거나 빠져 2027 리그 구성이 바뀜 — 화면을 다시 불러 순위표·일정·시즌 기록을 새 구성으로 맞춘다
+      navigate('/home', { replace: true });
+      location.reload();
+      return;
+    }
     toast({ text: `${t.name} 창단! 2027 시즌을 시작해요`, tone: 'good' });
     navigate('/home', { replace: true });
   };
@@ -55,6 +63,7 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
           <div>
             <h1 className={o.club}>{t.name}</h1>
             <p className={o.mgr}>감독 <b>{user ?? ME.user}</b> · {t.stadium.name}</p>
+            {slot && <p className={o.dates}>부활 구단 — <b>{slot.name}</b> 자리에서 뛰어요</p>}
             <p className={o.dates}><span className="num">4</span>월 개막 → <span className="num">10</span>월 가을야구</p>
           </div>
         </div>
@@ -67,7 +76,7 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
             <Card player={special} team={t} grade="unique" level={1} signaturePitch={special.pos === 'P' ? sig : null} width={124} />
           </div>
           <div className={o.picks}>
-            {picked.map((p, i) => <Card key={p.id} player={p} team={t} grade={DRAFT_GRADE} year={DRAFT_YEARS[i]} level={1} width={80} showStats={false} />)}
+            {picked.map((p, i) => <Card key={p.id} player={p} team={t} grade={DRAFT_GRADE} year={draftYearOf(p, i)} level={1} width={80} showStats={false} />)}
             <button type="button" className={o.edit} onClick={() => go('draft')}><Icon name="swap" size={14} /> 바꾸기</button>
           </div>
         </div>
@@ -113,7 +122,7 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
         </dl>
       </section>
 
-      <Dock note={<span><b>{level.ko} 상대로 개막</b><small>보상 ×{level.reward.toFixed(1)} · {t.short}</small></span>}>
+      <Dock note={<span><b>{level.ko} 상대로 개막</b><small>보상 ×{level.reward.toFixed(1)} · {shortLabel(t.code)}</small></span>}>
         <Button size="l" icon="play" onClick={start}>개막</Button>
       </Dock>
     </>

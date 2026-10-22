@@ -1,9 +1,10 @@
 // 목업 데이터 — 2027 시즌. 서버·엔진이 붙기 전까지 모든 화면이 이것만 본다.
 // 값은 시드 난수로 만들어 매번 같다. 실제 선수·구단 이름은 쓰지 않는다(지역명 + 우리말 별명 + 즈).
-// 구단 10개는 세계관(04_world.json → game/world.ts) 그대로 — 요구사항 34번 확정 이름.
+// 구단 10개는 세계관(04_world.json → game/world.ts) 그대로 — 요구사항 34번 확정 이름. 옛 구단 10개(카드·부활 구단)는 world.ts OLD_CLUBS.
 
 import { GRADES } from './grades';
-import { CLUBS, SPECIAL_PLAYER_NAMES } from './world';
+import { ALL_CLUBS, CURRENT_SEASON, FIRST_SEASON, OLD_CLUBS, SPECIAL_PLAYER_NAMES } from './world';
+import { clubTitles } from './clubSeasons';
 import { PITCH_KO } from './labels';
 import { fenceAt, mToField, polarToField } from './field';
 import type {
@@ -42,22 +43,37 @@ const r2 = (v: number) => Math.round(v * 100) / 100;
 export const SEASON = 2027;
 export const TODAY = '2027-06-14';
 
-/* ───────── 구단 10 — 세계관(world.ts, 요구사항 34번 확정 이름) ───────── */
+/* ───────── 구단 — 세계관(world.ts, 요구사항 34번 확정 이름) 현재 10 + 옛 10 ───────── */
 const lumOf = (hex: string) => {
   const n = parseInt(hex.slice(1), 16);
   const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; });
   return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 };
-const CAP: Record<ClubCode, string> = { DJ: 'D', GJ: 'G', DG: 'D', BS: 'B', SB: 'S', ST: 'T', SH: 'H', IC: 'I', CW: 'C', SW: 'W' };
-const WORDMARK: Record<ClubCode, string> = { DJ: 'DAEJEON', GJ: 'GWANGJU', DG: 'DAEGU', BS: 'BUSAN', SB: 'SEOUL', ST: 'SEOUL', SH: 'SEOUL', IC: 'INCHEON', CW: 'CHANGWON', SW: 'SUWON' };
-const AWAY: Record<ClubCode, 'primary' | 'gray'> = { DJ: 'primary', GJ: 'primary', DG: 'gray', BS: 'gray', SB: 'gray', ST: 'primary', SH: 'primary', IC: 'primary', CW: 'gray', SW: 'primary' };
-const PIN: Partial<Record<ClubCode, boolean>> = { ST: true, SB: true };
-const BACKDROP: Record<ClubCode, Team['stadium']['backdrop']> = { DJ: 'river', GJ: 'river', DG: 'mountain', BS: 'sea', SB: 'city', ST: 'city', SH: 'none', IC: 'sea', CW: 'sea', SW: 'fortress' };
+const CAP: Record<ClubCode, string> = {
+  DJ: 'D', GJ: 'G', DG: 'D', BS: 'B', SB: 'S', ST: 'T', SH: 'H', IC: 'I', CW: 'C', SW: 'W',
+  DDG: 'D', MDH: 'M', HBE: 'H', SCR: 'C', ISB: 'S', IJR: 'J', IDR: 'D', SUC: 'S', JDR: 'J', IBY: 'B',
+};
+const WORDMARK: Record<ClubCode, string> = {
+  DJ: 'DAEJEON', GJ: 'GWANGJU', DG: 'DAEGU', BS: 'BUSAN', SB: 'SEOUL', ST: 'SEOUL', SH: 'SEOUL', IC: 'INCHEON', CW: 'CHANGWON', SW: 'SUWON',
+  DDG: 'SEOUL', MDH: 'MUDEUNG', HBE: 'HANBAT', SCR: 'SEOUL', ISB: 'INCHEON', IJR: 'INCHEON', IDR: 'INCHEON', SUC: 'SUWON', JDR: 'JEONJU', IBY: 'INCHEON',
+};
+const AWAY: Record<ClubCode, 'primary' | 'gray'> = {
+  DJ: 'primary', GJ: 'primary', DG: 'gray', BS: 'gray', SB: 'gray', ST: 'primary', SH: 'primary', IC: 'primary', CW: 'gray', SW: 'primary',
+  DDG: 'gray', MDH: 'primary', HBE: 'gray', SCR: 'gray', ISB: 'primary', IJR: 'gray', IDR: 'primary', SUC: 'gray', JDR: 'primary', IBY: 'primary',
+};
+const PIN: Partial<Record<ClubCode, boolean>> = { ST: true, SB: true, DDG: true, SCR: true };
+const BACKDROP: Record<ClubCode, Team['stadium']['backdrop']> = {
+  DJ: 'river', GJ: 'river', DG: 'mountain', BS: 'sea', SB: 'city', ST: 'city', SH: 'none', IC: 'sea', CW: 'sea', SW: 'fortress',
+  DDG: 'city', MDH: 'mountain', HBE: 'mountain', SCR: 'river', ISB: 'sea', IJR: 'sea', IDR: 'sea', SUC: 'fortress', JDR: 'mountain', IBY: 'sea',
+};
 const ZONE: Record<string, Team['zone']> = { han: '한강 권역', jungbu: '중부·호남 권역', nakdong: '낙동 권역' };
+type ClubInfo = (typeof ALL_CLUBS)[number];
+const oldOf = (c: ClubInfo) => OLD_CLUBS.find((o) => o.code === c.code);
 
-export const TEAMS: Team[] = CLUBS.map((c) => {
+function toTeam(c: ClubInfo): Team {
   const code = c.code as ClubCode;
   const st = c.stadiumTraits;
+  const o = oldOf(c);
   return {
     id: code.toLowerCase(),
     code,
@@ -91,13 +107,24 @@ export const TEAMS: Team[] = CLUBS.map((c) => {
     tier: c.tier as Team['tier'],
     difficulty: c.tier === '강' ? 2 : c.tier === '중' ? 3 : 4,
     founded: c.founded,
-    titles: [...c.titles],
+    titles: clubTitles(code).slice(),
     rival: c.rival as ClubCode,
     rivalry: c.rivalry,
     mascot: c.mascot,
-    blurb: c.stadiumDesc,
+    blurb: o ? o.blurb : c.stadiumDesc,
+    era: [c.era[0], c.era[1]],
+    ...(o ? { old: true, revives: o.revives as ClubCode, homes: o.homes.map((h) => ({ ...h })) } : {}),
   } satisfies Team;
-});
+}
+
+/** 현재 구단 10 (2027 리그 기본 구성 — 부활과 상관없이 늘 같다) */
+export const CURRENT_TEAMS: Team[] = ALL_CLUBS.filter((c) => !oldOf(c)).map(toTeam);
+/** 옛 구단 10 */
+export const OLD_TEAMS: Team[] = OLD_CLUBS.map(toTeam);
+/** 현재 + 옛 20 — 카드·구단팩·세트덱 */
+export const ALL_TEAMS: Team[] = [...CURRENT_TEAMS, ...OLD_TEAMS];
+/** 2027 한별 리그 10개 구단 — 옛 구단을 시작 구단으로 고르면 그 계보 자리를 부활 구단이 대신한다(아래 applyRevival) */
+export const TEAMS: Team[] = CURRENT_TEAMS.slice();
 
 /* ───────── 고유 구종 (레어 이상 투수) ───────── */
 const SIG: Record<string, SignaturePitch> = {
@@ -682,17 +709,18 @@ export const PACKS: Pack[] = [
     limited: '이번 주 한정',
   },
   {
-    id: 'year', name: '연도팩', desc: '고른 시즌만 · 모든 구단 · 프리미엄 확률', size: 30,
+    id: 'year', name: '연도팩', desc: '고른 시즌만 · 그 해 리그에 있던 모든 구단 · 프리미엄 확률', size: 30,
     price: { gp: 540_000 }, priceMul: 2,
     odds: PREMIUM_ODDS,
-    pick: { kind: 'year', options: ["'27", "'26", "'25", '레전드 연도'] },
+    // 1982 ~ 2027 한 해 단위 (요구 40 + 옛 구단)
+    pick: { kind: 'year', options: Array.from({ length: CURRENT_SEASON - FIRST_SEASON + 1 }, (_, i) => CURRENT_SEASON - i) },
     pity: { count: 0, max: 10, guaranteed: '그 연도 레전드 이상 선택권' },
   },
   {
-    id: 'club', name: '구단팩', desc: '고른 구단만 · 연도는 고를 수 없음(그 구단 모든 연도)', size: 30,
+    id: 'club', name: '구단팩', desc: '고른 구단만 · 연도는 고를 수 없음(그 구단이 있던 모든 연도)', size: 30,
     price: { gp: 675_000 }, priceMul: 2.5,
     odds: PREMIUM_ODDS,
-    pick: { kind: 'club', options: ['DJ', 'GJ', 'DG', 'BS', 'SB', 'ST', 'SH', 'IC', 'CW', 'SW'] },
+    pick: { kind: 'club', options: ALL_CLUBS.map((c) => c.code) },
     pity: { count: 4, max: 10, guaranteed: '그 구단 카드 중 선택' },
   },
 ];
@@ -819,11 +847,76 @@ MY_CARD_IDS.push(...DJ_EXTRA_CARDS.map((c) => c.id));
   }
 }
 
-const teamMap = new Map(TEAMS.map((t) => [t.id, t]));
+/* ───────── 부활 구단 — 시작 구단으로 옛 구단을 고르면 2027 리그에서 같은 연고 계보의 현재 구단 자리를 대신한다 ───────── */
+//  · 리그 구단 수는 10 그대로. 바뀐 자리는 순위표·다음 경기·어제 경기·내 구단 id 를 부활 구단 id 로 옮긴다(가입자 순위·대전 상대는 다른 사람 구단이라 그대로).
+//  · 시작 설정(bb.start)은 club-select 가 이 기기에 둔다. 앱이 뜰 때 한 번 읽고, 개막에서 리그가 바뀌면 화면을 다시 불러 모두 새로 맞춘다.
+//  · 리그 구성이 바뀌면 이전 구성으로 쌓은 시즌 기록(bb.season*)은 맞지 않아 지우고 새로 시작한다.
+const START_KEY = 'bb.start';
+const LEAGUE_KEY = 'bb.league';
+/** 이 기기에 저장된 시작 구단 id (없으면 null) */
+export function savedStartClub(): string | null {
+  try {
+    const raw = localStorage.getItem(START_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw) as { club?: unknown };
+    return typeof v.club === 'string' ? v.club : null;
+  } catch { return null; }
+}
+/** 이 시작 구단이면 2027 리그 구단 id 10개 (부활 반영) */
+export function leagueIdsFor(startClub: string | null): string[] {
+  const old = OLD_TEAMS.find((t) => t.id === startClub);
+  const slot = old?.revives?.toLowerCase();
+  return CURRENT_TEAMS.map((t) => (old && t.id === slot ? old.id : t.id));
+}
+/** 개막 전에 — 고른 시작 구단으로 리그 구성이 지금과 달라지나 (다르면 화면을 다시 불러야 함) */
+export const leagueChangesWith = (startClub: string) => leagueIdsFor(startClub).join(',') !== TEAMS.map((t) => t.id).join(',');
+
+function applyRevival(oldId: string | null) {
+  const old = OLD_TEAMS.find((t) => t.id === oldId);
+  if (!old?.revives) return;
+  const slotId = old.revives.toLowerCase();
+  const idx = TEAMS.findIndex((t) => t.id === slotId);
+  if (idx < 0) return;
+  const slot = TEAMS[idx];
+  old.revived = true;
+  TEAMS[idx] = old;
+  const sw = (id: string) => (id === slotId ? old.id : id);
+  for (const r of STANDINGS) r.teamId = sw(r.teamId);
+  NEXT_GAME.opponentId = sw(NEXT_GAME.opponentId);
+  if (ME.teamId === slotId) {
+    ME.teamId = old.id;
+    if (NEXT_GAME.home && NEXT_GAME.stadium === slot.stadium.name) NEXT_GAME.stadium = old.stadium.name;
+  }
+  if (LAST_MATCH.homeId === slotId && LAST_MATCH.stadium === slot.stadium.name) LAST_MATCH.stadium = old.stadium.name;
+  LAST_MATCH.awayId = sw(LAST_MATCH.awayId);
+  LAST_MATCH.homeId = sw(LAST_MATCH.homeId);
+  for (const p of LAST_MATCH.plays) if (p.highlight) p.highlight.teamId = sw(p.highlight.teamId);
+}
+applyRevival(savedStartClub());
+// 리그 구성이 바뀌었으면 이전 구성의 시즌 기록을 지운다 (순위표에 없는 구단 → 계산이 깨짐)
+try {
+  const sig = TEAMS.map((t) => t.id).join(',');
+  const prev = localStorage.getItem(LEAGUE_KEY);
+  if (prev !== sig) {
+    const revivedNow = TEAMS.some((t) => t.revived);
+    if (prev != null || revivedNow) for (const k of Object.keys(localStorage)) if (k.startsWith('bb.season')) localStorage.removeItem(k);
+    localStorage.setItem(LEAGUE_KEY, sig);
+  }
+} catch { /* 저장이 막혀 있으면 이번 방문만 */ }
+
+const teamMap = new Map(ALL_TEAMS.map((t) => [t.id, t]));
+const codeMap = new Map(ALL_TEAMS.map((t) => [t.code, t]));
 const playerMap = new Map(PLAYERS.map((p) => [p.id, p]));
 const cardMap = new Map(CARDS.map((c) => [c.id, c]));
 
+/** 구단 찾기 — 현재 · 옛 구단 모두 (리그 밖 구단도 카드에 나온다) */
 export const teamById = (id: string): Team => teamMap.get(id) ?? TEAMS[0];
+/** 코드로 구단 찾기 ('DJ' · 'DDG') */
+export const teamByCode = (code: string): Team => codeMap.get(code as ClubCode) ?? TEAMS[0];
+/** 있는 구단 id 인가 (현재 · 옛) */
+export const isTeamId = (id: string) => teamMap.has(id);
+/** 서버(대전 순위)가 아는 구단 코드 — 부활 구단은 대신 들어간 현재 구단 자리로 보낸다 */
+export const serverClubId = (id: string) => teamMap.get(id)?.revives?.toLowerCase() ?? id;
 export const playerById = (id: string): Player | undefined => playerMap.get(id);
 export const cardById = (id: string): CardInst | undefined => cardMap.get(id);
 /** 카드의 선수 (없으면 첫 선수 — 목업이라 항상 있음) */

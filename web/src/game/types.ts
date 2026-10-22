@@ -11,7 +11,11 @@ export type BatSide = 'R' | 'L' | 'S';
 export type Origin = 'KR' | 'JP' | 'TW' | 'US' | 'USB' | 'LATAM' | 'AU';
 
 /* ───────── 구단 (세계관 04_world.json · 요구사항 34번 확정 이름) ───────── */
-export type ClubCode = 'DJ' | 'GJ' | 'DG' | 'BS' | 'SB' | 'ST' | 'SH' | 'IC' | 'CW' | 'SW';
+/** 현재 구단 10 (2027 한별 리그) */
+export type CurrentClubCode = 'DJ' | 'GJ' | 'DG' | 'BS' | 'SB' | 'ST' | 'SH' | 'IC' | 'CW' | 'SW';
+/** 옛 구단 10 — 동대문 곰스 · 무등 호랑이즈 · 한밭 독수리스 · 서울 청룡스 · 인천 슈퍼별즈 · 인천 조랑말스 · 인천 돌고래스 · 수원 일각수스 · 전주 돌격대스 · 인천 비룡스 */
+export type OldClubCode = 'DDG' | 'MDH' | 'HBE' | 'SCR' | 'ISB' | 'IJR' | 'IDR' | 'SUC' | 'JDR' | 'IBY';
+export type ClubCode = CurrentClubCode | OldClubCode;
 
 export interface TeamColors {
   /** 주색 (모자·띠·엠블럼 바탕) */
@@ -83,6 +87,16 @@ export interface Team {
   mascot: string;
   /** 구단 소개 한 줄 */
   blurb: string;
+  /** 그 이름으로 뛴 해 [첫 해, 끝 해] — 현재 구단은 끝 해 2027 */
+  era?: [number, number];
+  /** 옛 구단 (없어진 구단 · 지금 이름이 되기 전 시대) */
+  old?: boolean;
+  /** 옛 구단을 시작 구단으로 고르면 2027 리그에서 대신 들어가는 현재 구단 자리 */
+  revives?: ClubCode;
+  /** 2027 리그에서 부활 구단으로 뛰는 중 */
+  revived?: boolean;
+  /** 연고 이력 (옮긴 구단만 둘 이상) */
+  homes?: { from: number; to: number; region: string }[];
 }
 
 /* ───────── 선수 ───────── */
@@ -165,6 +179,8 @@ export interface Player {
   origin: Origin;
   /** 가상 입단 연도 (조합 태그) */
   draftYear: number;
+  /** 그 구단에서 뛴 해 [첫 해, 끝 해] — 옛 시즌 카드 선수(레전드 활약 기간 표시) */
+  career?: [number, number];
 
   /** 종합 (카드 기본, 강화·레벨 전) */
   ovr: number;
@@ -462,8 +478,8 @@ export interface Pack {
   odds: PackOdds[];
   /** 천장 — 이 팩을 n 번 사면 guaranteed 확정 (팩 종류별 따로) */
   pity: { count: number; max: number; guaranteed: string };
-  /** 골라 뽑기 (요구사항 40번) — year: 연도만 고름(모든 구단) · club: 구단만 고름(모든 연도). 둘 다 고정하는 팩은 없다 */
-  pick?: { kind: 'year'; options: string[] } | { kind: 'club'; options: ClubCode[] };
+  /** 골라 뽑기 (요구사항 40번) — year: 연도만 고름(그 해 있던 모든 구단) · club: 구단만 고름(그 구단이 있던 모든 연도). 둘 다 고정하는 팩은 없다 */
+  pick?: { kind: 'year'; options: number[] } | { kind: 'club'; options: ClubCode[] };
   /** 같은 등급 기본 팩 대비 가격 배율 */
   priceMul?: number;
   limited?: string;

@@ -29,8 +29,43 @@
 :global([data-theme='classic']) .grid { background: var(--line-2); box-shadow: 0 0 0 1px var(--line-3); }
 :global([data-theme='classic']) .cellOn { background: color-mix(in srgb, var(--c1) 10%, var(--bg)); }
 
+/* 옛 구단 묶음 — 펠트 패치 같은 옛 응원 용품 느낌으로 칸 바탕을 살짝 바래게 */
+.oldHead { margin: 22px var(--gutter) 10px; }
+.oldHead h2 { display: flex; align-items: baseline; gap: 8px; font-size: 15px; font-weight: 750; letter-spacing: -.03em; }
+.oldHead h2 small { font-size: 11.5px; font-weight: 500; color: var(--fg-3); letter-spacing: -.02em; }
+.oldHead p { margin-top: 4px; font-size: 12.5px; line-height: 1.5; color: var(--fg-2); letter-spacing: -.02em; }
+.oldHead b { color: var(--fg); }
+.oldGrid .cell { background-color: color-mix(in srgb, var(--bg) 92%, #B49A6A); }
+.oldGrid .cell small { font-size: 10px; letter-spacing: -.03em; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; color: var(--fg-3); }
+.oldGrid .cellOn { background-color: color-mix(in srgb, var(--c1) 14%, var(--bg)); }
+:global([data-theme='broadcast']) .oldGrid .cell { background: var(--surface-2); }
+:global([data-theme='broadcast']) .oldGrid .cellOn { background: var(--inv); }
+:global([data-theme='broadcast']) .oldGrid .cellOn small { color: var(--inv-fg-2); }
+:global([data-theme='classic']) .oldGrid .cell { background-color: color-mix(in srgb, var(--bg) 90%, var(--fg)); background-image: none; }
+:global([data-theme='classic']) .oldGrid .cellOn { background-color: color-mix(in srgb, var(--c1) 12%, var(--bg)); }
+
 /* 고른 구단 소개 */
 .detail { margin-top: 18px; padding-bottom: 18px; }
+
+/* 2027 부활 — 대신 들어가는 자리 */
+.revive { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; margin: 2px var(--gutter) 10px; padding: 10px 12px; border-left: 3px solid var(--c1); background: var(--surface); font-size: 12.5px; line-height: 1.5; color: var(--fg-2); letter-spacing: -.02em; }
+.revive b { color: var(--fg); }
+.reviveTag { font-size: 11px; font-weight: 800; color: var(--accent); white-space: nowrap; }
+.reviveSwap { display: inline-flex; align-items: center; gap: 4px; color: var(--fg-3); }
+:global([data-theme='broadcast']) .revive { background: var(--inv); color: var(--inv-fg-2); border-left-width: 4px; }
+:global([data-theme='broadcast']) .revive b { color: var(--inv-fg); }
+:global([data-theme='broadcast']) .reviveSwap { color: var(--inv-fg-3); --emblem-edge: rgba(243, 241, 236, .5); }
+:global([data-theme='classic']) .revive { background: transparent; box-shadow: inset 0 0 0 1px var(--line-2); }
+:global([data-theme='classic']) .reviveTag { color: var(--club-text); }
+
+/* 계보 */
+.lineage { display: flex; align-items: flex-start; gap: 10px; margin: 12px var(--gutter) 0; padding-top: 10px; border-top: 1px solid var(--line); }
+.lineageHead { flex: none; padding-top: 3px; font-size: 11px; font-weight: 700; color: var(--fg-3); }
+.lineage ol { display: flex; flex-wrap: wrap; gap: 6px 14px; min-width: 0; }
+.lineage li { position: relative; display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--fg-3); letter-spacing: -.03em; }
+.lineage li + li::before { content: '→'; position: absolute; left: -12px; color: var(--fg-4); font-size: 11px; }
+.lineage li small { font-size: 11px; }
+.lineOn { color: var(--fg) !important; font-weight: 700; }
 .hero { position: relative; isolation: isolate; display: flex; align-items: center; gap: 16px; padding: 18px var(--gutter) 16px; overflow: hidden; }
 .glow { position: absolute; z-index: -1; left: -40px; top: -60px; width: 260px; height: 260px; background: radial-gradient(closest-side, color-mix(in srgb, var(--c1) 30%, transparent), transparent); }
 .crest { flex: none; }

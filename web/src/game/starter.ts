@@ -3,9 +3,13 @@
 //  · 처음엔 어떤 세트덱도 켜지지 않게: 기본 카드는 내 구단을 빼고 9개 구단에 고루(엔트리에 구단당 3명 이하),
 //    연도는 ’25·’26·’27 을 섞어 한 해 8명 이하. 지명 3명은 내 구단이지만 연도가 모두 달라(’27·’26·’25) 구단+연도 세트가 안 생기고,
 //    특별 선수까지 내 구단 4명이라 구단 세트(5명)도 아직 — 한 명만 더 모으면 열린다.
+//  · 옛 구단(2027 부활 구단)을 고르면 지명 후보는 그 구단 옛 시즌의 주축 8명 — 카드 연도는 그 선수가 뛴 해(서로 다른 해).
 //  · 저장: 시작 설정(구단·지명·특별 선수)은 club-select 가 localStorage 'bb.start'(+ 'bb.special') 에 둔다. 여기서는 읽기만.
-import { CARDS, LINEUP, ME, MY_CARD_IDS, PLAYERS, TEAMS, registerPlayers } from './mock';
-import type { BatSide, CardInst, GradeId, Hand, PitcherRole, Player, Pos } from './types';
+import { CARDS, LINEUP, ME, MY_CARD_IDS, PLAYERS, isTeamId, leagueIdsFor, registerPlayers, teamById } from './mock';
+import { seasonRoster } from './history';
+import { clubTitles } from './clubSeasons';
+import { ALL_CLUBS, eraOfCode } from './world';
+import type { BatSide, CardInst, ClubCode, GradeId, Hand, PitcherRole, Player, Pos } from './types';
 
 /* ───────── 시드 난수 ───────── */
 function hashStr(s: string) {
@@ -52,6 +56,10 @@ const DRAFT_TEMPLATE: Tmpl[] = [
 /** 지명 카드 — 스페셜, 연도는 지명 순서대로 ’27 · ’26 · ’25 (같은 해가 안 겹쳐 구단+연도 세트가 안 생김) */
 export const DRAFT_GRADE: GradeId = 'special';
 export const DRAFT_YEARS = [27, 26, 25];
+/** 옛 구단 지명 후보의 카드 연도 (선수 id → 2자리 연도) */
+const draftSeason = new Map<string, number>();
+/** 지명 카드 연도 — 지금 구단은 지명 순서대로, 옛 구단은 그 선수가 뛴 해 */
+export const draftYearOf = (p: Player, i: number) => draftSeason.get(p.id) ?? DRAFT_YEARS[i] ?? 25;
 
 /* ───────── 선수 만들기 — 같은 자리 목업 선수를 본으로 능력치를 옮긴다 ───────── */
 const templates = (pos: Pos, role?: PitcherRole) => {
@@ -115,11 +123,51 @@ function scaled(tpl: Player, ovr: number, o: { id: string; name: string; teamId:
 }
 const fixOps = (p: Player) => { if (p.season.bat) p.season.bat.ops = Math.round((p.season.bat.obp + p.season.bat.slg) * 1000) / 1000; return p; };
 
+/** 옛 시즌 선수를 지명 수준(종합)으로 — 이름·나이·얼굴·등번호는 그대로 */
+function rescale(src: Player, ovr: number, id: string, teamId: string): Player {
+  const d = ovr - src.ovr;
+  const v = (x: number) => clamp(Math.round(x + d), 25, 97);
+  return {
+    ...src, id, teamId, ovr,
+    face: src.face.map((f) => ({ ...f, v: v(f.v) })),
+    attrs: Object.fromEntries(Object.entries(src.attrs).map(([k, x]) => [k, typeof x === 'number' ? (/Tend$/.test(k) ? x : v(x)) : x])) as Player['attrs'],
+    pitches: src.pitches?.map((x) => ({ ...x, stuff: v(x.stuff), command: v(x.command) })),
+    potential: Math.max(src.potential, 3.5),
+    condition: 4,
+    fatigue: 0,
+  };
+}
+
+/** 옛 구단(부활) 지명 후보 — 우승·황금기 시즌부터 서로 다른 해의 주축 8명 (종합은 지금 구단 유망주와 같은 70~76) */
+function oldDraft(code: ClubCode, teamId: string): Player[] {
+  const club = ALL_CLUBS.find((c) => c.code === code)!;
+  const [from, to] = eraOfCode(code);
+  const years: number[] = [];
+  const pref = [...clubTitles(code), ...(club.goldenEras as readonly { legendSeason: number }[]).map((e) => e.legendSeason)].sort((a, b) => b - a);
+  for (const y of pref) if (y >= from && y <= to && !years.includes(y)) years.push(y);
+  for (let y = to; y >= from && years.length < DRAFT_TEMPLATE.length; y--) if (!years.includes(y)) years.push(y);
+  return DRAFT_TEMPLATE.map((t, i) => {
+    const y = years[i % years.length];
+    const roster = seasonRoster(code, y);
+    const src = roster.filter((p) => p.pos === t.pos && (t.pos !== 'P' || p.role === t.role)).sort((a, b) => b.ovr - a.ovr)[0] ?? roster[0];
+    const p = rescale(src, t.ovr + (hashStr(`d:${teamId}:${i}`) % 3) - 1, `d-${teamId}-${i}`, teamId);
+    draftSeason.set(p.id, y % 100);
+    return p;
+  }).sort((a, b) => b.ovr - a.ovr);
+}
+
 const draftCache = new Map<string, Player[]>();
-/** 그 구단 지명 후보 8명 — 유망주(종합 70~76), 실제 목업 스타는 넣지 않는다 */
+/** 그 구단 지명 후보 8명 — 유망주(종합 70~76), 실제 목업 스타는 넣지 않는다. 옛 구단은 그 시절 주축 */
 export function draftPool(teamId: string): Player[] {
   const hit = draftCache.get(teamId);
   if (hit) return hit;
+  const team = teamById(teamId);
+  if (team.old && team.id === teamId) {
+    const old = oldDraft(team.code, teamId);
+    registerPlayers(old);
+    draftCache.set(teamId, old);
+    return old;
+  }
   const names = DRAFT_NAMES[teamId] ?? DRAFT_NAMES.dj;
   const out = DRAFT_TEMPLATE.map((t, i) => {
     const tpl = templates(t.pos, t.role)[hashStr(`${teamId}:${i}`) % templates(t.pos, t.role).length];
@@ -154,7 +202,7 @@ function readStart(): StartPicks {
     const raw = localStorage.getItem('bb.start');
     if (raw) {
       const v = JSON.parse(raw) as { club?: string; picks?: unknown };
-      if (v.club && TEAMS.some((t) => t.id === v.club)) club = v.club;
+      if (v.club && isTeamId(v.club)) club = v.club;
       if (Array.isArray(v.picks)) picks = v.picks.filter((x): x is string => typeof x === 'string').slice(0, 3);
     }
     const sp = localStorage.getItem('bb.special');
@@ -176,7 +224,8 @@ const BAT_ORDER: Exclude<Pos, 'P'>[] = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF',
 
 function buildStarter(st: StartPicks): Starter {
   const myClub = st.club;
-  const others = TEAMS.filter((t) => t.id !== myClub);
+  // 그 시작 구단으로 꾸린 2027 리그의 다른 9개 구단 (옛 구단을 고르면 부활해 대신 들어간 자리 반영)
+  const others = leagueIdsFor(myClub).filter((id) => id !== myClub).map((id) => teamById(id));
   // 구단 배정 — 시드로 섞은 9개 구단을 돌아가며 (엔트리에 구단당 3명 이하)
   const order = others.slice().sort((a, b) => hashStr(`club:${myClub}:${a.id}`) - hashStr(`club:${myClub}:${b.id}`));
   // 고정 선수 (특별 · 지명)
@@ -186,7 +235,7 @@ function buildStarter(st: StartPicks): Starter {
     : CARDS.find((c) => c.id === 'c46')!;
   const pool = draftPool(myClub);
   const picks = st.picks.map((id) => pool.find((p) => p.id === id)).filter((p): p is Player => !!p);
-  const pickCards: CardInst[] = picks.map((p, i) => ({ id: `kd-${p.id}`, playerId: p.id, grade: DRAFT_GRADE, year: DRAFT_YEARS[i] ?? 25, level: 1, enhance: 0, dup: 0 }));
+  const pickCards: CardInst[] = picks.map((p, i) => ({ id: `kd-${p.id}`, playerId: p.id, grade: DRAFT_GRADE, year: draftYearOf(p, i), level: 1, enhance: 0, dup: 0 }));
 
   // 선발 10명(타자 9 + 1선발) 중 고정 선수 몫 → 기본 카드 수준 L 을 맞춘다
   const fixedBat = [...picks, special].filter((p) => p.pos !== 'P');

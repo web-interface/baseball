@@ -9,7 +9,7 @@
 //            동시에 2개까지, 한 선수는 가장 센 세트 하나. 오르는 능력치는 조합마다 다르다.
 //  · 팀 종합: 선발 10명(타자 9 + 1선발)의 '기본(종합 + 강화) + 세트덱 + 케미' 평균. 최대 99.
 import type { CardInst, Player, Team } from '../../game/types';
-import { ME, TEAMS, teamById } from '../../game/mock';
+import { ME, teamByCode, teamById } from '../../game/mock';
 import { DYNASTY_V, computeSets, faceBonus, sideLine, type EntryMember, type SetProgress } from '../../game/sets';
 import { fullYear } from '../../game/clubSeasons';
 import { yearTag } from '../../ui/format';
@@ -304,7 +304,7 @@ export function evaluate(st: LineupState): Eval {
   const sets = computeSets(members);
   const exploded = !!sets.dynasty;
   const lead = sets.dynasty ?? sets.active[0] ?? sets.all.find((x) => x.kind !== 'year' && x.code);
-  const club = lead?.code ? (TEAMS.find((t) => t.code === lead.code) ?? teamById(ME.teamId)) : teamById(ME.teamId);
+  const club = lead?.code ? teamByCode(lead.code) : teamById(ME.teamId);
   const setOf = (s: Slot) => sets.bonusOf.get(s);
 
   /* 케미 선 */

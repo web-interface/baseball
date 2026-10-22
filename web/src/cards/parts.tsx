@@ -92,7 +92,7 @@ function Leaves({ cx, cy, r, n, from, step, fill }: { cx: number; cy: number; r:
 /** MVP = 월계관 · GG = 황금 글러브 · TH = 왕관 */
 export function Crest({ kind, year, pos, title, className }: { kind: 'mvp' | 'gg' | 'th'; year: number; pos?: string; title?: string; className?: string }) {
   const id = 'cr' + useId().replace(/[^a-zA-Z0-9]/g, '');
-  const yr = String(year < 100 ? 2000 + year : year);
+  const yr = String(year < 100 ? (year > 28 ? 1900 : 2000) + year : year);
   const gold = (
     <linearGradient id={id + 'g'} x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stopColor="#FFF4CC" /><stop offset=".35" stopColor="#E2B24A" /><stop offset=".6" stopColor="#8E6014" /><stop offset=".8" stopColor="#F3D27A" /><stop offset="1" stopColor="#9A6A18" />

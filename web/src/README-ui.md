@@ -11,7 +11,7 @@
 | `theme/` | `tokens.css`(3테마 토큰) · `base.css`(리셋·숫자·접근성) · `fonts.ts`(글꼴) · `themes.ts`(테마·내 구단 색) · `ThemeProvider.tsx` | 기반 |
 | `ui/` | 공용 부품 — `index.ts` 에서만 가져다 쓴다 | 기반 |
 | `app/` | `App`(뿌리) · `router`(해시) · `routes`(경로 표) · `auth`(로그인 상태) · `AuthScreen`(로그인 게이트) · `Shell`(헤더+메뉴) · `Preview`(#/preview) · `ScreenStub`(자리 안내판) · `StadiumArt` | 기반 |
-| `game/` | `types.ts` · `mock.ts` · `world.ts`(세계관 구단 10 · 리그 · 특별 선수 이름) · `grades.ts`(등급 11종 + 특별 선수) · `labels.ts`(한국어 이름표) · `field.ts`(경기장 좌표) | 기반 |
+| `game/` | `types.ts` · `mock.ts` · `world.ts`(세계관 구단 10 + 옛 구단 10 · 계보 · 리그 · 특별 선수 이름) · `clubSeasons.ts`(1982~ 구단 연도 기록 — `data/club-seasons.json`) · `history.ts`(옛 시즌 선수단 — 연도팩·구단팩) · `grades.ts`(등급 11종 + 특별 선수) · `labels.ts`(한국어 이름표) · `field.ts`(경기장 좌표) | 기반 |
 | `cards/` | `Card` · `CardMini` · `CardBack` — 지금은 임시, props 는 최종 | 카드 디자이너 |
 | `art/` | `PlayerArt.tsx`(선수 그림 입구) · `interim.ts`(생성기 오류 때 대체 초상) | 기반 |
 | `art/character/` | 캐릭터 생성기 (외모·체격·유니폼·초상·전신) | 캐릭터 팀 |
@@ -95,6 +95,7 @@
 | `CalloutStage` `useCalloutQueue` `CalloutAnnouncer` | 강조 문구 (아래 6) |
 | `ToastProvider` `useToast` | 토스트 `toast('저장했어요')` |
 | `ThemePicker` · `TextField` | 테마 고르기 · 입력칸 |
+| `YearPicker` | 1982~2027 한 해 단위 고르기 — 연대 탭 + 5칸 격자, 칸마다 작은 한 줄(우승 구단 등), 우승한 해 강조 |
 
 카드·선수 그림: `import { Card, CardMini, CardBack, cardProps } from '../../cards'` → `<Card {...cardProps(card)} size="m" />`,
 `import { PlayerArt } from '../../art/PlayerArt'` → `<PlayerArt player={p} variant="portrait | full | mini" />`. **선수 얼굴은 반드시 이 둘로만.**
@@ -119,11 +120,13 @@ q.push({ kind: 'walkoff', title: '끝내기!', sub: '연이준 · 9회말 우중
 ## 7. 목업 (`game/mock.ts`)
 
 - 구단 10 (`TEAMS`, id = 코드 소문자 `dj` `gj` `dg` `bs` `sb` `st` `sh` `ic` `cw` `sw`) — 세계관 확정 이름(요구 34): 대전 독수리스 · 광주 호랑이즈 · 대구 사자즈 · 부산 거인츠 · 서울 곰스 · 서울 쌍둥이스 · 서울 영웅즈 · 인천 상륙스 · 창원 공룡스 · 수원 마법사즈. 화면은 `team.name`, 좁은 곳은 `team.short`.
+- 옛 구단 10 (`OLD_TEAMS`, 코드 `DDG` `MDH` `HBE` `SCR` `ISB` `IJR` `IDR` `SUC` `JDR` `IBY`) — 동대문 곰스 · 무등 호랑이즈 · 한밭 독수리스 · 서울 청룡스 · 인천 슈퍼별즈 · 인천 조랑말스 · 인천 돌고래스 · 수원 일각수스 · 전주 돌격대스 · 인천 비룡스. `team.era`(뛴 해) · `team.revives`(부활 자리). 현재 구단은 지금 이름이 된 뒤 해만 맡는다(예 곰스 1999~).
+  `TEAMS` 는 2027 리그 10개 — 옛 구단을 시작 구단으로 고르면 같은 계보 자리를 그 구단이 '부활 구단'으로 대신한다(순위표·다음 경기 id 도 옮김). 카드·구단팩·세트덱처럼 20개 모두 필요하면 `ALL_TEAMS` · `CURRENT_TEAMS`, 찾기는 `teamById`/`teamByCode`(20개 모두). 좁은 곳에서 옛 구단과 별명이 겹치면 `shortLabel(code)`('동대문 곰스').
 - `PLAYERS`(40 + 특별 선수 예시 `p41` 이동규) · `CARDS`(46, 등급 11종 + `unique`) · `MY_CARD_IDS` · `LINEUP` · `LINEUP_EVAL`(팀컬러 = 같은 구단·권역·연도·라이벌, 케미, 폭발)
 - `WEATHER_TODAY` · `NEXT_GAME` · `LAST_MATCH`(거인츠 4:5 독수리스 끝내기 — 이닝 점수·플레이·좌표·원인·강조 장면·수비 범위·승리 확률) · `STANDINGS` · `USER_RANKING` · `PVP_OPPONENTS`
 - `PACKS`(전부 30장: 일반 3만 GP · 프리미엄 27만 · 스페셜 45만 · 레전드 9천 골든볼 · 연도팩 · 구단팩) · `ROULETTE_EXAMPLE` · `SCOUT_SHOP` · `ME`(GP 1조 · 골든볼 1억 · 10시즌까지) · `NEWS` · `SPECIAL_PLAYER_NAMES`
 - 찾기: `teamById` `playerById` `cardById` `playerOfCard` `cardsOfPlayer` `myTeam`. 이름표 `game/labels.ts`, 등급 `game/grades.ts`(`GRADES` `GRADE_ORDER` `GRADE_ORDER_ALL`).
-- 실제 선수·구단 이름 금지(특별 선수 11명은 사용자 지정 예외).
+- 실제 선수·구단 이름 금지(특별 선수 11명은 사용자 지정 예외). 구단 코드도 화면(카드 번호)에 보이니 실제 구단 약칭과 같은 글자는 쓰지 않는다.
 
 ## 8. 스크린샷 (필수 — 찍고, 혹평하고, 고치기)
 

@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, api, newRequestId, type PvpBattleRes, type PvpClub, type PvpSnapshot, type PvpToday } from '../../api';
 import { useAuth } from '../../app/auth';
-import { TEAMS, teamById } from '../../game/mock';
+import { isTeamId, serverClubId, teamById } from '../../game/mock';
 import { loadStart } from '../club-select/local-mock';
 import { mySide } from './local-mock';
 import { getSlot, initialLineup, store as lineupStore, unit } from '../lineup/calc';
 
 /** 서버 구단 코드 → 세계관 구단 (모르는 코드면 독수리스) */
-export const clubTeam = (code: string) => (TEAMS.some((t) => t.id === code) ? teamById(code) : teamById('dj'));
+export const clubTeam = (code: string) => (isTeamId(code) ? teamById(code) : teamById('dj'));
 
 /** 내 구단 · 라인업 스냅샷 — 지금은 목업 라인업, 구단은 구단 선택 화면에서 고른 값이 있으면 그것 */
 export function mySnapshot(): PvpSnapshot {
@@ -30,7 +30,7 @@ export function mySnapshot(): PvpSnapshot {
     item(st.closer, 'CP'),
   ].filter((x): x is NonNullable<typeof x> => !!x);
   return {
-    club,
+    club: serverClubId(club), // 부활 구단(옛 구단)은 서버가 아는 자리 코드로 — 이름은 부활 구단 그대로
     teamName: clubTeam(club).name,
     power: side.power,
     ovr: side.ovr,

@@ -3,12 +3,12 @@
 import type { CSSProperties } from 'react';
 import { Emblem, Icon } from '../../ui';
 import { navigate } from '../../app/router';
-import { TEAMS } from '../../game/mock';
+import { teamByCode } from '../../game/mock';
 import { ENTRY_SIZE, SET_KIND_KO, TIERS, statLine, type SetProgress } from '../../game/sets';
 import type { BatSlot, Eval } from './calc';
 import s from './TeamColor.module.css';
 
-const teamOf = (sp: SetProgress) => (sp.code ? TEAMS.find((t) => t.code === sp.code) : undefined);
+const teamOf = (sp: SetProgress) => (sp.code ? teamByCode(sp.code) : undefined);
 const goal = (sp: SetProgress) => sp.next?.at ?? ENTRY_SIZE;
 
 /** 칸 막대 — 칸 수 = 엔트리 20, 단계 문턱에 눈금 */

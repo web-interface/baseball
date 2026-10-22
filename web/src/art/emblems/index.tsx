@@ -3,7 +3,7 @@
 // 그림은 marks.tsx. 32px 미만은 S 상세도(굵고 단순하게), 그 이상은 L 상세도.
 import { useId } from 'react';
 import type { ClubCode, Team } from '../../game/types';
-import { TEAMS } from '../../game/mock';
+import { teamByCode } from '../../game/mock';
 import { MARKS, type Detail } from './marks';
 import s from './emblems.module.css';
 
@@ -22,13 +22,11 @@ export interface ClubEmblemProps {
   decorative?: boolean;
 }
 
-const byCode = (code: ClubCode) => TEAMS.find((t) => t.code === code)!;
-
 export function ClubEmblem({ team, code, size = 24, detail = 'auto', className, title, decorative }: ClubEmblemProps) {
-  const t = team ?? byCode(code ?? 'DJ');
+  const t = team ?? teamByCode(code ?? 'DJ');
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const d: Detail = detail === 'auto' ? (size < 32 ? 's' : 'l') : detail;
-  const Mark = MARKS[t.code];
+  const Mark = MARKS[t.code] ?? MARKS.DJ;
   return (
     <svg
       className={[s.em, className].filter(Boolean).join(' ')}
@@ -44,14 +42,14 @@ export function ClubEmblem({ team, code, size = 24, detail = 'auto', className, 
   );
 }
 
-/** 큰 표장 — 엠블럼 + 지역 영문 대문자 띠 + 창단 연도 (구단 선택 · 개막 화면) */
+/** 큰 표장 — 엠블럼 + 지역 영문 대문자 띠 + 창단 연도 (옛 구단은 뛴 해 '1982–1998') (구단 선택 · 개막 화면) */
 export function ClubCrest({ team, size = 96, className }: { team: Team; size?: number; className?: string }) {
   return (
     <figure className={[s.crest, className].filter(Boolean).join(' ')} style={{ width: size * 1.25 }} aria-label={team.name}>
       <ClubEmblem team={team} size={size} decorative />
       <figcaption className={s.band}>
         <span className={s.word}>{team.wordmark}</span>
-        <span className={['num', s.est].join(' ')}>EST. {team.founded}</span>
+        <span className={['num', s.est].join(' ')}>{team.old && team.era ? `${team.era[0]}–${team.era[1]}` : `EST. ${team.founded}`}</span>
       </figcaption>
     </figure>
   );

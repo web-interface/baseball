@@ -102,40 +102,38 @@
 /* ───────── 골라 뽑기 ───────── */
 .pick { padding: 18px 0 2px; border-bottom: 1px solid var(--line); }
 .pick .secHead { padding: 0 var(--gutter); }
-.years { display: flex; gap: 6px; overflow-x: auto; padding: 12px var(--gutter) 4px; scrollbar-width: none; scroll-snap-type: x proximity; }
-.years::-webkit-scrollbar { display: none; }
-.yearBtn {
-  flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  width: 54px; height: 58px; scroll-snap-align: start;
-  border-radius: var(--r-2);
-  box-shadow: inset 0 0 0 1px var(--line-2);
-  color: var(--fg);
-  transition: background-color var(--dur-2), color var(--dur-2), box-shadow var(--dur-2);
-}
-.yearBtn b { font-size: 25px; line-height: .9; }
-.yearBtn small { font-size: 10.5px; color: var(--fg-3); letter-spacing: -.03em; }
-.yearBtn.legendYear small { color: var(--gr-legend); }
-.yearBtn.on { background: var(--fg); color: var(--bg); box-shadow: none; }
-.yearBtn.on small { color: color-mix(in srgb, var(--bg) 70%, transparent); }
-:global([data-theme='night']) .yearBtn.on { background: var(--surface-3); color: var(--fg); box-shadow: inset 0 0 0 1px var(--line-3), inset 0 -2px 0 var(--accent); }
-:global([data-theme='night']) .yearBtn.on small { color: var(--fg-2); }
-:global([data-theme='classic']) .yearBtn { border-radius: 0; background: var(--surface); }
-:global([data-theme='classic']) .yearBtn.on { background: var(--inv); color: var(--inv-fg); }
+.yearPicker { padding: 10px var(--gutter) 2px; }
 
-.yearNote { padding: 10px var(--gutter) 14px; font-size: 12.5px; color: var(--fg-2); }
+.yearNote { padding: 12px var(--gutter) 14px; font-size: 12.5px; color: var(--fg-2); }
 .yearNote p b { color: var(--fg); font-size: 14px; }
-.yearNote ul { margin-top: 8px; display: grid; gap: 6px; }
+.champLine { margin-top: 3px; }
+.champLine b { font-size: 13px !important; font-weight: 700; }
+.yearNote ul { margin-top: 10px; display: grid; gap: 6px; }
 .yearNote li { display: flex; align-items: flex-start; gap: 8px; line-height: 1.4; }
 .yearNote li b { color: var(--fg); font-weight: 700; }
+/* 그 해 리그에 있던 구단 */
+.yearClubs { display: flex; flex-wrap: wrap; gap: 8px 4px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.yearClub { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 52px; }
+.yearClub small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; letter-spacing: -.04em; color: var(--fg-3); }
+.yearChamp small { color: var(--accent); font-weight: 700; }
+:global([data-theme='classic']) .yearChamp small { color: var(--club-text); }
 
-.clubs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px 2px; padding: 12px calc(var(--gutter) - 4px) 14px; }
+.clubGroup { padding: 12px 0 0; }
+.clubGroup + .clubGroup { border-top: 1px solid var(--line); margin-top: 4px; }
+.clubGroupHead { display: flex; align-items: baseline; gap: 8px; padding: 0 var(--gutter); font-size: 11.5px; color: var(--fg-3); letter-spacing: -.02em; }
+.clubGroupHead b { font-size: 12.5px; color: var(--fg-2); font-weight: 700; }
+.clubs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px 2px; padding: 8px calc(var(--gutter) - 4px) 12px; }
 .clubBtn {
   position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px;
-  padding: 8px 0 7px; border-radius: var(--r-2);
+  min-width: 0; padding: 8px 0 7px; border-radius: var(--r-2);
   font-size: 11.5px; font-weight: 700; letter-spacing: -.04em; color: var(--fg-3);
   transition: color var(--dur-2), background-color var(--dur-2);
 }
+.clubBtn > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clubBtn small { margin-top: -3px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; font-weight: 600; color: var(--fg-4); }
+.clubBtn small .num { font-size: 10.5px; }
 .clubBtn.on { color: var(--fg); background: color-mix(in srgb, var(--team) 12%, transparent); }
+.clubBtn.on small { color: var(--fg-3); }
 .clubBtn.on::after { content: ''; position: absolute; left: 22%; right: 22%; bottom: 0; height: 2px; background: var(--team); }
 :global([data-theme='classic']) .clubBtn { border-radius: 0; }
 
@@ -198,8 +196,3 @@
   .stage { grid-template-columns: 200px 1fr; gap: 28px; padding: 28px var(--gutter); }
   .clubs { grid-template-columns: repeat(10, 1fr); }
 }
-
-/* 우승 연도 — 연도팩 선택지 강조 */
-.champYear small { color: var(--accent); font-weight: 700; }
-.champYear.on small { color: inherit; }
-:global([data-theme='classic']) .champYear small { color: var(--club-text); }

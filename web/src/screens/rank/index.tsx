@@ -6,7 +6,7 @@ import type { ScreenProps } from '../../app/screen';
 import { navigate, setQueryQuiet } from '../../app/router';
 import { useAuth } from '../../app/auth';
 import { Button, Emblem, Icon, Tabs, fmt } from '../../ui';
-import { TEAMS, myTeam, teamById } from '../../game/mock';
+import { isTeamId, myTeam, teamById } from '../../game/mock';
 import { standingsOf, useSeason } from '../../season/store';
 import { ApiError, api, type RankingBy, type RankingsRes } from '../../api';
 import { demoRankings } from './demo';
@@ -18,7 +18,7 @@ const BY: { value: RankingBy; label: string; col: string }[] = [
   { value: 'winrate', label: '승률', col: '승률' },
   { value: 'power', label: '구단 전력', col: '선수 점수 합' },
 ];
-const clubTeam = (code: string) => (TEAMS.some((t) => t.id === code) ? teamById(code) : teamById('dj'));
+const clubTeam = (code: string) => (isTeamId(code) ? teamById(code) : teamById('dj'));
 const showVal = (by: RankingBy, v: number) => (by === 'winrate' ? fmt.avg(v) : fmt.int(v));
 
 type Load = { kind: 'idle' | 'loading' } | { kind: 'error'; msg: string } | { kind: 'ok'; data: RankingsRes };

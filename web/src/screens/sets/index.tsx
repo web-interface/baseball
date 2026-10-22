@@ -1,14 +1,14 @@
 // 세트덱 #/sets — 세트 종류별 조건 · 단계별 효과 표 · 지금 내 엔트리 진행 · 모으면 되는 카드 · 구단·연도 조합별 효과
-//   ?club=DJ (조합 표에서 볼 구단)
-import { useMemo, useState } from 'react';
+//   ?club=DJ (조합 표에서 볼 구단 — 현재 10 + 옛 10) · ?year=1995 (구단+연도 세트에서 볼 해)
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { navigate, setQueryQuiet } from '../../app/router';
-import { Button, Emblem, Icon, fmt } from '../../ui';
+import { Button, Emblem, YearPicker, fmt, type YearCell } from '../../ui';
 import { CardMini } from '../../cards';
-import { CLUBS } from '../../game/world';
-import { TEAMS, myTeam } from '../../game/mock';
+import { CURRENT_SEASON, FIRST_SEASON, shortLabel } from '../../game/world';
+import { CURRENT_TEAMS, OLD_TEAMS, isTeamId, myTeam, teamByCode } from '../../game/mock';
 import type { ClubCode, Team } from '../../game/types';
-import { HAS_REAL_SEASONS, clubSeason, clubTitles, fullYear } from '../../game/clubSeasons';
+import { HAS_REAL_SEASONS, clubPennants, clubRunnerUps, clubSeason, clubTitles, clubYears, fullYear, leagueYear, leagueYears, postLabel, seasonLine } from '../../game/clubSeasons';
 import {
   ENTRY_SIZE, MAX_ACTIVE, SET_KIND_DESC, SET_KIND_KO, STAT_KO, TIERS, setEffect, setName, statLine,
   type SetEffect, type SetKind, type SetProgress,
@@ -17,13 +17,12 @@ import { boxOf, evaluate, initialLineup, store, unit } from '../lineup/calc';
 import s from './sets.module.css';
 
 const KINDS: SetKind[] = ['teamYear', 'team', 'year'];
-const CURRENT_YEARS = [2027, 2026, 2025];
-const teamOfCode = (c: ClubCode) => TEAMS.find((t) => t.code === c)!;
 const tierHead = (at: number) => (at >= ENTRY_SIZE ? '전원' : `${at}명`);
+const yyOf = (y: number) => `’${String(y).slice(-2)}`;
 
 export default function SetsScreen({ query }: ScreenProps) {
-  const q = query.get('club')?.toUpperCase();
-  const [club, setClubS] = useState<ClubCode>(() => (TEAMS.some((t) => t.code === q) ? (q as ClubCode) : myTeam().code));
+  const q = query.get('club')?.toLowerCase();
+  const [club, setClubS] = useState<ClubCode>(() => (q && isTeamId(q) ? (q.toUpperCase() as ClubCode) : myTeam().code));
   const setClub = (c: ClubCode) => { setClubS(c); setQueryQuiet({ club: c }); };
   const st = useMemo(() => store.get() ?? initialLineup(), []);
   const ev = useMemo(() => evaluate(st), [st]);
@@ -40,7 +39,7 @@ export default function SetsScreen({ query }: ScreenProps) {
 
       <Rules />
       <Mine ev={ev} st={st} />
-      <Combos club={club} setClub={setClub} />
+      <Combos club={club} setClub={setClub} initialYear={Number(query.get('year')) || undefined} />
     </div>
   );
 }
@@ -102,12 +101,13 @@ function Mine({ ev, st }: { ev: ReturnType<typeof evaluate>; st: ReturnType<type
 }
 
 function MineRow({ sp, spare }: { sp: SetProgress; spare: ReturnType<typeof unit>[] }) {
-  const t = sp.code ? teamOfCode(sp.code) : undefined;
+  const t = sp.code ? teamByCode(sp.code) : undefined;
   const need = sp.next ? sp.next.at : ENTRY_SIZE;
   const fits = spare.filter((u) => (sp.code ? u.team.code === sp.code : true) && (sp.year != null ? (u.card.year != null && fullYear(u.card.year) === sp.year) : true));
   const more = sp.next ? sp.next.at - sp.have : 0;
-  const want = sp.kind === 'teamYear' ? `${t?.short} ${fmt.yearTag(sp.year! % 100)} 카드` : sp.kind === 'team' ? `${t?.short} 카드(연도 무관)` : `${fmt.yearTag(sp.year! % 100)} 카드(구단 무관)`;
-  const pack = sp.kind === 'year' ? `연도팩 ${sp.year}` : sp.kind === 'team' ? `구단팩 ${t?.short}` : `연도팩 ${sp.year} · 구단팩 ${t?.short}`;
+  const short = sp.code ? shortLabel(sp.code) : '';
+  const want = sp.kind === 'teamYear' ? `${short} ${fmt.yearTag(sp.year! % 100)} 카드` : sp.kind === 'team' ? `${short} 카드(연도 무관)` : `${fmt.yearTag(sp.year! % 100)} 카드(구단 무관)`;
+  const pack = sp.kind === 'year' ? `연도팩 ${sp.year}` : sp.kind === 'team' ? `구단팩 ${short}` : `연도팩 ${sp.year} · 구단팩 ${short}`;
   return (
     <li className={[s.mineRow, sp.active && s.on].filter(Boolean).join(' ')} style={t ? ({ ['--tc' as string]: t.colors.primary }) : undefined}>
       <div className={s.mineTop}>
@@ -149,35 +149,58 @@ function MineRow({ sp, spare }: { sp: SetProgress; spare: ReturnType<typeof unit
 }
 
 /* ───────── 조합별 효과 ───────── */
-function Combos({ club, setClub }: { club: ClubCode; setClub: (c: ClubCode) => void }) {
-  const t = teamOfCode(club);
-  const info = CLUBS.find((c) => c.code === club)!;
+/** 구단+연도 세트에서 처음 보여 줄 해 — 마지막 우승, 없으면 마지막 해 */
+const defaultYear = (code: ClubCode, want?: number) => {
+  const ys = clubYears(code);
+  if (want && ys.includes(want)) return want;
+  return clubTitles(code).at(-1) ?? ys.at(-1) ?? CURRENT_SEASON;
+};
+
+/** 한 구단이 있던 해 칸 — 우승 · 준우승 · 순위 */
+function clubCells(code: ClubCode): YearCell[] {
+  const titles = new Set(clubTitles(code)), runners = new Set(clubRunnerUps(code)), pennants = new Set(clubPennants(code));
+  return clubYears(code).map((y) => {
+    const rec = clubSeason(code, y);
+    const live = rec?.post === '진행중';
+    const sub = titles.has(y) ? '우승' : runners.has(y) ? '준우승' : y === CURRENT_SEASON ? '이번' : live ? '가을야구 중' : pennants.has(y) ? '정규 1위' : rec?.rank ? `${rec.rank}위` : undefined;
+    return { year: y, sub, tone: titles.has(y) ? 'champ' : undefined, label: `${y}년${sub ? ` · ${sub}` : ''}` };
+  });
+}
+
+/** 리그 연도 칸 — 그 해 리그 특징 첫 태그 */
+const LEAGUE_CELLS: YearCell[] = leagueYears().map((y) => {
+  const lg = leagueYear(y);
+  const sub = y === CURRENT_SEASON ? '이번' : lg?.tags[0];
+  return { year: y, sub, label: `${y}년${sub ? ` · ${sub}` : ''}` };
+});
+
+function Combos({ club, setClub, initialYear }: { club: ClubCode; setClub: (c: ClubCode) => void; initialYear?: number }) {
+  const t = teamByCode(club);
   const titles = clubTitles(club).slice().reverse();
-  const years = useMemo(() => {
-    const ys = [...CURRENT_YEARS, ...titles.filter((y) => !CURRENT_YEARS.includes(y))];
-    return ys.filter((y) => !!clubSeason(club, y) || CURRENT_YEARS.includes(y));
-  }, [club]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [pickYear, setPickYear] = useState(() => defaultYear(club, initialYear));
+  const [lgYear, setLgYear] = useState(CURRENT_SEASON);
+  const cells = useMemo(() => clubCells(club), [club]);
+  // 구단을 바꾸면 그 구단이 있던 해로 맞춘다
+  const year = cells.some((c) => c.year === pickYear) ? pickYear : defaultYear(club);
+  const choose = (c: ClubCode) => { setClub(c); setPickYear(defaultYear(c)); };
+  const [from, to] = t.era ?? [FIRST_SEASON, CURRENT_SEASON];
+  const le = setEffect('year', undefined, lgYear, 0);
+  const lg = leagueYear(lgYear);
   return (
     <section className={s.sec} aria-labelledby="combo-h">
       <header className={s.secHead}>
         <h3 id="combo-h" className="head">조합별 효과</h3>
         <span className={s.meta}>{HAS_REAL_SEASONS ? '연도 성격은 그 해 실제 팀 기록에서' : '연도 성격은 세계관 기록에서'}</span>
       </header>
-      <div className={s.clubs} role="tablist" aria-label="구단">
-        {TEAMS.map((x) => (
-          <button key={x.code} type="button" role="tab" aria-selected={x.code === club} className={[s.clubBtn, x.code === club && s.clubOn].filter(Boolean).join(' ')} onClick={() => setClub(x.code)}>
-            <Emblem team={x} size={28} />
-            <span>{x.short}</span>
-          </button>
-        ))}
-      </div>
+      <ClubRow label="지금 구단" teams={CURRENT_TEAMS} club={club} onPick={choose} />
+      <ClubRow label="옛 구단" teams={OLD_TEAMS} club={club} onPick={choose} old />
 
       <div className={s.clubHead} style={{ ['--tc' as string]: t.colors.primary }}>
         <Emblem team={t} size={40} />
         <div>
-          <p className={s.clubName}>{t.name}</p>
-          <p className={s.clubStyle}>{info.style}</p>
-          {titles.length > 0 && <p className={s.titles}>우승 <span className="num">{titles.length}</span>회 · {titles.slice(0, 8).map((y) => fmt.yearTag(y % 100)).join(' ')}{titles.length > 8 ? ' …' : ''}</p>}
+          <p className={s.clubName}>{t.name}{t.old && <small className={s.oldTag}>옛 구단</small>}</p>
+          <p className={s.clubStyle}>{t.style} · <span className="num">{from}~{to >= CURRENT_SEASON ? '' : to}</span></p>
+          {titles.length > 0 && <p className={s.titles}>우승 <span className="num">{titles.length}</span>회 · {titles.slice(0, 9).map((y) => fmt.yearTag(y % 100)).join(' ')}{titles.length > 9 ? ' …' : ''}</p>}
         </div>
       </div>
 
@@ -185,53 +208,70 @@ function Combos({ club, setClub }: { club: ClubCode; setClub: (c: ClubCode) => v
       <EffectTable kind="team" code={club} team={t} />
 
       <h4 className={s.h4}>구단+연도 세트 <small>{SET_KIND_DESC.teamYear}</small></h4>
-      <ul className={s.yearList}>
-        {years.map((y) => <YearCombo key={y} code={club} year={y} team={t} champion={titles.includes(y)} />)}
-      </ul>
+      <YearPicker className={s.yearPick} cells={cells} value={year} onChange={setPickYear} champCount aria-label={`${t.name} 연도`} />
+      <YearCombo code={club} year={year} team={t} champion={titles.includes(year)} />
 
       <h4 className={s.h4}>연도 세트 <small>{SET_KIND_DESC.year} — 그 해 리그 특징</small></h4>
-      <ul className={s.yearList}>
-        {CURRENT_YEARS.map((y) => {
-          const e = setEffect('year', undefined, y, 0);
-          return (
-            <li key={y} className={s.yearRow}>
-              <details>
-                <summary>
-                  <span className={['num-display', s.yy].join(' ')}>{fmt.yearTag(y % 100)}</span>
-                  <span className={s.yrMain}>
-                    <b>{setName('year', undefined, y)} — {e.trait}</b>
-                    <small>9명부터 · 타자 {statLine(e.bat, 3)} · 투수 {statLine(e.pit, 2)}</small>
-                  </span>
-                  <Icon name="chevron" size={16} className={s.chev} />
-                </summary>
-                <EffectTable kind="year" year={y} />
-              </details>
-            </li>
-          );
-        })}
-      </ul>
+      <YearPicker className={s.yearPick} cells={LEAGUE_CELLS} value={lgYear} onChange={setLgYear} aria-label="리그 연도" />
+      <div className={s.yearPanel}>
+        <p className={s.panelHead}>
+          <span className={['num-display', s.yy].join(' ')}>{yyOf(lgYear)}</span>
+          <span className={s.yrMain}>
+            <b>{setName('year', undefined, lgYear)} — {le.trait}</b>
+            <small>{lg?.note ? `${lg.note.replace(/\s*·\s*포스트시즌 진행 중.*$/, '')} · ` : ''}9명부터 · 타자 {statLine(le.bat, 3)} · 투수 {statLine(le.pit, 2)}</small>
+          </span>
+        </p>
+        <EffectTable kind="year" year={lgYear} />
+      </div>
     </section>
+  );
+}
+
+/** 구단 고르기 줄 — 지금 구단 / 옛 구단 (가로로 미는 목록) */
+function ClubRow({ label, teams, club, onPick, old }: { label: string; teams: Team[]; club: ClubCode; onPick: (c: ClubCode) => void; old?: boolean }) {
+  const box = useRef<HTMLDivElement>(null);
+  // 고른 구단이 줄 밖에 있으면 가로로만 당겨 보여 준다 (화면 세로 위치는 그대로)
+  useEffect(() => {
+    const b = box.current, el = b?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!b || !el) return;
+    const br = b.getBoundingClientRect(), er = el.getBoundingClientRect();
+    if (er.left < br.left || er.right > br.right) b.scrollLeft += er.left + er.width / 2 - (br.left + br.width / 2);
+  }, [club]);
+  return (
+    <div className={s.clubRow}>
+      <p className={s.clubRowHead}>{label}</p>
+      <div ref={box} className={s.clubs} role="tablist" aria-label={label}>
+        {teams.map((x) => (
+          <button key={x.code} type="button" role="tab" aria-selected={x.code === club} className={[s.clubBtn, x.code === club && s.clubOn].filter(Boolean).join(' ')} onClick={() => onPick(x.code)}>
+            <Emblem team={x} size={28} />
+            <span>{x.short}</span>
+            {old && <small className="num">{yyOf(x.era?.[0] ?? 0)}–{yyOf(x.era?.[1] ?? 0)}</small>}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
 function YearCombo({ code, year, team, champion }: { code: ClubCode; year: number; team: Team; champion: boolean }) {
   const e = setEffect('teamYear', code, year, 0);
   const rec = clubSeason(code, year);
-  const recLine = rec && rec.w != null && rec.l != null ? `${rec.rank ? `${rec.rank}위 · ` : ''}${rec.w}승${rec.d ? ` ${rec.d}무` : ''} ${rec.l}패${rec.post ? ` · ${rec.post}` : ''}` : '';
+  const line = seasonLine(code, year, { post: false });
+  // 우승·준우승은 이름(성격) 쪽에 이미 있다 — 가을야구 결과만 덧붙인다
+  const post = rec?.post && !/우승/.test(rec.post) ? postLabel(rec.post) : '';
   return (
-    <li className={[s.yearRow, champion && s.champ].filter(Boolean).join(' ')} style={{ ['--tc' as string]: team.colors.primary }}>
-      <details>
-        <summary>
-          <span className={['num-display', s.yy].join(' ')}>{fmt.yearTag(year % 100)}</span>
-          <span className={s.yrMain}>
-            <b>{setName('teamYear', code, year)} — {e.trait}</b>
-            <small>{recLine && <>{recLine} · </>}5명부터 · 타자 {statLine(e.bat, 3)} · 투수 {statLine(e.pit, 2)}{e.special ? ` · ${e.special.text}` : ''}</small>
-          </span>
-          <Icon name="chevron" size={16} className={s.chev} />
-        </summary>
-        <EffectTable kind="teamYear" code={code} year={year} team={team} />
-      </details>
-    </li>
+    <div className={[s.yearPanel, champion && s.champ].filter(Boolean).join(' ')} style={{ ['--tc' as string]: team.colors.primary }}>
+      <p className={s.panelHead}>
+        <span className={['num-display', s.yy].join(' ')}>{yyOf(year)}</span>
+        <span className={s.yrMain}>
+          <b>{setName('teamYear', code, year)} — {e.trait}</b>
+          <small>
+            {line && <>{line}{post ? ` · ${post}` : ''} · </>}5명부터 · 타자 {statLine(e.bat, 3)} · 투수 {statLine(e.pit, 2)}{e.special ? ` · ${e.special.text}` : ''}
+          </small>
+        </span>
+      </p>
+      <EffectTable kind="teamYear" code={code} year={year} team={team} />
+    </div>
   );
 }
 

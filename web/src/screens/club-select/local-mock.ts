@@ -1,6 +1,6 @@
 // 구단 선택 · 클럽 창단 · 특별 선수 · 개막 — 화면 전용 목업
 // 서버가 붙으면: 지명 후보·기본 선수단·특별 선수 카드는 서버가 만들고(같은 Player/CardInst 모양), 여기 값은 버린다.
-import { PLAYERS, TEAMS } from '../../game/mock';
+import { PLAYERS, isTeamId, teamByCode } from '../../game/mock';
 import { SPECIAL_PLAYER_NAMES } from '../../game/world';
 import { makeAppearance, type FacialHair, type HairStyle } from '../../art/character';
 import type { BatSide, GradeId, Hand, PitcherRole, PitchType, Player, Pos, SignaturePitch, Team } from '../../game/types';
@@ -28,14 +28,20 @@ export const DIFF_KO = ['', '아주 쉬움', '쉬움', '보통', '어려움', '�
 
 /** 구단 소개 한 줄 — '먼저 모이는 팀' 조언 (풋볼데이 창단 팁의 야구판) */
 export function clubTip(t: Team) {
+  if (t.old) {
+    const [a, b] = t.era ?? [t.founded, t.founded];
+    return `지명 후보는 ${a}~${b} 시절 주축 선수예요. 이 구단 카드는 그 시절 연도로만 나와서, 구단+연도 세트를 맞추는 맛이 남달라요.`;
+  }
   if (t.tier === '강') return '스타가 많아 처음부터 강해요. 대신 같은 구단 카드를 다 모으기는 오래 걸려요.';
   if (t.tier === '약') return '전력은 아래지만 같은 구단 카드가 빨리 모여요. 키워 가는 맛이 있어요.';
   return '전력과 모으는 속도가 고르게 섞인 구단이에요.';
 }
+/** 옛 구단이 2027 리그에서 대신 들어가는 자리 */
+export const revivalSlot = (t: Team) => (t.revives ? teamByCode(t.revives) : undefined);
 
 /* ───────── 2. 지명 후보 (구단마다 8명 — 유망주) ───────── */
-// 만드는 곳은 game/starter (기본 선수단과 같이 맞춘다). 지명 카드는 스페셜, 연도는 지명 순서대로 ’27 · ’26 · ’25.
-export { DRAFT_GRADE, DRAFT_YEARS, draftPool } from '../../game/starter';
+// 만드는 곳은 game/starter (기본 선수단과 같이 맞춘다). 지명 카드는 스페셜, 연도는 지명 순서대로 ’27 · ’26 · ’25 (옛 구단은 그 선수가 뛴 해).
+export { DRAFT_GRADE, DRAFT_YEARS, draftPool, draftYearOf } from '../../game/starter';
 
 /* ───────── 3. 특별 선수 (요구 29) ───────── */
 export type SpecialName = (typeof SPECIAL_PLAYER_NAMES)[number];
@@ -269,7 +275,7 @@ export function loadStart(): StartState {
     if (!raw) return DEFAULT_START;
     const v = JSON.parse(raw) as Partial<StartState>;
     return {
-      club: TEAMS.some((t) => t.id === v.club) ? v.club! : DEFAULT_START.club,
+      club: v.club && isTeamId(v.club) ? v.club : DEFAULT_START.club,
       picks: Array.isArray(v.picks) ? v.picks.slice(0, 3) : [],
       special: { ...DEFAULT_SPECIAL, ...(v.special ?? {}) },
       level: AI_LEVELS.some((l) => l.id === v.level) ? v.level! : RECOMMENDED,

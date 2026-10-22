@@ -4,14 +4,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { navigate } from '../../app/router';
-import { PACKS, TEAMS, myTeam, teamById } from '../../game/mock';
+import { CURRENT_TEAMS, OLD_TEAMS, PACKS, isTeamId, myTeam, teamByCode } from '../../game/mock';
+import { CURRENT_SEASON, FIRST_SEASON } from '../../game/world';
 import { SET_KIND_KO, statLine } from '../../game/sets';
 import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
 import { GRADES } from '../../game/grades';
 import type { ClubCode, GradeId, Pack } from '../../game/types';
-import { Button, CoinGP, Emblem, GoldenBall, Icon, Tabs, fmt } from '../../ui';
+import { Button, CoinGP, Emblem, GoldenBall, Icon, Tabs, YearPicker, fmt, type YearCell } from '../../ui';
 import { atLeastOne, oddsFor, pullPack, useGacha, type Pick, type PullResult } from './draw';
-import { PACK_LOOK, YEAR_OPTIONS } from './local-mock';
+import { PACK_LOOK, YEAR_OPTIONS, clubShort, eraText, yearOption } from './local-mock';
 import { PackArt } from './PackArt';
 import { OddsBar, PityTally, Price, Swatch, gradeShort } from './bits';
 import { OddsSheet } from './OddsSheet';
@@ -51,8 +52,8 @@ function Store({ query }: { query: URLSearchParams }) {
   const g = useGacha();
   const qp = query.get('pack');
   const [packId, setPackId] = useState(() => (qp && PACKS.some((p) => p.id === qp) ? qp : 'premium'));
-  const [year, setYear] = useState(() => Number(query.get('year')) || 2027);
-  const [club, setClub] = useState<ClubCode>(() => (query.get('club')?.toUpperCase() as ClubCode) || myTeam().code);
+  const [year, setYear] = useState(() => { const y = Number(query.get('year')); return y >= FIRST_SEASON && y <= CURRENT_SEASON ? y : CURRENT_SEASON; });
+  const [club, setClub] = useState<ClubCode>(() => { const q = query.get('club')?.toLowerCase(); return q && isTeamId(q) ? (q.toUpperCase() as ClubCode) : myTeam().code; });
   const [oddsOpen, setOddsOpen] = useState(query.get('odds') === '1');
   const [result, setResult] = useState<PullResult | null>(null);
   const [demoStep, setDemoStep] = useState<OpeningStep | undefined>();
@@ -61,7 +62,8 @@ function Store({ query }: { query: URLSearchParams }) {
   const pick: Pick | null = pack.pick?.kind === 'year' ? { kind: 'year', year } : pack.pick?.kind === 'club' ? { kind: 'club', club } : null;
   const view = useMemo(() => oddsFor(pack, pick), [pack, pick?.kind, year, club]); // eslint-disable-line react-hooks/exhaustive-deps
   const look = PACK_LOOK[pack.id] ?? PACK_LOOK.basic;
-  const team = pick?.kind === 'club' ? teamById(pick.club.toLowerCase()) : undefined;
+  const team = pick?.kind === 'club' ? teamByCode(pick.club) : undefined;
+  const yo = pick?.kind === 'year' ? yearOption(year) : undefined;
   const pity = g.pityOf(pack.id);
   const toPity = pack.pity.max - pity;
   const combos = combosFor(pick);
@@ -117,8 +119,12 @@ function Store({ query }: { query: URLSearchParams }) {
             <span className="num">{look.en}</span>
             {pack.limited && <em>{pack.limited}</em>}
           </p>
-          <h2 className={['head', s.title].join(' ')}>{pack.name}{pick && <small>{pick.kind === 'year' ? YEAR_OPTIONS.find((o) => o.year === year)?.tag : team?.short}</small>}</h2>
-          <p className={s.desc}>{pick?.kind === 'club' ? `${team?.name} · 그 구단의 모든 연도` : pick?.kind === 'year' ? `${year} 시즌 카드만 · 모든 구단` : look.blurb}</p>
+          <h2 className={['head', s.title].join(' ')}>{pack.name}{pick && <small>{pick.kind === 'year' ? yo?.tag : clubShort(pick.club)}</small>}</h2>
+          <p className={s.desc}>
+            {pick?.kind === 'club' && team ? `${team.name} · ${eraText(team.code)} 모든 연도${team.old ? ' · 옛 구단' : ''}`
+              : pick?.kind === 'year' ? `${year} 시즌 카드만 · 그 해 ${yo?.clubs.length ?? 10}개 구단`
+              : look.blurb}
+          </p>
           <dl className={s.facts}>
             {[top, second].filter(Boolean).map((r) => (
               <div key={r.grade} className={s.fact}>
@@ -156,44 +162,16 @@ function Store({ query }: { query: URLSearchParams }) {
       {/* ───── 골라 뽑기 ───── */}
       {pack.pick?.kind === 'year' && (
         <section className={s.pick} aria-label="시즌 고르기">
-          <div className={s.secHead}><h3 className="head">시즌 고르기</h3><span>모든 구단 · 고른 시즌 카드만</span></div>
-          <div className={s.years} role="radiogroup" aria-label="시즌">
-            {YEAR_OPTIONS.map((o) => (
-              <button
-                key={o.year}
-                type="button"
-                role="radio"
-                aria-checked={o.year === year}
-                className={[s.yearBtn, o.year === year && s.on, o.year < 2025 && s.legendYear, !!o.champ && s.champYear].filter(Boolean).join(' ')}
-                onClick={() => setYear(o.year)}
-              >
-                <b className="num-display">{o.tag}</b>
-                <small>{o.year >= 2025 ? (o.year === 2027 ? '이번' : o.year === 2026 ? '지난' : '2년 전') : o.champ ? `${teamById(o.champ.toLowerCase()).short} 우승` : '레전드'}</small>
-              </button>
-            ))}
-          </div>
+          <div className={s.secHead}><h3 className="head">시즌 고르기</h3><span>{FIRST_SEASON}~{CURRENT_SEASON} 한 해씩 · 그 해 리그에 있던 구단 카드만</span></div>
+          <YearPicker className={s.yearPicker} cells={YEAR_CELLS} value={year} onChange={setYear} aria-label="시즌" />
           <YearNote year={year} />
         </section>
       )}
       {pack.pick?.kind === 'club' && (
         <section className={s.pick} aria-label="구단 고르기">
-          <div className={s.secHead}><h3 className="head">구단 고르기</h3><span>연도는 고를 수 없어요 — 그 구단의 모든 연도</span></div>
-          <div className={s.clubs} role="radiogroup" aria-label="구단">
-            {TEAMS.map((t) => (
-              <button
-                key={t.code}
-                type="button"
-                role="radio"
-                aria-checked={t.code === club}
-                className={[s.clubBtn, t.code === club && s.on].filter(Boolean).join(' ')}
-                onClick={() => setClub(t.code)}
-                style={{ ['--team' as string]: t.colors.primary }}
-              >
-                <Emblem team={t} size={34} />
-                <span>{t.short}</span>
-              </button>
-            ))}
-          </div>
+          <div className={s.secHead}><h3 className="head">구단 고르기</h3><span>연도는 고를 수 없어요 — 그 구단이 있던 모든 연도</span></div>
+          <ClubGrid label="지금 구단" note={`2027 리그 10개 구단`} teams={CURRENT_TEAMS} club={club} setClub={setClub} />
+          <ClubGrid label="옛 구단" note="없어진 구단 · 지금 이름이 되기 전 시대" teams={OLD_TEAMS} club={club} setClub={setClub} old />
         </section>
       )}
 
@@ -289,16 +267,72 @@ function Store({ query }: { query: URLSearchParams }) {
   );
 }
 
+/** 연도팩 칸 — 숫자 아래 그 해 우승 구단 (최근 세 해는 이번·지난·2년 전, 가을야구가 안 끝난 해는 '가을야구 중') */
+const YEAR_CELLS: YearCell[] = YEAR_OPTIONS.map((o) => {
+  const champ = o.champ ? teamByCode(o.champ) : undefined;
+  const recent = o.year === CURRENT_SEASON ? '이번 시즌' : o.live ? '가을야구 중' : undefined;
+  return {
+    year: o.year,
+    sub: recent ?? champ?.short,
+    tone: champ ? 'champ' : undefined,
+    label: `${o.year}년${champ ? ` · ${champ.name} 우승` : ''}`,
+  };
+});
+
+function ClubGrid({ label, note, teams, club, setClub, old }: { label: string; note: string; teams: ReturnType<typeof teamByCode>[]; club: ClubCode; setClub: (c: ClubCode) => void; old?: boolean }) {
+  return (
+    <div className={s.clubGroup}>
+      <p className={s.clubGroupHead}><b>{label}</b><span>{note}</span></p>
+      <div className={s.clubs} role="radiogroup" aria-label={label}>
+        {teams.map((t) => (
+          <button
+            key={t.code}
+            type="button"
+            role="radio"
+            aria-checked={t.code === club}
+            aria-label={`${t.name} ${eraText(t.code)}`}
+            className={[s.clubBtn, t.code === club && s.on].filter(Boolean).join(' ')}
+            onClick={() => setClub(t.code)}
+            style={{ ['--team' as string]: t.colors.primary }}
+          >
+            <Emblem team={t} size={34} />
+            <span>{t.short}</span>
+            {old && <small>{t.name.split(' ')[0]} <span className="num">{`’${String(t.era?.[0] ?? 0).slice(2)}–’${String(t.era?.[1] ?? 0).slice(2)}`}</span></small>}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function YearNote({ year }: { year: number }) {
-  const o = YEAR_OPTIONS.find((x) => x.year === year);
+  const o = yearOption(year);
   if (!o) return null;
+  const champ = o.champ ? teamByCode(o.champ) : undefined;
+  const runner = o.runnerUp ? teamByCode(o.runnerUp) : undefined;
   return (
     <div className={s.yearNote}>
-      <p><b className="num">{year}</b> · {o.note}{o.champ && o.year < 2027 ? <> · 우승 <b>{teamById(o.champ.toLowerCase()).short}</b>{o.runnerUp ? <> · 준우승 {teamById(o.runnerUp.toLowerCase()).short}</> : null}</> : null}</p>
+      <p><b className="num">{year}</b> · {o.note}</p>
+      {champ && (
+        <p className={s.champLine}>
+          우승 <b>{champ.name}</b>{runner ? <> · 준우승 {runner.name}</> : null}
+        </p>
+      )}
+      <div className={s.yearClubs} aria-label={`${year} 시즌 구단 ${o.clubs.length}개`}>
+        {o.clubs.map((c) => {
+          const t = teamByCode(c);
+          return (
+            <span key={c} className={[s.yearClub, c === o.champ && s.yearChamp].filter(Boolean).join(' ')} title={t.name}>
+              <Emblem team={t} size={22} />
+              <small>{t.short}</small>
+            </span>
+          );
+        })}
+      </div>
       {o.legends.length > 0 && (
         <ul>
           {o.legends.map((l) => {
-            const t = teamById(l.club.toLowerCase());
+            const t = teamByCode(l.club);
             return (
               <li key={l.club}>
                 <Emblem team={t} size={18} />

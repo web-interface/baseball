@@ -25,3 +25,5 @@ export type { ToastInput } from './Toast';
 export { ThemePicker } from './ThemePicker';
 export { TextField } from './TextField';
 export type { TextFieldProps } from './TextField';
+export { YearPicker } from './YearPicker';
+export type { YearCell, YearPickerProps } from './YearPicker';
