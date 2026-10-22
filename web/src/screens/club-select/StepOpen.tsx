@@ -13,6 +13,7 @@ import type { Player } from '../../game/types';
 import { AI_LEVELS, DRAFT_GRADE, RECOMMENDED, buildSpecial, draftPool, draftYearOf, revivalSlot, specialSignature } from './local-mock';
 import { resetStarter } from '../../game/starter';
 import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
+import { clearSeason, getSeason, setNextNotice } from '../../season/store';
 import type { StepProps } from './index';
 import s from './cs.module.css';
 import o from './StepOpen.module.css';
@@ -35,12 +36,18 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
   }, [special, st.picks, st.club]);
 
   const slot = revivalSlot(t);
+  // 내 구단이 바뀌나 (부활 구단으로 리그 구성이 바뀌는 것 포함) — 바뀌면 지금 시즌 진행은 지우고 개막전부터
+  const switching = t.id !== ME.teamId || leagueChangesWith(t.id);
+  const played = getSeason().next;
   const start = () => {
     try { localStorage.setItem('bb.special', JSON.stringify(special)); } catch { /* 이번 방문만 */ }
     resetStarter();
     lineupStore.clear();
-    if (leagueChangesWith(t.id)) {
-      // 부활 구단이 들어오거나 빠져 2027 리그 구성이 바뀜 — 화면을 다시 불러 순위표·일정·시즌 기록을 새 구성으로 맞춘다
+    if (switching) {
+      // 고른 구단이 앱 전체의 내 구단(ME.teamId)이 되게 — 시즌 진행을 지우고 화면을 다시 불러
+      // 내 구단 · 순위표 · 일정 · 라인업 · 구단 색을 새 구단(부활 구단이면 바뀐 리그 구성)으로 맞춘다
+      clearSeason();
+      setNextNotice(`${t.name} 창단! 2027 개막전부터 시작해요`, t.id);
       navigate('/home', { replace: true });
       location.reload();
       return;
@@ -122,7 +129,7 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
         </dl>
       </section>
 
-      <Dock note={<span><b>{level.ko} 상대로 개막</b><small>보상 ×{level.reward.toFixed(1)} · {shortLabel(t.code)}</small></span>}>
+      <Dock note={<span><b>{level.ko} 상대로 개막</b><small>보상 ×{level.reward.toFixed(1)} · {shortLabel(t.code)}</small>{switching && played > 0 && <small>지금 시즌 진행은 지우고 {t.short}로 개막전부터 다시 시작해요</small>}</span>}>
         <Button size="l" icon="play" onClick={start}>개막</Button>
       </Dock>
     </>

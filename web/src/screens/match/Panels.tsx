@@ -6,6 +6,7 @@ import { ROLE_KO } from '../../game/labels';
 import type { Player, Team } from '../../game/types';
 import { PlayerArt } from '../../art/PlayerArt';
 import { GAME, type FullPlay } from './local-mock';
+import { avgLabel, batLine, eraLabel, pitLine } from '../../season/store';
 import { HALVES, PLAYS, PLAY_COUNT, halfOf, type Live, type Mode } from './timeline';
 import { halfKo, halfSummary, notationOf, slotLabel } from './Board';
 import s from './Panels.module.css';
@@ -13,6 +14,8 @@ import s from './Panels.module.css';
 const away = () => teamById(GAME.match.awayId);
 const home = () => teamById(GAME.match.homeId);
 const HITS = ['1B', '2B', '3B', 'HR'];
+/** 시즌 경기(지금 바로 경기)인가 — 그러면 선수 시즌 기록은 저장된 시즌 진행(개막부터 친 경기)에서 */
+export const isSeasonGame = () => GAME.match.id.startsWith('s27-');
 
 /* ───────── 오늘 기록 ───────── */
 export function batterToday(id: string, upto: number) {
@@ -69,6 +72,8 @@ export function Matchup({ live, label }: { live: Live; label?: string }) {
   const sta = stamina(pitcher, pPitches);
   const season = batter.season.bat;
   const pseason = pitcher.season.pit;
+  const sb = isSeasonGame() ? batLine(batter.id) : null;
+  const sp = isSeasonGame() ? pitLine(pitcher.id) : null;
   const role = pitcher.role ? ROLE_KO[pitcher.role] : '투수';
   const todayB = bt.pa === 0 ? '오늘 첫 타석' : `오늘 ${bt.ab}타수 ${bt.h}안타${bt.rbi ? ` ${bt.rbi}타점` : ''}${bt.bb ? ` ${bt.bb}볼넷` : ''}`;
   const todayP = `${ipText(pt.outs)}이닝 · 삼진 ${pt.k} · ${pt.r}실점`;
@@ -77,13 +82,13 @@ export function Matchup({ live, label }: { live: Live; label?: string }) {
       <Side
         team={batTeam} player={batter} set={p.half === 'top' ? 'away' : 'home'}
         role={`타자 · ${slotLabel(p)}`}
-        stat={season ? <><b className="num">{fmt.avg(season.avg)}</b><span>타율</span><b className="num">{season.hr}</b><span>홈런</span></> : null}
+        stat={sb ? <><b className="num">{avgLabel(sb)}</b><span>타율</span><b className="num">{sb.hr}</b><span>홈런</span></> : season ? <><b className="num">{fmt.avg(season.avg)}</b><span>타율</span><b className="num">{season.hr}</b><span>홈런</span></> : null}
         line={todayB}
       />
       <Side
         right team={fldTeam} player={pitcher} set={p.half === 'top' ? 'home' : 'away'}
         role={`투수 · ${role}`}
-        stat={pseason ? <><b className="num">{fmt.era(pseason.era)}</b><span>평균자책</span><b className="num">{pPitches}</b><span>구</span></> : null}
+        stat={sp ? <><b className="num">{eraLabel(sp)}</b><span>평균자책</span><b className="num">{pPitches}</b><span>구</span></> : pseason ? <><b className="num">{fmt.era(pseason.era)}</b><span>평균자책</span><b className="num">{pPitches}</b><span>구</span></> : null}
         line={todayP}
         meter={sta}
       />

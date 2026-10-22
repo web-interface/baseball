@@ -2,7 +2,7 @@
 // 중계 그래픽(볼카운트 · 투구 위치 · 날씨 · 타구 정보)을 얹는다.
 import { memo, useMemo, type CSSProperties, type ReactNode } from 'react';
 import { Field, Icon } from '../../ui';
-import { playerById, teamById } from '../../game/mock';
+import { ME, playerById, teamById } from '../../game/mock';
 import type { Stadium } from '../../game/types';
 import { useTheme } from '../../theme/ThemeProvider';
 import { GAME, ZONE, type PitchEv, type WxState } from './local-mock';
@@ -79,7 +79,7 @@ function FieldLayer({ player, idle }: { player: Player; idle?: boolean }) {
   const fieldTeam = teamById(play.half === 'top' ? GAME.match.homeId : GAME.match.awayId);
   const batTeam = teamById(play.half === 'top' ? GAME.match.awayId : GAME.match.homeId);
   const classic = theme === 'classic';
-  const mine = (id: string) => id === 'dj';
+  const mine = (id: string) => id === ME.teamId; // 내 구단 (구단 선택에서 고른 구단)
   const fill = (teamId: string, color: string) => (classic ? (mine(teamId) ? 'var(--club)' : 'var(--surface)') : color);
   const fFill = fill(fieldTeam.id, fieldTeam.colors.primary);
   const rFill = fill(batTeam.id, batTeam.colors.primary);

@@ -4,18 +4,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, api, newRequestId, type PvpBattleRes, type PvpClub, type PvpSnapshot, type PvpToday } from '../../api';
 import { useAuth } from '../../app/auth';
 import { isTeamId, serverClubId, teamById } from '../../game/mock';
-import { loadStart } from '../club-select/local-mock';
 import { mySide } from './local-mock';
 import { getSlot, initialLineup, store as lineupStore, unit } from '../lineup/calc';
 
 /** 서버 구단 코드 → 세계관 구단 (모르는 코드면 독수리스) */
 export const clubTeam = (code: string) => (isTeamId(code) ? teamById(code) : teamById('dj'));
 
-/** 내 구단 · 라인업 스냅샷 — 지금은 목업 라인업, 구단은 구단 선택 화면에서 고른 값이 있으면 그것 */
+/** 내 구단 · 라인업 스냅샷 — 구단은 앱 전체의 내 구단(ME.teamId = 구단 선택에서 고른 구단, 옛 구단이면 부활 구단) */
 export function mySnapshot(): PvpSnapshot {
   const side = mySide();
-  let club = side.team.id;
-  try { if (localStorage.getItem('bb.start')) club = loadStart().club; } catch { /* 이 기기에 저장 없음 */ }
+  const club = side.team.id;
   // 라인업 화면의 1군 엔트리 (타순 9 · 선발 · 불펜 · 마무리)
   const st = lineupStore.get() ?? initialLineup();
   const item = (id: string | null, pos: string) => {

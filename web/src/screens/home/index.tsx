@@ -1,11 +1,14 @@
 // 홈 · 클럽하우스 — 담당: 홈·시작·설정 개발자
-// 구단 머리(엠블럼·이름·감독·시즌 성적) → 다음 경기 → 오늘 할 일 → 구단 소식 → 팀 종합 → 어제 경기(명장면 다시 보기) → 구단 금고
+// 구단 머리(엠블럼·이름·감독·시즌 성적) → 다음 경기 → 오늘 할 일 → 구단 소식 → 팀 종합 → 지난 경기(명장면 다시 보기) → 구단 금고
+// 시즌 성적 · 순위 · 선수 기록 · 지난 경기 · 소식은 모두 저장된 시즌 진행(season/store) — 개막일엔 0승 0무 0패, 지난 경기 칸은 없음
 import type { ScreenProps } from '../../app/screen';
 import { useAuth } from '../../app/auth';
 import { ClubEmblem } from '../../art/emblems';
-import { CoinGP, GoldenBall, Icon } from '../../ui';
-import { avg, int } from '../../ui/format';
-import { ME, myTeam } from '../../game/mock';
+import { Button, CoinGP, GoldenBall, Icon } from '../../ui';
+import { navigate } from '../../app/router';
+import { int } from '../../ui/format';
+import { ME, myTeam, savedStartClub } from '../../game/mock';
+import { gbLabel, isOver, pctLabel, useSeason } from '../../season/store';
 import { clubLine, leagueName } from './local-mock';
 import { NextGame } from './NextGame';
 import { Todo } from './Todo';
@@ -17,10 +20,12 @@ import s from './home.module.css';
 
 function Masthead({ manager }: { manager: string }) {
   const team = myTeam();
-  const ln = clubLine(team.id);
+  // 저장된 시즌 진행 — 헤더 · 순위 탭 · 시즌 화면과 같은 값 (개막일엔 0승 0무 0패)
+  const season = useSeason();
+  const ln = clubLine(team.id, season);
   const r = ln.row;
-  const pct = r.w / Math.max(1, r.w + r.l);
-  const streak = r.streak.endsWith('승') ? `${r.streak.replace('승', '')}연승` : r.streak.endsWith('패') ? `${r.streak.replace('패', '')}연패` : r.streak;
+  const streak = r.streak.endsWith('승') ? `${r.streak.replace('승', '')}연승` : r.streak.endsWith('패') ? `${r.streak.replace('패', '')}연패` : '';
+  const next = isOver(season) ? '정규 시즌 끝' : ln.played === 0 ? (ln.started ? '첫 경기 앞' : '개막전 앞') : <><span className="num">{ln.nextNo}</span>번째 경기 앞</>;
   return (
     <section className={s.mast} aria-label="구단">
       <div className={s.mastArt} aria-hidden>
@@ -30,7 +35,7 @@ function Masthead({ manager }: { manager: string }) {
       </div>
       <p className={s.kicker}>
         <span>{leagueName} <span className="num">2027</span></span>
-        <span>구단 <b className="num">{ME.seasonNo}</b>년차 · <span className="num">{ln.nextNo}</span>번째 경기 앞</span>
+        <span>구단 <b className="num">{ME.seasonNo}</b>년차 · {next}</span>
       </p>
       <div className={s.club}>
         <ClubEmblem team={team} size={60} className={s.em} />
@@ -42,26 +47,42 @@ function Masthead({ manager }: { manager: string }) {
       <dl className={s.stats}>
         <div>
           <dt>순위</dt>
-          <dd><b className="num-display">{ln.rank}</b><span>위</span></dd>
+          <dd>{ln.started ? <>{ln.tied && <span>공동</span>}<b className="num-display">{ln.rank}</b><span>위</span></> : <><b className="num-display">—</b><span>개막 전</span></>}</dd>
         </div>
         <div>
           <dt>승률</dt>
-          <dd><b className="num">{avg(pct)}</b></dd>
+          <dd><b className="num">{pctLabel(r)}</b></dd>
         </div>
         <div>
           <dt>게임 차</dt>
-          <dd><b className="num">{r.gb === 0 ? '—' : r.gb.toFixed(1)}</b></dd>
+          <dd><b className="num">{gbLabel(r)}</b></dd>
         </div>
         <div className={s.formCell}>
           <dt>최근 10경기</dt>
           <dd>
-            <span className={s.form} aria-label={`최근 10경기 ${r.last10.split('').map((c) => (c === 'W' ? '승' : c === 'L' ? '패' : '무')).join(' ')}`}>
-              {r.last10.split('').map((c, i) => <i key={i} className={c === 'W' ? s.fw : c === 'L' ? s.fl : s.fd} />)}
-            </span>
-            <small>{streak}</small>
+            {ln.form ? (
+              <span className={s.form} aria-label={`최근 10경기 ${ln.form.split('').map((c) => (c === 'W' ? '승' : c === 'L' ? '패' : '무')).join(' ')}`}>
+                {ln.form.split('').map((c, i) => <i key={i} className={c === 'W' ? s.fw : c === 'L' ? s.fl : s.fd} />)}
+              </span>
+            ) : <small>아직 경기 전</small>}
+            {streak && <small>{streak}</small>}
           </dd>
         </div>
       </dl>
+    </section>
+  );
+}
+
+/** 처음 — 아직 구단을 안 골랐으면 구단 선택으로 (고른 구단이 앱 전체의 내 구단이 된다) */
+function StartGuide() {
+  if (savedStartClub()) return null;
+  return (
+    <section className={s.guide} aria-label="처음 시작">
+      <p>
+        <b>2027 시즌을 함께할 구단을 골라 주세요</b>
+        <span>지금은 기본 구단({myTeam().short})으로 보여요 — 현재 구단 10 · 옛 구단 10 중에서</span>
+      </p>
+      <Button size="m" icon="arrow-right" onClick={() => navigate('/club-select?step=club')}>구단 고르기</Button>
     </section>
   );
 }
@@ -106,6 +127,7 @@ export default function HomeScreen({ query }: ScreenProps) {
   const seasonNo = Number.isFinite(qs) && qs > 0 ? qs : ME.seasonNo;
   return (
     <div className={s.home}>
+      <StartGuide />
       <Masthead manager={user ?? ME.user} />
       <NextGame />
       <Todo />

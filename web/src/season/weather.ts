@@ -5,7 +5,8 @@ function hash(s: string) { let h = 2166136261; for (let i = 0; i < s.length; i++
 const u01 = (s: string) => hash(s) / 4294967296;
 export function weatherOf(date: string, homeId: string, seed: string) {
   const m = Number(date.slice(5, 7));
-  const base = m <= 5 ? 19 : m === 6 ? 24 : m === 7 ? 28 : m === 8 ? 29 : m === 9 ? 25 : 18;
+  // 개막(3월 말) 저녁은 쌀쌀하다 — 3월 10° · 4월 15° · 5월 20° …
+  const base = m <= 3 ? 10 : m === 4 ? 15 : m === 5 ? 20 : m === 6 ? 24 : m === 7 ? 28 : m === 8 ? 29 : m === 9 ? 25 : 18;
   const tC = Math.round(base + (u01(`t:${seed}:${date}:${homeId}`) - 0.5) * 6);
   const dome = teamById(homeId).stadium.roof === 'dome';
   const windMs = dome ? 0 : Math.round(u01(`w:${seed}:${date}:${homeId}`) * 55) / 10;

@@ -19,6 +19,9 @@ export interface WpChartProps {
 const halfKo = (p: Play) => `${p.inning}회${p.half === 'top' ? '초' : '말'}`;
 
 export function WpChart({ plays, homeShort, awayShort, marks, active, onPick, markLabel }: WpChartProps) {
+  // 가로 칸 = 반 이닝 (9회 18칸, 연장이면 그만큼 더)
+  const innN = Math.max(9, ...plays.map((p) => p.inning));
+  const halves = innN * 2;
   const pts = useMemo(() => {
     const bySlot = new Map<number, Play[]>();
     plays.forEach((p) => {
@@ -28,12 +31,12 @@ export function WpChart({ plays, homeShort, awayShort, marks, active, onPick, ma
     const out: { x: number; y: number; wp: number; play?: Play }[] = [{ x: 0, y: 0.5, wp: 0.5 }];
     [...bySlot.entries()].sort((a, b) => a[0] - b[0]).forEach(([h, ps]) => {
       ps.forEach((p, k) => {
-        const x = (h + (k + 1) / (ps.length + 1)) / 18;
+        const x = (h + (k + 1) / (ps.length + 1)) / halves;
         out.push({ x, y: 1 - p.wp[1], wp: p.wp[1], play: p });
       });
     });
     return out;
-  }, [plays]);
+  }, [plays, halves]);
 
   const PAD = 0.1; // 위아래 여백 (높이 비율)
   const Y = (y: number) => PAD + y * (1 - PAD * 2);
@@ -83,7 +86,7 @@ export function WpChart({ plays, homeShort, awayShort, marks, active, onPick, ma
             <clipPath id={`wpUp${uid}`}><rect x="0" y="0" width="1000" height="50" /></clipPath>
             <clipPath id={`wpDn${uid}`}><rect x="0" y="50" width="1000" height="50" /></clipPath>
           </defs>
-          {Array.from({ length: 8 }, (_, i) => <line key={i} x1={((i + 1) * 2 / 18) * 1000} x2={((i + 1) * 2 / 18) * 1000} y1="0" y2="100" className={s.tick} />)}
+          {Array.from({ length: innN - 1 }, (_, i) => <line key={i} x1={((i + 1) * 2 / halves) * 1000} x2={((i + 1) * 2 / halves) * 1000} y1="0" y2="100" className={s.tick} />)}
           <line x1="0" x2="1000" y1="50" y2="50" className={s.mid} />
           <path d={area} className={s.areaUp} clipPath={`url(#wpUp${uid})`} />
           <path d={area} className={s.areaDn} clipPath={`url(#wpDn${uid})`} />
@@ -108,7 +111,7 @@ export function WpChart({ plays, homeShort, awayShort, marks, active, onPick, ma
         ))}
       </div>
       <div className={s.axis} aria-hidden>
-        {Array.from({ length: 9 }, (_, i) => <span key={i} className="num" style={{ left: `${((i * 2 + 1) / 18) * 100}%` }}>{i + 1}</span>)}
+        {Array.from({ length: innN }, (_, i) => <span key={i} className="num" style={{ left: `${((i * 2 + 1) / halves) * 100}%` }}>{i + 1}</span>)}
       </div>
       <table className="sr-only">
         <caption>명장면 승리 확률</caption>

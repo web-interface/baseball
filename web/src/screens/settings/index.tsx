@@ -3,12 +3,14 @@
 import { useState, type ReactNode } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { useAuth } from '../../app/auth';
-import { Link } from '../../app/router';
+import { Link, navigate } from '../../app/router';
 import { useTheme } from '../../theme/ThemeProvider';
 import type { ThemeId } from '../../theme/themes';
 import { Button, CalloutStage, Field, Icon, Sheet, useToast, type CalloutData } from '../../ui';
 import { ClubEmblem } from '../../art/emblems';
 import { LAST_MATCH, myTeam, teamById } from '../../game/mock';
+import { resetSeason, teamLine, useSeason } from '../../season/store';
+import { record } from '../../ui/format';
 import { WATCH_MODES, paceOf, setPrefs, usePrefs, type SoundPrefs } from './prefs';
 import s from './settings.module.css';
 
@@ -181,6 +183,35 @@ function Devices() {
   );
 }
 
+/** 새로 시작 — 구단 다시 고르기. 시즌 진행은 지우고(경고) 구단 선택으로: 고른 구단이 앱 전체의 내 구단이 된다 */
+function NewStart() {
+  const season = useSeason();
+  const me = myTeam();
+  const ln = teamLine(me.id, season);
+  const toast = useToast();
+  const [ask, setAsk] = useState(false);
+  return (
+    <>
+      <button type="button" className={s.linkRow} onClick={() => setAsk(true)}>
+        <span><b>새로 시작 — 구단 다시 고르기</b><small>지금 {me.name} · {ln.played ? `${ln.played}경기 ${record(ln.row.w, ln.row.d, ln.row.l)}` : '개막 전'}</small></span>
+        <Icon name="chevron" size={16} />
+      </button>
+      <Sheet
+        open={ask}
+        onClose={() => setAsk(false)}
+        title="새로 시작할까요?"
+        sub={ln.played || season.next
+          ? <>지금 시즌 진행(<b className="num">{ln.played}</b>경기 · {record(ln.row.w, ln.row.d, ln.row.l)})은 지워지고, 다시 고른 구단으로 2027 개막전부터 시작해요. 되돌릴 수 없어요.</>
+          : <>구단 · 지명 · 특별 선수를 다시 골라 2027 개막전부터 시작해요.</>}
+        footer={<>
+          <Button variant="secondary" onClick={() => setAsk(false)}>그만두기</Button>
+          <Button onClick={() => { setAsk(false); resetSeason(); toast({ text: '시즌 진행을 지웠어요 — 구단부터 다시 골라 주세요', tone: 'info' }); navigate('/club-select?step=club'); }}>새로 시작</Button>
+        </>}
+      />
+    </>
+  );
+}
+
 export default function SettingsScreen(_: ScreenProps) {
   const p = usePrefs();
   const mode = WATCH_MODES.find((m) => m.id === p.watch)!;
@@ -204,7 +235,7 @@ export default function SettingsScreen(_: ScreenProps) {
         <ul className={s.links}>
           <li><span><b>전술</b><small>팀 · 그룹(테이블세터·클린업·필승조) · 선수 개인 지시</small></span><em>준비 중</em></li>
           <li><span><b>AI 상대 난이도</b><small>시즌을 시작할 때 6단계 중에서 골라요</small></span><em>시즌 시작 때</em></li>
-          <li><Link to="/club-select?step=club" className={s.linkRow}><span><b>처음 시작 다시 보기</b><small>구단 · 지명 · 특별 선수 · 개막</small></span><Icon name="chevron" size={16} /></Link></li>
+          <li><NewStart /></li>
         </ul>
       </Section>
       <Section id="set-account" title="계정 · 기기">

@@ -1,8 +1,8 @@
 // 화면 틀 — 위쪽 헤더(뒤로·제목·재화) + 가로 메뉴 + 본문. 아래 탭바는 없다(앱처럼 X).
 import { Component, Suspense, useEffect, useLayoutEffect, useRef, useState, type ErrorInfo, type ReactNode } from 'react';
-import { IconButton, TopBar, Emblem } from '../ui';
+import { IconButton, TopBar, Emblem, useToast } from '../ui';
 import { myTeam } from '../game/mock';
-import { standingsOf, useSeason } from '../season/store';
+import { takeNotice, teamLine, useSeason } from '../season/store';
 import { useWallet } from '../game/wallet';
 import { useTitleOverride } from './title';
 import { record } from '../ui/format';
@@ -15,11 +15,16 @@ export function Shell({ route, preview, children }: { route: RouteDef | null; pr
   const wallet = useWallet();
   const over = useTitleOverride();
   const team = myTeam();
-  // 순위 · 전적 — 시즌 진행(지금 바로 경기 · 빨리 감기)에 따라
+  // 순위 · 전적 — 저장된 시즌 진행(지금 바로 경기 · 빨리 감기)에서. 개막일엔 모든 구단 0승 0무 0패
   const season = useSeason();
-  const rows = standingsOf(season);
-  const st = Math.max(0, rows.findIndex((x) => x.teamId === team.id));
-  const row = rows[st];
+  const ln = teamLine(team.id, season);
+  const row = ln.row;
+  // 예전 저장(6월 15일 시작 형식)을 정리하고 새 시즌으로 시작했으면 한 번 알려 준다
+  const toast = useToast();
+  useEffect(() => {
+    const n = takeNotice();
+    if (n) toast({ text: n, tone: 'info', duration: 7000 });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const lead = (
     <Link to="/home" className={s.club} aria-label={`${team.name} 홈`}>
@@ -28,7 +33,7 @@ export function Shell({ route, preview, children }: { route: RouteDef | null; pr
         <b>{team.name}</b>
         <small>
           {preview && <em className={s.pv}>미리보기 · </em>}
-          <span className="num">2027</span> · <span className="num">{st + 1}</span>위 · {record(row.w, row.d, row.l)}
+          <span className="num">2027</span> · {ln.started ? <><span className="num">{ln.rank}</span>위</> : '개막 전'} · {record(row.w, row.d, row.l)}
         </small>
       </span>
     </Link>

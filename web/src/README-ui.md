@@ -124,6 +124,8 @@ q.push({ kind: 'walkoff', title: '끝내기!', sub: '연이준 · 9회말 우중
   `TEAMS` 는 2027 리그 10개 — 옛 구단을 시작 구단으로 고르면 같은 계보 자리를 그 구단이 '부활 구단'으로 대신한다(순위표·다음 경기 id 도 옮김). 카드·구단팩·세트덱처럼 20개 모두 필요하면 `ALL_TEAMS` · `CURRENT_TEAMS`, 찾기는 `teamById`/`teamByCode`(20개 모두). 좁은 곳에서 옛 구단과 별명이 겹치면 `shortLabel(code)`('동대문 곰스').
 - `PLAYERS`(40 + 특별 선수 예시 `p41` 이동규) · `CARDS`(46, 등급 11종 + `unique`) · `MY_CARD_IDS` · `LINEUP` · `LINEUP_EVAL`(팀컬러 = 같은 구단·권역·연도·라이벌, 케미, 폭발)
 - `WEATHER_TODAY` · `NEXT_GAME` · `LAST_MATCH`(거인츠 4:5 독수리스 끝내기 — 이닝 점수·플레이·좌표·원인·강조 장면·수비 범위·승리 확률) · `STANDINGS` · `USER_RANKING` · `PVP_OPPONENTS`
+  **시즌 성적·순위·선수 시즌 기록은 목업이 아니라 `season/store`(이 기기의 시즌 진행)** — 2027 개막일(3월 27일 토) 모든 구단 0승 0무 0패에서 시작, `teamLine(id)`(순위·공동·전적·남은 경기) · `standingsOf()` · `batLine/pitLine(id)` 를 쓴다(헤더·홈·순위·시즌·경기 화면이 같은 값). `STANDINGS` 는 쓰지 않는다.
+- 내 구단 = `ME.teamId`(`myTeam()`) — 구단 선택(#/club-select)에서 고른 구단(옛 구단이면 부활 구단). 'dj' 를 직접 쓰지 말 것.
 - `PACKS`(전부 30장: 일반 3만 GP · 프리미엄 27만 · 스페셜 45만 · 레전드 9천 골든볼 · 연도팩 · 구단팩) · `ROULETTE_EXAMPLE` · `SCOUT_SHOP` · `ME`(GP 1조 · 골든볼 1억 · 10시즌까지) · `NEWS` · `SPECIAL_PLAYER_NAMES`
 - 찾기: `teamById` `playerById` `cardById` `playerOfCard` `cardsOfPlayer` `myTeam`. 이름표 `game/labels.ts`, 등급 `game/grades.ts`(`GRADES` `GRADE_ORDER` `GRADE_ORDER_ALL`).
 - 실제 선수·구단 이름 금지(특별 선수 11명은 사용자 지정 예외). 구단 코드도 화면(카드 번호)에 보이니 실제 구단 약칭과 같은 글자는 쓰지 않는다.

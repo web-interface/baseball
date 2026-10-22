@@ -7,6 +7,7 @@ import { polarToField } from '../../game/field';
 import type { Player, Team, Weather } from '../../game/types';
 import { clubLine, nextGameView, pitchLine } from './local-mock';
 import { longDate, shortDate } from '../../season/schedule';
+import { useSeason } from '../../season/store';
 import s from './NextGame.module.css';
 
 const SKY_ICON: Record<Weather['sky'], IconName> = {
@@ -64,21 +65,26 @@ function Starter({ p, team, label }: { p?: Player; team: Team; label: string }) 
       <span className={s.starterText}>
         <small>{label}</small>
         <b>{p.name}</b>
-        {ln && (
+        {ln && (ln.first ? (
+          <span className={s.pline}>시즌 첫 등판</span>
+        ) : (
           <span className={s.pline}>
             <span className="num">{ln.w}</span>승 <span className="num">{ln.l}</span>패
             <i aria-hidden>·</i>
-            <span className="num">{ln.era.toFixed(2)}</span>
+            <span className="num">{ln.era}</span>
           </span>
-        )}
+        ))}
       </span>
     </div>
   );
 }
 
 export function NextGame() {
+  const season = useSeason(); // 시즌 진행이 바뀌면 다시 그린다
   const g = nextGameView();
-  const myLine = clubLine(g.me.id);
+  const myLine = clubLine(g.me.id, season);
+  const gameNo = g.over ? '정규 시즌 끝' : g.opener ? '개막전' : myLine.played === 0 ? '첫 경기' : `${myLine.nextNo}번째 경기`;
+  const rec = (ln: typeof myLine) => `${ln.started ? `${ln.rank}위 · ` : ''}${ln.row.w}-${ln.row.d}-${ln.row.l}`;
   const w = g.weather;
   const st = g.venue;
   const wpMine = Math.round(g.wp * 100);
@@ -100,7 +106,7 @@ export function NextGame() {
           </b>
           <p className={s.whenText}>
             <span>{g.over ? '시즌 끝' : shortDate(g.date)} · {g.isHome ? '홈' : '원정'}</span>
-            <span><span className="num">{myLine.nextNo}</span>번째 경기 · {st.name}</span>
+            <span>{gameNo} · {st.name}</span>
           </p>
         </div>
 
@@ -108,7 +114,7 @@ export function NextGame() {
           <div className={s.side}>
             <ClubEmblem team={g.me} size={40} className={s.em} decorative />
             <b>{g.me.short}</b>
-            <small className="num">{myLine.rank}위 · {myLine.row.w}-{myLine.row.d}-{myLine.row.l}</small>
+            <small className="num">{rec(myLine)}</small>
           </div>
           <div className={s.vs}>
             <span>VS</span>
@@ -117,7 +123,7 @@ export function NextGame() {
           <div className={[s.side, s.away].join(' ')}>
             <ClubEmblem team={g.opp} size={40} className={s.em} decorative />
             <b>{g.opp.short}</b>
-            <small className="num">{g.oppLine.rank}위 · {g.oppLine.row.w}-{g.oppLine.row.d}-{g.oppLine.row.l}</small>
+            <small className="num">{rec(g.oppLine)}</small>
           </div>
         </div>
 

@@ -189,6 +189,13 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
     doneOnce.current = true;
     ctx.onDone?.();
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 시작 — 시즌 경기는 이때부터 라인업을 얼린다(경기 전 화면만 보고 나가 라인업을 바꾸면 새 라인업으로 다시 계산)
+  const startOnce = useRef(false);
+  useEffect(() => {
+    if (phase === 'pre' || startOnce.current) return;
+    startOnce.current = true;
+    if (ctx.kind === 'season') ctx.onStart?.();
+  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const switchMode = useCallback((m: Mode) => {
     queue.clear();
@@ -290,22 +297,25 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
 }
 
 /* ───────── 어떤 경기를 띄울지 — 주소로 ─────────
-   #/match            공용 목업 '어제 경기'
+   #/match            (메뉴 '경기') 시즌 다음 내 경기 — 내 구단(구단 선택에서 고른 구단) 경기. ?g=season 과 같다
    #/match?g=season   시즌 다음 내 경기 (지금 바로 경기 — 엔진이 계산, 그날 앞 경기들은 먼저 친다)
+   #/match?g=demo     공용 목업 '어제 경기' (g 없이 장면 주소 at= · beat= · state= 가 있어도 이것 — 미리보기 · 스크린샷)
    #/match?pvp=<id>   다른 감독과 한 대전 (서버가 정한 점수에 맞춘 기록)
    그 밖의 주소 값(mode · at · beat · state …)은 그대로 MatchView 가 읽는다 */
 export default function MatchRoute(props: ScreenProps) {
-  const g = props.query.get('g');
   const pvp = props.query.get('pvp');
+  const g0 = props.query.get('g');
+  // 공용 목업 경기는 ?g=demo 나 장면 주소(at · beat · state)로만 — 주소 값이 없으면(메뉴) 시즌 다음 내 경기
+  const g = g0 ?? (pvp ? null : ['at', 'beat', 'state'].some((k) => props.query.has(k)) ? 'demo' : 'season');
   const n = props.query.get('n') ?? '';
   const [view, setView] = useState<{ key: string; ctx: MatchCtx } | null>(() => {
-    if (g || pvp) return null;
+    if (g !== 'demo') return null;
     activateLast();
     return { key: LAST_GAME.match.id, ctx: { kind: 'last' } };
   });
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => {
-    if (!g && !pvp) { activateLast(); setView({ key: LAST_GAME.match.id, ctx: { kind: 'last' } }); return; }
+    if (g === 'demo') { activateLast(); setView({ key: LAST_GAME.match.id, ctx: { kind: 'last' } }); return; }
     let alive = true;
     setView(null);
     setErr(null);

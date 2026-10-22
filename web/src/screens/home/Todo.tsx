@@ -4,6 +4,8 @@ import { Button, Icon, Sheet, Tabs, useToast, type IconName } from '../../ui';
 import { Link } from '../../app/router';
 import { int } from '../../ui/format';
 import { ME } from '../../game/mock';
+import { seasonToday, useSeason } from '../../season/store';
+import { shortDate } from '../../season/schedule';
 import { clubLine, shortcuts } from './local-mock';
 import s from './Todo.module.css';
 
@@ -11,7 +13,8 @@ interface Tile { key: string; to?: string; icon: IconName; label: string; value:
 
 export function Todo() {
   const n = shortcuts();
-  const line = clubLine(ME.teamId);
+  const season = useSeason();
+  const line = clubLine(ME.teamId, season);
   const [open, setOpen] = useState(false);
   const tiles: Tile[] = [
     { key: 'lineup', to: '/lineup', icon: 'lineup', label: '라인업', value: <b className="num">{n.lineup.overall}</b>, note: <>{n.lineup.set ? <>{n.lineup.set} 세트까지 <b className="num">{n.lineup.remain}</b>명</> : '세트덱 모으기'}</>, hot: n.lineup.remain > 0 && n.lineup.remain <= 2 },
@@ -79,7 +82,7 @@ function SeasonSheet({ open, onClose, left }: { open: boolean; onClose: () => vo
           items={[{ value: '1', label: '1배' }, { value: '2', label: '2배' }, { value: '4', label: '4배' }, { value: 'end', label: '끝까지' }]}
         />
         <ol className={s.path}>
-          <li><b>정규 시즌</b><span>6월 14일 → 9월 말</span></li>
+          <li><b>정규 시즌</b><span className="num">{shortDate(seasonToday())} → 9월</span></li>
           <li><b>가을야구</b><span>상위 6팀</span></li>
           <li><b>한별 시리즈</b><span>7전 4선승</span></li>
           <li><b>시상식</b><span>MVP · 골든글러브 · 타이틀</span></li>

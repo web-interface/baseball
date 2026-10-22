@@ -118,3 +118,6 @@ export function myRoster(st: LineupState = lineupStore.get() ?? initialLineup())
 
 /** 그 구단 선수단 (내 구단이면 내 엔트리) */
 export const rosterOf = (teamId: string) => (teamId === ME.teamId ? myRoster() : clubRoster(teamId));
+
+/** AI 구단 선수단을 미리 만들어 둔다 — 가상 선수 이름(개인 기록 1위 · 소식)을 화면을 다시 열어도 찾을 수 있게 */
+export function ensureClubRosters() { for (const t of TEAMS) if (t.id !== ME.teamId) clubRoster(t.id); }

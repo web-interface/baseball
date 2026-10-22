@@ -3,7 +3,7 @@ import { navigate } from '../../app/router';
 import { Button, Emblem, Icon, fmt } from '../../ui';
 import { ME, teamById } from '../../game/mock';
 import { longDate, shortDate } from '../../season/schedule';
-import { allDays, gamesPlayed, isOver, rankOf, resetSeason, standingsOf, useSeason } from '../../season/store';
+import { allDays, isOver, pctLabel, rankLabel, resetSeason, standingsOf, teamLine, useSeason } from '../../season/store';
 import { nextMyGame } from '../../season/run';
 import s from './EndBar.module.css';
 
@@ -23,7 +23,7 @@ export interface PvpEnd {
 export type MatchCtx =
   | { kind: 'last'; onDone?: () => void }
   | { kind: 'over'; onDone?: () => void }
-  | { kind: 'season'; idx: number; date: string; onDone?: () => void }
+  | { kind: 'season'; idx: number; date: string; onDone?: () => void; onStart?: () => void }
   | { kind: 'pvp'; end: PvpEnd; onDone?: () => void };
 
 const RES_KO = { W: '승', D: '무', L: '패' } as const;
@@ -39,23 +39,23 @@ function SeasonBar({ idx }: { idx: number }) {
   const st = useSeason();
   const applied = st.next > idx;
   const me = teamById(ME.teamId);
-  const rec = st.table[ME.teamId];
-  const rank = rankOf(ME.teamId, st);
+  // 헤더 · 홈 · 순위 탭과 같은 값 (season/store 의 teamLine)
+  const ln = teamLine(ME.teamId, st);
+  const rec = ln.row;
   const rows = standingsOf(st);
-  const top = rows[0];
   const day = allDays(st)[idx];
   const others = (st.results[idx] ?? []).filter((g) => g.a !== ME.teamId && g.h !== ME.teamId);
   const nx = applied ? nextMyGame() : null;
   const over = applied && isOver(st);
-  const gb = rows.find((r) => r.teamId === ME.teamId)?.gb ?? 0;
+  const gb = rec.gb;
   return (
     <section className={s.end} aria-label="시즌 다음">
-      <p className={s.kicker}>2027 정규 시즌 · <span className="num">{gamesPlayed(ME.teamId, st)}</span>경기째 · {day ? longDate(day.date) : ''}</p>
+      <p className={s.kicker}>2027 정규 시즌 · <span className="num">{ln.played}</span>경기째 · {day ? longDate(day.date) : ''}</p>
       <div className={s.rec}>
         <Emblem team={me} size={30} />
         <p className={s.recMain}>
           <b>{me.short} <span className="num">{rec.w}</span>승 <span className="num">{rec.d}</span>무 <span className="num">{rec.l}</span>패</b>
-          <small>{applied ? <>{rank}위 · {top.teamId === ME.teamId ? '선두' : <>1위와 <span className="num">{gb.toFixed(1)}</span>경기</>} · 최근 {rec.last10.slice(0, 5).split('').map((c) => (c === 'W' ? '승' : c === 'L' ? '패' : '무')).join('')}</> : '오늘 결과를 넣는 중이에요…'}</small>
+          <small>{applied ? <>{rankLabel(ln)} · {ln.rank === 1 ? (ln.tied ? '선두 경쟁' : '선두') : <>1위와 <span className="num">{gb.toFixed(1)}</span>경기</>} · 최근 {rec.last10.slice(0, 5).split('').map((c) => (c === 'W' ? '승' : c === 'L' ? '패' : '무')).join('')}</> : '오늘 결과를 넣는 중이에요…'}</small>
         </p>
       </div>
       {others.length > 0 && (
@@ -102,19 +102,19 @@ function SeasonOver({ standalone }: { standalone?: boolean }) {
       <p className={s.kicker}>2027 정규 시즌</p>
       <h2 className={['head', s.overH].join(' ')}>정규 시즌이 끝났어요</h2>
       <ol className={s.final}>
-        {rows.map((r, i) => (
+        {rows.map((r) => (
           <li key={r.teamId} className={r.teamId === ME.teamId ? s.mine : undefined}>
-            <span className="num">{i + 1}</span>
+            <span className="num">{r.rank}</span>
             <Emblem team={teamById(r.teamId)} size={20} />
             <b>{teamById(r.teamId).short}</b>
             <span className="num">{r.w}-{r.d}-{r.l}</span>
-            <span className="num">{fmt.avg(r.pct)}</span>
+            <span className="num">{pctLabel(r)}</span>
           </li>
         ))}
       </ol>
       <div className={s.btns}>
         <Button size="l" block icon="arrow-right" onClick={() => navigate('/season')}>시즌 결과 · 개인 기록</Button>
-        <Button variant="secondary" onClick={() => { resetSeason(); navigate('/home'); }}>6월 15일부터 다시</Button>
+        <Button variant="secondary" onClick={() => { resetSeason(); navigate('/home'); }}>개막부터 다시</Button>
       </div>
     </section>
   );

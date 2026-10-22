@@ -1,10 +1,11 @@
-// 구단 소식 — 슬럼프·부상·라이벌 더비 예고·형광 케미 달성 같은 이벤트 피드
-import { useState } from 'react';
+// 구단 소식 — 저장된 시즌 진행에서: 개막 · 다음 시리즈(라이벌 더비 예고) · 연승/연패 · 기록 · 부상 · 비 취소 · 내 선수 시즌 기록
+import { useMemo, useState } from 'react';
 import { Icon, type IconName } from '../../ui';
 import { PlayerArt } from '../../art/PlayerArt';
 import { Link } from '../../app/router';
 import { playerById } from '../../game/mock';
-import { FEED, type FeedItem, type FeedKind } from './local-mock';
+import { useSeason } from '../../season/store';
+import { feedItems, type FeedItem, type FeedKind } from './local-mock';
 import s from './Feed.module.css';
 
 const KIND: Record<FeedKind, { tone: string; icon: IconName }> = {
@@ -16,6 +17,11 @@ const KIND: Record<FeedKind, { tone: string; icon: IconName }> = {
   기록: { tone: s.gold, icon: 'trophy' },
   날씨: { tone: s.info, icon: 'rain' },
   구단: { tone: s.plain, icon: 'stadium' },
+  연승: { tone: s.up, icon: 'flame' },
+  연패: { tone: s.down, icon: 'arrow-down' },
+  순위: { tone: s.gold, icon: 'crown' },
+  경기: { tone: s.plain, icon: 'ball' },
+  시즌: { tone: s.plain, icon: 'calendar' },
 };
 
 function Lead({ item }: { item: FeedItem }) {
@@ -29,13 +35,17 @@ function Lead({ item }: { item: FeedItem }) {
 }
 
 export function Feed() {
+  const season = useSeason();
+  const feed = useMemo(() => feedItems(season), [season]);
   const [all, setAll] = useState(false);
-  const items = all ? FEED : FEED.slice(0, 5);
+  const items = all ? feed : feed.slice(0, 5);
+  const today = feed.filter((f) => f.when === '오늘').length;
+  if (!feed.length) return null;
   return (
     <section className={s.feed} aria-labelledby="feed-h">
       <header className={s.head}>
         <h2 id="feed-h" className={s.h}>구단 소식</h2>
-        <span className={s.meta}>오늘 <b className="num">{FEED.filter((f) => f.when === '오늘').length}</b>건</span>
+        <span className={s.meta}>{today ? <>오늘 <b className="num">{today}</b>건</> : <>모두 <b className="num">{feed.length}</b>건</>}</span>
       </header>
       <ul className={s.list}>
         {items.map((it) => {
@@ -59,9 +69,9 @@ export function Feed() {
           );
         })}
       </ul>
-      {!all && FEED.length > 5 && (
+      {!all && feed.length > 5 && (
         <button type="button" className={s.more} onClick={() => setAll(true)}>
-          소식 <span className="num">{FEED.length - 5}</span>건 더 보기 <Icon name="chevron-down" size={14} />
+          소식 <span className="num">{feed.length - 5}</span>건 더 보기 <Icon name="chevron-down" size={14} />
         </button>
       )}
     </section>

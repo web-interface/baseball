@@ -8,6 +8,7 @@ import { Preview } from './Preview';
 import { ROUTES, SCREENS, type RouteDef } from './routes';
 import { Link, matchPath, navigate, useLocation, type Loc } from './router';
 import { Shell } from './Shell';
+import { savedStartClub } from '../game/mock';
 import s from './App.module.css';
 
 export default function App() {
@@ -29,6 +30,10 @@ const PREVIEW_ROUTE: RouteDef = {
 };
 
 const PV_KEY = 'bb.preview';
+/** 처음 들어온 감독(아직 구단을 안 고름)을 구단 선택으로 — 이 탭에서 한 번만 (둘러보다 나가도 다시 끌고 가지 않게) */
+const GUIDE_KEY = 'bb.clubGuide';
+const guided = () => { try { return sessionStorage.getItem(GUIDE_KEY) === '1'; } catch { return true; } };
+const markGuided = () => { try { sessionStorage.setItem(GUIDE_KEY, '1'); } catch { /* */ } };
 const pvGet = () => { try { return sessionStorage.getItem(PV_KEY) === '1'; } catch { return false; } };
 const pvSet = () => { try { sessionStorage.setItem(PV_KEY, '1'); } catch { /* */ } };
 
@@ -62,6 +67,11 @@ function Routes() {
     if (status === 'checking') return;
     if (loc.path === '/') navigate(status === 'in' ? '/home' : previewAllowed(loc) ? '/preview' : '/login', { replace: true });
     else if (loc.path === '/login' && status === 'in' && !recoveryCode) navigate(loc.query.get('next') || '/home', { replace: true });
+    else if (status === 'in' && !recoveryCode && loc.path !== '/club-select' && loc.path !== '/settings' && !savedStartClub() && !guided()) {
+      // 처음 들어옴 — 2027 시즌을 함께할 구단부터 (고른 구단이 앱 전체의 내 구단이 된다)
+      markGuided();
+      navigate('/club-select', { replace: true });
+    }
   }, [loc, status, recoveryCode]);
 
   if (status === 'checking') return <Splash />;

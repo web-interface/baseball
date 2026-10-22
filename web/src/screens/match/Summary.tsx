@@ -6,7 +6,8 @@ import type { CauseFactor, Stadium } from '../../game/types';
 import { PlayerArt } from '../../art/PlayerArt';
 import { GAME } from './local-mock';
 import { CALLOUTS_ALL, HALVES, MODES, PLAYS, PLAY_COUNT, type Mode } from './timeline';
-import { batterToday, ipText, pitcherToday } from './Panels';
+import { batterToday, ipText, isSeasonGame, pitcherToday } from './Panels';
+import { eraLabel, pitLine } from '../../season/store';
 import { halfKo } from './Board';
 import s from './Summary.module.css';
 
@@ -71,7 +72,10 @@ export function Starters() {
             <div className={s.stInfo}>
               <p className={s.stTeam}><Emblem team={t} size={14} />{t.short}</p>
               <p className={s.stName}>{p.name}</p>
-              <p className={s.stLine}><b className="num">{fmt.era(p.season.pit?.era ?? 0)}</b> 평균자책 · <b className="num">{p.season.pit?.w ?? 0}</b>승</p>
+              {isSeasonGame() ? (() => {
+                const l = pitLine(p.id);
+                return <p className={s.stLine}>{l.outs ? <><b className="num">{eraLabel(l)}</b> 평균자책 · <b className="num">{l.w}</b>승 <b className="num">{l.l}</b>패</> : '시즌 첫 등판'}</p>;
+              })() : <p className={s.stLine}><b className="num">{fmt.era(p.season.pit?.era ?? 0)}</b> 평균자책 · <b className="num">{p.season.pit?.w ?? 0}</b>승</p>}
             </div>
           </div>
         ))}

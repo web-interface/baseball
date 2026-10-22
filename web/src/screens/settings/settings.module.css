@@ -112,6 +112,7 @@
 .links em { flex: none; font-size: 11.5px; font-weight: 700; color: var(--fg-4); }
 .linkRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 58px; color: var(--fg); }
 .linkRow svg { color: var(--fg-4); }
+button.linkRow { text-align: left; }
 
 /* 계정 · 기기 */
 .who { display: flex; align-items: center; gap: 7px; font-size: 13.5px; color: var(--fg-2); }

@@ -1,4 +1,4 @@
-// 순위 #/rank — 감독 순위(서버: 레이팅 · 승률 · 구단 전력) + 리그 순위(구단 10개, 목업 순위표)
+// 순위 #/rank — 감독 순위(서버: 레이팅 · 승률 · 구단 전력) + 리그 순위(구단 10개, 이 기기의 시즌 진행 — season/store)
 //   ?tab=league · ?by=winrate|power
 //   감독 순위는 실제 가입한 감독만 나온다(AI 구단은 순위에 없다). 로그인해야 내 순위가 보인다.
 import { useCallback, useEffect, useState } from 'react';
@@ -7,7 +7,7 @@ import { navigate, setQueryQuiet } from '../../app/router';
 import { useAuth } from '../../app/auth';
 import { Button, Emblem, Icon, Tabs, fmt } from '../../ui';
 import { isTeamId, myTeam, teamById } from '../../game/mock';
-import { standingsOf, useSeason } from '../../season/store';
+import { gbLabel, pctLabel, standingsOf, useSeason } from '../../season/store';
 import { ApiError, api, type RankingBy, type RankingsRes } from '../../api';
 import { demoRankings } from './demo';
 import s from './rank.module.css';
@@ -155,16 +155,17 @@ function Managers({ by, setBy, demo }: { by: RankingBy; setBy: (v: RankingBy) =>
   );
 }
 
-/* ───────── 리그 순위 (구단 10개 · 목업) ───────── */
+/* ───────── 리그 순위 (구단 10개 · 이 기기의 시즌 진행 — 개막일엔 모두 0승 0무 0패) ───────── */
 function League() {
   const mine = myTeam().id;
   const season = useSeason();
   const rows = standingsOf(season);
+  const started = season.next > 0;
   return (
     <section className={s.sec}>
       <header className={s.head}>
         <h2 className={['head', s.h].join(' ')}>2027 리그 순위</h2>
-        <p className={s.meta}>정규 시즌 · 10개 구단</p>
+        <p className={s.meta}>{started ? '정규 시즌 · 10개 구단' : '개막 전 · 10개 구단'}</p>
       </header>
       <table className={[s.table, s.league].join(' ')}>
         <thead>
@@ -182,7 +183,7 @@ function League() {
             const tm = teamById(r.teamId);
             return (
               <tr key={r.teamId} className={[r.teamId === mine && s.me, i === 5 && s.cut].filter(Boolean).join(' ') || undefined}>
-                <td className={['num', s.cRank, s.rk].join(' ')}>{i + 1}</td>
+                <td className={['num', s.cRank, s.rk].join(' ')}>{started ? r.rank : '—'}</td>
                 <td>
                   <span className={s.who}>
                     <Emblem team={tm} size={24} />
@@ -190,8 +191,8 @@ function League() {
                   </span>
                 </td>
                 <td className={['num', s.cR, s.wdl].join(' ')}>{r.w}-{r.d}-{r.l}</td>
-                <td className={['num', s.cR, s.val].join(' ')}>{fmt.avg(r.pct)}</td>
-                <td className={['num', s.cR, s.gb].join(' ')}>{r.gb === 0 ? '—' : r.gb.toFixed(1)}</td>
+                <td className={['num', s.cR, s.val].join(' ')}>{pctLabel(r)}</td>
+                <td className={['num', s.cR, s.gb].join(' ')}>{gbLabel(r)}</td>
                 <td className={[s.cR, s.streak, s.hideS].join(' ')}>{r.streak}</td>
               </tr>
             );

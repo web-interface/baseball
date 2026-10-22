@@ -5,12 +5,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { navigate } from '../../app/router';
-import { Button, Emblem, Icon, Tabs, fmt, useToast } from '../../ui';
+import { Button, Emblem, Icon, Tabs, useToast } from '../../ui';
 import { ME, playerById, teamById } from '../../game/mock';
-import { longDate, shortDate } from '../../season/schedule';
-import { allDays, gamesPlayed, isOver, leaders, rankOf, resetSeason, standingsOf, useSeason, type DayHighlight, type NewsRec } from '../../season/store';
+import { OPENING_DATE, longDate, shortDate } from '../../season/schedule';
+import { allDays, gbLabel, isOver, leaders, pctLabel, rankLabel, resetSeason, standingsOf, teamLine, useSeason, type DayHighlight, type NewsRec } from '../../season/store';
 import { playNextDay } from '../../season/run';
-import { LEVEL_KO, aiLevel } from '../../season/rosters';
+import { LEVEL_KO, aiLevel, ensureClubRosters } from '../../season/rosters';
 import type { GameOut } from '../../season/sim';
 import { RankChart } from './RankChart';
 import s from './season.module.css';
@@ -71,13 +71,11 @@ export default function SeasonScreen({ query }: ScreenProps) {
 
   useEffect(() => { if (query.get('go') === '1' && !over) void loop(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const dates = useMemo(() => {
-    const base = days[0]?.date ?? '2027-06-15';
-    return [base, ...days.slice(0, st.next).map((d) => d.date)];
-  }, [days, st.next]);
+  // 순위 경쟁 — 친 날마다 한 칸 (개막 전엔 비어 있음)
+  const dates = useMemo(() => days.slice(0, st.next).map((d) => d.date), [days, st.next]);
   const me = teamById(ME.teamId);
-  const rec = st.table[ME.teamId];
-  const rank = rankOf(ME.teamId, st);
+  const ln = teamLine(ME.teamId, st);
+  const rec = ln.row;
   const cur = days[Math.min(st.next, days.length - 1)];
   const doneN = st.next, totalN = days.length;
   const news = st.news.slice(-40).reverse();
@@ -91,9 +89,9 @@ export default function SeasonScreen({ query }: ScreenProps) {
           <Emblem team={me} size={34} />
           <p className={s.meMain}>
             <b>{me.short} <span className="num">{rec.w}</span>승 <span className="num">{rec.d}</span>무 <span className="num">{rec.l}</span>패</b>
-            <small><span className="num">{rank}</span>위 · <span className="num">{gamesPlayed(ME.teamId, st)}</span>경기 · 최근 {rec.last10.slice(0, 10).split('').map((c) => (c === 'W' ? '승' : c === 'L' ? '패' : '무')).join('') || '—'}</small>
+            <small>{rankLabel(ln)} · <span className="num">{ln.played}</span>경기 · 최근 {ln.form.split('').reverse().map((c) => (c === 'W' ? '승' : c === 'L' ? '패' : '무')).join('') || '—'}</small>
           </p>
-          <span className={['num-display', s.rankBig].join(' ')}>{rank}<i>위</i></span>
+          <span className={['num-display', s.rankBig].join(' ')}>{ln.started ? <>{ln.rank}<i>위</i></> : <>—<i>개막 전</i></>}</span>
         </div>
       </header>
 
@@ -106,7 +104,7 @@ export default function SeasonScreen({ query }: ScreenProps) {
         <div className={s.bar} role="progressbar" aria-valuemin={0} aria-valuemax={totalN} aria-valuenow={doneN} aria-label="시즌 진행">
           <i style={{ width: `${(doneN / Math.max(1, totalN)) * 100}%` }} />
         </div>
-        <div className={s.progEnds}><span>{shortDate(days[0]?.date ?? '2027-06-15')}</span><span>{shortDate(days[days.length - 1]?.date ?? '2027-08-31')}</span></div>
+        <div className={s.progEnds}><span>{shortDate(days[0]?.date ?? OPENING_DATE)} 개막</span><span>{shortDate(days[days.length - 1]?.date ?? OPENING_DATE)}</span></div>
       </section>
 
       {/* 조작 */}
@@ -138,8 +136,8 @@ export default function SeasonScreen({ query }: ScreenProps) {
 
       {/* 순위 경쟁 */}
       <section className={s.sec} aria-label="순위 경쟁">
-        <p className={s.secH}>순위 경쟁 <small>{shortDate(dates[0])}부터</small></p>
-        <RankChart hist={st.rankHist} dates={dates} total={totalN + 1} />
+        <p className={s.secH}>순위 경쟁 <small>{shortDate(days[0]?.date ?? OPENING_DATE)} 개막부터</small></p>
+        <RankChart hist={st.rankHist} dates={dates} total={totalN} />
       </section>
 
       {/* 지금 순위 / 최종 순위 */}
@@ -150,7 +148,7 @@ export default function SeasonScreen({ query }: ScreenProps) {
         <section className={s.sec}>
           <div className={s.endBtns}>
             <Button size="l" block onClick={() => navigate('/home')}>홈으로</Button>
-            <Button variant="secondary" onClick={() => { resetSeason(); toast({ text: '6월 15일 순위표로 돌아왔어요', tone: 'info' }); }}>6월 15일부터 다시</Button>
+            <Button variant="secondary" onClick={() => { resetSeason(); toast({ text: '2027 개막일로 돌아왔어요 — 모든 구단 0승 0무 0패', tone: 'info' }); }}>개막부터 다시</Button>
           </div>
         </section>
       )}
@@ -201,6 +199,7 @@ function NewsLine({ n }: { n: NewsRec }) {
 function Standings({ final }: { final: boolean }) {
   const st = useSeason();
   const rows = standingsOf(st);
+  const started = st.next > 0;
   return (
     <section className={s.sec} aria-label={final ? '최종 순위' : '지금 순위'}>
       <p className={s.secH}>{final ? '최종 순위' : '지금 순위'} <small>6위까지 가을야구</small></p>
@@ -211,11 +210,11 @@ function Standings({ final }: { final: boolean }) {
             const t = teamById(r.teamId);
             return (
               <tr key={r.teamId} className={[r.teamId === ME.teamId && s.mine, i === 5 && s.cut].filter(Boolean).join(' ') || undefined}>
-                <td className={['num', s.cR, s.rk].join(' ')}>{i + 1}</td>
+                <td className={['num', s.cR, s.rk].join(' ')}>{started ? r.rank : '—'}</td>
                 <td><span className={s.who}><Emblem team={t} size={20} /><b>{t.short}</b></span></td>
                 <td className={['num', s.cR].join(' ')}>{r.w}-{r.d}-{r.l}</td>
-                <td className={['num', s.cR, s.pct].join(' ')}>{fmt.avg(r.pct)}</td>
-                <td className={['num', s.cR].join(' ')}>{r.gb === 0 ? '—' : r.gb.toFixed(1)}</td>
+                <td className={['num', s.cR, s.pct].join(' ')}>{pctLabel(r)}</td>
+                <td className={['num', s.cR].join(' ')}>{gbLabel(r)}</td>
                 <td className={[s.cR, s.hideS, s.streak].join(' ')}>{r.streak}</td>
               </tr>
             );
@@ -228,10 +227,11 @@ function Standings({ final }: { final: boolean }) {
 
 function Leaders() {
   const st = useSeason();
-  const list = leaders(st);
+  // AI 구단 가상 선수 이름 — 화면을 다시 열었을 때도 찾게 선수단을 먼저 만든다
+  const list = useMemo(() => { ensureClubRosters(); return leaders(st); }, [st]);
   return (
     <section className={s.sec} aria-label="개인 기록 1위">
-      <p className={s.secH}>개인 기록 1위 <small>6월 15일부터 친 경기</small></p>
+      <p className={s.secH}>개인 기록 1위 <small>개막부터 친 경기</small></p>
       <ul className={s.leaders}>
         {list.map((l) => {
           const p = playerById(l.id);

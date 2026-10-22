@@ -892,7 +892,23 @@ function applyRevival(oldId: string | null) {
   LAST_MATCH.homeId = sw(LAST_MATCH.homeId);
   for (const p of LAST_MATCH.plays) if (p.highlight) p.highlight.teamId = sw(p.highlight.teamId);
 }
+/* ───────── 내 구단 — 구단 선택(#/club-select)에서 고른 구단 ───────── */
+//  · 고른 구단(현재 10 · 옛 10 — 옛 구단이면 위 applyRevival 로 리그에 들어와 있음)이 앱 전체의 '내 구단'(ME.teamId)이다.
+//    헤더 · 홈 · 라인업 · 세트덱 · 경기 · 시즌 · 순위 · 대전 스냅샷 · 구단 색(main.tsx)이 모두 ME.teamId 를 본다.
+//  · 아직 안 골랐으면(bb.start 없음) 기본 대전 독수리스 — 처음 들어오면 구단 선택으로 안내한다(App · 홈).
+//  · 앱이 뜰 때 한 번 정한다. 개막에서 구단이 바뀌면 club-select 가 시즌 진행을 지우고 화면을 다시 불러 모두 새로 맞춘다.
+function applyMyClub(id: string | null) {
+  const team = TEAMS.find((t) => t.id === id);
+  if (!team || team.id === ME.teamId) return; // 리그 밖 구단 · 이미 내 구단
+  const prev = ME.teamId;
+  ME.teamId = team.id;
+  // 목업 '다음 경기'(시즌 첫 상대)가 내 구단 자신이 되지 않게 — 원래 기본 구단과 맞바꾼다
+  if (NEXT_GAME.opponentId === team.id) NEXT_GAME.opponentId = prev;
+  const host = NEXT_GAME.home ? team : TEAMS.find((t) => t.id === NEXT_GAME.opponentId);
+  if (host) NEXT_GAME.stadium = host.stadium.name;
+}
 applyRevival(savedStartClub());
+applyMyClub(savedStartClub());
 // 리그 구성이 바뀌었으면 이전 구성의 시즌 기록을 지운다 (순위표에 없는 구단 → 계산이 깨짐)
 try {
   const sig = TEAMS.map((t) => t.id).join(',');
