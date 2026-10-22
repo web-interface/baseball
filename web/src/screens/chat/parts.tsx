@@ -54,7 +54,7 @@ export function statusText(st: ChatState): string {
     case 'connecting': return '연결하는 중';
     case 'retry': {
       const left = st.retryAt ? Math.max(1, Math.ceil((st.retryAt - Date.now()) / 1000)) : 0;
-      return left ? `끊김 · ${left}초 뒤 다시 연결` : '다시 연결하는 중';
+      return !left ? '다시 연결하는 중' : left > 90 ? `끊김 · ${Math.ceil(left / 60)}분 뒤 다시 연결` : `끊김 · ${left}초 뒤 다시 연결`;
     }
     case 'offline': return '인터넷 연결 없음';
     case 'paused': return '잠시 쉬는 중';
