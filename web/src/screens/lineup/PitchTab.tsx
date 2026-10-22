@@ -1,5 +1,5 @@
 // 투수진 — 선발 로테이션 5 · 불펜 5 · 마무리. 선발마다 주전 포수와의 배터리 케미, 셋업맨–마무리 '뒷문' 케미.
-// 손잡이를 누르고 같은 묶음의 다른 줄을 누르면 순서(보직)가 바뀐다. 줄을 누르면 투수 바꾸기.
+// 손잡이를 누르고 같은 묶음의 다른 줄을 누르면 순서(보직)가 바뀐다. 줄을 누르면 투수 정보(교체는 그 안에서).
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { PlayerArt } from '../../art/PlayerArt';
 import { Button, Icon, fmt } from '../../ui';
@@ -59,7 +59,7 @@ export function PitchTab({ st, ev, onOpen, onSwap }: PitchTabProps) {
     return (
       <li key={slot} data-flip={id ?? slot} className={[s.row, s.pRow, pick === slot && s.picked, blocked && s.blocked, ue?.injured && s.hurt].filter(Boolean).join(' ')}>
         <button type="button" className={s.body} onClick={() => tap(slot)} disabled={blocked}
-          aria-label={u ? `${SLOT_KO[slot]} ${u.player.name} — 바꾸기` : `${SLOT_KO[slot]} 비어 있음 — 채우기`}>
+          aria-label={u ? `${SLOT_KO[slot]} ${u.player.name} — 정보 보기` : `${SLOT_KO[slot]} 비어 있음 — 채우기`}>
           <span className={s.role}>{SLOT_KO[slot]}</span>
           {u ? (
             <>

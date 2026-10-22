@@ -1,6 +1,7 @@
 // 야구 게임 서버 (Cloudflare Worker) — 로그인 · 저장(D1) · Claude 호출
 // 비밀값(Claude 열쇠 ANTHROPIC_API_KEY, 비밀번호 후추 PEPPER)은 Worker 비밀값으로만 둔다. 사이트에는 없다.
 import Anthropic from '@anthropic-ai/sdk';
+import { PvpError, battle, opponents, putMe, rankings } from './pvp';
 
 export interface Env {
   DB: D1Database;
@@ -59,7 +60,7 @@ function corsHeaders(req: Request, env: Env): Record<string, string> {
   const allowed = env.ALLOWED_ORIGINS ? env.ALLOWED_ORIGINS.split(',').map((s) => s.trim()) : DEFAULT_ORIGINS;
   return {
     'Access-Control-Allow-Origin': allowed.includes(origin) ? origin : allowed[0],
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
@@ -229,10 +230,18 @@ export default {
         }
         case 'GET /me': { const u = await currentUser(req, env); return json({ username: u.username }, 200, cors); }
         case 'POST /ai/ping': return json(await aiPing(req, env), 200, cors);
+        // 비동기 대전 · 순위
+        case 'PUT /pvp/me': return json(await putMe(req, env.DB, await currentUser(req, env)), 200, cors);
+        case 'GET /pvp/opponents': return json(await opponents(env.DB, await currentUser(req, env)), 200, cors);
+        case 'POST /pvp/battle': {
+          if (tooMany('battle:' + ip, 30)) throw new HttpError(429, '대전 요청이 너무 빨라요. 잠시 뒤 다시 해 주세요');
+          return json(await battle(req, env.DB, await currentUser(req, env)), 200, cors);
+        }
+        case 'GET /rankings': return json(await rankings(url, env.DB, await currentUser(req, env)), 200, cors);
         default: throw new HttpError(404, '없는 경로예요');
       }
     } catch (e) {
-      if (e instanceof HttpError) return json({ error: e.message }, e.status, cors);
+      if (e instanceof HttpError || e instanceof PvpError) return json({ error: e.message }, e.status, cors);
       console.error(e);
       return json({ error: '서버 오류가 났어요' }, 500, cors);
     }

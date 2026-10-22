@@ -74,7 +74,7 @@ export function Battle({ opp, auto, rating, left, onFinish }: { opp: PvpOpponent
     <div className={s.screen}>
       <div className={s.topRow}>
         <button type="button" className={s.back} onClick={() => goBack('/pvp')}><Icon name="back" size={18} />대전 상대</button>
-        <span className={s.mode}>비동기 대전 · {them.user} 감독의 「{them.lineupName}」</span>
+        <span className={s.mode}>AI 구단 연습 · {them.user}의 「{them.lineupName}」</span>
       </div>
       {phase === 'pre' && <Pre me={me} them={them} opp={opp} pace={pace} setPace={setPace} onStart={start} left={left} />}
       {phase !== 'pre' && (
@@ -358,7 +358,7 @@ function Result({ sim, me, them, delta, opp, onAgain, left }: { sim: Sim; me: Si
       <dl className={s.resList}>
         <div><dt>레이팅</dt><dd><span className="num">{fmt.int(me.rating)}</span> → <b className="num">{fmt.int(shown)}</b> <em className={['num', delta >= 0 ? s.up : s.down].join(' ')}>{fmt.signed(delta)}</em></dd></div>
         <div><dt>보상</dt><dd><b className="num">+{fmt.int(gp)}</b> GP{opp.rival === 'rival' && sim.result === 'W' ? ' · 라이벌 2배' : ''}</dd></div>
-        <div><dt>{them.user} 감독 전적</dt><dd>{sim.result === 'W' ? '이 라인업에 처음 이겼어요' : sim.result === 'L' ? '설욕전 상대로 남아요' : '승부는 다음으로'}</dd></div>
+        <div><dt>{them.user} 전적</dt><dd>{sim.result === 'W' ? '이 라인업에 처음 이겼어요' : sim.result === 'L' ? '설욕전 상대로 남아요' : '승부는 다음으로'}</dd></div>
         <div><dt>오늘 남은 대전</dt><dd><b className="num">{left}</b>/10</dd></div>
       </dl>
       {sim.keyFactors.length > 0 && (

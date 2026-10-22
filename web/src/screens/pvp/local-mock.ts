@@ -86,7 +86,7 @@ export function oppSide(o: PvpOpponent): Side {
   const spCard = aceP.pos === 'P' && aceP.role === 'SP' ? ace : pitchers.filter((c) => playerOfCard(c).role === 'SP').sort((a, b) => (playerOfCard(b).teamId === o.teamId ? 1 : 0) - (playerOfCard(a).teamId === o.teamId ? 1 : 0) || playerOfCard(b).ovr - playerOfCard(a).ovr)[r.int(0, 1)];
   const clCard = aceP.pos === 'P' && aceP.role !== 'SP' ? ace : pitchers.filter((c) => playerOfCard(c).role !== 'SP').sort((a, b) => playerOfCard(b).ovr - playerOfCard(a).ovr)[r.int(0, 2)];
   return {
-    key: 'opp', user: o.user, team, rating: o.rating, ovr: o.lineupOvr, power: o.power,
+    key: 'opp', user: `${o.user} (AI)`, team, rating: o.rating, ovr: o.lineupOvr, power: o.power,
     batting, sp: { card: spCard, player: playerOfCard(spCard) }, closer: { card: clCard, player: playerOfCard(clCard) },
     lineupName: LNAME[o.id] ?? '대전용', savedAgo: SAVED[o.id], style: STYLE[o.id],
   };

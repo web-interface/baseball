@@ -2,7 +2,9 @@
 // 풋볼데이처럼 경기장 위 자리마다 카드(수비 9 + 지명 + 1선발). 누르면 바꾸기 시트,
 // 바꾸는 즉시 케미 선 굵기 · 팀컬러 칸 · 팀 종합 게이지가 다시 계산되어 움직인다. 타자 9명이 한 구단이면 '능력치 폭발'.
 //
-// 주소 (미리보기·스크린샷용): ?tab=order|pitch · ?slot=LF (그 자리 시트 열기) · ?bench=lc1 (벤치 카드 시트)
+// 선수를 누르면 먼저 선수 정보 시트(능력치·성적), 거기서 '교체'로 바꾸기 시트. 빈 자리는 바로 바꾸기 시트.
+//
+// 주소 (미리보기·스크린샷용): ?tab=order|pitch · ?slot=LF (그 자리 바꾸기 시트) · ?info=CF · ?info=S1 (그 자리 선수 정보 시트, S1~S5 = 1~5선발) · ?bench=lc1 (벤치 카드 시트)
 //   ?demo=8 (독수리스 8/9) · ?demo=boom (잠시 뒤 9/9 → 폭발 연출) · ?demo=done (폭발한 상태) · ?pick=2 (타순 고르는 중)
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
@@ -16,6 +18,7 @@ import { TeamColorPanel } from './TeamColor';
 import { OrderTab } from './OrderTab';
 import { PitchTab } from './PitchTab';
 import { BenchSheet, SwapSheet } from './SwapSheet';
+import { PlayerSheet } from './PlayerSheet';
 import {
   BAT_SLOTS, STAFF_SLOTS, SLOT_KO, autoLineup, autoOrder, evaluate, getSlot, initialLineup, isBat, place, store, swapOrder, unit,
   type LineupState, type Slot, type StaffSlot,
@@ -51,6 +54,24 @@ export default function LineupScreen({ query }: ScreenProps) {
   stRef.current = st;
 
   const [slot, setSlot] = useState<Slot | null>(() => { const v = q.get('slot'); return v && ALL_SLOTS.includes(v) ? (v as Slot) : null; });
+  // ?info=CF · ?info=R0 — 선발은 S1~S5 · 투수 P 로도 (S1 = 1선발)
+  const [info, setInfo] = useState<Slot | null>(() => {
+    const raw = q.get('info');
+    const v = raw && /^S[1-5]$/.test(raw) ? `R${Number(raw[1]) - 1}` : raw === 'P' ? 'R0' : raw;
+    return v && ALL_SLOTS.includes(v) ? (v as Slot) : null;
+  });
+  /** 선수가 있으면 정보 시트, 비었으면 바로 바꾸기 시트 */
+  const open = (x: Slot) => { if (getSlot(stRef.current, x)) setInfo(x); else setSlot(x); };
+  // '교체' — 정보 시트가 다 내려간 뒤 바꾸기 시트를 올린다 (시트 둘이 겹치면 스크롤 잠금·포커스 되돌리기가 꼬인다)
+  const [pending, setPending] = useState<Slot | null>(null);
+  const swapTimer = useRef(0);
+  useEffect(() => () => window.clearTimeout(swapTimer.current), []);
+  const swapFromInfo = (x: Slot) => {
+    setInfo(null);
+    setPending(x);
+    window.clearTimeout(swapTimer.current);
+    swapTimer.current = window.setTimeout(() => { setPending(null); setSlot(x); }, 240);
+  };
   const [benchCard, setBenchCard] = useState<string | null>(() => q.get('bench'));
   const [boom, setBoom] = useState<number | null>(null);
 
@@ -152,7 +173,7 @@ export default function LineupScreen({ query }: ScreenProps) {
 
       {tab === 'field' && (
         <div className={s.field}>
-          <Board st={st} ev={ev} home={home} active={slot} onPick={setSlot} boom={boom} onBoomDone={() => setBoom(null)} />
+          <Board st={st} ev={ev} home={home} active={slot ?? info ?? pending} onPick={open} boom={boom} onBoomDone={() => setBoom(null)} />
           <div className={s.legend}>
             <LinkLegend />
             <p>같은 구단 · 권역 · 시즌 카드일수록 선이 굵어져요. 키스톤 · 배터리 · 외야 짝은 한 단 더. 카드 밑은 타순과 조합으로 오른 종합이에요.</p>
@@ -180,13 +201,14 @@ export default function LineupScreen({ query }: ScreenProps) {
         </div>
       )}
       {tab === 'order' && (
-        <OrderTab st={st} ev={ev} onOpen={setSlot} onSwap={swapBatOrder} onAuto={runAutoOrder}
+        <OrderTab st={st} ev={ev} onOpen={open} onSwap={swapBatOrder} onAuto={runAutoOrder}
           initialPick={q.get('pick') ? Number(q.get('pick')) - 1 : null} />
       )}
-      {tab === 'pitch' && <PitchTab st={st} ev={ev} onOpen={setSlot} onSwap={swapStaff} />}
+      {tab === 'pitch' && <PitchTab st={st} ev={ev} onOpen={open} onSwap={swapStaff} />}
 
       <p className={s.foot}>바꾸는 즉시 저장돼요 · 수치는 아직 목업이에요</p>
 
+      <PlayerSheet slot={info} st={st} ev={ev} onClose={() => setInfo(null)} onSwap={swapFromInfo} />
       <SwapSheet slot={slot} st={st} ev={ev} onClose={() => setSlot(null)} onApply={applyFromSheet} />
       <BenchSheet cardId={benchCard} st={st} ev={ev} onClose={() => setBenchCard(null)} onApply={applyFromSheet} />
     </div>

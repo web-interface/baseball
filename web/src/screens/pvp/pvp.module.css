@@ -179,3 +179,41 @@
 /* 상대 최근 전적은 덜 튀게 — 주황은 내 점수판에만 */
 .oppForm .rW { background: var(--fg-2); color: var(--bg); }
 :global([data-theme='classic']) .oppForm .rW { background: var(--fg); color: var(--bg); }
+
+/* ───────── 실제 감독 대전 (서버) ───────── */
+.ai { font-weight: 700; color: var(--fg-3); font-size: .92em; }
+.mgr { font-weight: 750; color: var(--fg-2); }
+.oppRt0 { margin-left: 0; }
+.linkBtn { color: var(--accent); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; padding: 0 1px; font-size: inherit; }
+.sparkEmpty { font-size: 11px; line-height: 1.45; color: var(--inv-fg-3); text-align: right; align-self: center; }
+.empty { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0 12px; border-bottom: 1px solid var(--line); }
+.empty p { font-size: 13px; line-height: 1.55; color: var(--fg-2); }
+.empty p b { color: var(--fg); font-weight: 750; }
+.empty > :global(button), .empty > button { flex: none; }
+.emptyLine { padding: 16px 0; font-size: 13px; color: var(--fg-3); border-bottom: 1px solid var(--line); }
+
+/* 결과 시트 */
+.resFoot { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; }
+.result { padding-bottom: 4px; }
+.final { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 6px 0 14px; border-bottom: 1px solid var(--line-2); }
+.final > b { font-size: 52px; line-height: .85; }
+.fSide { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; }
+.fSide small { font-size: 12px; color: var(--fg-2); font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.fSideR { align-items: flex-end; }
+.fRes { width: 30px; height: 30px; font-size: 14px; }
+.lineWrap { overflow-x: auto; margin: 12px 0 4px; }
+.line { width: 100%; font-size: 13px; border-collapse: collapse; background: var(--inv); color: var(--inv-fg); }
+.line th, .line td { padding: 6px 3px; text-align: center; min-width: 20px; }
+.line thead th { font-size: 10.5px; font-weight: 600; color: var(--inv-fg-3); border-bottom: 1px solid var(--inv-line); }
+.line tbody th { text-align: left; padding-left: 10px; font-size: 12px; font-weight: 700; white-space: nowrap; color: var(--inv-fg-2); }
+.line .lR { font-weight: 800; color: var(--inv-fg); border-left: 1px solid var(--inv-line); padding: 6px 10px; }
+.resDl { margin-top: 10px; }
+.resDl > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.resDl dt { color: var(--fg-3); font-size: 12px; white-space: nowrap; }
+.resDl dd { text-align: right; color: var(--fg-2); }
+.resDl dd b { font-size: 16px; color: var(--fg); }
+.resDl dd em { font-style: normal; font-weight: 700; margin-left: 4px; }
+:global([data-theme='broadcast']) .line { border-radius: 0; box-shadow: inset 4px 0 0 var(--accent); }
+:global([data-theme='classic']) .line { box-shadow: inset 0 0 0 3px var(--inv-2); }
+:global([data-theme='classic']) .final > b { font-family: var(--font-num-display); }
+.demo { margin: 10px var(--gutter) 0; font-size: 11.5px; font-weight: 700; color: var(--warn); }

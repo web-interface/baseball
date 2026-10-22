@@ -1,22 +1,26 @@
 // 대전 #/pvp — 비동기 대전 (담당: 선수 상세·대전 개발자, 이 폴더만 고친다)
-//   다른 감독이 저장해 둔 라인업과 혼자 붙는다(상대 접속 필요 없음). 랭킹 · 내 전적.
-//   ?tab=opp|rank|log · ?by=rating|pct|power|collection · ?vs=<상대 id> 경기(경기 전 → 빨리 보기 → 결과)
-import { setQueryQuiet } from '../../app/router';
-import { useMemo, useState } from 'react';
+//   다른 감독이 저장해 둔 구단과 혼자 붙는다(상대 접속 필요 없음). 실제 감독은 서버가 결과를 정하고,
+//   아래 'AI 구단'은 이 기기에서만 도는 연습 상대(목업)다. 순위는 위 메뉴 '순위' 탭(#/rank).
+//   ?tab=opp|log · ?vs=<AI 상대 id> AI 경기(경기 전 → 빨리 보기 → 결과)
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
-import { navigate } from '../../app/router';
-import { Button, Emblem, Icon, Sheet, Tabs, fmt } from '../../ui';
+import { navigate, setQueryQuiet } from '../../app/router';
+import { useAuth } from '../../app/auth';
+import { Button, Emblem, Icon, Sheet, Tabs, fmt, useToast } from '../../ui';
 import { CardMini } from '../../cards';
 import { POS_KO } from '../../game/labels';
 import { teamById } from '../../game/mock';
 import type { PvpOpponent } from '../../game/types';
+import type { PvpClub } from '../../api';
 import { Battle } from './Battle';
 import { Spark } from './Spark';
-import { ME, MY_RANK, PVP_OPPONENTS, meRow, myLog, oppSide, rankingTop, ratingSeries, vsClubs, type RankBy } from './local-mock';
+import { ME, MY_RANK, PVP_OPPONENTS, myLog, oppSide, ratingSeries, vsClubs } from './local-mock';
+import { clubTeam, usePvpOnline, type SessionGame } from './online';
 import s from './pvp.module.css';
 
-type Tab = 'opp' | 'rank' | 'log';
-
+type Tab = 'opp' | 'log';
+const RES_KO = { W: '승', D: '무', L: '패' } as const;
+const pctOf = (w: number, l: number) => fmt.avg(w / Math.max(1, w + l));
 
 export default function PvpScreen({ query }: ScreenProps) {
   const vs = query.get('vs');
@@ -41,103 +45,326 @@ export default function PvpScreen({ query }: ScreenProps) {
 }
 
 function Lobby({ query, left, extra }: { query: URLSearchParams; left: number; extra: { rating: number; w: number; d: number; l: number } }) {
+  const toast = useToast();
+  const { user } = useAuth();
   const t = query.get('tab');
-  const [tab, setTabS] = useState<Tab>(t === 'rank' || t === 'log' ? t : 'opp');
-  const b = query.get('by');
-  const [by, setByS] = useState<RankBy>(b === 'pct' || b === 'power' || b === 'collection' ? b : 'rating');
+  const [tab, setTabS] = useState<Tab>(t === 'log' ? 'log' : 'opp');
   const [peek, setPeek] = useState<PvpOpponent | null>(null);
+  const [peekReal, setPeekReal] = useState<PvpClub | null>(null);
+  const [result, setResult] = useState<SessionGame | null>(null);
   const setTab = (v: Tab) => { setTabS(v); setQueryQuiet({ tab: v === 'opp' ? null : v }); };
-  const setBy = (v: RankBy) => { setByS(v); setQueryQuiet({ by: v === 'rating' ? null : v }); };
-  const series = useMemo(() => { const x = ratingSeries(); if (extra.rating) x.push(x[x.length - 1] + extra.rating); return x; }, [extra.rating]);
-  const w = ME.record.w + extra.w, d = ME.record.d + extra.d, l = ME.record.l + extra.l;
-  const rating = ME.rating + extra.rating;
-  const log = useMemo(() => myLog(), []);
-  const recent = log.map((x) => x.res);
-  const me = teamById(ME.teamId);
+  const demo = query.get('demo') === '1';
+  const on = usePvpOnline(demo);
+  // 미리보기: ?demo=1&fight=1 이면 첫 상대와 바로 한 판 (결과 시트 모양 보기)
+  const autoFought = useRef(false);
+  useEffect(() => {
+    if (!demo || query.get('fight') !== '1' || autoFought.current || on.st.kind !== 'ready' || !on.st.opponents[0]) return;
+    autoFought.current = true;
+    void start(on.st.opponents[0]);
+  }, [on.st]); // eslint-disable-line react-hooks/exhaustive-deps
+  const real = on.st.kind === 'ready' ? on.st.me : null;
+
+  const start = async (o: PvpClub) => {
+    setPeekReal(null);
+    const r = await on.fight(o);
+    if (r.ok) setResult(r.game);
+    else toast({ text: r.msg, tone: 'bad' });
+  };
 
   return (
     <div className={s.screen}>
-      {/* 내 전적 — 점수판 */}
-      <section className={s.board} aria-label="내 대전 전적">
-        <div className={s.boardTop}>
-          <p className={s.who}><Emblem team={me} size={22} /><b>{ME.user}</b><span>감독 · {me.name}</span></p>
-          <p className={s.left}>오늘 대전 <b className="num">{left}</b><span className="num">/10</span></p>
-        </div>
-        <div className={s.wdl}>
-          <span><b className="num-display">{w}</b><i>승</i></span>
-          <span><b className="num-display">{d}</b><i>무</i></span>
-          <span><b className="num-display">{l}</b><i>패</i></span>
-          <span className={s.pct}><i>승률</i><b className="num">{fmt.avg(w / Math.max(1, w + l))}</b></span>
-        </div>
-        <div className={s.rate}>
-          <div className={s.rateNum}>
-            <i>레이팅</i>
-            <b className="num-display">{fmt.int(rating)}</b>
-            <span className={['num', s.delta].join(' ')}>{fmt.signed(ME.ratingDelta + extra.rating)}</span>
-            <small>전체 <span className="num">{MY_RANK.rating.rank}</span>위 · 상위 <span className="num">{Math.max(1, Math.round((MY_RANK.rating.rank / MY_RANK.rating.of) * 100))}%</span></small>
-          </div>
-          <Spark values={series} className={s.spark} label="최근 20판 레이팅" />
-        </div>
-        <div className={s.recent} aria-label="최근 10판">
-          <i>최근 10판</i>
-          {recent.map((x, i) => <b key={i} className={[s.res, s['r' + x]].join(' ')}>{x === 'W' ? '승' : x === 'D' ? '무' : '패'}</b>)}
-        </div>
-      </section>
+      {demo && <p className={s.demo}>예시 화면이에요 — 서버에 아무것도 보내지 않아요.</p>}
+      {real ? <RealBoard me={real} today={on.st.kind === 'ready' ? on.st.today : null} games={on.games} /> : <MockBoard left={left} extra={extra} user={user} />}
 
       <div className={s.tabsWrap}>
-        <Tabs items={[{ value: 'opp' as Tab, label: '대전 상대' }, { value: 'rank' as Tab, label: '랭킹' }, { value: 'log' as Tab, label: '내 기록' }]} value={tab} onChange={setTab} fill aria-label="대전" />
+        <Tabs items={[{ value: 'opp' as Tab, label: '대전 상대' }, { value: 'log' as Tab, label: '내 기록' }]} value={tab} onChange={setTab} fill aria-label="대전" />
       </div>
 
       {tab === 'opp' && (
-        <section className={s.sec}>
-          <header className={s.secHead}>
-            <h3 className="head">오늘의 상대</h3>
-            <span className={s.secMeta}>저장된 라인업과 혼자 붙어요 · 상대는 접속 안 해도 돼요</span>
-          </header>
-          <ul className={s.opps}>
-            {PVP_OPPONENTS.map((o, i) => {
-              const tm = teamById(o.teamId);
-              const pct = o.record.w / Math.max(1, o.record.w + o.record.l);
-              return (
-                <li key={o.id} className={[s.opp, o.rival && s.oppRival].filter(Boolean).join(' ')}>
-                  <button type="button" className={s.oppMain} onClick={() => setPeek(o)} aria-label={`${o.user} 라인업 보기`}>
-                    <Emblem team={tm} size={34} />
-                    <span className={s.oppBody}>
-                      <span className={s.oppName}>
-                        <b>{tm.name}</b>
-                        {o.rival && <em className={s.tag}>{o.rival === 'rival' ? '라이벌 · 보상 2배' : '설욕전'}</em>}
+        <>
+          <section className={s.sec}>
+            <header className={s.secHead}>
+              <h3 className="head">다른 감독</h3>
+              <span className={s.secMeta}>저장된 구단과 혼자 붙어요 · 상대는 접속 안 해도 돼요</span>
+            </header>
+            <RealList on={on} onPeek={setPeekReal} onStart={start} />
+          </section>
+
+          <section className={s.sec}>
+            <header className={s.secHead}>
+              <h3 className="head">AI 구단</h3>
+              <span className={s.secMeta}>연습 상대 · 결과는 이 기기에서만, 순위에 안 들어가요</span>
+            </header>
+            <ul className={s.opps}>
+              {PVP_OPPONENTS.map((o) => {
+                const tm = teamById(o.teamId);
+                return (
+                  <li key={o.id} className={[s.opp, o.rival && s.oppRival].filter(Boolean).join(' ')}>
+                    <button type="button" className={s.oppMain} onClick={() => setPeek(o)} aria-label={`${o.user} (AI) 라인업 보기`}>
+                      <Emblem team={tm} size={34} />
+                      <span className={s.oppBody}>
+                        <span className={s.oppName}>
+                          <b>{tm.name}</b>
+                          {o.rival && <em className={s.tag}>{o.rival === 'rival' ? '라이벌 · 보상 2배' : '설욕전'}</em>}
+                        </span>
+                        <span className={s.oppSub}>
+                          {o.user} <span className={s.ai}>(AI)</span> · <span className="num">{o.record.w}</span>승 <span className="num">{o.record.d}</span>무 <span className="num">{o.record.l}</span>패 <span className="num">{pctOf(o.record.w, o.record.l)}</span>
+                        </span>
+                        <span className={s.oppForm}>
+                          {o.recent.map((x, k) => <b key={k} className={[s.res, s.resS, s['r' + x]].join(' ')}>{RES_KO[x]}</b>)}
+                          <span className={s.oppRt}>레이팅 <span className="num">{fmt.int(o.rating)}</span></span>
+                        </span>
                       </span>
-                      <span className={s.oppSub}>
-                        {o.user} 감독 · <span className="num">{o.record.w}</span>승 <span className="num">{o.record.d}</span>무 <span className="num">{o.record.l}</span>패 <span className="num">{fmt.avg(pct)}</span>
+                      <span className={s.oppPow}>
+                        <b className="num-display">{o.lineupOvr}</b>
+                        <small>전력 <span className="num">{fmt.int(o.power)}</span></small>
                       </span>
-                      <span className={s.oppForm}>
-                        {o.recent.map((x, k) => <b key={k} className={[s.res, s.resS, s['r' + x]].join(' ')}>{x === 'W' ? '승' : x === 'D' ? '무' : '패'}</b>)}
-                        <span className={s.oppRt}>레이팅 <span className="num">{fmt.int(o.rating)}</span></span>
-                      </span>
-                    </span>
-                    <span className={s.oppPow}>
-                      <b className="num-display">{o.lineupOvr}</b>
-                      <small>전력 <span className="num">{fmt.int(o.power)}</span></small>
-                    </span>
-                  </button>
-                  <Button size="s" variant={i === 0 ? 'primary' : 'secondary'} className={s.go} onClick={() => navigate(`/pvp?vs=${o.id}`)} disabled={left <= 0}>도전</Button>
-                </li>
-              );
-            })}
-          </ul>
-          <p className={s.note}>내 팀 종합 ±8 범위에서 골라요. 보상 있는 판은 하루 10판, 그 뒤로도 랭킹에는 반영돼요.</p>
-        </section>
+                    </button>
+                    <Button size="s" variant="secondary" className={s.go} onClick={() => navigate(`/pvp?vs=${o.id}`)} disabled={left <= 0}>도전</Button>
+                  </li>
+                );
+              })}
+            </ul>
+            <p className={s.note}>AI 구단은 감독이 없는 연습 상대예요. 이름 옆에 (AI)가 붙어요.</p>
+          </section>
+          <p className={s.foot}>
+            <Icon name="info" size={14} /> 순위는 위 메뉴 <button type="button" className={s.linkBtn} onClick={() => navigate('/rank')}>순위</button> 탭에서 봐요.
+          </p>
+        </>
       )}
 
-      {tab === 'rank' && <Ranking by={by} setBy={setBy} rating={rating} w={w} d={d} l={l} />}
-      {tab === 'log' && <MyLog />}
+      {tab === 'log' && <MyLog games={on.games} />}
 
       <OpponentSheet opp={peek} onClose={() => setPeek(null)} disabled={left <= 0} />
+      <RealSheet opp={peekReal} onClose={() => setPeekReal(null)} onStart={start} busy={on.busy != null} />
+      <ResultSheet game={result} onClose={() => setResult(null)} onAgain={(o) => { setResult(null); void start(o); }} busy={on.busy != null} />
     </div>
   );
 }
 
-/* ───────── 상대 라인업 미리 보기 ───────── */
+/* ───────── 내 전적 점수판 — 실제(서버) ───────── */
+function RealBoard({ me, today, games }: { me: PvpClub; today: { used: number; limit: number } | null; games: SessionGame[] }) {
+  const tm = clubTeam(me.club);
+  const series = useMemo(() => (games.length ? [games[games.length - 1].before, ...games.slice().reverse().map((g) => g.res.me?.rating ?? g.before + g.res.game.ratingDelta)] : []), [games]);
+  const sessionDelta = games.reduce((a, g) => a + g.res.game.ratingDelta, 0);
+  return (
+    <section className={s.board} aria-label="내 대전 전적">
+      <div className={s.boardTop}>
+        <p className={s.who}><Emblem team={tm} size={22} /><b>{me.username}</b><span>감독 · {me.teamName}</span></p>
+        {today && <p className={s.left}>오늘 대전 <b className="num">{today.limit - today.used}</b><span className="num">/{today.limit}</span></p>}
+      </div>
+      <div className={s.wdl}>
+        <span><b className="num-display">{me.w}</b><i>승</i></span>
+        <span><b className="num-display">{me.d}</b><i>무</i></span>
+        <span><b className="num-display">{me.l}</b><i>패</i></span>
+        <span className={s.pct}><i>승률</i><b className="num">{pctOf(me.w, me.l)}</b></span>
+      </div>
+      <div className={s.rate}>
+        <div className={s.rateNum}>
+          <i>레이팅</i>
+          <b className="num-display">{fmt.int(me.rating)}</b>
+          {games.length > 0 && <span className={['num', s.delta].join(' ')}>{fmt.signed(sessionDelta)}</span>}
+          <small>시작 <span className="num">1,500</span> · 팀 종합 <span className="num">{me.ovr}</span> · 전력 <span className="num">{fmt.int(me.power)}</span></small>
+        </div>
+        {series.length >= 2 ? <Spark values={series} className={s.spark} label="이번 접속 레이팅" /> : <span className={s.sparkEmpty}>대전하면 레이팅 흐름이 여기 그려져요</span>}
+      </div>
+      {games.length > 0 && (
+        <div className={s.recent} aria-label="이번 접속 대전">
+          <i>방금 대전</i>
+          {games.slice(0, 10).map((g) => <b key={g.res.game.id} className={[s.res, s['r' + g.res.game.result]].join(' ')}>{RES_KO[g.res.game.result]}</b>)}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/* ───────── 내 전적 점수판 — 로그인 전(목업) ───────── */
+function MockBoard({ left, extra, user }: { left: number; extra: { rating: number; w: number; d: number; l: number }; user: string | null }) {
+  const series = useMemo(() => { const x = ratingSeries(); if (extra.rating) x.push(x[x.length - 1] + extra.rating); return x; }, [extra.rating]);
+  const w = ME.record.w + extra.w, d = ME.record.d + extra.d, l = ME.record.l + extra.l;
+  const rating = ME.rating + extra.rating;
+  const recent = useMemo(() => myLog().map((x) => x.res), []);
+  const me = teamById(ME.teamId);
+  return (
+    <section className={s.board} aria-label="내 대전 전적 (예시)">
+      <div className={s.boardTop}>
+        <p className={s.who}><Emblem team={me} size={22} /><b>{user ?? ME.user}</b><span>감독 · {me.name}</span></p>
+        <p className={s.left}>오늘 대전 <b className="num">{left}</b><span className="num">/10</span></p>
+      </div>
+      <div className={s.wdl}>
+        <span><b className="num-display">{w}</b><i>승</i></span>
+        <span><b className="num-display">{d}</b><i>무</i></span>
+        <span><b className="num-display">{l}</b><i>패</i></span>
+        <span className={s.pct}><i>승률</i><b className="num">{pctOf(w, l)}</b></span>
+      </div>
+      <div className={s.rate}>
+        <div className={s.rateNum}>
+          <i>레이팅 · 예시</i>
+          <b className="num-display">{fmt.int(rating)}</b>
+          <span className={['num', s.delta].join(' ')}>{fmt.signed(ME.ratingDelta + extra.rating)}</span>
+          <small>전체 <span className="num">{MY_RANK.rating.rank}</span>위 · 로그인하면 내 실제 전적이 나와요</small>
+        </div>
+        <Spark values={series} className={s.spark} label="최근 20판 레이팅" />
+      </div>
+      <div className={s.recent} aria-label="최근 10판">
+        <i>최근 10판</i>
+        {recent.map((x, i) => <b key={i} className={[s.res, s['r' + x]].join(' ')}>{RES_KO[x]}</b>)}
+      </div>
+    </section>
+  );
+}
+
+/* ───────── 실제 감독 목록 ───────── */
+function RealList({ on, onPeek, onStart }: { on: ReturnType<typeof usePvpOnline>; onPeek: (o: PvpClub) => void; onStart: (o: PvpClub) => void }) {
+  const st = on.st;
+  if (st.kind === 'out') {
+    return (
+      <div className={s.empty}>
+        <p><b>로그인하면 다른 감독 구단과 붙을 수 있어요.</b> 내 구단도 자동으로 상대 목록에 올라가요.</p>
+        <Button size="s" variant="secondary" onClick={() => navigate('/login')}>로그인</Button>
+      </div>
+    );
+  }
+  if (st.kind === 'loading') return <p className={s.emptyLine}>다른 감독을 찾는 중이에요…</p>;
+  if (st.kind === 'error') {
+    return (
+      <div className={s.empty}>
+        <p><b>목록을 못 불러왔어요.</b> {st.msg}</p>
+        <Button size="s" variant="secondary" onClick={() => void on.reload()}>다시 불러오기</Button>
+      </div>
+    );
+  }
+  if (st.opponents.length === 0) {
+    return <div className={s.empty}><p><b>아직 다른 감독이 없어요.</b> 내 구단은 올려 뒀으니, 누가 들어오면 여기 나와요. 그동안 아래 AI 구단과 붙어 보세요.</p></div>;
+  }
+  const out = st.today.used >= st.today.limit;
+  return (
+    <>
+      <ul className={s.opps}>
+        {st.opponents.map((o, i) => {
+          const tm = clubTeam(o.club);
+          const n = o.w + o.d + o.l;
+          return (
+            <li key={o.userId} className={s.opp}>
+              <button type="button" className={s.oppMain} onClick={() => onPeek(o)} aria-label={`${o.username} 감독 구단 보기`}>
+                <Emblem team={tm} size={34} />
+                <span className={s.oppBody}>
+                  <span className={s.oppName}><b>{o.teamName}</b></span>
+                  <span className={s.oppSub}>
+                    <b className={s.mgr}>{o.username}</b> 감독 · {n ? <><span className="num">{o.w}</span>승 <span className="num">{o.d}</span>무 <span className="num">{o.l}</span>패 <span className="num">{pctOf(o.w, o.l)}</span></> : '첫 대전 전'}
+                  </span>
+                  <span className={s.oppForm}>
+                    <span className={[s.oppRt, s.oppRt0].join(' ')}>레이팅 <span className="num">{fmt.int(o.rating)}</span></span>
+                    <span className={s.oppRt}>{ago(o.updatedAt)} 저장</span>
+                  </span>
+                </span>
+                <span className={s.oppPow}>
+                  <b className="num-display">{o.ovr}</b>
+                  <small>전력 <span className="num">{fmt.int(o.power)}</span></small>
+                </span>
+              </button>
+              <Button size="s" variant={i === 0 ? 'primary' : 'secondary'} className={s.go} onClick={() => onStart(o)} disabled={out || on.busy != null}>
+                {on.busy === o.userId ? '경기 중' : '대전 시작'}
+              </Button>
+            </li>
+          );
+        })}
+      </ul>
+      <p className={s.note}>
+        결과는 서버가 두 팀 종합·전력으로 정해요. 강팀도 질 수 있어요. 12회까지 같으면 무승부.
+        {out ? ' 오늘 대전을 다 했어요 — 오전 9시에 다시 채워져요.' : ` 하루 ${st.today.limit}판까지.`}
+      </p>
+    </>
+  );
+}
+
+function ago(sec: number) {
+  const d = Math.max(0, Date.now() / 1000 - sec);
+  if (d < 3600) return `${Math.max(1, Math.round(d / 60))}분 전`;
+  if (d < 86400) return `${Math.round(d / 3600)}시간 전`;
+  return `${Math.round(d / 86400)}일 전`;
+}
+
+/* ───────── 실제 감독 구단 미리 보기 ───────── */
+function RealSheet({ opp, onClose, onStart, busy }: { opp: PvpClub | null; onClose: () => void; onStart: (o: PvpClub) => void; busy: boolean }) {
+  return (
+    <Sheet
+      open={!!opp}
+      onClose={onClose}
+      title={opp ? `${opp.teamName} · ${opp.username}` : ''}
+      sub={opp ? <>저장된 라인업 · 팀 종합 <span className="num">{opp.ovr}</span> · 전력 <span className="num">{fmt.int(opp.power)}</span> · 레이팅 <span className="num">{fmt.int(opp.rating)}</span></> : undefined}
+      footer={opp ? <Button block disabled={busy} onClick={() => onStart(opp)}>대전 시작</Button> : undefined}
+    >
+      {opp && (
+        <ol className={s.peekList}>
+          {(opp.lineup ?? []).map((b, i) => (
+            <li key={i}>
+              <span className="num">{b.pos === 'SP' || b.pos === 'CP' || b.pos === 'RP' || b.pos === 'P' ? '' : i + 1}</span>
+              <span className={s.peekPos}>{b.pos === 'SP' ? '선발' : b.pos === 'CP' ? '마무리' : b.pos === 'RP' ? '불펜' : POS_KO[b.pos as keyof typeof POS_KO] ?? b.pos}</span>
+              <b className="num">{b.id.toUpperCase()}</b>
+              <span className={s.peekTeam} />
+              <span className={['num', s.peekOvr].join(' ')}>{b.ovr}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </Sheet>
+  );
+}
+
+/* ───────── 결과 ───────── */
+function ResultSheet({ game, onClose, onAgain, busy }: { game: SessionGame | null; onClose: () => void; onAgain: (o: PvpClub) => void; busy: boolean }) {
+  const g = game?.res.game;
+  const me = game?.res.me;
+  const myTm = me ? clubTeam(me.club) : null;
+  const opTm = game ? clubTeam(game.opp.club) : null;
+  const n = g ? Math.max(9, g.line.away.length) : 9;
+  const cols = Array.from({ length: n }, (_, i) => i);
+  const after = me?.rating ?? (game ? game.before + (g?.ratingDelta ?? 0) : 0);
+  return (
+    <Sheet
+      open={!!game}
+      onClose={onClose}
+      title={g ? (g.result === 'W' ? '이겼어요' : g.result === 'L' ? '졌어요' : '비겼어요') : ''}
+      sub={game ? <>{game.opp.username} 감독의 {game.opp.teamName} · 상대 구장{g?.replay ? ' · 저장된 결과' : ''}</> : undefined}
+      footer={game ? (
+        <div className={s.resFoot}>
+          <Button variant="secondary" onClick={onClose}>닫기</Button>
+          <Button disabled={busy} onClick={() => onAgain(game.opp)}>한 번 더</Button>
+        </div>
+      ) : undefined}
+    >
+      {g && game && myTm && opTm && (
+        <div className={s.result}>
+          <div className={s.final}>
+            <span className={s.fSide}><Emblem team={myTm} size={30} /><small>{myTm.short} · 나</small></span>
+            <b className="num-display">{g.myScore}</b>
+            <span className={[s.res, s['r' + g.result], s.fRes].join(' ')}>{RES_KO[g.result]}</span>
+            <b className="num-display">{g.oppScore}</b>
+            <span className={[s.fSide, s.fSideR].join(' ')}><Emblem team={opTm} size={30} /><small>{opTm.short}</small></span>
+          </div>
+          <div className={s.lineWrap}>
+            <table className={s.line}>
+              <thead><tr><th />{cols.map((i) => <th key={i} className="num">{i + 1}</th>)}<th className={['num', s.lR].join(' ')}>R</th></tr></thead>
+              <tbody>
+                <tr><th>{myTm.short}</th>{cols.map((i) => <td key={i} className="num">{g.line.away[i] ?? ''}</td>)}<td className={['num', s.lR].join(' ')}>{g.myScore}</td></tr>
+                <tr><th>{opTm.short}</th>{cols.map((i) => { const v = g.line.home[i]; return <td key={i} className="num">{v === null ? 'X' : v ?? ''}</td>; })}<td className={['num', s.lR].join(' ')}>{g.oppScore}</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <dl className={s.resDl}>
+            <div><dt>레이팅</dt><dd><span className="num">{fmt.int(game.before)}</span> → <b className="num">{fmt.int(after)}</b> <em className={['num', g.ratingDelta >= 0 ? s.up : s.down].join(' ')}>{fmt.signed(g.ratingDelta)}</em></dd></div>
+            {me && <div><dt>내 전적</dt><dd className="num">{me.w}승 {me.d}무 {me.l}패 · 승률 {pctOf(me.w, me.l)}</dd></div>}
+            {game.res.opponent && <div><dt>{game.opp.username} 감독</dt><dd className="num">{game.res.opponent.w}승 {game.res.opponent.d}무 {game.res.opponent.l}패 · 레이팅 {fmt.int(game.res.opponent.rating)}</dd></div>}
+          </dl>
+          {n > 9 && <p className={s.note}>{g.result === 'D' ? '12회까지 승부가 안 나 무승부예요.' : `연장 ${n}회까지 갔어요.`}</p>}
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
+/* ───────── AI 상대 라인업 미리 보기 ───────── */
 function OpponentSheet({ opp, onClose, disabled }: { opp: PvpOpponent | null; onClose: () => void; disabled: boolean }) {
   const side = useMemo(() => (opp ? oppSide(opp) : null), [opp]);
   return (
@@ -175,75 +402,48 @@ function OpponentSheet({ opp, onClose, disabled }: { opp: PvpOpponent | null; on
   );
 }
 
-/* ───────── 랭킹 ───────── */
-const BY: { value: RankBy; label: string; col: string }[] = [
-  { value: 'rating', label: '레이팅', col: '레이팅' },
-  { value: 'pct', label: '승률', col: '승률' },
-  { value: 'power', label: '구단 전력', col: '선수 점수 합' },
-  { value: 'collection', label: '수집', col: '수집 점수' },
-];
-function Ranking({ by, setBy, rating, w, d, l }: { by: RankBy; setBy: (v: RankBy) => void; rating: number; w: number; d: number; l: number }) {
-  const rows = rankingTop(by);
-  const me = { ...meRow(), rating, w, d, l };
-  const val = (x: typeof me) => (by === 'rating' ? fmt.int(x.rating) : by === 'pct' ? fmt.avg(x.w / Math.max(1, x.w + x.l)) : by === 'power' ? fmt.int(x.power) : fmt.int(x.collection));
-  const col = BY.find((x) => x.value === by)!.col;
-  return (
-    <section className={s.sec}>
-      <header className={s.secHead}>
-        <h3 className="head">랭킹</h3>
-        <span className={s.secMeta}>매주 일요일 24:00 정산 · 하루 4번 갱신</span>
-      </header>
-      <Tabs variant="box" size="s" items={BY.map((x) => ({ value: x.value, label: x.label }))} value={by} onChange={setBy} aria-label="랭킹 기준" className={s.byTabs} />
-      <table className={s.rank}>
-        <thead>
-          <tr><th className={s.cR}>순위</th><th>감독 · 구단</th><th className={s.cR}>승-무-패</th><th className={s.cR}>{col}</th></tr>
-        </thead>
-        <tbody>
-          {rows.map((x) => (
-            <tr key={x.user} className={x.rank <= 3 ? s.podium : undefined}>
-              <td className={['num', s.cR, s.rk].join(' ')}>{x.rank}</td>
-              <td className={s.rkWho}><Emblem team={teamById(x.teamId)} size={18} /><b>{x.user}</b><span>{teamById(x.teamId).short}</span></td>
-              <td className={['num', s.cR, s.wdlCell].join(' ')}>{x.w}-{x.d}-{x.l}</td>
-              <td className={['num', s.cR, s.val].join(' ')}>{val(x)}{by === 'rating' && <em className={x.delta >= 0 ? s.up : s.down}>{fmt.signed(x.delta)}</em>}</td>
-            </tr>
-          ))}
-          <tr className={s.gap} aria-hidden><td colSpan={4}>⋮</td></tr>
-          <tr className={s.meRow}>
-            <td className={['num', s.cR, s.rk].join(' ')}>{MY_RANK[by].rank}</td>
-            <td className={s.rkWho}><Emblem team={teamById(me.teamId)} size={18} /><b>{me.user}</b><span>나</span></td>
-            <td className={['num', s.cR, s.wdlCell].join(' ')}>{me.w}-{me.d}-{me.l}</td>
-            <td className={['num', s.cR, s.val].join(' ')}>{val(me)}</td>
-          </tr>
-        </tbody>
-      </table>
-      <p className={s.note}>
-        {by === 'power' ? '구단 전력 = 1군 22명 최종 능력치 합(강화·레벨 포함).' : by === 'collection' ? '수집 점수 = 도감에 모은 카드 등급 점수.' : by === 'pct' ? '승률은 30판 이상 감독만.' : '레이팅은 이길수록 오르고, 강한 상대를 이기면 더 올라요(시작 1,500).'}
-        {' '}상위 3% 골든볼 300 · 상위 10% 골든볼 100.
-      </p>
-    </section>
-  );
-}
-
 /* ───────── 내 기록 ───────── */
-function MyLog() {
+function MyLog({ games }: { games: SessionGame[] }) {
   const log = useMemo(() => myLog(), []);
   const clubs = useMemo(() => vsClubs(), []);
   const maxG = Math.max(...clubs.map((c) => c.w + c.d + c.l));
   return (
     <>
+      {games.length > 0 && (
+        <section className={s.sec}>
+          <header className={s.secHead}>
+            <h3 className="head">방금 한 대전</h3>
+            <span className={s.secMeta}>다른 감독과 · 서버 기록</span>
+          </header>
+          <ul className={s.log}>
+            {games.map((x) => {
+              const g = x.res.game;
+              return (
+                <li key={g.id}>
+                  <b className={[s.res, s['r' + g.result]].join(' ')}>{RES_KO[g.result]}</b>
+                  <span className={['num', s.lgScore].join(' ')}>{g.myScore}<i>:</i>{g.oppScore}</span>
+                  <span className={s.lgWho}><b>{x.opp.username}</b><span>{clubTeam(x.opp.club).short}{g.line.away.length > 9 ? <em> · 연장 {g.line.away.length}회</em> : null}</span></span>
+                  <span className={['num', s.lgDelta, g.ratingDelta >= 0 ? s.up : s.down].join(' ')}>{fmt.signed(g.ratingDelta)}</span>
+                  <span className={['num', s.lgDate].join(' ')}>{new Date(g.createdAt * 1000).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
       <section className={s.sec}>
         <header className={s.secHead}>
-          <h3 className="head">최근 대전</h3>
-          <span className={s.secMeta}>2027 시즌 · 다시 보기는 하이라이트만</span>
+          <h3 className="head">AI 구단과 한 대전</h3>
+          <span className={s.secMeta}>예시 기록 · 다시 보기는 하이라이트만</span>
         </header>
         <ul className={s.log}>
           {log.map((x, i) => {
             const tm = teamById(x.oppTeam);
             return (
               <li key={i}>
-                <b className={[s.res, s['r' + x.res]].join(' ')}>{x.res === 'W' ? '승' : x.res === 'D' ? '무' : '패'}</b>
+                <b className={[s.res, s['r' + x.res]].join(' ')}>{RES_KO[x.res]}</b>
                 <span className={['num', s.lgScore].join(' ')}>{x.my}<i>:</i>{x.their}</span>
-                <span className={s.lgWho}><b>{x.oppUser}</b><span>{tm.short}{x.tag ? <em> · {x.tag}</em> : null}</span></span>
+                <span className={s.lgWho}><b>{x.oppUser} <span className={s.ai}>(AI)</span></b><span>{tm.short}{x.tag ? <em> · {x.tag}</em> : null}</span></span>
                 <span className={['num', s.lgDelta, x.delta >= 0 ? s.up : s.down].join(' ')}>{fmt.signed(x.delta)}</span>
                 <span className={['num', s.lgDate].join(' ')}>{x.date}</span>
               </li>
@@ -254,7 +454,7 @@ function MyLog() {
       <section className={s.sec}>
         <header className={s.secHead}>
           <h3 className="head">구단별 상대 전적</h3>
-          <span className={s.secMeta}>상대 감독이 고른 구단 기준</span>
+          <span className={s.secMeta}>AI 구단 예시 · 상대 구단 기준</span>
         </header>
         <ul className={s.clubs}>
           {clubs.map((c) => {
@@ -275,7 +475,7 @@ function MyLog() {
         </ul>
         <p className={s.legend}><i className={s.clW} />승 <i className={s.clD} />무 <i className={s.clL} />패</p>
       </section>
-      <p className={s.foot}><Icon name="info" size={14} /> 대전 결과는 서버 엔진이 정하고, 새로고침해도 바뀌지 않아요.</p>
+      <p className={s.foot}><Icon name="info" size={14} /> 다른 감독과의 대전 결과는 서버가 정하고, 새로고침해도 바뀌지 않아요.</p>
     </>
   );
 }

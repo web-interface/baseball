@@ -24,7 +24,7 @@ export const session = {
 
 export class ApiError extends Error { constructor(public status: number, msg: string) { super(msg); } }
 
-async function call<T>(method: 'GET' | 'POST', path: string, data?: unknown): Promise<T> {
+async function call<T>(method: 'GET' | 'POST' | 'PUT', path: string, data?: unknown): Promise<T> {
   const headers: Record<string, string> = {};
   if (data !== undefined) headers['Content-Type'] = 'application/json';
   const t = session.get();
@@ -55,4 +55,43 @@ export const api = {
     call<Auth>('POST', '/auth/reset', { username, recoveryCode, key: await passwordKey(username, password) }),
   logout: () => call<{ ok: boolean }>('POST', '/auth/logout', {}),
   aiPing: () => call<Ping>('POST', '/ai/ping', {}),
+
+  /* 비동기 대전 · 순위 (로그인 필요) */
+  pvpPutMe: (snap: PvpSnapshot) => call<{ me: PvpClub }>('PUT', '/pvp/me', snap),
+  pvpOpponents: () => call<PvpOpponentsRes>('GET', '/pvp/opponents'),
+  /** 같은 requestId 로 다시 보내면 서버가 저장된 결과를 돌려준다(두 번 처리 안 함) — 연결이 끊기면 같은 번호로 다시 */
+  pvpBattle: (opponentId: number, requestId: string) => call<PvpBattleRes>('POST', '/pvp/battle', { opponentId, requestId }),
+  rankings: (by: RankingBy) => call<RankingsRes>('GET', `/rankings?by=${by}`),
 };
+
+/* ───────── 대전 · 순위 타입 ───────── */
+export type PvpResult = 'W' | 'D' | 'L';
+export interface PvpLineupItem { id: string; pos: string; ovr: number }
+/** PUT /pvp/me — 대전 상대로 보일 내 구단 스냅샷 */
+export interface PvpSnapshot { club: string; teamName: string; power: number; ovr: number; lineup: PvpLineupItem[] }
+export interface PvpClub {
+  userId: number; username: string; club: string; teamName: string;
+  power: number; ovr: number; rating: number; w: number; d: number; l: number; updatedAt: number;
+  lineup?: PvpLineupItem[];
+}
+export interface PvpToday { used: number; limit: number }
+export interface PvpOpponentsRes { me: PvpClub | null; opponents: PvpClub[]; today: PvpToday }
+export interface PvpGame {
+  id: string; opponentId: number; myScore: number; oppScore: number; result: PvpResult; ratingDelta: number;
+  /** 이닝별 점수 — away = 나(도전), home = 상대(null = 9회 말 공격 없음) */
+  line: { away: number[]; home: (number | null)[] };
+  createdAt: number;
+  /** 같은 요청 번호로 다시 받은 저장된 결과 */
+  replay: boolean;
+}
+export interface PvpBattleRes { game: PvpGame; me: PvpClub | null; opponent: PvpClub | null; today: PvpToday }
+export type RankingBy = 'rating' | 'winrate' | 'power';
+export interface RankingRow extends PvpClub { rank: number; value: number; me?: boolean }
+export interface RankingsRes {
+  by: RankingBy; minGames: number; total: number; rows: RankingRow[];
+  me: (PvpClub & { rank: number | null; value: number }) | null;
+}
+
+/** 대전 요청 번호 (브라우저 난수) */
+export const newRequestId = () =>
+  (crypto.randomUUID?.() ?? Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join(''));

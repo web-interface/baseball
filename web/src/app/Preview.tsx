@@ -31,7 +31,7 @@ const SCENES: { k: string; title: string; desc: string; path: string }[] = [
   { k: '1/1', title: '특별 선수 만들기', desc: '투타·포지션·팔 각도·고유 구종 고르기', path: '/club-select?step=special' },
 ];
 function order(k: string) {
-  return ['club-select', 'home', 'lineup', 'match', 'cards', 'player', 'gacha', 'shop', 'pvp', 'settings'].indexOf(k);
+  return ['club-select', 'home', 'lineup', 'match', 'cards', 'player', 'gacha', 'shop', 'pvp', 'rank', 'settings'].indexOf(k);
 }
 
 const team = (id: string) => {

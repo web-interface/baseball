@@ -1,5 +1,5 @@
 // 타순 — 1~9번. 줄 사이 케미 사슬(테이블세터 · 클린업), 타순 적성(적임·무난·어색).
-// 오른쪽 손잡이를 누르고 다른 줄을 누르면 두 타자의 순서가 바뀐다. 줄을 누르면 선수 바꾸기.
+// 오른쪽 손잡이를 누르고 다른 줄을 누르면 두 타자의 순서가 바뀐다. 줄을 누르면 선수 정보(교체는 그 안에서).
 import { useRef, useState, type CSSProperties } from 'react';
 import { PlayerArt } from '../../art/PlayerArt';
 import { Button, Icon, fmt } from '../../ui';
@@ -90,7 +90,7 @@ export function OrderTab({ st, ev, onOpen, onSwap, onAuto, initialPick = null }:
                 {link && <i className={[s.chain, s['c' + link.level]].join(' ')} title={link.why.join(' · ')} />}
               </span>
               <button type="button" className={s.body} onClick={() => tapRow(i, slot)}
-                aria-label={pick == null ? `${i + 1}번 ${u.player.name} — 바꾸기` : `${i + 1}번과 순서 바꾸기`}>
+                aria-label={pick == null ? `${i + 1}번 ${u.player.name} — 정보 보기` : `${i + 1}번과 순서 바꾸기`}>
                 <span className={['num-display', s.no].join(' ')}>{i + 1}</span>
                 <span className={s.face}><PlayerArt player={u.player} variant="mini" /></span>
                 <span className={s.who}>

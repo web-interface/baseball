@@ -228,7 +228,7 @@ export function Board({ st, ev, home, active, onPick, boom, onBoomDone }: BoardP
           const bonus = ue ? Math.round(ue.tc + ue.chem) : 0;
           const p = SPOT[b];
           const label = u
-            ? `${SLOT_KO[slot]} ${u.player.name}, 종합 ${u.player.ovr}${bonus ? `, 조합 +${bonus}` : ''}${ue?.fit === 'off' ? ', 적성 밖 자리' : ''} — 바꾸기`
+            ? `${SLOT_KO[slot]} ${u.player.name}, 종합 ${u.player.ovr}${bonus ? `, 조합 +${bonus}` : ''}${ue?.fit === 'off' ? ', 적성 밖 자리' : ''} — 정보 보기`
             : `${SLOT_KO[slot]} 비어 있음 — 채우기`;
           return (
             <button
