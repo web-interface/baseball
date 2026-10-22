@@ -78,6 +78,8 @@ export interface PC {
   /** 12 상태가 만든 채널 값(물리층·심리층): bat.contact, bat.power, bat.eye, bat.aggr, pit.stuff, pit.control, fld.error(log) */
   chP: number[]; chS: number[];
   injMult: number;                 // 부상 배율(경향·내구성·나이·프로의식)
+  /** 투구 부상 배율(혹사): 팔 피로 50 넘으면 +4%/점, 사흘 연속 등판 ×1.8, 어제 30구↑ ×1.3 [18 재미·악용 심사] */
+  overuse: number;
   zoneMult: number;                // '웅크림' 폼 존 높이 배율
   role: string;
 }
@@ -86,8 +88,8 @@ export const N_CH = 10;
 
 const WX_K = [0.05, 0.05, 0.05, 0.06, 0.06, 0.04];
 
-/** 경기 단위 문맥(큰 경기·홈) */
-export interface CacheCtx { team: 0 | 1; home: boolean; importance: number; rec: number }
+/** 경기 단위 문맥(큰 경기·홈·리그 수준 기준점 R) */
+export interface CacheCtx { team: 0 | 1; home: boolean; importance: number; rec: number; ref?: number }
 
 const cubeS = (u: number): number => u + P.zCubeStuff * u * u * u;
 const zeros = (n: number): number[] => { const a = new Array<number>(n); for (let i = 0; i < n; i++) a[i] = 0; return a; };
@@ -103,11 +105,13 @@ export function buildCache(p: PlayerIn, cx: CacheCtx): PC {
   // ③ 경기 단위 점수
   const big = cx.importance * (hid[HD.bigGame] - 10) * P.ctx.bigGame;
   const adapt = st.adaptGames != null && st.adaptGames > 0 ? -P.ctx.adapt * clamp(1 - st.adaptGames / Math.max(10, 40 - 1.5 * hid[HD.adaptability]), 0, 1) : 0;
+  // 리그 수준 기준점 R(경기엔진.md 3.4): 양 팀 공통 수준을 모든 선수에게서 똑같이 뺀다(차이는 그대로) — 풀덱끼리도 보정된 범위에서 돈다
+  const ref = cx.ref ?? 0;
   for (let i = 0; i < N_ATTR; i++) {
     let x = p.attrs[i] ?? 50;
     if (B && B[i]) x += compressBonus(B[i]);
     if (!IS_T[i]) {
-      x += adapt;
+      x += adapt - ref;
       if (big && (i <= A.vsBreak || (i >= A.velocity && i <= A.deception))) x += big;
       if (st.pain) x *= 0.9;
     }
@@ -124,7 +128,7 @@ export function buildCache(p: PlayerIn, cx: CacheCtx): PC {
     if (IS_T[i]) { v[i] = clamp(v[i], 1, 100); z[i] = (v[i] - 50) / 50; continue; }
     v[i] = softCap(v[i]);
     const u = (v[i] - (C[i] ?? 60)) / (P.scale[i] ?? 10);
-    z[i] = P.zGain * (i <= A.vsBreak ? u + P.zCube[i] * u * u * u : u);   // 타격 능력은 3차 항으로 꼬리(스타)를 키운다 — 팀 평균 이동엔 거의 영향 없음
+    z[i] = P.zGain * (i <= A.vsBreak ? P.zGainBat * (u + P.zCube[i] * u * u * u) : u);   // 타격 능력은 3차 항으로 꼬리(스타)를 키운다 — 팀 평균 이동엔 거의 영향 없음
   }
   // 플래툰 컨택
   const zConR = z[A.contactR], zConL = z[A.contactL];
@@ -136,8 +140,8 @@ export function buildCache(p: PlayerIn, cx: CacheCtx): PC {
   const bS = B ? (B[45] ?? 0) : 0, bC = B ? (B[46] ?? 0) : 0;
   for (const x of p.pitches ?? []) {
     const t = PITCH_KEYS.indexOf(x.t); if (t < 0) continue;
-    let stuff = softCap(x.stuff + compressBonus(bS) + (p.mech?.stuffRel ? 30 * p.mech.stuffRel : 0) + big);
-    let cmd = softCap(x.cmd + compressBonus(bC) + big);
+    let stuff = softCap(x.stuff + compressBonus(bS) + (p.mech?.stuffRel ? 30 * p.mech.stuffRel : 0) + big - ref);
+    let cmd = softCap(x.cmd + compressBonus(bC) + big - ref);
     const sig = x.sig ? Math.max(0, SIG.indexOf(x.sig)) : 0;
     if (sig === 1) cmd -= 4;
     if (t === 8) kn = true;
@@ -177,6 +181,9 @@ export function buildCache(p: PlayerIn, cx: CacheCtx): PC {
   }
   const age = p.age;
   const injMult = Math.exp(0.0788 * (hid[HD.injuryProne] - 10)) * (1.25 - 0.005 * v[A.durability]) * (1 + 0.035 * Math.max(0, age - 29)) * (1.1 - 0.01 * hid[HD.professionalism]) * (st.pain ? 2 : 1) * (cond === -2 ? 1.15 : 1);
+  // 혹사 위험(투구 노출에만): 전에는 혹사 비용이 연투 구속 손실뿐이라 등판 규칙을 무시한 불펜이 오히려 더 잘 막고(구원 RA9 4.68 → 4.29) 덜 다쳤다
+  const b2 = st.b2b ?? [0, 0, 0];
+  const overuse = (1 + Math.max(0, (st.arm ?? 0) - 50) / 25) * (b2[0] > 0 && b2[1] > 0 ? 1.8 : 1) * (b2[0] >= 30 ? 1.3 : 1);
   return {
     id: p.id, rec: cx.rec, team: cx.team, throwsL: p.throws === 'L', bats, height: p.heightCm, age,
     v, z, tPull: z[A.pullTend], tLaunch: z[A.launchTend], tSwing: z[A.swingTend], tGb: z[A.gbTend],
@@ -184,7 +191,7 @@ export function buildCache(p: PlayerIn, cx: CacheCtx): PC {
     sprint: P.run.v0 + P.run.vK * v[A.speed], h1: P.run.h1A - P.run.h1K * v[A.speed] - (bats === 1 ? P.run.lhb : 0), bunt: z[A.bunt],
     pitches, velo: 130 + 0.30 * v[A.velocity], ext, limit, deliv: P.steal.deliv - P.steal.delivK * v[A.slideStep], pPlat, slotPlat: (SLOT_PLATOON[slot] ?? 0.8) - 0.8, slot, kn, parkGames: p.parkGames ?? 0,
     pop: P.steal.pop - P.steal.popK * v[A.popTime],
-    posMult, posProf, traits, sigBat: p.sigBat ?? '', h: hid, wxT, mech: p.mech ?? {}, chP, chS, injMult,
+    posMult, posProf, traits, sigBat: p.sigBat ?? '', h: hid, wxT, mech: p.mech ?? {}, chP, chS, injMult, overuse,
     zoneMult: p.formFx?.zoneSizeMult ?? 1, role: p.role ?? '',
   };
 }

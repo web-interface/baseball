@@ -132,6 +132,9 @@ export function throwPitch(g: G, pitchout: boolean): number {
     + (D.tac.calling === 'attack' ? P.intent.calling : D.tac.calling === 'nibble' ? -P.intent.calling : 0)
     + P.intent.eye * gq * pa.zEye;
   if (!g.bases[0] && pa.zPow > 0) { const J = tp?.jam === 'pitchAround' ? 2 : tp?.jam === 'challenge' ? 0 : 1; s -= P.intent.around * pa.zPow * Math.min(1, pa.li / 2) * J; }
+  // 타자의 접근법을 배터리가 읽는다(포수 리드 gq 만큼) [18 재미·악용 심사]: 기다리는 타자에겐 존 안으로 밀어붙이고, 장타를 노리는 타자에겐 조심
+  // — 전에는 접근법에 맞대응이 없어 '모든 타석 기다려(patient)'·'모든 타석 장타(power)'가 AI 기본보다 승률 +3.8·+4.6%p 인 정답이었다
+  if (pa.approach === 2) s += P.intent.vsPatient * gq; else if (pa.approach === 3) s -= P.intent.vsPower * gq;
   s = clamp(s, -0.3, 1.1);
   let ph = P.intent.s0[0] + s * (P.intent.s1[0] - P.intent.s0[0]), pe = P.intent.s0[1] + s * (P.intent.s1[1] - P.intent.s0[1]), po = P.intent.s0[2] + s * (P.intent.s1[2] - P.intent.s0[2]);
   ph = Math.max(0, ph); pe = Math.max(0, pe); po = Math.max(0, po); const sumI = ph + pe + po; ph /= sumI; pe /= sumI;
@@ -231,10 +234,11 @@ export function throwPitch(g: G, pitchout: boolean): number {
     const offer = mode === 4 ? true : dp > -4 ? SL[10] < P.bunt.offer : SL[10] < P.bunt.offerOut;
     if (offer) {
       T.swing = true; T.bunt = true;
-      const pc2 = sig(P.bunt.contact + P.bunt.skill * b.z[A.bunt] - P.bunt.stuff * zs - P.bunt.velo * (T.vPlate - 125) - P.bunt.ballPen * (d < 0 ? 1 : 0) + (fam === 0 ? P.bunt.fast : 0));
+      const zbR = clamp(b.z[A.bunt] / P.zGain, -2.5, 2.5);   // 번트 기술은 원래 눈금(표준편차 1)으로 — zGain 압축 때문에 기술 차가 거의 사라졌었다
+      const pc2 = sig(P.bunt.contact + P.bunt.skill * zbR - P.bunt.stuff * zs - P.bunt.velo * (T.vPlate - 125) - P.bunt.ballPen * (d < 0 ? 1 : 0) + (fam === 0 ? P.bunt.fast : 0));
       if (SL[12] < pc2) {
         T.contact = true;
-        if (SL[13] < P.bunt.fair + P.bunt.fairK * b.z[A.bunt]) { T.inPlay = true; T.res = PR.INPLAY; return PR.INPLAY; }
+        if (SL[13] < P.bunt.fair + P.bunt.fairK * zbR) { T.inPlay = true; T.res = PR.INPLAY; return PR.INPLAY; }
         T.foul = true; T.res = PR.BUNT_FOUL; wpCheck(g, c, pc, rainLv); return PR.BUNT_FOUL;
       }
       T.res = PR.BUNT_MISS; wpCheck(g, c, pc, rainLv); return PR.BUNT_MISS;
@@ -278,11 +282,13 @@ export function throwPitch(g: G, pitchout: boolean): number {
   const two = st === 2;
   const twoTac = O.tac.twoStrike;
   let lc = P.con.c0 + P.con.c1 * Math.tanh(d / P.con.w) + P.pt.C[t] + P.con.zc * pa.zCon + P.con.zk * pa.zK + P.con.zcope * zCope - P.con.zs * zs
-    - (fam === 0 ? P.con.velo * (T.vPerc - 146) : 0) + P.con.mem * f + (two ? P.con.two : 0) + P.ev.contactLogit * (pa.cCon - pa.cStuff) + P.env.contactAdj;
+    - (fam === 0 ? P.con.velo * (T.vPerc - 146) : t === 8 || pc.sig === 8 ? 0 : P.con.veloOS * clamp(vRel - P.bat.veloRef - P.pt.veloOff[t], -15, 15)) + P.con.mem * f + (two ? P.con.two : 0) + P.ev.contactLogit * (pa.cCon - pa.cStuff) + P.env.contactAdj;
   if (t === 0 && z > zm + HH / 3) lc -= P.con.highFF * (pc.sig === 4 ? 1.3 : 1);
   if (pa.prevType >= 0 && P.pt.fam[pa.prevType] === 0 && fam >= 1) lc -= P.con.timing * Math.max(0, pa.prevV - vRel - 10) + (pc.sig === 8 ? 0.6 : 0);
   if (T.guessHit) lc += P.con.guessHit; else if (T.guessMiss) lc += P.con.guessMiss;
   if (two && twoTac === 'shorten') lc += 0.20; else if (two && twoTac === 'full') lc -= 0.15;
+  // 접근법의 대가 [18]: 장타(큰 스윙) → 헛스윙↑, 맞히기·진루타(짧게) → 헛스윙↓ — 전에는 장타가 공짜(삼진도 그대로)이고 맞히기는 배트만 느려지는 손해뿐이었다
+  if (appr === 3) lc -= P.swing.powerCon; else if (appr === 4) lc += P.swing.contactCon; else if (appr === 5 || appr === 6) lc += P.swing.prodCon;
   if (pc.sig > 0) { const sigW = [0, 1.25, 1.05, 1, 1, 1.15, 1, pa.same ? 1 : 1.25, 1, 1.3, 1, 1, 1.2, pa.same ? 1.2 : 1][pc.sig] ?? 1; lc -= Math.log(sigW); if (pc.sig === 10 && !pa.same) lc -= 0.4; if (pc.sig === 3 && pa.same) lc -= 0.6; }
   if (hasT(b, TR.fastballHunter)) lc += fam === 0 ? 0.4 : -0.3;
   if (pa.hot & 1) lc += z < zm - HH / 3 ? 0.5 : z > zm + HH / 3 ? -0.3 : 0; if (pa.hot & 2) lc += z > zm + HH / 3 ? 0.5 : z < zm - HH / 3 ? -0.3 : 0;

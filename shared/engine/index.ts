@@ -10,4 +10,5 @@ export { homeWE, leverage, reOf } from './we.ts';
 export { injuryDays } from './injury.ts';
 export { batVal, pitVal, DEF_TAC } from './tactics.ts';
 export type * from './types.ts';
-export const ENGINE_VER = 'e1.0.0';
+export const ENGINE_VER = 'e1.2.0';   // 18 재미·악용 심사 반영(WE 말 공격·메모 결정성, 유저 명령 검증·즉시 적용, 접근법 대가, 구속 효과, 선형 보너스 + 기준점 R, 혹사 위험, 투구 상한) — 같은 시드도 결과가 달라지므로 올림
+// e1.1.0: 17 현실성 심사(끝내기·미완료 타석·작전 AI·바람 복원 등)

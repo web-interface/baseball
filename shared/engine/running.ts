@@ -6,15 +6,13 @@ import { flight, FL, gbTime, rollSpeed, heightAtFrac, timeAtFrac, kindOf, type R
 import { airCarry, windAt } from './weather.ts';
 import { type G, type Runner, type TeamSt, PO, BASE_X, BASE_Y, R, offense, defense } from './state.ts';
 import { OFJ, pcAt, fenceAt, fenceHAt, flyCatch, groundIntercept, retrieve, releaseTime, throwFlight, throwSpeed, throwErrP, flyAbil, travel } from './fielding.ts';
-import { bkRun, bkOut, bkPO, bkA, bkE, bkDP, batLine, fldLine, logBB, closeBB, logFD, logTH, logRN, logWhy, WHY } from './log.ts';
+import { bkRun, bkOut, bkPO, bkA, bkE, bkDP, batLine, fldLine, logBB, markBB, closeBB, logFD, logTH, logRN, logWhy, WHY } from './log.ts';
 
 const DEG = Math.PI / 180, BL = 27.43;
 const W2 = new Float64Array(2);
 const OF_ROLL: Roll = { c: 1.5, k: 1 / 200 }, OF_ROLL_T: Roll = { c: 1.0, k: 1 / 260 };
 
 /** 플레이 결과(재사용) — game.ts 가 타석 결과로 기록 */
-export const DBG: Record<string, number> = {};
-const dbg = (k: string, v = 1) => { DBG[k] = (DBG[k] ?? 0) + v; };
 /** 진루 상황 기록(보정용) */
 function rev(g: G, kind: string, outs: number, field: number, result: number): void { if (g.col?.run) g.col.run({ kind, outs, field, result }); }
 const fieldCode = (f: number): number => (f === 6 ? 0 : f === 7 ? 1 : f === 8 ? 2 : 3);
@@ -46,7 +44,7 @@ const noise = (g: G, sd: number): number => sd * invN(g.rB.next());
 function newRunner(g: G, bIdx: number, earned: boolean): Runner {
   const D = defense(g); return { i: bIdx, slot: g.T[g.half].next, resp: D.pit.i, earned, lead: 0, jump: 0 };
 }
-function scoreR(g: G, r: Runner, rbiOK: boolean): void { bkRun(g, r, rbiOK ? g.pa.b : -1); if (rbiOK) PL.rbi++; }
+function scoreR(g: G, r: Runner, rbiOK: boolean): void { if (bkRun(g, r, rbiOK ? g.pa.b : -1) && rbiOK) PL.rbi++; }   // 끝내기로 무효가 된 득점은 타점도 없음
 /** 판정 잡음 + 접전 오심(사람 심판) — 양수면 세이프 */
 function safeMargin(g: G, m: number, runner: PC, tag: boolean): number {
   let x = m + noise(g, P.run.safeNoise) + (tag ? P.run.slide * runner.z[A.sliding] + (hasT(runner, TR.headfirstSlide) ? P.run.headfirst : 0) : 0);
@@ -100,7 +98,7 @@ export function walk(g: G, earned = true): void {
 export interface BipCtx { ev: number; la: number; phi: number; weak: boolean; rangeCh: number; bunt: boolean }
 /** 인플레이 타구 판정 → PL 채움, 베이스·아웃·득점 갱신 */
 export function resolveBIP(g: G, c: BipCtx): void {
-  resetPL();
+  resetPL(); markBB(g);
   PL.ev = c.ev; PL.la = c.la; PL.phi = c.phi; PL.kind = kindOf(c.la);
   OFJ.add = c.la >= 10 ? P.fld.ofLineReact * Math.max(0, 25 - c.la) / 15 : 0;
   if (c.la < 10) playGround(g, c); else playAir(g, c);
@@ -119,7 +117,6 @@ function playGround(g: G, c: BipCtx): void {
   if (c.la > 2) { flight(c.ev, c.la); sAir = Math.min(FL.d, 40); tAir = FL.T * sAir / Math.max(0.1, FL.d); v0 = Math.min(v0, FL.vl * 0.85); }
   v0 = Math.max(1.5, v0);
   const gi = groundIntercept(g, D, c.phi, v0, lam, sAir, tAir, c.rangeCh, chop ? 0.15 : 0);
-  dbg("gb"); if (gi.f < 0) dbg("gbThrough"); else { dbg("gbT", gi.t); dbg("gbV0", v0); }
   if (gi.f < 0) {
     // 내야를 빠져나감 → 외야 회수
     const s0 = 46; const tr = gbTime(s0 - sAir, v0, lam); const t0 = tAir + (chop ? 0.15 : 0) + (tr === Infinity ? 4 : tr); const vb = Math.max(0.5, rollSpeed(s0 - sAir, v0, lam));
@@ -166,7 +163,6 @@ function playGround(g: G, c: BipCtx): void {
   if (rr[1] && dest[1] === 3 && rr[2] && dest[2] === 3) dest[1] = 2;   // 3루가 막혀 있으면 2루에
   // ── 수비 선택: 가장 이득이 큰 송구 ──
   const t1def = tToBase(1, tB1 - tToBase(1, false) < 0.3), m1 = tB1 - t1def;
-  dbg("m1", m1); dbg("tB1", tB1); dbg("t1def", t1def); dbg("n1");
   const t2def = rr[0] ? tToBase(2, true) : 99, m2 = tRun[0] - t2def;
   const t3def = rr[1] && dest[1] === 3 ? tToBase(3, true) : 99, m3 = tRun[1] - t3def - (forced[1] ? 0 : P.thr.tag);
   const tHdef = rr[2] && dest[2] === 4 ? tToBase(0, true) : 99, mH = tRun[2] - tHdef - (forced[2] ? 0 : P.thr.tag);
@@ -185,7 +181,7 @@ function playGround(g: G, c: BipCtx): void {
     if (!nearBag(b)) logTH(g, fpos, b, gi.t + rel, tDef, throwSpeed(fpc, fpos, true), 0, 0);
     return safeMargin(g, tDef + (tag ? P.thr.tag : 0) - tR, rpc, tag) < 0;
   };
-  const cover = (b: number): number => (b === 1 ? PO.B1 : b === 2 ? (fpos === PO.B2 || fpos === PO.B1 || (fpos === PO.P && c.phi > 0) ? PO.SS : PO.B2) : b === 3 ? PO.B3 : PO.C);
+  const cover = (b: number): number => (b === 1 ? (fpos === PO.B1 ? PO.P : PO.B1) : b === 2 ? (fpos === PO.B2 || fpos === PO.B1 || (fpos === PO.P && c.phi > 0) ? PO.SS : PO.B2) : b === 3 ? PO.B3 : PO.C);
   const recOut = (b: number): void => { bkOut(g); if (nearBag(b)) bkPO(g, fpos); else { bkPO(g, cover(b)); bkA(g, fpos); } };
   if (choice === 2) {
     if (doThrow(2, t2def, tRun[0], O.pcs[rr[0]!.i], false)) {
@@ -207,7 +203,7 @@ function playGround(g: G, c: BipCtx): void {
     const tagPlay = !forced[2];
     if (doThrow(0, tHdef, tRun[2], O.pcs[rr[2]!.i], tagPlay)) {
       out[2] = true; recOut(0);
-      if (!tagPlay && g.outs < 3 && !errThrow) { const cpc = pcAt(D, PO.C); const t1 = tHdef + 0.55 + BL / throwSpeed(cpc, PO.C, true); if (safeMargin(g, t1 - tB1, bat, false) < 0) { batOut = true; bkOut(g); bkPO(g, PO.B1); bkA(g, PO.C); PL.gdp = true; } }
+      if (!tagPlay && g.outs < 3 && !errThrow) { const cpc = pcAt(D, PO.C); const t1 = tHdef + 0.55 + BL / throwSpeed(cpc, PO.C, true); logTH(g, PO.C, 1, tHdef + 0.55, t1, throwSpeed(cpc, PO.C, true), 0, 1); if (safeMargin(g, t1 - tB1, bat, false) < 0) { batOut = true; bkOut(g); bkPO(g, PO.B1); bkA(g, PO.C); PL.gdp = true; } }
     }
   } else if (choice === 3) {
     if (doThrow(3, t3def, tRun[1], O.pcs[rr[1]!.i], !forced[1])) { out[1] = true; recOut(3); }
@@ -287,8 +283,10 @@ function playAir(g: G, c: BipCtx): void {
       logBB(g, c.ev, c.la, c.phi, lx, ly, T, FL.apex, kind, 4, 0);
       attribHR(g, d, Df, dAir, dWind, Hf, hF);
       const r = newRunner(g, pa.b, true);
+      g.hrTrot = true;   // 홈런은 끝내기여도 주자·타자 전원 득점
       for (let b = 2; b >= 0; b--) { const rr = g.bases[b]; if (rr) { g.bases[b] = null; scoreR(g, rr, true); } }
       scoreR(g, r, true);
+      g.hrTrot = false;
       return;
     }
     // 담장 직격 → 담장 앞에서 회수
@@ -310,7 +308,7 @@ function playAir(g: G, c: BipCtx): void {
   const ifr = kind === 3 && d < 60 && g.outs < 2 && g.bases[0] && g.bases[1];
   const caught = g.rB.next() < cr.p || (ifr && g.rB.next() < 0.98);
   const fpc = cr.f >= 0 ? pcAt(D, cr.f) : null;
-  if (cr.f >= 0) { const ab = flyAbil(fpc!, cr.f, c.rangeCh); logFD(g, cr.f, g.fx[cr.f], g.fy[cr.f], ab.react, ab.v, ab.tau, lx, ly, T, caught ? (cr.dive ? 2 : 0) : 1, cr.p); }
+  if (cr.f >= 0) { const ab = flyAbil(fpc!, cr.f, c.rangeCh); logFD(g, cr.f, g.fx[cr.f], g.fy[cr.f], ab.react, ab.v, ab.tau, cr.x, cr.y, cr.t, caught ? (cr.dive ? 2 : 0) : 1, cr.p); }   // 라이너를 길 위에서 막으면 그 점·시각
   if (caught && fpc) {
     // 잡았는데 떨어뜨림(실책)
     const rainC = P.fld.errRainCatch[sl.rainLv + (sl.rainLv > 0 ? 1 : 0)] ?? 1;
@@ -324,7 +322,7 @@ function playAir(g: G, c: BipCtx): void {
     }
     if (cr.p < 0.35) fldLine(D, cr.f).hardCaught++;
     logBB(g, c.ev, c.la, c.phi, lx, ly, T, FL.apex, kind, 0, cr.p);
-    caughtFly(g, cr.f, cr.line ? (g.fx[cr.f]) : lx, cr.line ? g.fy[cr.f] : ly, cr.line ? T * 0.4 : T, kind);
+    caughtFly(g, cr.f, cr.x, cr.y, cr.t, kind);
     if (ifr) PL.res = R.OUT;
     return;
   }
@@ -370,8 +368,8 @@ function caughtFly(g: G, f: number, x: number, y: number, tC: number, kind: numb
     if (est > th - (late ? 0.15 : 0) - 0.15 * O.tac.extraBase) {
       threw = true;
       logTH(g, f, 0, tC + rel, tThrow, throwSpeed(fpc, f, true), 0, 0);
-      if (g.rB.next() < throwErrP(fpc, f, Math.hypot(x, y), true, g.slot.rainLv, g.pa.cErr) * 0.7) { bkE(g, f); g.bases[2] = null; scoreR(g, r3, true); PL.sf = true; if (r2) { g.bases[1] = null; g.bases[2] = r2; } return; }
-      if (safeMargin(g, tThrow - tRun, pc, true) > 0) { g.bases[2] = null; scoreR(g, r3, true); PL.sf = true; logRN(g, pc.id, 3, 4, tC, tRun, 3, 1); }
+      if (g.rB.next() < throwErrP(fpc, f, Math.hypot(x, y), true, g.slot.rainLv, g.pa.cErr) * 0.7) { bkE(g, f); g.bases[2] = null; scoreR(g, r3, true); PL.sf = true; if (r2 && !g.over) { g.bases[1] = null; g.bases[2] = r2; } return; }
+      if (safeMargin(g, tThrow - tRun, pc, true) > 0) { g.bases[2] = null; scoreR(g, r3, true); PL.sf = true; logRN(g, pc.id, 3, 4, tC, tRun, 3, 1); if (g.over) return; }   // 끝내기 희생플라이면 여기서 끝
       else { g.bases[2] = null; bkOut(g); bkA(g, f); bkPO(g, PO.C); logRN(g, pc.id, 3, 4, tC, tRun, 1, 1); if (g.outs >= 3) { /* 득점 무효는 아님: 태그 아웃 전에 득점 없음 */ } }
     }
     if (g.outs >= 3) return;
@@ -493,7 +491,7 @@ function outfieldHit(g: G, phi: number, s0: number, t0: number, vb: number, lam:
   // 이동 적용(앞 주자부터)
   const old = [g.bases[0], g.bases[1], g.bases[2]];
   g.bases[0] = g.bases[1] = g.bases[2] = null;
-  const pendingRuns: Runner[] = [];
+  const pendingRuns: Runner[] = []; const pendingFrom: number[] = [];
   let outOnBases = 0; const fin = [0, 0, 0];
   for (let b = 2; b >= 0; b--) {
     const r = old[b]; if (!r) continue;
@@ -509,17 +507,26 @@ function outfieldHit(g: G, phi: number, s0: number, t0: number, vb: number, lam:
         continue;
       }
     }
-    logRN(g, O.pcs[r.i].id, b + 1, k, 0, arrT[b], k >= 4 ? 3 : 0, 0);
+    if (k < 4) logRN(g, O.pcs[r.i].id, b + 1, k, 0, arrT[b], 0, 0);
     fin[b] = k;
-    if (k >= 4) pendingRuns.push(r); else g.bases[k - 1] = r;
+    if (k >= 4) { pendingRuns.push(r); pendingFrom.push(b); } else g.bases[k - 1] = r;
   }
-  // 득점(세 번째 아웃이 태그 아웃이면 그 전에 들어온 앞 주자 득점은 인정)
-  for (const r of pendingRuns) if (g.outs < 3 || outOnBases > 0) scoreR(g, r, !throwErr || true);
+  // 득점(세 번째 아웃이 태그 아웃이면 그 전에 들어온 앞 주자 득점은 인정). 끝내기면 결승 주자까지만(9.06(f): 타자 루타도 결승 주자가 간 만큼만)
+  let woFrom = -1;
+  for (let q = 0; q < pendingRuns.length; q++) {
+    const r = pendingRuns[q], b = pendingFrom[q];
+    if (!(g.outs < 3 || outOnBases > 0)) continue;
+    const was = g.wo, s0 = g.score[g.half];
+    scoreR(g, r, !throwErr || true);
+    const scored = g.score[g.half] > s0;
+    logRN(g, O.pcs[r.i].id, b + 1, scored ? 4 : 3, 0, arrT[b], scored ? 3 : 0, 0);
+    if (!was && g.wo) woFrom = b;
+  }
   // 타자
   let bFinal = bTgt;
   if (g.outs < 3) {
     if (throwErr && !isBat) bFinal = Math.min(4, bTgt + 1);
-    if (isBat && !throwErr) {
+    if (isBat && !throwErr && !g.wo) {
       const base = bTgt === 4 ? 0 : bTgt;
       const m = tThrowTo(base) - batterTo(g, bat, bTgt);
       if (safeMargin(g, m, bat, true) < 0) { bFinal = -(bTgt - 1); bkOut(g); bkA(g, f); bkPO(g, base === 0 ? PO.C : base === 3 ? PO.B3 : PO.B2); }
@@ -531,9 +538,10 @@ function outfieldHit(g: G, phi: number, s0: number, t0: number, vb: number, lam:
   }
   const credited = bFinal > 0 ? Math.min(bFinal, throwErr ? bTgt : bFinal) : -bFinal;
   PL.hitBases = Math.max(1, Math.min(4, credited));
+  if (woFrom >= 0) { PL.hitBases = Math.max(1, Math.min(PL.hitBases, 3 - woFrom)); if (bFinal > PL.hitBases) bFinal = PL.hitBases; }   // 끝내기 안타: 결승 주자가 간 베이스 수만큼만
   PL.res = PL.hitBases === 1 ? R.S1 : PL.hitBases === 2 ? R.S2 : PL.hitBases === 3 ? R.S3 : R.HR;
   if (bFinal > 0) { const br = newRunner(g, pa.b, true); if (bFinal >= 4) scoreR(g, br, true); else { while (bFinal <= 3 && g.bases[bFinal - 1]) bFinal++; if (bFinal >= 4) scoreR(g, br, true); else g.bases[bFinal - 1] = br; } }
-  logRN(g, bat.id, 0, Math.abs(bFinal), 0, batterTo(g, bat, Math.max(1, Math.abs(bFinal))), bFinal > 0 ? 0 : 1, 0);
+  { const to = bFinal > 0 ? bFinal : bTgt; logRN(g, bat.id, 0, to, 0, batterTo(g, bat, Math.max(1, to)), bFinal > 0 ? 0 : 1, bFinal > 0 ? 0 : 1); }   // 더 가다 잡히면 목표 베이스(예: 2루타 치고 3루에서 아웃)로 기록
   if (g.col?.run && !throwErr) {
     const fc = fieldCode(f); const hb = PL.hitBases; const res3 = (b: number, adv: number): number => (fin[b] < 0 ? 2 : fin[b] >= adv ? 0 : 1);
     if (hb === 1) {
@@ -562,19 +570,20 @@ function attribHR(g: G, d: number, Df: number, dAir: number, dWind: number, Hf: 
 // ═════════════ 번트 ═════════════
 /** 번트 타구(페어) — 투수·포수·코너가 잡아 선행 주자 또는 1루 */
 export function playBunt(g: G, type: number): void {
-  resetPL(); PL.kind = 4;
+  resetPL(); markBB(g); PL.kind = 4;
   const D = defense(g), O = offense(g); const pa = g.pa; const bat = O.pcs[pa.b];
   const Bp = P.bunt; const r = g.rB;
+  const zb = clamp(bat.z[A.bunt] / P.zGain, -2.5, 2.5);   // 번트 기술(원래 눈금)
   // 뜬 번트
-  if (r.next() < Bp.pop * Math.exp(-Bp.popK * bat.z[A.bunt])) {
+  if (r.next() < Bp.pop * Math.exp(-Bp.popK * zb)) {
     const f = r.next() < 0.5 ? PO.P : PO.C; bkOut(g); bkPO(g, f); PL.res = R.OUT;
     if (g.bases[0] && g.outs < 3 && r.next() < 0.10) { bkOut(g); bkA(g, f); bkPO(g, PO.B1); g.bases[0] = null; }
     logBB(g, 30, 50, 0, 0, 10, 1.5, 6, 4, 0, 0.98); return;
   }
   const toFirstSide = !!g.bases[1] && !g.bases[0];
   const dirTarget = toFirstSide ? 30 : -30;
-  const phi = dirTarget + 6 * (1.4 - 0.4 * bat.z[A.bunt]) * invN(r.next());
-  const v = clamp(Bp.v + Bp.vSd * invN(r.next()) - Bp.vK * bat.z[A.bunt], 2.5, 12);
+  const phi = dirTarget + 6 * clamp(1.4 - 0.4 * zb, 0.5, 2.4) * invN(r.next());
+  const v = clamp(Bp.v + Bp.vSd * invN(r.next()) - Bp.vK * zb, 2.5, 12);
   const stop = v * v / (2 * Bp.friction * (g.park.surface === 'turf' ? 0.67 : 1));
   const sx = stop * Math.sin(phi * DEG), sy = stop * Math.cos(phi * DEG);
   // 수비: 투수·포수·1루·3루(코너 전진이면 5m 앞)
@@ -595,32 +604,40 @@ export function playBunt(g: G, type: number): void {
   const tThrow = (b: number): number => bestT + rel + Math.hypot(BASE_X[b] - sx, BASE_Y[b] - sy) / throwSpeed(fpc, bestF, true);
   // 선행 주자 승부?
   const r1 = g.bases[0], r2 = g.bases[1], r3 = g.bases[2];
+  // 선행 주자 포스 승부: 2루(1루 주자) · 3루(1·2루 주자) · 홈(만루). 스퀴즈 3루 주자는 투구와 함께 뛰어 홈 승부가 늦다
   let leadBase = -1, mLead = -9;
-  if (r1 && !(r2 && !r3 && false)) { const tr = arrive(g, O.pcs[r1.i], BL - leadOf(g, r1, 0), 0, 0.2, true); mLead = tr - tThrow(2); leadBase = 2; }
+  if (r1) { const tr = arrive(g, O.pcs[r1.i], BL - leadOf(g, r1, 0), 0, 0.2, true); mLead = tr - tThrow(2); leadBase = 2; }
   if (r2 && r1) { const tr = arrive(g, O.pcs[r2.i], BL - leadOf(g, r2, 1), 0, 0.2, true); const m = tr - tThrow(3); if (m > mLead) { mLead = m; leadBase = 3; } }
+  if (r3 && r2 && r1) { const tr = arrive(g, O.pcs[r3.i], BL - leadOf(g, r3, 2), 0, type === 4 ? -0.6 : 0.2, true); const m = tr - tThrow(0); if (m > mLead) { mLead = m; leadBase = 0; } }
   const errP = P.fld.errField * 0.8 * Math.exp(-P.fld.hands * fpc.z[A.hands]);
   if (r.next() < errP) { reachOnError(g, bestF, 0); return; }
-  if (type !== 3 && leadBase > 0 && mLead > 0.25 && g.outs < 2) {
-    // 선행 주자 포스 아웃
-    bkOut(g); bkA(g, bestF); bkPO(g, leadBase === 2 ? PO.SS : PO.B3);
-    if (leadBase === 2) { g.bases[0] = null; } else { g.bases[1] = null; if (g.bases[0]) { g.bases[1] = g.bases[0]; g.bases[0] = null; } }
+  if (type !== 3 && leadBase >= 0 && mLead > P.bunt.leadMargin && g.outs < 2) {   // 확실할 때만 선행 주자(아니면 1루에서 확실한 아웃)
+    // 선행 주자 포스 아웃 — 나머지는 밀려 한 베이스씩(만루면 3루 주자 득점), 스퀴즈 3루 주자는 득점
+    bkOut(g); bkA(g, bestF); bkPO(g, leadBase === 2 ? PO.SS : leadBase === 3 ? PO.B3 : PO.C);
+    const outR = leadBase === 2 ? r1 : leadBase === 3 ? r2 : r3;
+    g.bases[0] = g.bases[1] = g.bases[2] = null;
+    if (r3 && r3 !== outR) { if (type === 4 || (r1 && r2)) scoreR(g, r3, true); else g.bases[2] = r3; }
+    if (r2 && r2 !== outR) g.bases[2] = r2;
+    if (r1 && r1 !== outR) g.bases[1] = r1;
     g.bases[0] = newRunner(g, pa.b, true);
     PL.res = R.FC; return;
   }
   const m1 = tThrow(1) - tB1;
   if (safeMargin(g, m1, bat, false) < 0) {
     bkOut(g); bkA(g, bestF); bkPO(g, PO.B1);
-    // 주자 진루(희생번트)
+    // 주자 진루(희생번트): 밀려나는 주자는 한 베이스씩, 스퀴즈(type 4)면 투구와 함께 뛴 3루 주자가 들어온다
     if (g.outs < 3) {
-      if (r3 && type === 2) { g.bases[2] = null; scoreR(g, r3, true); }
-      if (r2) { g.bases[1] = null; if (!g.bases[2]) g.bases[2] = r2; }
-      if (r1) { g.bases[0] = null; if (!g.bases[1]) g.bases[1] = r1; }
+      const nb: (Runner | null)[] = [null, null, null];
+      if (r3) { if (type === 4 || (r1 && r2)) scoreR(g, r3, true); else nb[2] = r3; }
+      if (r2) { if (!nb[2]) nb[2] = r2; else nb[1] = r2; }
+      if (r1) nb[1] = nb[1] ?? r1;
+      g.bases[0] = null; g.bases[1] = nb[1]; g.bases[2] = nb[2];
     }
     PL.res = (r1 || r2 || r3) && type !== 3 ? R.SH : R.OUT; PL.sh = PL.res === R.SH;
   } else {
     // 번트 안타
     advanceForced(g, 1, true);
-    if (r3 && type === 2 && g.bases[2] === r3) { g.bases[2] = null; scoreR(g, r3, true); }
+    if (r3 && type === 4 && g.bases[2] === r3) { g.bases[2] = null; scoreR(g, r3, true); }
     g.bases[0] = newRunner(g, pa.b, true);
     PL.res = R.S1; PL.hitBases = 1;
   }

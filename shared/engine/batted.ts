@@ -51,12 +51,14 @@ export function timeAtFrac(f: number, T: number): number {
 // ── 충돌 오프셋 모형 [11 6.1 맞춤] ──
 export interface BatIn {
   zc: number; zk: number; zs: number; gbPitch: number; tLaunch: number; tGbPit: number; dEdge: number; zRel: number;
-  vPlate: number; vb: number; mem: number; weakAdj: number; muAdj: number; sdMult: number; move: number; heavy: boolean; rainLv: number; tempC: number; coldT: number;
+  vPlate: number; vb: number; mem: number; weakAdj: number;
+  /** 이 공의 구속 − 같은 구종 리그 평균(km/h, ±15 자름; 너클·이퓨스 0) — 빠를수록 타이밍이 밀려 빗맞음↑ [18 심사] */
+  veloDev: number; muAdj: number; sdMult: number; move: number; heavy: boolean; rainLv: number; tempC: number; coldT: number;
 }
 export const BB = { ev: 0, la: 0, weak: false, theta: 0, bar: 0 };
 export function battedBall(r: Sfc32, a: BatIn): void {
   const p = P.bat;
-  const pWeak = sig(p.weak0 - p.weakC * a.zc - p.weakK * a.zk + p.weakS * a.zs * a.move - p.weakD * clamp(a.dEdge, -15, 15) - p.weakMem * a.mem + a.weakAdj);
+  const pWeak = sig(p.weak0 - p.weakC * a.zc - p.weakK * a.zk + p.weakS * a.zs * a.move - p.weakD * clamp(a.dEdge, -15, 15) - p.weakMem * a.mem + a.weakAdj + p.weakV * a.veloDev);
   const weak = r.next() < pWeak;
   let delta: number;
   const u1 = r.next(), u2 = r.next();
@@ -68,7 +70,7 @@ export function battedBall(r: Sfc32, a: BatIn): void {
   }
   const th = Math.asin(clamp(delta / p.R, -0.999, 0.999));
   const la = p.laA + p.laK * th * 57.29578 + p.laSd * invN(r.next());
-  const bar = weak ? p.weakB[0] + p.weakB[1] * r.next() : Math.max(0.5, 1 - p.barrel * Math.exp(-p.barrelC * a.zc) * Math.abs(invN(r.next())));
+  const bar = weak ? p.weakB[0] + p.weakB[1] * r.next() : Math.max(0.5, 1 - p.barrel * Math.exp(-p.barrelC * a.zc) * (1 + p.barrelV * a.veloDev) * Math.abs(invN(r.next())));
   let ev = (p.plateW * a.vPlate + p.batW * a.vb) * Math.pow(Math.cos(th), th < 0 ? p.cosNeg : p.cosPos) * bar;
   if (a.heavy) ev -= 5;
   ev *= 1 - p.rainEv[a.rainLv];

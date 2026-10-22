@@ -4,8 +4,8 @@ import type { G, Runner, TeamSt } from './state.ts';
 import type { BatLine, PitLine, FldLine, GameRecord } from './types.ts';
 import { POS_NAME } from './state.ts';
 
-export interface LogBuf { pa: number[]; pt: number[]; bb: number[]; fd: number[]; th: number[]; rn: number[]; ev: number[]; why: number[]; wp: number[]; hl: number[]; wx: number[]; dict: number[]; recOf: Map<number, number> }
-export function newLog(): LogBuf { return { pa: [], pt: [], bb: [], fd: [], th: [], rn: [], ev: [], why: [], wp: [], hl: [], wx: [], dict: [], recOf: new Map() }; }
+export interface LogBuf { pa: number[]; pt: number[]; bb: number[]; fd: number[]; th: number[]; rn: number[]; ev: number[]; why: number[]; wp: number[]; hl: number[]; wx: number[]; dict: number[]; recOf: Map<number, number>; mk: number[] }
+export function newLog(): LogBuf { return { pa: [], pt: [], bb: [], fd: [], th: [], rn: [], ev: [], why: [], wp: [], hl: [], wx: [], dict: [], recOf: new Map(), mk: [-1, -1, -1] }; }
 export function recNo(g: G, pid: number): number {
   const L = g.log as LogBuf; if (!L) return 0;
   let r = L.recOf.get(pid); if (r === undefined) { r = L.dict.length; L.dict.push(pid); L.recOf.set(pid, r); }
@@ -36,7 +36,9 @@ export function fldLine(t: TeamSt, pos: number): FldLine {
   const f = newFld(pid, POS_NAME[pos]); t.fld.push(f); return f;
 }
 /** 득점: 주자 r 이 홈을 밟음. 자책 여부는 주자 출루 방식과 '가상 아웃'(실책이 없었다면 끝났을 이닝)으로 */
-export function bkRun(g: G, r: Runner, rbiBatter: number): void {
+export function bkRun(g: G, r: Runner, rbiBatter: number): boolean {
+  // 끝내기: 결승 주자가 홈을 밟는 순간 경기 끝 — 뒤따르는 주자의 득점은 무효(홈런만 예외, 규칙 7.01(g))
+  if (g.wo && !g.hrTrot) return false;
   const O = g.T[g.half], D = g.T[1 - g.half];
   g.score[g.half]++;
   O.runsInn[g.inning - 1] = (O.runsInn[g.inning - 1] ?? 0) + 1;
@@ -48,6 +50,8 @@ export function bkRun(g: G, r: Runner, rbiBatter: number): void {
   if (r.resp !== D.pit.i) { const cur = pitLine(D, D.pit.i); cur.inhScored++; }
   g.h = (Math.imul(g.h ^ (g.paNo * 31 + g.score[g.half]), 0x01000193)) >>> 0;
   if (g.logOn) (g.log as LogBuf).rn.push(recNo(g, O.pcs[r.i].id), -1, 4, Math.round(g.clock * 100), 0, 3, 0);
+  if (g.half === 1 && g.inning >= 9 && g.score[1] > g.score[0]) { g.wo = true; g.over = true; }
+  return true;
 }
 export function bkOut(g: G, n = 1): void {
   const D = g.T[1 - g.half];
@@ -63,14 +67,19 @@ export function bkDP(g: G, pos: number): void { fldLine(g.T[1 - g.half], pos).DP
 export function logPitch(g: G, type: number, vPlate: number, x: number, z: number, res: number, flags: number): void {
   if (!g.logOn) return; (g.log as LogBuf).pt.push(type, Math.round(vPlate * 10), Math.round(x), Math.round(z), res, flags, Math.round(g.clock));
 }
+/** 인플레이 시작 표시: 이 뒤에 남는 수비·송구·주루 기록이 이번 타구 것(logBB 를 수비 기록보다 늦게 불러도 범위가 맞도록) */
+export function markBB(g: G): void {
+  if (!g.logOn) return; const L = g.log as LogBuf; L.mk[0] = L.fd.length / 11; L.mk[1] = L.th.length / 7; L.mk[2] = L.rn.length / 7;
+}
 export function logBB(g: G, ev: number, la: number, phi: number, lx: number, ly: number, hang: number, apex: number, kind: number, result: number, catchP: number): void {
   if (!g.logOn) return; const L = g.log as LogBuf;
+  const m = L.mk; const f0 = m[0] >= 0 ? m[0] : L.fd.length / 11, t0 = m[1] >= 0 ? m[1] : L.th.length / 7, r0 = m[2] >= 0 ? m[2] : L.rn.length / 7;
   L.bb.push(g.paNo, Math.round(ev * 10), Math.round(la * 10), Math.round(phi * 10), Math.round(lx * 10), Math.round(ly * 10), Math.round(hang * 100), Math.round(apex * 10), kind, result, Math.round(catchP * 1000),
-    L.fd.length / 11, 0, L.th.length / 7, 0, L.rn.length / 7, 0);
+    f0, 0, t0, 0, r0, 0);
 }
 /** 타구 기록의 관여 수 칸 마감 */
 export function closeBB(g: G): void {
-  if (!g.logOn) return; const L = g.log as LogBuf; const o = L.bb.length - 17; if (o < 0) return;
+  if (!g.logOn) return; const L = g.log as LogBuf; L.mk[0] = L.mk[1] = L.mk[2] = -1; const o = L.bb.length - 17; if (o < 0) return;
   L.bb[o + 12] = L.fd.length / 11 - L.bb[o + 11]; L.bb[o + 14] = L.th.length / 7 - L.bb[o + 13]; L.bb[o + 16] = L.rn.length / 7 - L.bb[o + 15];
 }
 export function logFD(g: G, pos: number, sx: number, sy: number, react: number, v: number, tau: number, ax: number, ay: number, t: number, act: number, p: number): void {
@@ -83,7 +92,7 @@ export function logRN(g: G, pid: number, from: number, to: number, t0: number, t
   if (!g.logOn) return; (g.log as LogBuf).rn.push(recNo(g, pid), from, to, Math.round(t0 * 100), Math.round(t1 * 100), res, slide);
 }
 export function logEV(g: G, code: number, a: number, b: number): void {
-  if (!g.logOn) return; (g.log as LogBuf).ev.push(g.paNo, g.pitchNo, code, a, b);
+  if (!g.logOn) return; (g.log as LogBuf).ev.push(g.prePA ? g.paNo + 1 : g.paNo, g.pitchNo, code, a, b);
 }
 export function logWhy(g: G, factor: number, size: number, decisive: boolean, pid: number): void {
   if (!g.logOn) return; const L = g.log as LogBuf; if (L.why.length / 5 >= 8) return; L.why.push(g.paNo, factor, Math.round(size * 10), decisive ? 1 : 0, recNo(g, pid));

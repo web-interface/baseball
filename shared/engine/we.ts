@@ -22,26 +22,33 @@ for (let n = 1; n <= 12; n++) POW.push(conv(POW[n - 1], inn));
 let pTie1 = 0, pHome1 = 0; for (let a = 0; a < MR; a++) for (let h = 0; h < MR; h++) { const p = inn[a] * inn[h]; if (h > a) pHome1 += p; else if (h === a) pTie1 += p; }
 function extraWE(innLeft: number): number { if (innLeft <= 0) return 0.5; let w = 0, tie = 1; for (let k = 0; k < innLeft; k++) { w += tie * pHome1; tie *= pTie1; } return w + 0.5 * tie; }
 
-const MEMO = new Float64Array(13 * 2 * 24 * 31).fill(-1);   // Float64: 캐시에서 꺼낸 값과 새로 계산한 값이 비트까지 같아야 결정적
+// 메모는 '결과를 정하는 상태'로만 키를 잡는다: (정규/연장, 남은 이닝 0~12, 초/말, 아웃, 주자, 점수 차) × 경기의 maxInn 마다 따로.
+// [18 재미·악용 심사] 전에는 키에 maxInn 이 없고 이닝을 12에서 잘라, 더블헤더 2차전(9회 제한)·연장 13회↑ 경기를 먼저 돈 프로세스에서는
+// 같은 경기의 WE·LI 가 달라져 결과가 바뀌었다(실측: 9회 제한 경기 80개 뒤 같은 경기 200개 해시 0/200 일치) — '같은 요청 = 같은 결과' 위반.
+const MEMOS = new Map<number, Float64Array>();   // Float64: 캐시에서 꺼낸 값과 새로 계산한 값이 비트까지 같아야 결정적
+function memoOf(maxInn: number): Float64Array { let m = MEMOS.get(maxInn); if (!m) { m = new Float64Array(2 * 13 * 2 * 24 * 31).fill(-1); MEMOS.set(maxInn, m); } return m; }
 /** 홈 팀 승리 기대값. inning 1~, half 0 초 1 말, outs 0~2, bases 비트, diff = 홈 − 원정 */
 export function homeWE(inning: number, half: number, outs: number, bases: number, diff: number, maxInn = 11): number {
   if (outs >= 3) { if (half === 0) { half = 1; outs = 0; bases = 0; } else { inning++; half = 0; outs = 0; bases = 0; } }
   const dc = diff < -15 ? -15 : diff > 15 ? 15 : diff;
-  const ii = Math.min(12, inning);
-  const key = ((ii * 2 + half) * 24 + bases * 3 + outs) * 31 + dc + 15;
-  const hit = MEMO[key]; if (hit >= 0) return hit;
   const reg = 9;
-  const innLeftAfter = inning <= reg ? reg - inning : Math.max(0, maxInn - inning);
+  const phase = inning <= reg ? 0 : 1;
+  const innLeftAfter = Math.min(12, inning <= reg ? reg - inning : Math.max(0, maxInn - inning));   // 12이닝 넘게 남으면 12로 근사(전에는 maxInn ≥ 23 에서 표 밖을 읽어 멈췄다)
+  const M = memoOf(maxInn);
+  const key = (((phase * 13 + innLeftAfter) * 2 + half) * 24 + bases * 3 + outs) * 31 + dc + 15;
+  const hit = M[key]; if (hit >= 0) return hit;
   let away: Float64Array, home: Float64Array;
-  if (half === 0) { away = conv(REST[bases * 3 + outs], POW[innLeftAfter]); home = POW[innLeftAfter + 1]; }
-  else { home = conv(REST[bases * 3 + outs], POW[innLeftAfter]); away = POW[0]; }
+  // 초: 원정 = 이번 반 이닝 나머지 + 뒤 이닝들, 홈 = 이번 말 + 뒤 이닝들 / 말: 홈 = 이번 반 이닝 나머지 + 뒤 이닝들, 원정 = 뒤 이닝들
+  // [18 심사] 전에는 말 공격 때 원정의 남은 이닝을 0으로 봐(9회말만 맞음) 1~8회말 홈 WE 가 크게 부풀었다 — 이닝 끝 아웃 하나가 WE +0.44 로 기록되는 등 LI·명장면 감지가 틀렸다.
+  if (half === 0) { away = conv(REST[bases * 3 + outs], POW[innLeftAfter]); home = POW[Math.min(12, innLeftAfter + 1)]; }
+  else { home = conv(REST[bases * 3 + outs], POW[innLeftAfter]); away = POW[innLeftAfter]; }
   // P(홈 승) = Σ_a P(a)·P(h > a − d)
   const tail = new Float64Array(MR + 1); for (let h = MR - 1; h >= 0; h--) tail[h] = tail[h + 1] + home[h];
   let win = 0, tie = 0;
   for (let a = 0; a < MR; a++) { if (away[a] < 1e-12) continue; const need = a - dc + 1; win += away[a] * (need <= 0 ? 1 : need >= MR ? 0 : tail[need]); const eq = a - dc; if (eq >= 0 && eq < MR) tie += away[a] * home[eq]; }
   const extraLeft = inning <= reg ? maxInn - reg : 0;
   const we = win + tie * (inning <= reg ? extraWE(extraLeft) : 0.5);
-  MEMO[key] = we; return we;
+  M[key] = we; return we;
 }
 /** 공격 팀 기준 WE */
 export function offWE(inning: number, half: number, outs: number, bases: number, homeDiff: number, maxInn = 11): number {

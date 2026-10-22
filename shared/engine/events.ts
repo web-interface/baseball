@@ -130,7 +130,7 @@ export function evHalfStart(g: G): void {
 }
 
 /** 타석 시작: 상황 이벤트 + 이번 타석 채널 합산(타자 bP/bS, 투수 pP/pS) */
-export function evPAStart(g: G, bP: Float64Array, bS: Float64Array, pP: Float64Array, pS: Float64Array): void {
+export function evPAStart(g: G, bP: Float64Array, bS: Float64Array, pP: Float64Array, pS: Float64Array, again = false): void {
   bP.fill(0); bS.fill(0); pP.fill(0); pS.fill(0);
   const ev = g.ev as EvState; if (!ev.on) return;
   const off = g.half, def = 1 - g.half; const O = ev.S[off], D = ev.S[def];
@@ -147,13 +147,13 @@ export function evPAStart(g: G, bP: Float64Array, bS: Float64Array, pP: Float64A
   if (D.shaken > 0) pS[CH.error] += V.shakenErr;
   // 만루 정면승부
   if (g.bases[0] && g.bases[1] && g.bases[2]) {
-    note(g, 'pit_bases_loaded');
+    if (!again) note(g, 'pit_bases_loaded');
     pS[CH.control] += V.blCtl; bS[CH.aggr] += V.blAggr;
     const P0 = clamp((g.pa.li - 1) / 3, 0, 1) + 0.2;
     if (u01(ev.seed, 3, HID.pit_bases_loaded, g.paNo) < 0.25 * kc(comp100 / 5) * (P0 >= 0.6 ? 1.3 : 1)) { pS[CH.control] += V.blCrack; ev.blCrack = true; }
   }
   // 도루 신경전: 빠른 1루 주자(2루 빔)
-  if (g.bases[0] && !g.bases[1]) { const rp = Ot.pcs[g.bases[0].i]; if (rp.v[A.speed] >= 70 && rp.v[A.stealJump] >= 60) { ev.duel = true; note(g, 'run_steal_duel'); pS[CH.control] += V.duelCtl; bS[CH.contact] += V.duelCon; } }
+  if (g.bases[0] && !g.bases[1]) { const rp = Ot.pcs[g.bases[0].i]; if (rp.v[A.speed] >= 70 && rp.v[A.stealJump] >= 60) { ev.duel = true; if (!again) note(g, 'run_steal_duel'); pS[CH.control] += V.duelCtl; bS[CH.contact] += V.duelCon; } }
   // 공격 팀 상태
   if (O.rally) { bS[CH.contact] += V.rallyCon; bS[CH.eye] += V.rallyEye; }
   if (O.momentum) bS[CH.contact] += V.momCon;
@@ -261,7 +261,8 @@ export function evHalfEnd(g: G): void {
   const runs = D.runsHalf;
   if (runs >= 4) { note(g, 'bench_momentum'); O.momentum = ev.on; } else O.momentum = false;
   if (D.hadErr && D.runsAfterErr === 0 && u01(ev.seed, 2, HID.fld_teammate_cover, g.inning * 2 + g.half) < base('fld_teammate_cover', 0.6)) { note(g, 'fld_teammate_cover'); D.shaken = 0; }
-  if (D.battersHalf >= 9) D.coldLeft = -1;      // 다음 수비 반 이닝 시작 때 판정(공격한 팀의 투수 = O 쪽)
+  // 어깨 식음: 우리 공격이 9타자 이상 길었으면 그동안 앉아 있던 '우리 투수'(O 쪽)를 다음 수비 시작에 판정.
+  // [18 심사] 전에는 방금 긴 이닝을 '던진' 투수(D 쪽)에게도 −1 을 걸어, 두 반 이닝 뒤 그 투수가 앉아 있지도 않았는데 어깨 식음 판정을 받았다.
   if (D.battersHalf >= 9) O.coldLeft = -1;
   D.rattled = false; O.roar = false;
   ev.tension = Math.max(0, ev.tension - 15);

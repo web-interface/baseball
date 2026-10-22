@@ -62,15 +62,32 @@ export interface ClubSeason {
   bat: Map<number, Record<string, number>>; pit: Map<number, Record<string, number>>;
   injuries: { pid: number; type: string; days: number; day: number }[];
   mgr?: TeamIn['mgr']; tac?: TeamIn['tac']; chemTier: number;
+  /** 1군(1)·2군(2). 경기에 나오는 건 1군 엔트리(타자 13·투수 14)뿐 — 부상으로 모자라면 2군에서 올린다 */
+  tier: Map<number, 1 | 2>;
 }
-export function newClub(id: string, park: Park, players: PlayerIn[], primary: Map<number, string>, role: Map<number, string>): ClubSeason {
+export function newClub(id: string, park: Park, players: PlayerIn[], primary: Map<number, string>, role: Map<number, string>, tier?: Map<number, 1 | 2>): ClubSeason {
   const sps = players.filter((p) => role.get(p.id) === 'SP');
   // 로테이션: 선발 5명(스태미나·위력 순)
   const val = (p: PlayerIn) => (p.attrs[A.stamina] ?? 50) * 0.3 + (p.pitches ?? []).reduce((s, x) => s + x.stuff * x.use / 100, 0) + (p.attrs[A.control] ?? 50) * 0.4;
   const rot = sps.sort((a, b) => val(b) - val(a)).slice(0, 5).map((p) => p.id);
   for (const p of players) p.state = p.state ?? { cond: 0, fatigue: 0, arm: 0, sense: 80, conf: 50, morale: 60, b2b: [0, 0, 0], flags: [] };
   return { id, park, players, byId: new Map(players.map((p) => [p.id, p])), primary, role, rotation: rot, rotIdx: 0, lastStart: new Map(), injuredUntil: new Map(),
-    W: 0, L: 0, T: 0, RS: 0, RA: 0, streak: 0, mood: 55, bat: new Map(), pit: new Map(), injuries: [], chemTier: 1 };
+    W: 0, L: 0, T: 0, RS: 0, RA: 0, streak: 0, mood: 55, bat: new Map(), pit: new Map(), injuries: [], chemTier: 1, tier: tier ?? new Map(players.map((p) => [p.id, 1 as const])) };
+}
+/** 그날 1군 엔트리: 다치지 않은 1군 + 모자란 만큼 2군에서 콜업(포수·선발 투수 먼저). 타자 13·투수 14 (KBO 1군 28명 중 출전 26명 기준) */
+const ACTIVE_BAT = 13, ACTIVE_PIT = 14;
+function activeRoster(c: ClubSeason, day: number): { bats: PlayerIn[]; pits: PlayerIn[] } {
+  const ok = (p: PlayerIn) => (c.injuredUntil.get(p.id) ?? -1) < day;
+  const isP = (p: PlayerIn) => c.role.get(p.id) !== undefined;
+  const one = c.players.filter((p) => ok(p) && (c.tier.get(p.id) ?? 1) === 1), two = c.players.filter((p) => ok(p) && (c.tier.get(p.id) ?? 1) === 2);
+  const bats = one.filter((p) => !isP(p)), pits = one.filter(isP);
+  const pv = (p: PlayerIn) => (p.pitches ?? []).reduce((s2, x) => s2 + x.stuff * x.use / 100, 0) + 0.45 * (p.attrs[A.control] ?? 50);
+  const hv = (p: PlayerIn) => hitVal(p) + (p.pos[1] ?? 1) * (bats.filter((b) => c.primary.get(b.id) === 'C').length < 2 ? 3 : 0);   // 포수가 모자라면 포수부터
+  const b2 = two.filter((p) => !isP(p)).sort((a, b) => hv(b) - hv(a)); while (bats.length < ACTIVE_BAT && b2.length) bats.push(b2.shift()!);
+  const spNeed = () => pits.filter((p) => c.role.get(p.id) === 'SP').length < 5;
+  const p2 = two.filter(isP).sort((a, b) => (spNeed() ? (c.role.get(b.id) === 'SP' ? 100 : 0) - (c.role.get(a.id) === 'SP' ? 100 : 0) : 0) + pv(b) - pv(a));
+  while (pits.length < ACTIVE_PIT && p2.length) pits.push(p2.shift()!);
+  return { bats, pits };
 }
 
 /** 타자 라인업 가치(대략): 컨택·파워·선구·주력 */
@@ -80,7 +97,8 @@ function defVal(p: PlayerIn, pos: string): number { const a = p.attrs; const pro
 /** 그날 자동 라인업(AI·유저 기본): 다친 선수·지친 선수 빼고 포지션별 주전, 지명타자, 타순, 선발, 불펜 가용 */
 export function autoTeamIn(c: ClubSeason, day: number, opts: { level?: 1 | 2 | 3 | 4 | 5 | 6; style?: -2 | -1 | 0 | 1 | 2; isUser?: boolean } = {}): TeamIn {
   const ok = (p: PlayerIn) => (c.injuredUntil.get(p.id) ?? -1) < day;
-  const bats = c.players.filter((p) => ok(p) && c.role.get(p.id) === undefined);
+  const act = activeRoster(c, day);
+  const bats = act.bats;
   const used = new Set<number>(); const lineup: { pid: number; pos: Pos }[] = [];
   // 포수: 피로 높으면 백업
   for (const pos of POSL) {
@@ -107,9 +125,22 @@ export function autoTeamIn(c: ClubSeason, day: number, opts: { level?: 1 | 2 | 3
   // 선발: 로테이션 순서, 4일 휴식
   let sp = -1;
   for (let k = 0; k < 5 && sp < 0; k++) { const id = c.rotation[(c.rotIdx + k) % c.rotation.length]; const p = c.byId.get(id); if (!p || !ok(p)) continue; const last = c.lastStart.get(id) ?? -99; if (day - last >= 5) { sp = id; c.rotIdx = (c.rotIdx + k + 1) % c.rotation.length; } }
-  const pitchers = c.players.filter((p) => ok(p) && c.role.get(p.id) !== undefined);
-  if (sp < 0) { // 불펜 데이: 휴식 가장 긴 롱맨
+  const pitchers = act.pits;
+  // 대체 선발: 로테이션 투수가 다쳤거나 덜 쉬었으면 로테이션 밖 선발 자원(2군 선발·스윙맨) 중 충분히 쉰 가장 좋은 투수 — 실제 구단이 2군 선발을 올리는 것처럼
+  if (sp < 0) {
+    let best = -1, bv = -1e9;
+    for (const p of pitchers) {
+      if (c.role.get(p.id) !== 'SP' || c.rotation.includes(p.id)) continue;
+      if (day - (c.lastStart.get(p.id) ?? -99) < 5 || (p.state?.b2b?.[0] ?? 0) > 0 || (p.state?.b2b?.[1] ?? 0) > 0) continue;
+      const v = (p.attrs[A.stamina] ?? 50) * 0.3 + (p.pitches ?? []).reduce((s, x) => s + x.stuff * x.use / 100, 0) + (p.attrs[A.control] ?? 50) * 0.4;
+      if (v > bv) { bv = v; best = p.id; }
+    }
+    sp = best;
+  }
+  let opener = false;
+  if (sp < 0) { // 불펜 데이: 휴식 가장 긴 롱맨 — 구원 투수가 먼저 나가므로 투구 수를 짧게(오프너)
     let best = -1, bv = -1; for (const p of pitchers) { if (c.role.get(p.id) === 'CL') continue; const r = day - (c.lastStart.get(p.id) ?? -99); const v = r * 10 - (p.state?.arm ?? 0) + (p.attrs[A.stamina] ?? 0) * 0.3; if (v > bv && (p.state?.b2b?.[0] ?? 0) === 0) { bv = v; best = p.id; } } sp = best;
+    opener = sp >= 0 && c.role.get(sp) !== 'SP';
   }
   // 불펜 역할: CL·SU 2·MID·LONG·MOP·LOOGY
   const rps = pitchers.filter((p) => p.id !== sp && (c.role.get(p.id) === 'RP' || c.role.get(p.id) === 'CL' || !c.rotation.includes(p.id)));
@@ -124,7 +155,7 @@ export function autoTeamIn(c: ClubSeason, day: number, opts: { level?: 1 | 2 | 3
     return 'MID';
   };
   sorted.forEach((p, k) => {
-    const isSP = c.rotation.includes(p.id);
+    const isSP = c.rotation.includes(p.id) || c.role.get(p.id) === 'SP';   // 대체 선발 자원도 불펜에선 비상시만(쉬게 해서 선발 날 쓸 수 있게)
     const st = p.state ?? {};
     const av = availability(st, false, day - (c.lastStart.get(p.id) ?? -99), (p.traits ?? []).includes('rubberArm'));
     const avail = isSP ? ((day - (c.lastStart.get(p.id) ?? -99)) >= 3 ? 1 : 0) as 0 | 1 : av;
@@ -132,7 +163,10 @@ export function autoTeamIn(c: ClubSeason, day: number, opts: { level?: 1 | 2 | 3
   });
   if (pen.length && !pen.some((x) => x.role === 'MOP')) { const last = [...pen].reverse().find((x) => x.role === 'MID'); if (last) last.role = 'MOP'; }
   const bench = bats.filter((p) => !used.has(p.id)).map((p) => p.id);
-  return { id: c.id, isUser: !!opts.isUser, players: c.players, lineup: order.map((x) => ({ pid: x.pid, pos: x.pos })), sp, pen, bench, tac: c.tac, mgr: c.mgr ?? { style: opts.style ?? 0, level: opts.level ?? 3 }, mood: c.mood, streak: c.streak, chemTier: c.chemTier };
+  // 오프너(구원 투수 선발)는 40~50구에서 내린다 — 전술의 투수별 한계 투구 수로 전달
+  const stamSP = sp >= 0 ? (c.byId.get(sp)?.attrs[A.stamina] ?? 40) : 40;
+  const tac = opener ? { ...(c.tac ?? {}), pit: { ...(c.tac?.pit ?? {}), [sp]: { ...(c.tac?.pit?.[sp] ?? {}), limit: Math.round(Math.min(60, 35 + 0.3 * stamSP)) } } } : c.tac;
+  return { id: c.id, isUser: !!opts.isUser, players: c.players, lineup: order.map((x) => ({ pid: x.pid, pos: x.pos })), sp, pen, bench, tac, mgr: c.mgr ?? { style: opts.style ?? 0, level: opts.level ?? 3 }, mood: c.mood, streak: c.streak, chemTier: c.chemTier };
 }
 
 /** 경기 뒤 상태 갱신(하루): 투수 팔 피로·연투, 야수 피로, 부상 등록, 컨디션·폼, 순위 */

@@ -163,6 +163,8 @@ export interface GameInput {
   home: TeamIn; away: TeamIn;
   cmds?: Command[];
   opts?: GameOpts;
+  /** 리그 수준 기준점 R(경기엔진.md 3.4) — 서버가 양 팀 종합 수준으로 계산해 넘긴다. 모든 선수의 능력치(성향 4개 제외)·구종 위력·커맨드에서 똑같이 뺀다. 기본 0, −20~60 */
+  levelRef?: number;
 }
 
 // ───────────── 출력 ─────────────
@@ -228,6 +230,8 @@ export interface PaEvt {
   tto: number; isStarter: boolean; inning: number; half: number; homeBatting: boolean; li: number;
   tempC: number; rainLv: number; dayClear: boolean; windOut: number; batterPlatoonAdv: boolean; scoreDiff: number;
   ibb: boolean; sh: boolean; sf: boolean; gdp: boolean; roe: boolean; foulOut?: boolean;
+  /** 타석 미완료(타석 중 주루사로 이닝 끝·타석 중 끝내기) — 타석 수에 넣지 않는다 */
+  incomplete?: boolean;
 }
 export interface RunEvt { kind: string; outs: number; field: number; result: number }
 export interface StealEvt { base: number; success: boolean; combinedTime: number; pickoff: boolean }

@@ -77,14 +77,18 @@ export function flyAbil(pc: PC, pos: number, rangeCh: number): FAbil {
   return FA;
 }
 
-export interface CatchRes { f: number; p: number; m: number; t: number; dive: boolean; wallNear: boolean; line: boolean }
-const CR: CatchRes = { f: -1, p: 0, m: -9, t: 0, dive: false, wallNear: false, line: false };
+/** t·x·y: 포구 시도 시각과 자리 — 뜬공은 낙구점·체공, 라이너를 길 위에서 막으면 공이 그 야수 깊이를 지나는 점·시각(2D 중계가 야수를 낙구점으로 뛰게 그리지 않도록) */
+export interface CatchRes { f: number; p: number; m: number; t: number; dive: boolean; wallNear: boolean; line: boolean; x: number; y: number }
+const CR: CatchRes = { f: -1, p: 0, m: -9, t: 0, dive: false, wallNear: false, line: false, x: 0, y: 0 };
+const FP = new Float64Array(9), FM = new Float64Array(9), FDv = new Uint8Array(9), FLn = new Uint8Array(9), FLX = new Float64Array(9), FLY = new Float64Array(9), FLT = new Float64Array(9);
+/** 뜬공 콜 우선순위(P,C,1B,2B,3B,SS,LF,CF,RF) */
+const CALL_PRI = [1, 2, 3, 5, 4, 6, 8, 9, 8];
 /**
  * 뜬공·라이너 포구 경주. (lx,ly) 낙구점, T 체공, d 비거리, phi 방향, kind 1 라이너·2 뜬공·3 팝업.
  * 라이너는 내야수가 공의 길 위(높이 ≤ 손 닿는 높이)에서 잡는 경우도 본다.
  * 반환: 가장 잡을 확률이 높은 야수와 그 확률(잡을 확률 기록용) */
 export function flyCatch(g: G, def: TeamSt, lx: number, ly: number, T: number, d: number, phi: number, kind: number, fenceD: number, wx: { sunPen: number; fogMult: number; gustMult: number }, rangeCh: number): CatchRes {
-  CR.f = -1; CR.p = 0; CR.m = -9; CR.t = T; CR.dive = false; CR.wallNear = false; CR.line = false;
+  CR.f = -1; CR.p = 0; CR.m = -9; CR.t = T; CR.dive = false; CR.wallNear = false; CR.line = false; CR.x = lx; CR.y = ly;
   const sinp = Math.sin(phi * Math.PI / 180), cosp = Math.cos(phi * Math.PI / 180);
   const wallNear = d > fenceD - 3;
   for (let pos = 0; pos <= 8; pos++) {
@@ -100,7 +104,7 @@ export function flyCatch(g: G, def: TeamSt, lx: number, ly: number, T: number, d
     let dive = m - ab.dive < 0 && m > 0;
     if (wallNear && pos >= 6) p *= clamp(P.fld.wallK + P.fld.wallIQ * ab.iq + (hasT(pc, TR.wallClimber) ? 0.05 : 0), 0.5, 1);
     if (kind === 3 && pos >= 6 && d < 50) p *= 0.85;                     // 내야 팝업은 외야수가 양보
-    let line = false;
+    let line = false; FLX[pos] = lx; FLY[pos] = ly; FLT[pos] = T;
     // ② 라이너: 내야수가 공의 길 위에서(깊이 s_p, 옆 거리 L)
     if (kind <= 1 && pos <= 5 && pos !== PO.C) {
       const sp = fx * sinp + fy * cosp, L = Math.abs(fx * cosp - fy * sinp);
@@ -113,11 +117,18 @@ export function flyCatch(g: G, def: TeamSt, lx: number, ly: number, T: number, d
           const tn = Math.max(0.08, 0.15 - 0.03 * defZ(pc, A.firstStep, pos)) + Math.max(0, L - reach) / latV;
           const ml = tb - tn + (L > reach ? 0.08 + 0.03 * ab.ag : 0);
           const pl = sig(ml / P.fld.lineSig) * (h > ab.reachH ? 0.6 : 1);
-          if (pl > p) { p = pl; m = ml; line = true; dive = L > reach + 0.5; }
+          if (pl > p) { p = pl; m = ml; line = true; dive = L > reach + 0.5; FLX[pos] = sp * sinp; FLY[pos] = sp * cosp; FLT[pos] = tb; }
         }
       }
     }
-    if (p > CR.p) { CR.f = pos; CR.p = p; CR.m = m; CR.dive = dive; CR.line = line; }
+    FP[pos] = p; FM[pos] = m; FDv[pos] = dive ? 1 : 0; FLn[pos] = line ? 1 : 0;
+    if (p > CR.p) { CR.f = pos; CR.p = p; CR.m = m; CR.dive = dive; CR.line = line; CR.x = FLX[pos]; CR.y = FLY[pos]; CR.t = FLT[pos]; }
+  }
+  // 콜 우선순위: 여럿이 쉽게 잡을 공(뜬공·팝업)은 외야수(중견수 우선) > 유격수 > 2루수 > 3루수 > 1루수 > 포수 > 투수 — 뒤로 뛰는 내야수보다 앞으로 오는 외야수가 잡는다
+  if (CR.f >= 0 && !CR.line && CR.p >= 0.9) {
+    let bp = CR.f, pri = CALL_PRI[CR.f];
+    for (let pos = 0; pos <= 8; pos++) if (FP[pos] >= 0.9 && FP[pos] >= CR.p - 0.03 && !FLn[pos] && CALL_PRI[pos] > pri && !(kind === 3 && d < 50 && pos >= 6)) { bp = pos; pri = CALL_PRI[pos]; }
+    if (bp !== CR.f) { CR.f = bp; CR.p = FP[bp]; CR.m = FM[bp]; CR.dive = FDv[bp] === 1; CR.line = false; CR.x = lx; CR.y = ly; CR.t = T; }
   }
   CR.wallNear = wallNear;
   // 햇빛·안개·돌풍 낙구 판단 실수(도달한 공에만)
@@ -143,36 +154,48 @@ export function groundIntercept(g: G, def: TeamSt, phi: number, v0: number, roll
   const F = P.fld;
   const sStop = sAir + rollStop(v0, roll);
   const tStop = tAir + chopDelay + Math.atan(v0 * Math.sqrt(roll.k / roll.c)) / Math.sqrt(roll.c * roll.k);
+  // 야수마다 가장 이른 가로채기 → 가장 이른 사람. 단 투수·포수가 가장 이르더라도 내야수(1·2·3루·유격)가 pYield 초 안에 닿으면 내야수가 처리
+  // (실제로도 느린 땅볼·바운드 큰 공은 3루수·1루수가 달려 나와 '내 공' 하고 잡는다 — 전에는 투수가 내야 땅볼의 28%를 처리했다)
+  let bestT = 99;
   for (let pos = 0; pos <= 5; pos++) {
+    GT[pos] = 99;
     if (pos === PO.C && sStop > 8) continue;
     const pc = pcAt(def, pos);
     const fx = g.fx[pos], fy = g.fy[pos];
     const sp = fx * sinp + fy * cosp, L = Math.abs(fx * cosp - fy * sinp);
     if (L > 22) continue;
     const zfs = defZ(pc, A.firstStep, pos), zr = defZ(pc, A.range, pos), zag = pc.z[A.agility];
-    const react = clamp(F.ifReact - F.ifReactFS * zfs, 0.10, 0.45) * (1 - 0.5 * rangeCh);
+    // 투수는 던진 뒤 자세(팔로스루)라 반응이 늦고, 자기 옆을 지나가는 공만 막는다(뒤로 쫓아가 줍는 건 2루수·유격수 몫)
+    const react = clamp(F.ifReact - F.ifReactFS * zfs, 0.10, 0.45) * (1 - 0.5 * rangeCh) + (pos === 0 ? P.fld.pReact : 0);
     const lat = (F.ifLat + F.ifLatR * zr + F.ifLatS * pc.z[A.speed]) * (1 + 0.5 * rangeCh) * (pos === 0 ? 0.85 : pos === PO.C ? 0.8 : 1);
-    const reach = F.reach, dreach = F.diveReach + F.diveReachAg * zag + (hasT(pc, TR.diver) ? 0.3 : 0);
-    const sLo = Math.max(sAir + 0.5, sp - 7), sHi = Math.min(pos === 0 ? 30 : 50, sp + 14, sStop);
+    // 투수는 마운드에서 균형이 무너진 채라 손이 닿는 거리·다이빙이 짧다(pReach)
+    const reach = F.reach * (pos === 0 ? P.fld.pReach : 1), dreach = (F.diveReach + F.diveReachAg * zag + (hasT(pc, TR.diver) ? 0.3 : 0)) * (pos === 0 ? P.fld.pReach * 0.8 : 1);
+    // 찍힌 공(촙)은 홈 앞에서 크게 튀어 첫 바운드 동안(≈ pHop·초속 m) 투수 머리 위로 지나간다 — 투수는 그 뒤에만 잡는다
+    const sLo = Math.max(sAir + 0.5, sp - 7, pos === 0 && chopDelay > 0 ? P.fld.pHop * v0 : 0), sHi = Math.min(pos === 0 ? Math.min(30, sp + P.fld.pBehind) : 50, sp + 14, sStop);
     let got = false;
     for (let s = sLo; s <= sHi; s += 1) {
       const tb = tAir + chopDelay + gbTime(s - sAir, v0, roll);
-      if (tb > GR.t) { got = true; break; }
+      if (tb > bestT + P.fld.pYield) { got = true; break; }
       const dist = Math.hypot(L, s - sp);
       const tf = travel(dist - reach, react, lat, F.ifTau);
-      if (tf <= tb) { if (tb < GR.t) { GR.f = pos; GR.s = s; GR.t = tb; GR.dive = false; GR.x = s * sinp; GR.y = s * cosp; GR.vAt = rollSpeed(s - sAir, v0, roll); } got = true; break; }
+      if (tf <= tb) { GT[pos] = tb; GS[pos] = s; GD[pos] = 0; GV[pos] = rollSpeed(s - sAir, v0, roll); got = true; break; }
       const tfd = travel(dist - reach - dreach, react, lat, F.ifTau);
-      if (tfd <= tb) { if (tb < GR.t) { GR.f = pos; GR.s = s; GR.t = tb; GR.dive = true; GR.x = s * sinp; GR.y = s * cosp; GR.vAt = rollSpeed(s - sAir, v0, roll); } got = true; break; }
+      if (tfd <= tb) { GT[pos] = tb; GS[pos] = s; GD[pos] = 1; GV[pos] = rollSpeed(s - sAir, v0, roll); got = true; break; }
     }
     // 공이 그의 범위 안에서 멈추면 가서 줍는다(느린 땅볼)
-    if (!got && sStop < Math.min(pos === 0 ? 30 : 50, sp + 14) && sStop >= sAir) {
+    if (!got && sStop < Math.min(pos === 0 ? Math.min(30, sp + P.fld.pBehind + 2) : 50, sp + 14) && sStop >= sAir) {
       const x = sStop * sinp, y = sStop * cosp;
       const t = Math.max(tStop, travel(Math.hypot(x - fx, y - fy) - reach, react, lat * 1.2, F.ifTau)) + 0.1;
-      if (t < GR.t) { GR.f = pos; GR.s = sStop; GR.t = t; GR.dive = false; GR.x = x; GR.y = y; GR.vAt = 0; }
+      if (t < GT[pos]) { GT[pos] = t; GS[pos] = sStop; GD[pos] = 0; GV[pos] = 0; }
     }
+    if (GT[pos] < bestT) bestT = GT[pos];
   }
+  let f = -1; for (let pos = 0; pos <= 5; pos++) if (GT[pos] < 99 && (f < 0 || GT[pos] < GT[f])) f = pos;
+  if (f === PO.P || f === PO.C) { let alt = -1; for (let pos = 2; pos <= 5; pos++) if (GT[pos] < GT[f] + P.fld.pYield && (alt < 0 || GT[pos] < GT[alt])) alt = pos; if (alt >= 0) f = alt; }
+  if (f >= 0) { GR.f = f; GR.s = GS[f]; GR.t = GT[f]; GR.dive = GD[f] === 1; GR.x = GS[f] * sinp; GR.y = GS[f] * cosp; GR.vAt = GV[f]; }
   return GR;
 }
+const GT = new Float64Array(6), GS = new Float64Array(6), GD = new Uint8Array(6), GV = new Float64Array(6);
 
 export interface RetrRes { f: number; t: number; x: number; y: number; wall: boolean }
 const RR: RetrRes = { f: -1, t: 0, x: 0, y: 0, wall: false };
@@ -187,7 +210,7 @@ export function retrieve(g: G, def: TeamSt, phi: number, s0: number, t0: number,
   const tWall = s0 >= sWall ? t0 : sStop > sWall ? t0 + gbTime(sWall - s0, Math.max(0.3, vb), roll) : 99;
   const stopAt = sStop < sWall ? sStop : sWall - (2 + 3 * wallBounce);
   for (let pos = 2; pos <= 8; pos++) {
-    if (pos <= 5 && s0 > 55) continue;
+    if (pos <= 5 && (s0 > 55 || vb > P.fld.ifRetrV)) continue;   // 내야수는 느리게 빠져나간 공만 쫓아가 줍는다(세게 빠진 땅볼은 외야수 몫)
     const pc = pcAt(def, pos); const ab = flyAbil(pc, pos, rangeCh);
     const fx = g.fx[pos], fy = g.fy[pos];
     let found = false;

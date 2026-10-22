@@ -24,6 +24,8 @@ export interface PitSt {
   firstInningDone: boolean; warmed: boolean; rattled: number; inZone: boolean; coldArm: number;
   /** 연투 구속 손실(km/h) */
   b2bLoss: number;
+  /** 이번 이닝에 내보낸 주자 수(안타·볼넷·몸맞공·실책) — 위기 교체 판단 */
+  innBR: number;
 }
 export interface Runner { i: number; slot: number; resp: number; earned: boolean; lead: number; jump: number }
 
@@ -37,6 +39,8 @@ export interface TeamSt {
   pit: PitSt; pitHist: PitSt[];
   pen: { i: number; role: string; avail: number; used: boolean }[];
   bench: number[]; removed: Uint8Array;
+  /** 수비 굳히기·자리 메우기로 들어온 선수(대타로 다시 빼지 않는다) */
+  defIn: Uint8Array;
   bat: BatLine[]; pitL: Map<number, PitLine>; fld: FldLine[];
   lob: number; hits: number; errors: number; runsInn: number[];
   mood: number; chemTier: number; streak: number;
@@ -93,6 +97,12 @@ export interface G {
   extra: boolean;
   wpNext: number;
   vOuts: number;
+  /** 끝내기 잠금: 9회말 이후 홈 팀이 앞서는 점수가 난 순간 경기 끝 — 그 뒤 주자의 득점은 인정하지 않는다(홈런 제외, 야구 규칙 7.01(g)·9.06(f)) */
+  wo: boolean;
+  /** 홈런으로 주자 전원이 들어오는 중(끝내기 잠금 예외) */
+  hrTrot: boolean;
+  /** 타석 시작 전 판단(투수 교체·대타·우천) 중 — 그때 남기는 사건은 다음 타석 번호로 기록 */
+  prePA: boolean;
 }
 
 /** 타석 문맥(타석 시작 때 한 번 계산) */

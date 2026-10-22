@@ -8,23 +8,30 @@ import { buildFence, setAlignment, pcAt } from './fielding.ts';
 import { beginPA, throwPitch, PT, PR, KIND, capCh } from './pitch.ts';
 import { battedBall, sprayAngle, BB, type BatIn } from './batted.ts';
 import { resolveBIP, PL, walk, advanceAll, stealPlay, pickoffPlay, playBunt } from './running.ts';
-import { aiPitching, aiSubs, aiOffenseMode, aiIBB, aiAlign, aiPrePitch, aiPickoffs, applyCommands, resolveTac, newPitSt, changePitcher, substitute } from './tactics.ts';
+import { aiPitching, aiSubs, aiOffenseMode, aiIBB, aiAlign, aiPrePitch, aiPickoffs, aiDefense, applyCommands, resolveTac, newPitSt, changePitcher, substitute } from './tactics.ts';
 import { addPitch, restBreak } from './fatigue.ts';
 import { expose, EX } from './injury.ts';
 import { initEvents, evPreGame, evHalfStart, evHalfEnd, evPAStart, evPAEnd, evPlay, evRhythm, evGameEnd, eventCounts, tmpCh, note } from './events.ts';
-import { newLog, newBat, newPit, batLine, pitLine, fldLine, bkOut, bkPO, logPitch, logEV, EVC, buildRecord, recNo, type LogBuf } from './log.ts';
+import { newLog, newBat, newPit, batLine, pitLine, fldLine, bkOut, bkPO, bkA, closeBB, logPitch, logEV, EVC, buildRecord, recNo, type LogBuf } from './log.ts';
 import { homeWE } from './we.ts';
 import { windAt } from './weather.ts';
 const WO = new Float64Array(2);
 function windOut(g: G): number { if (g.wx.dome) return 0; windAt(g.slot, g.park, 0, WO); return g.park.expoHigh > 0 ? WO[0] / (g.park.expoHigh * P.air.expo) : 0; }
 
 const PRE_SLOTS = 18;
+/** 안전 상한 [18 재미·악용 심사]: 한 경기 투구 수가 이만큼이면 그 자리에서 콜드(점수 그대로, 같으면 무승부).
+ *  실제 리그 최장급(12회 450구 안팎)·엔진 극단 시험(20회 제한 660구, 전원 99 vs 전원 1 670구)보다 넉넉히 크고, 요청당 CPU 10ms 안(1,000구 ≈ 3ms).
+ *  전에는 상한이 없어 명령 폭탄(매 투구 피치아웃)으로 한 경기 3,400구까지 갔다 — 명령 수로 늘어나는 CPU·끝나지 않는 경기로 결과를 무효화하는 길을 막는다. */
+const MAX_PITCHES = 1000, MAX_CMDS = 1000;   // 명령은 보낸 순서로 앞 1,000개만(= 투구 상한 — 투구마다 하나씩 보내도 모자라지 않게). 무작위 명령 1,000개 폭탄도 경기당 CPU p99 5ms 안
 
 function buildTeam(g: G, tin: TeamIn, side: 0 | 1): TeamSt {
   const pcs: PC[] = []; const idOf = new Map<number, number>();
   // 이 경기에 나올 수 있는 선수만 캐시(라인업·선발·불펜·벤치) — 2군·부상자는 건너뜀
   const need = new Set<number>([tin.sp, ...tin.lineup.map((l) => l.pid), ...tin.pen.map((x) => x.pid), ...tin.bench]);
-  for (let i = 0; i < tin.players.length; i++) { const p = tin.players[i]; if (!need.has(p.id)) continue; idOf.set(p.id, pcs.length); pcs.push(buildCache(p, { team: side, home: side === 1, importance: g.inp.ctx.importance, rec: i })); }
+  const ref = clamp(Number(g.inp.levelRef) || 0, -20, 60);   // 리그 수준 기준점 R(서버가 양 팀 종합으로 계산, 경기엔진.md 3.4)
+  // 선수 배열은 id 순으로 고정 [18 재미·악용 심사]: 배열 순서가 캐시 번호 → AI 판단 난수 키(대타 후보 잡음 등)로 이어져, 같은 선수단을 순서만 바꿔 보내면 200경기 중 1경기 결과가 달라졌다(입력 순서로 재추첨)
+  const plist = tin.players.slice().sort((a, b) => a.id - b.id);
+  for (let i = 0; i < plist.length; i++) { const p = plist[i]; if (!need.has(p.id)) continue; idOf.set(p.id, pcs.length); pcs.push(buildCache(p, { team: side, home: side === 1, importance: g.inp.ctx.importance, rec: i, ref })); }
   const n = pcs.length;
   const order = new Int16Array(9), field = new Int16Array(10).fill(-1), posOf = new Int8Array(n).fill(-1);
   tin.lineup.forEach((l, k) => { const i = idOf.get(l.pid)!; order[k] = i; const pi = POS_NAME.indexOf(l.pos); field[pi] = i; posOf[i] = pi; });
@@ -32,7 +39,7 @@ function buildTeam(g: G, tin: TeamIn, side: 0 | 1): TeamSt {
   const T: TeamSt = {
     side, tin, pcs, idOf, order, next: 0, field, posOf, pit: null as any, pitHist: [],
     pen: tin.pen.map((p) => ({ i: idOf.get(p.pid)!, role: p.role, avail: p.avail, used: false })).filter((p) => p.i !== undefined),
-    bench: tin.bench.map((id) => idOf.get(id)!).filter((i) => i !== undefined), removed: new Uint8Array(n),
+    bench: tin.bench.map((id) => idOf.get(id)!).filter((i) => i !== undefined), removed: new Uint8Array(n), defIn: new Uint8Array(n),
     bat: tin.lineup.map((l, k) => newBat(l.pid, l.pos, k + 1)), pitL: new Map(), fld: [], lob: 0, hits: 0, errors: 0, runsInn: [],
     mood: tin.mood ?? 55, chemTier: tin.chemTier ?? 0, streak: tin.streak ?? 0, mem: new Map(), teamMem: new Map(),
     tac: resolveTac(tin.tac), level: tin.mgr?.level ?? 3, style: tin.mgr?.style ?? 0, user: !!tin.isUser, auto: true,
@@ -53,8 +60,10 @@ function setup(inp: GameInput): G {
     over: false, status: 'final', maxInn: inp.ctx.dh2 ? 9 : inp.rules.maxInnings,
     fenceD: new Float64Array(91), fenceH: new Float64Array(91), fx: new Float64Array(9), fy: new Float64Array(9),
     col: o.collector ?? null, logOn: !!o.log, evOn: o.events !== false, ev: null, log: null, delays: 0, delayMin: 0,
-    pa: newPaCtx(), dayClear: false, tempStart: 20, doy: 0, cmds: (inp.cmds ?? []).slice().sort((a, b) => a.at - b.at), cmdPtr: 0,
+    // 명령: 보낸 순서로 앞 MAX_CMDS 개 중 투구 번호가 유한한 것만, 번호 순(같은 번호는 보낸 순서) [18 재미·악용 심사 — NaN 번호 하나가 뒤 명령을 전부 막거나 명령 폭탄으로 CPU 를 쓰는 것을 막음]
+    pa: newPaCtx(), dayClear: false, tempStart: 20, doy: 0, cmds: (inp.cmds ?? []).slice(0, MAX_CMDS).filter((c) => c && Number.isFinite(c.at)).sort((a, b) => a.at - b.at), cmdPtr: 0,
     injuries: [], inhRunsLeft: 0, lastPlay: 0, horizon: o.liveHorizon ?? 1e9, h: 0x811c9dc5, uniqueEvents: new Map(), extra: false, wpNext: 0, vOuts: 0,
+    wo: false, hrTrot: false, prePA: false,
     leadSide: -1, leadWinP: -1, leadLoseP: -1,
   } as unknown as G & { leadSide: number; leadWinP: number; leadLoseP: number };
   if (g.logOn) g.log = newLog();
@@ -92,19 +101,20 @@ function rainCheck(g: G): boolean {
   g.delayMin += waited;
   logEV(g, EVC.RESUME, waited, 0);
   // 재개 뒤 선발 리듬
-  for (const s of [0, 1] as const) { const T = g.T[s]; evRhythm(g, s, waited); if (T.pit.starter && waited >= 45 && !(T.user && !T.auto)) { /* 45분 넘게 쉬면 AI 교체 */ T.pit.F = Math.max(T.pit.F, T.pcs[T.pit.i].limit + 40); } }
+  for (const s of [0, 1] as const) { const T = g.T[s]; evRhythm(g, s, waited); if (T.pit.starter && T.pit.pitches > 0 && waited >= 45 && !(T.user && !T.auto)) { /* 45분 넘게 쉬면 AI 교체 */ T.pit.F = Math.max(T.pit.F, T.pcs[T.pit.i].limit + 40); } }
   return false;
 }
 
 const chB = { bP: tmpCh.bP, bS: tmpCh.bS, pP: tmpCh.pP, pS: tmpCh.pS };
 const ZERO = new Float64Array(N_CH);
-const BIN: BatIn = { zc: 0, zk: 0, zs: 0, gbPitch: 0, tLaunch: 0, tGbPit: 0, dEdge: 0, zRel: 0, vPlate: 0, vb: 0, mem: 0, weakAdj: 0, muAdj: 0, sdMult: 1, move: 1, heavy: false, rainLv: 0, tempC: 20, coldT: 1 };
+const BIN: BatIn = { zc: 0, zk: 0, zs: 0, gbPitch: 0, tLaunch: 0, tGbPit: 0, dEdge: 0, zRel: 0, vPlate: 0, vb: 0, mem: 0, weakAdj: 0, veloDev: 0, muAdj: 0, sdMult: 1, move: 1, heavy: false, rainLv: 0, tempC: 20, coldT: 1 };
 
 /** 타석 하나 */
 function runPA(g: G, firstOfHalf: boolean): void {
   const O = offense(g), D = defense(g);
+  g.prePA = true;   // 타석 시작 전 사건(교체·대타·우천)은 이번 타석 번호로 기록
   tickWeather(g);
-  if (rainCheck(g)) return;
+  if (rainCheck(g)) { g.prePA = false; return; }
   // 문맥(채널 없이) → 수비 판단 → 공격 판단 → 이벤트 → 채널 포함 문맥
   beginPA(g, ZERO, ZERO, ZERO, ZERO);
   aiPitching(g, firstOfHalf);
@@ -113,15 +123,18 @@ function runPA(g: G, firstOfHalf: boolean): void {
   beginPA(g, chB.bP, chB.bS, chB.pP, chB.pS);
   const pa = g.pa;
   aiOffenseMode(g); aiAlign(g);
-  const b = O.pcs[pa.b], p = D.pcs[pa.p];
+  let b = O.pcs[pa.b], p = D.pcs[pa.p];
   const slot = O.next; const tto = D.pit.tto[slot];
   const bases0 = basesCode(g), outs0 = g.outs, score0 = g.score[g.half] - g.score[1 - g.half];
   const we0 = g.logOn ? homeWE(g.inning, g.half, g.outs, bases0, g.score[1] - g.score[0], g.maxInn) : 0;
   const firstPitchNo = g.pitchNo;
-  const bl = batLine(O, pa.b); const pl = pitLine(D, pa.p);
+  let bl = batLine(O, pa.b); let pl = pitLine(D, pa.p); const ps0 = D.pit;
   bl.PA++; pl.BF++; D.pit.bf++;
-  g.paNo++; g.pitchInPA = 0; g.balls = 0; g.strikes = 0; pa.countsSeen = 1;
+  g.paNo++; g.prePA = false; g.pitchInPA = 0; g.balls = 0; g.strikes = 0; pa.countsSeen = 1;
+  const bb0 = g.logOn ? (g.log as LogBuf).bb.length : 0;
   let res: number = R.OUT; let ended = false; let rbi = 0; let onBase = false, isHit = false, wasK = false, hbp = false; let outsBefore = g.outs;
+  /** 타석 미완료: 타석 중 주루사(도루 실패·견제사·스퀴즈 실패)로 세 번째 아웃 또는 끝내기(폭투·보크 등) — 타자는 타석·타수 없음, 다음 이닝 선두로 다시 선다 */
+  let incomplete = false;
   const runsBefore = g.score[g.half];
   PL.kind = -1; PL.sf = false; PL.sh = false; PL.gdp = false; PL.rbi = 0;
   // 고의4구(투구 없이, KBO 2018~)
@@ -129,17 +142,29 @@ function runPA(g: G, firstOfHalf: boolean): void {
     walk(g); res = R.IBB; bl.BB++; bl.IBB++; pl.BB++; pl.IBB++; D.pit.bb++; D.pit.ibb++; onBase = true; ended = true;
   }
   setAlignment(g, D, b, pa.bL ? 1 : -1);
-  const pre0 = { steal2: false, steal3: false, pitchout: false, hitRun: false };
+  const pre0 = { steal2: false, steal3: false, pitchout: false, hitRun: false, ibb: false };
   while (!ended && !g.over) {
     if (g.pitchNo >= g.horizon) { g.over = true; g.status = 'suspended'; break; }
     sub(g.rR, g.seed, KIND.R, g.paNo, g.pitchInPA);
-    const pre = aiPrePitch(g); pre0.steal2 = pre.steal2; pre0.steal3 = pre.steal3; pre0.pitchout = pre.pitchout; pre0.hitRun = pre.hitRun;
+    const pre = aiPrePitch(g); pre0.steal2 = pre.steal2; pre0.steal3 = pre.steal3; pre0.pitchout = pre.pitchout; pre0.hitRun = pre.hitRun; pre0.ibb = false;
     applyCommands(g, pre0);
+    // 유저 대타·투수 교체는 이번 타석부터 [18 재미·악용 심사]: 전에는 타석 문맥(타자·투수)을 명령 전에 잡아 둬서, 대타를 내도 빠진 타자가 그 타석을 끝까지 치고
+    //   새 투수를 올려도 앞 투수가 그 타석을 던졌다(시험 120경기 중 0번 적용). 타자·투수가 바뀌었으면 문맥·장부를 새 선수로 다시 잡는다.
+    if (O.order[O.next] !== pa.b || D.pit.i !== pa.p) {
+      const newB = O.order[O.next] !== pa.b, newP = D.pit.i !== pa.p;
+      if (newB) bl.PA--; if (newP) { pl.BF--; ps0.bf--; }
+      evPAStart(g, chB.bP, chB.bS, chB.pP, chB.pS, true); beginPA(g, chB.bP, chB.bS, chB.pP, chB.pS);
+      b = O.pcs[pa.b]; p = D.pcs[pa.p];
+      if (newB) { bl = batLine(O, pa.b); bl.PA++; } if (newP) { pl = pitLine(D, pa.p); pl.BF++; D.pit.bf++; }
+      setAlignment(g, D, b, pa.bL ? 1 : -1);
+    }
+    // 유저 고의4구(아무 카운트에서나, 투구 없이)
+    if (pre0.ibb) { walk(g); res = R.IBB; bl.BB++; bl.IBB++; pl.BB++; pl.IBB++; D.pit.bb++; D.pit.ibb++; onBase = true; ended = true; break; }
     // 견제
     if (g.bases[0] && !g.bases[1]) {
       const n = aiPickoffs(g);
-      for (let k = 0; k < n && g.bases[0]; k++) { g.clock += P.clock.visit / 6; if (pickoffPlay(g, 1)) { logEV(g, EVC.PICKOFF, 1, 1); pre0.steal2 = false; if (g.outs >= 3) { ended = true; break; } } }
-      if (ended) break;
+      for (let k = 0; k < n && g.bases[0]; k++) { g.clock += P.clock.visit / 6; if (pickoffPlay(g, 1)) { logEV(g, EVC.PICKOFF, 1, 1); pre0.steal2 = false; if (g.outs >= 3) { ended = true; incomplete = true; break; } } if (g.over) break; }
+      if (ended || g.over) break;
     }
     // 보크
     if ((g.bases[0] || g.bases[1] || g.bases[2]) && g.rR.next() < P.balk.base * Math.exp(-P.balk.pk * p.z[A.pickoff] - P.balk.comp * p.z[A.composure])) {
@@ -154,6 +179,8 @@ function runPA(g: G, firstOfHalf: boolean): void {
     let code: number;
     if (auto >= 0) { code = auto === 0 ? PR.AUTO_B : PR.AUTO_S; PT.type = 0; PT.pi = 0; PT.vPlate = 0; PT.vRel = pa.vFF; PT.H = 0; PT.x = 0; PT.z = 0; PT.d = 0; PT.wp = false; PT.pb = false; PT.swing = false; PT.inZone = false; PT.frame = false; PT.bunt = false; PT.called = auto === 1; }
     else code = throwPitch(g, pre0.pitchout);
+    // 스퀴즈는 한 공 작전(히트앤런처럼) — 이번 공이 끝나면 풀린다
+    const modeNow = pa.mode; if (pa.mode === 4) pa.mode = 0;
     // ── 기록·피로·기억 ──
     const ps = D.pit;
     if (auto < 0) {
@@ -172,7 +199,7 @@ function runPA(g: G, firstOfHalf: boolean): void {
         if (g.col.velo && P.pt.fam[t] === 0) g.col.velo({ pitcherPitches: ps.pitches, inning: g.inning, velo: PT.vRel, isStarter: ps.starter, fast: t === 0 });
       }
       // 부상 노출: 투구·스윙
-      injuryCheck(g, D, pa.p, EX.pitch, ps.F > p.limit ? 1 + 0.04 * (ps.F - p.limit) : 1);
+      injuryCheck(g, D, pa.p, EX.pitch, (ps.F > p.limit ? 1 + 0.04 * (ps.F - p.limit) : 1) * p.overuse);
       if (PT.swing) injuryCheck(g, O, pa.b, EX.swing, 1);
     }
     logPitch(g, PT.type, PT.vPlate, PT.x, PT.z, code, (stealing ? 1 : 0) | (pa.mode === 1 ? 2 : 0) | (PT.wp ? 4 : 0) | (PT.pb ? 8 : 0) | (PT.frame ? 32 : 0));
@@ -188,16 +215,16 @@ function runPA(g: G, firstOfHalf: boolean): void {
       break;
     }
     if (code === PR.INPLAY) {
-      if (PT.bunt) { playBunt(g, pa.mode); }
+      if (PT.bunt) { playBunt(g, modeNow); closeBB(g); }
       else {
         // 타구(B 스트림, 키 = 타석·투구)
         const rb = sub(g.rB, g.seed, KIND.B, g.paNo, g.pitchInPA);
         const pc = p.pitches[PT.pi];
         BIN.zc = pa.zCon; BIN.zk = pa.zK; BIN.zs = PT.zs; BIN.gbPitch = P.pt.gb[PT.type] + (pc.sig === 1 ? 0.05 : pc.sig === 3 ? 0.06 : pc.sig === 4 ? -0.05 : pc.sig === 9 ? 0.04 : pc.sig === 10 ? 0.06 : 0);
         BIN.tLaunch = b.tLaunch; BIN.tGbPit = p.tGb; BIN.dEdge = PT.d; BIN.zRel = PT.z - pa.zMid;
-        BIN.vPlate = PT.vPlate; BIN.mem = PT.f; BIN.move = PT.move; BIN.heavy = pc.sig === 2; BIN.rainLv = g.slot.rainLv; BIN.tempC = g.slot.tC; BIN.coldT = b.wxT[1];
+        BIN.vPlate = PT.vPlate; BIN.veloDev = PT.type === 8 || pc.sig === 8 ? 0 : clamp(PT.vRel - P.bat.veloRef - P.pt.veloOff[PT.type], -15, 15); BIN.mem = PT.f; BIN.move = PT.move; BIN.heavy = pc.sig === 2; BIN.rainLv = g.slot.rainLv; BIN.tempC = g.slot.tC; BIN.coldT = b.wxT[1];
         const appr = pa.approach;
-        BIN.vb = P.bat.vb0 + P.bat.power * pa.zPow + P.bat.strength * b.z[A.strength] + (appr === 3 ? P.bat.approachPow : appr === 4 || appr === 5 ? -2 : appr === 6 ? -1 : 0) + (PT.guessHit ? P.bat.guessV : 0) + P.ev.powerVb * pa.cPow + P.env.powerAdj
+        BIN.vb = P.bat.vb0 + P.bat.power * pa.zPow + P.bat.strength * b.z[A.strength] + (appr === 3 ? P.bat.approachPow : appr === 4 ? P.bat.contactVb : appr === 5 ? -2 : appr === 6 ? -1 : 0) + (PT.guessHit ? P.bat.guessV : 0) + P.ev.powerVb * pa.cPow + P.env.powerAdj
           + (g.strikes === 2 && O.tac.twoStrike === 'shorten' ? -3 : g.strikes === 2 && O.tac.twoStrike === 'full' ? 1.5 : 0) + (hasT(b, TR.fastballHunter) && P.pt.fam[PT.type] === 0 ? 1.5 : 0);
         BIN.weakAdj = (PT.guessHit ? -0.51 : PT.guessMiss ? 0.34 : 0) - 2.0 * (b.mech.hitRel ?? 0) + P.ev.stuffWeak * pa.cStuff - P.ev.contactWeak * pa.cCon + (pc.sig === 11 ? 0.3 : 0);
         BIN.muAdj = (appr === 5 ? 0.15 : appr === 6 ? -0.2 : 0) + (pa.mode === 1 ? -0.3 : 0);
@@ -235,27 +262,45 @@ function runPA(g: G, firstOfHalf: boolean): void {
       continue;
     }
     // 볼·스트라이크(도루·폭투·포일)
-    if (stealing && g.bases[stealing - 2]) {
+    const kNow = strikeCode && (code === PR.TIP_K || g.strikes === 2);
+    const bbNow = ballCode && g.balls === 3;
+    // 낫아웃: 3번째 스트라이크를 못 잡고(폭투·포일) 1루가 비었거나 2사 → 타자 1루로(75% 세이프)
+    const kDrop = kNow && code !== PR.TIP_K && wpPb && (!g.bases[0] || g.outs === 2);
+    const kDropSafe = kDrop && g.rB.next() < 0.75;
+    // 2사 삼진(공이 잡힘)은 그 순간 이닝 끝 → 도루 판정 없음 · 볼넷으로 밀려가는 주자는 도루 없이 진루
+    const forcedSteal = stealing === 2 || (stealing === 3 && !!g.bases[0] && !!g.bases[1]);
+    if (stealing && g.bases[stealing - 2] && !(kNow && g.outs === 2) && !(bbNow && forcedSteal)) {
+      const ri = g.bases[stealing - 2]!.i;
       const ok = stealPlay(g, stealing, PT.type, PT.vRel, pa.vFF, PT.H, pre0.pitchout);
       logEV(g, EVC.STEAL, stealing, ok ? 1 : 0);
-      injuryCheck(g, O, ok ? (g.bases[stealing - 1]?.i ?? pa.b) : pa.b, EX.slide, 0.5);
-      if (g.outs >= 3) { ended = true; if (strikeCode && g.strikes === 2) { /* 3아웃 — 타석 이어지지 않음 */ } break; }
+      injuryCheck(g, O, ri, EX.slide, 0.5);
+      if (g.over) break;
+      if (g.outs >= 3) { ended = true; incomplete = true; break; }   // 도루 실패로 이닝 끝 — 타자는 다음 이닝 선두
     }
-    if (wpPb && (g.bases[0] || g.bases[1] || g.bases[2])) {
+    // 스퀴즈 실패(번트 헛스윙): 투구와 함께 뛴 3루 주자가 협살에 걸린다(85%)
+    if (modeNow === 4 && code === PR.BUNT_MISS && g.bases[2] && !wpPb && !(kNow && g.outs === 2)) {
+      const r3 = g.bases[2]!;
+      if (g.rR.next() < 0.85) {
+        g.bases[2] = null; batLine(O, r3.i).CS++; bkOut(g); bkA(g, PO.C); bkPO(g, PO.B3); logEV(g, EVC.STEAL, 4, 0);
+        if (g.outs >= 3) { ended = true; incomplete = true; break; }
+      }
+    }
+    const anyOn = !!(g.bases[0] || g.bases[1] || g.bases[2]);
+    if (wpPb && anyOn && !(kDrop && !kDropSafe && g.outs === 2)) {   // 2사 낫아웃 타자가 1루에서 잡히면 이닝 끝(주자 진루·득점 없음)
       if (PT.wp) { pl.WP++; D.pit.wp++; logEV(g, EVC.WP, 0, 0); } else { fldLine(D, PO.C).PB++; logEV(g, EVC.PB, 0, 0); }
       advanceAll(g, 1, !PT.pb);
-      if (g.over) break;
+      if (g.over && !kNow && !bbNow) break;   // 폭투 끝내기(삼진·볼넷이 같이 나면 그 타석은 마무리)
     }
     if (ballCode) {
       g.balls++;
       if (g.balls >= 4) { res = R.BB; bl.BB++; pl.BB++; D.pit.bb++; walk(g); onBase = true; ended = true; break; }
     } else if (strikeCode) {
-      if (code === PR.TIP_K || g.strikes === 2) {
+      if (kNow) {
         res = R.K; wasK = true;
-        // 낫아웃: 3번째 스트라이크를 못 잡고(폭투·포일) 1루가 비었거나 2사
-        const drop = wpPb && (!g.bases[0] || g.outs === 2);
-        strikeOut(g, D, pl, drop);
-        if (drop) { onBase = true; }
+        if (kDropSafe) {
+          g.bases[0] = { i: pa.b, slot: O.next, resp: D.pit.i, earned: true, lead: 0, jump: 0 }; onBase = true;
+          if (!anyOn) { if (PT.wp) { pl.WP++; D.pit.wp++; logEV(g, EVC.WP, 0, 0); } else { fldLine(D, PO.C).PB++; logEV(g, EVC.PB, 0, 0); } }
+        } else { bkOut(g); if (kDrop) { bkPO(g, PO.B1); bkA(g, PO.C); } else bkPO(g, PO.C); }
         ended = true; break;
       }
       g.strikes++;
@@ -263,15 +308,20 @@ function runPA(g: G, firstOfHalf: boolean): void {
     pa.countsSeen |= 1 << (g.balls * 3 + g.strikes);
     if (pa.mode === 1) pa.mode = 0;   // 히트앤런은 한 공
   }
-  if (g.over && !ended) return;
+  if (g.over && !ended) {
+    if (!g.wo) return;                 // 라이브 지평(liveHorizon) — 타석 진행 중
+    ended = true; incomplete = true;   // 타석 도중 끝내기(폭투·포일·보크·도루 실책)
+  }
+  if (incomplete) { finishIncompletePA(g, O, D, bl, pl, outs0, bases0, score0, firstPitchNo, runsBefore, outsBefore, we0, b.id, p.id, bb0); return; }
   // ── 타석 마무리 ──
   if (res !== R.IBB && res !== R.BB && res !== R.HBP && res !== R.SH && res !== R.SF && !PL.sf) bl.AB++;
   if (res === R.K) { bl.SO++; pl.SO++; D.pit.k++; }
   if (isHit) { bl.H++; pl.H++; D.pit.h++; O.hits++; if (res === R.S2) bl.D++; else if (res === R.S3) bl.T++; else if (res === R.HR) { bl.HR++; pl.HR++; D.pit.hr++; } }
   if (res === R.SH || PL.sh) { bl.SH++; }
-  if (PL.sf && res !== R.SH) { bl.SF++; bl.AB = Math.max(0, bl.AB - (res === R.OUT ? 1 : 0)); }
+  if (PL.sf && res !== R.SH) { bl.SF++; }   // 희생플라이는 위에서 이미 타수에서 빠짐(전에는 한 번 더 빼서 타수가 모자랐다)
   if (res === R.DP || PL.gdp && PL.kind === 0) bl.GDP++;
   D.pit.tto[slot]++;
+  if (onBase) D.pit.innBR++;
   const runs = g.score[g.half] - runsBefore;
   void rbi;
   evPAEnd(g, res, onBase, isHit, runs, g.outs - outsBefore, wasK, hbp);
@@ -280,7 +330,7 @@ function runPA(g: G, firstOfHalf: boolean): void {
     windOut: windOut(g), batterPlatoonAdv: !pa.same, scoreDiff: score0, ibb: res === R.IBB, sh: res === R.SH || PL.sh, sf: PL.sf, gdp: res === R.DP, roe: res === R.ROE, foulOut: PL.kind === 5 && res === R.OUT });
   if (g.logOn) {
     const L = g.log as LogBuf; const we1 = homeWE(g.inning, g.half, Math.min(3, g.outs), basesCode(g), g.score[1] - g.score[0], g.maxInn);
-    L.pa.push(g.inning * 2 + g.half, outs0, bases0, score0, recNo(g, b.id), recNo(g, p.id), res, PL.rbi, firstPitchNo, g.pitchInPA, L.bb.length / 17 - 1, Math.round((we1 - we0) * 1000));
+    L.pa.push(g.inning * 2 + g.half, outs0, bases0, score0, recNo(g, b.id), recNo(g, p.id), res, PL.rbi, firstPitchNo, g.pitchInPA, L.bb.length > bb0 ? L.bb.length / 17 - 1 : -1, Math.round((we1 - we0) * 1000));
     L.wp.push(Math.round(we1 * 1000));
   }
   PL.rbi = 0; PL.sf = false; PL.sh = false; PL.gdp = false;
@@ -291,12 +341,26 @@ function runPA(g: G, firstOfHalf: boolean): void {
   void tto;
 }
 function strikeOut(g: G, D: TeamSt, pl: PitLine, drop: boolean): void {
-  if (drop) {
-    // 타자 1루로 — 포수 회수 vs 타자 주루(대부분 세이프)
-    const O = offense(g); const b = O.pcs[g.pa.b];
-    if (g.rB.next() < 0.75) { g.bases[0] = { i: g.pa.b, slot: O.next, resp: D.pit.i, earned: true, lead: 0, jump: 0 }; void b; return; }
+  void D; void pl; void drop;
+  bkOut(g); bkPO(g, PO.C);
+}
+/** 미완료 타석 마무리: 타석·타수·상대 타자 수에서 빼고(규칙 9.02), 타순은 그대로(같은 타자가 다음 이닝 선두), 테이프에는 결과 '기타'로 남긴다 */
+function finishIncompletePA(g: G, O: TeamSt, D: TeamSt, bl: { PA: number }, pl: { BF: number }, outs0: number, bases0: number, score0: number, firstPitchNo: number, runsBefore: number, outsBefore: number, we0: number, bid: number, pid: number, bb0: number): void {
+  bl.PA--; pl.BF--; D.pit.bf--;
+  const runs = g.score[g.half] - runsBefore;
+  evPAEnd(g, R.OTHER, false, false, runs, g.outs - outsBefore, false, false);
+  if (g.col?.pa) g.col.pa({ result: R.OTHER, batter: bid, pitcher: pid, bHand: g.pa.bL ? 'L' : 'R', pHand: g.pa.pL ? 'L' : 'R', outsBefore: outs0, basesBefore: bases0, runs, rbi: 0, pitches: g.pitchInPA,
+    balls: g.balls, strikes: g.strikes, countsSeen: g.pa.countsSeen, tto: 0, isStarter: D.pit.starter, inning: g.inning, half: g.half, homeBatting: g.half === 1, li: g.pa.li, tempC: g.slot.tC, rainLv: g.slot.rainLv, dayClear: g.dayClear,
+    windOut: windOut(g), batterPlatoonAdv: !g.pa.same, scoreDiff: score0, ibb: false, sh: false, sf: false, gdp: false, roe: false, incomplete: true });
+  if (g.logOn) {
+    const L = g.log as LogBuf; const we1 = homeWE(g.inning, g.half, Math.min(3, g.outs), basesCode(g), g.score[1] - g.score[0], g.maxInn);
+    L.pa.push(g.inning * 2 + g.half, outs0, bases0, score0, recNo(g, bid), recNo(g, pid), R.OTHER, 0, firstPitchNo, g.pitchInPA, L.bb.length > bb0 ? L.bb.length / 17 - 1 : -1, Math.round((we1 - we0) * 1000));
+    L.wp.push(Math.round(we1 * 1000));
   }
-  bkOut(g); bkPO(g, PO.C); void pl;
+  PL.rbi = 0; PL.sf = false; PL.sh = false; PL.gdp = false;
+  g.clock += P.clock.paChange;
+  void O;
+  if (g.half === 1 && g.inning >= 9 && g.score[1] > g.score[0]) g.over = true;
 }
 function injuryCheck(g: G, T: TeamSt, i: number, ex: number, mult: number): void {
   if (i < 0) return;
@@ -312,13 +376,15 @@ function injuryCheck(g: G, T: TeamSt, i: number, ex: number, mult: number): void
   const pos = T.posOf[i];
   let best = -1, bv = -9;
   for (const j of T.bench) { if (T.removed[j] || T.pcs[j].pitches.length) continue; const v = pos >= 1 && pos <= 8 ? T.pcs[j].posProf[pos] : 10; if (v > bv) { bv = v; best = j; } }
-  if (best >= 0) { substitute(g, T, slot, best); for (const r of g.bases) if (r && r.i === i) r.i = best; logEV(g, EVC.SUB_DEF, pc.id, T.pcs[best].id); }
+  // 주자 바꿔 넣기는 공격 팀일 때만 — 전에는 수비수가 다쳐도 같은 번호의 공격 주자를 바꿔 버려 다른 팀 선수 번호가 베이스에 올라가고(드물게) 경기가 멈췄다
+  if (best >= 0) { substitute(g, T, slot, best); if (T === offense(g)) for (const r of g.bases) if (r && r.i === i) r.i = best; logEV(g, EVC.SUB_DEF, pc.id, T.pcs[best].id); }
 }
 
 function startHalf(g: G): void {
   { const O = offense(g); if (O.runsInn[g.inning - 1] === undefined) O.runsInn[g.inning - 1] = 0; }
   g.outs = 0; g.vOuts = 0; g.bases[0] = g.bases[1] = g.bases[2] = null;
-  const D = defense(g); D.pit.inningPitches = 0; D.pit.curInning = g.inning;
+  const D = defense(g); D.pit.inningPitches = 0; D.pit.curInning = g.inning; D.pit.innBR = 0;
+  g.prePA = true; aiDefense(g); g.prePA = false;   // 대타·대주자가 낯선 수비 자리에 서면 교체, 후반 리드면 수비 굳히기
   tickWeather(g);
   evHalfStart(g);
   // 노출: 포수 이닝, 첫 이닝엔 출장
@@ -345,6 +411,7 @@ export function simulateGame(inp: GameInput): GameResult {
     startHalf(g);
     let first = true;
     while (g.outs < 3 && !g.over) {
+      if (g.pitchNo >= MAX_PITCHES) { g.over = true; g.status = g.score[0] === g.score[1] ? 'tie' : 'called'; logEV(g, EVC.CALLED, 0, 1); break; }   // 안전 상한 콜드
       const before = defense(g).pit;
       runPA(g, first); first = false;
       if (defense(g).pit !== before) injuryCheck(g, defense(g), defense(g).pit.i, EX.pitcherApp, 1);
@@ -394,11 +461,15 @@ function finalize(g: G & { leadSide?: number; leadWinP?: number; leadLoseP?: num
     if ((g.leadLoseP ?? -1) >= 0) pitLine(L, g.leadLoseP!).L = 1;
     const fin = W.pitHist[W.pitHist.length - 1];
     if (!fin.starter && fin.i !== wp && fin.saveSit && !fin.blown) pitLine(W, fin.i).SV = 1;
-    for (const T of g.T) for (const ps of T.pitHist) {
+  }
+  // 홀드·블론: 이긴 팀만이 아니라 양 팀 모두(세이브 상황에 나와 아웃을 잡고 리드를 지킨 채 내려가면 홀드 — 뒤 투수가 역전당해도 그대로). 무승부 경기도 마찬가지
+  if (status !== 'noGame') {
+    const W = winner ? g.T[winner === 'home' ? 1 : 0] : null; const wp0 = W ? W.pitHist.find((x) => pitLine(W, x.i).W === 1)?.i ?? -1 : -1;
+    for (const T of g.T) { const finT = T.pitHist[T.pitHist.length - 1]; for (const ps of T.pitHist) {
       if (ps.starter) continue;
       if (ps.saveSit && ps.blown) pitLine(T, ps.i).BS = 1;
-      else if (T === W && ps.saveSit && !ps.blown && ps !== fin && ps.outs >= 1 && ps.i !== wp) pitLine(T, ps.i).HLD = 1;
-    }
+      else if (ps.saveSit && !ps.blown && ps !== finT && ps.outs >= 1 && !(T === W && ps.i === wp0)) pitLine(T, ps.i).HLD = 1;
+    } }
   }
   for (const T of g.T) {
     const sp = T.pitHist[0]; const l = pitLine(T, sp.i);
@@ -407,8 +478,9 @@ function finalize(g: G & { leadSide?: number; leadWinP?: number; leadLoseP?: num
     if (g.col?.starter) g.col.starter({ outs: sp.outs, pitches: sp.pitches, runs: sp.runs, er: sp.er, tto3: sp.tto.some((x) => x >= 3) });
     if (g.col?.reliever) for (const ps of T.pitHist) if (!ps.starter) g.col.reliever({ outs: ps.outs, pitches: ps.pitches, role: ps.role });
   }
+  // 투수별 이 경기 투구 수(같은 투수가 두 번 기록돼도 합친다 — 다음 날 피로 계산이 뒤 등판분만 보는 일이 없게)
   const usage: { pid: number; pitches: number; team: 0 | 1 }[] = [];
-  for (const T of g.T) for (const ps of T.pitHist) usage.push({ pid: T.pcs[ps.i].id, pitches: ps.pitches, team: T.side });
+  for (const T of g.T) for (const ps of T.pitHist) { const id = T.pcs[ps.i].id; const u = usage.find((x) => x.pid === id && x.team === T.side); if (u) u.pitches += ps.pitches; else usage.push({ pid: id, pitches: ps.pitches, team: T.side }); }
   const box = {
     line: { inn: [g.T[0].runsInn.map((x) => x ?? 0), g.T[1].runsInn.map((x) => x ?? 0)] as [number[], number[]], R: [g.score[0], g.score[1]] as [number, number], H: [g.T[0].hits, g.T[1].hits] as [number, number], E: [g.T[0].errors, g.T[1].errors] as [number, number], LOB: [g.T[0].lob, g.T[1].lob] as [number, number] },
     bat: [g.T[0].bat, g.T[1].bat] as any, pit: [Array.from(g.T[0].pitL.values()), Array.from(g.T[1].pitL.values())] as any, fld: [g.T[0].fld, g.T[1].fld] as any,
@@ -420,7 +492,7 @@ function finalize(g: G & { leadSide?: number; leadWinP?: number; leadLoseP?: num
   mix(g.score[0]); mix(g.score[1]); mix(g.pitchNo); mix(g.paNo); mix(g.T[0].hits); mix(g.T[1].hits); mix(g.T[0].errors); mix(g.T[1].errors); mix(Math.round(g.clock));
   const res: GameResult = {
     status, score: [g.score[0], g.score[1]], innings: g.inning, outsLastHalf: g.outs, winner, box, usage, injuries: g.injuries.map((x) => ({ ...x })), events: eventCounts(g),
-    durationMin: Math.round(g.clock / 60 + g.delayMin), delays: g.delays, hash: h >>> 0, pitchesTotal: g.pitchNo,
+    durationMin: Math.round(g.clock / 60), delays: g.delays, hash: h >>> 0, pitchesTotal: g.pitchNo,   // 경기 시계에 우천 대기가 이미 들어 있다(전에는 두 번 더함)
   };
   if (g.logOn) res.record = buildRecord(g);
   if (g.col?.game) g.col.game({ res, input: g.inp, starterIP: [g.T[0].pitHist[0].outs, g.T[1].pitHist[0].outs], starterPitches: [g.T[0].pitHist[0].pitches, g.T[1].pitHist[0].pitches], relievers: [g.T[0].pitHist.length - 1, g.T[1].pitHist.length - 1], extra: g.extra, tempC: g.tempStart, dayClear: g.dayClear, rain: g.delays > 0 || g.wx.slots[PRE_SLOTS].rainLv > 0 });
