@@ -6,7 +6,7 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 ALLOWED_ORIGINS = "https://web-interface.github.io,http://localhost:5173,http://127.0.0.1:5173"
-AI_MODEL = "claude-haiku-5-5"
+AI_BUDGET_USD = "180"  # 조직 크레딧 $200 — 이 금액(모든 사용자 합계)에 닿으면 Claude 호출을 멈춘다
 AI_DAILY_CALLS = "20"
 
 [[d1_databases]]

@@ -7,7 +7,7 @@ export interface Env {
   ANTHROPIC_API_KEY?: string;
   PEPPER?: string;
   ALLOWED_ORIGINS?: string; // 쉼표로 구분
-  AI_MODEL?: string; // 기본 claude-haiku-5-5 (가장 가벼운 모델)
+  AI_BUDGET_USD?: string; // 전체 누적 사용액 상한 (달러) — 넘으면 Claude 를 부르지 않는다
   AI_DAILY_CALLS?: string; // 한 사람 하루 AI 호출 한도
 }
 
@@ -148,7 +148,25 @@ async function reset(req: Request, env: Env) {
   return { token: await newSession(env, u.id), username: u.username, recoveryCode: next };
 }
 
-/** 연결 확인용 Claude 호출 — 한 사람 하루 한도 안에서만 */
+// Claude 는 Sonnet 5.5 하나만 쓴다 (사용자 지시 — 다른 모델 금지)
+const MODEL = 'claude-sonnet-5-5';
+const PRICE_IN = 2 / 1e6, PRICE_OUT = 10 / 1e6; // 달러/토큰 (생각 토큰도 출력에 포함돼 계산된다)
+const MAX_TOKENS = 1024;
+
+/** 지금까지 모든 사용자가 쓴 금액 (달러) */
+async function spentUsd(env: Env) {
+  const r = await env.DB.prepare('SELECT COALESCE(SUM(in_tokens), 0) AS i, COALESCE(SUM(out_tokens), 0) AS o FROM ai_usage').first<{ i: number; o: number }>();
+  return (r?.i ?? 0) * PRICE_IN + (r?.o ?? 0) * PRICE_OUT;
+}
+
+/** 조직 크레딧($200)을 넘지 않게 — 이번 호출이 최대로 써도 상한 안일 때만 통과. 설정이 없으면 막는다 */
+async function checkBudget(env: Env, maxOut: number) {
+  const cap = Number(env.AI_BUDGET_USD);
+  if (!Number.isFinite(cap) || cap <= 0) throw new HttpError(503, 'AI 예산 설정이 없어서 Claude 를 쓰지 않아요');
+  if ((await spentUsd(env)) + 4000 * PRICE_IN + maxOut * PRICE_OUT > cap) throw new HttpError(503, '이번 달 AI 예산을 다 써서 Claude 를 멈췄어요');
+}
+
+/** 연결 확인용 Claude 호출 — 한 사람 하루 한도와 전체 예산 안에서만 */
 async function aiPing(req: Request, env: Env) {
   const user = await currentUser(req, env);
   if (!env.ANTHROPIC_API_KEY) throw new HttpError(503, 'Claude 열쇠(ANTHROPIC_API_KEY)가 아직 없어요');
@@ -156,14 +174,15 @@ async function aiPing(req: Request, env: Env) {
   const limit = Number(env.AI_DAILY_CALLS || 20);
   const used = await env.DB.prepare('SELECT calls FROM ai_usage WHERE user_id = ? AND day = ?').bind(user.id, day).first<{ calls: number }>();
   if ((used?.calls ?? 0) >= limit) throw new HttpError(429, `오늘 AI 사용 한도(${limit}번)를 다 썼어요. 내일 오전 9시에 다시 채워져요`);
+  await checkBudget(env, MAX_TOKENS);
 
   const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-  const model = env.AI_MODEL || 'claude-haiku-5-5';
+  const model = MODEL;
   let msg: Anthropic.Message;
   try {
     msg = await client.messages.create({
       model,
-      max_tokens: 1024,
+      max_tokens: MAX_TOKENS,
       output_config: { effort: 'low' },
       system: '너는 웹 야구 매니지먼트 게임의 문자 중계 캐스터다. 한국어로, 짧고 생생하게.',
       messages: [{ role: 'user', content: '연결 테스트예요. 9회 말 2사 만루에서 터진 끝내기 안타를 두 문장으로 중계해 주세요.' }],
@@ -185,7 +204,7 @@ async function aiPing(req: Request, env: Env) {
 async function health(env: Env) {
   let db = false;
   try { db = !!(await env.DB.prepare('SELECT COUNT(*) AS n FROM users').first()); } catch { db = false; }
-  return { ok: true, service: 'baseball-api', db, ai: !!env.ANTHROPIC_API_KEY, pepper: !!env.PEPPER };
+  return { ok: true, service: 'baseball-api', db, ai: !!env.ANTHROPIC_API_KEY, pepper: !!env.PEPPER, model: MODEL };
 }
 
 export default {
