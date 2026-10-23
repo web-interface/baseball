@@ -5,7 +5,7 @@ export const GRADES: Record<GradeId, GradeInfo> = {
   normal:    { id: 'normal',    ko: '노멀',             short: 'N',   kind: 'season', rank: 1, yearTagged: true,  levelMax: 8,  frame: '은회색 얇은 테' },
   special:   { id: 'special',   ko: '스페셜',           short: 'S',   kind: 'season', rank: 2, yearTagged: true,  levelMax: 8,  frame: '주황 테' },
   rare:      { id: 'rare',      ko: '레어',             short: 'R',   kind: 'season', rank: 3, yearTagged: true,  levelMax: 9,  frame: '진홍 테 + 광택' },
-  elite:     { id: 'elite',     ko: '엘리트',           short: 'E',   kind: 'season', rank: 5, yearTagged: true,  levelMax: 9,  frame: '보라 테 + 테두리를 따라 흐르는 빛' },
+  elite:     { id: 'elite',     ko: '엘리트',           short: 'E',   kind: 'season', rank: 5, yearTagged: true,  levelMax: 9,  frame: '자수정 테 · 보라·얼음빛 햇살 · 다이아 별빛 · ELITE 명판' },
   legend:    { id: 'legend',    ko: '레전드',           short: 'L',   kind: 'icon',   rank: 4, yearTagged: false, levelMax: 10, frame: '금박 + 문양' },
   franchise: { id: 'franchise', ko: '프랜차이즈 엘리트', short: 'FR',  kind: 'icon',   rank: 6, yearTagged: false, levelMax: 10, frame: '구단색 핀스트라이프 + 구단 엠블럼 FRANCHISE 명판' },
   black:     { id: 'black',     ko: '블랙',             short: 'BK',  kind: 'icon',   rank: 7, yearTagged: false, levelMax: 10, frame: '흑요석 다이아몬드 컷 + 얼음 파랑 네온 · 크롬 BLACK 명판' },

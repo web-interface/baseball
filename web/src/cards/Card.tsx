@@ -18,7 +18,7 @@ import { avg as fmtAvg, era as fmtEra, ip as fmtIp, level as fmtLevel, levelColo
 import { awardPos, bandOf, cardCode, enName, enhanceTier, frameColorOf, isRookie, mockSerial, uniformOf, type Serial } from './meta';
 import { gearSet, mockGear, slotsOf, type GearPiece } from './gear';
 import { attachMotion } from './motion';
-import { Crest, Laurel, LeagueMark, Star4, autographStroke } from './parts';
+import { Crest, Gem, Laurel, LeagueMark, Star4, autographStroke } from './parts';
 import { CARD_BG, TYPE_KO, WxIcon, cardTypeOf, weatherOf, weatherTitle } from './front';
 import s from './Card.module.css';
 import c from './SdCard.module.css';
@@ -185,14 +185,15 @@ function labelOf(p: Player, grade: GradeId, year?: number, enhance = 0, level?: 
 /* ───────── 앞면 — SD 카드(마구마구식 한 틀) ─────────
  * 등급 테 → 능력 유형 배경(파워형 용암 · 스피드형 번개 …) + SD 선수 → 이름 띠 '연도 이름' · 등급
  * 칩: 왼쪽 위 종합 · 강화 · RC / 오른쪽 위 날씨 체질 동그라미(수상 카드는 문장) · 일련번호 / 아래 레벨 · 고유 구종 · 포지션
- * 엘리트부터 테가 빛나고(바깥 빛 + 안쪽 빛 선 + 흐르는 빛), 레전드 · 블랙 · 시그니처 · 특별은 빛이 숨 쉬듯 */
+ * 엘리트부터 테가 빛나고(바깥 빛 + 안쪽 빛 선 + 흐르는 빛), 엘리트 · 레전드 · 블랙 · 시그니처 · 특별은 빛이 숨 쉬듯.
+ * 빛나는 등급(GLOW)은 훈련해도 등급 빛을 지키고, 훈련 단계는 테 바깥 가는 색 선 + '훈련 N' 표로만 (SdCard.module.css '.trained.glow') */
 const GLOW = new Set<GradeId>(['elite', 'legend', 'franchise', 'black', 'signature', 'mvp', 'gg', 'th', 'unique']);
-const PULSE = new Set<GradeId>(['legend', 'black', 'signature', 'unique']);
-/* ───────── 등급 명판 — 맨 위 가운데. 큰 카드는 이름(BLACK …), 작은 카드는 짧은 표(BK …) — 다섯 등급이 한눈에 갈리게 ─────────
- * 블랙 크롬 글자 · 시그니처 프리즘 포일 · MVP 남색+금 월계수 · 프랜차이즈 구단색+엠블럼 · 특별 진주+별 (레전드는 원래 LEGEND 명판)
+const PULSE = new Set<GradeId>(['elite', 'legend', 'black', 'signature', 'unique']);
+/* ───────── 등급 명판 — 맨 위 가운데. 큰 카드는 이름(BLACK …), 작은 카드는 짧은 표(BK …) — 여섯 등급이 한눈에 갈리게 ─────────
+ * 엘리트 자수정 판+다이아 · 블랙 크롬 글자 · 시그니처 프리즘 포일 · MVP 남색+금 월계수 · 프랜차이즈 구단색+엠블럼 · 특별 진주+별 (레전드는 원래 LEGEND 명판)
  * 특별 선수는 SPECIAL 이 아니라 ONLY ONE — 스페셜(주황) 등급 이름과 헷갈리지 않게 */
 const PLATE: Partial<Record<GradeId, readonly [string, string]>> = {
-  black: ['BLACK', 'BK'], signature: ['SIGNATURE', 'SIG'], mvp: ['MVP', 'MVP'], franchise: ['FRANCHISE', 'FR'], unique: ['ONLY ONE', '1/1'],
+  elite: ['ELITE', 'ELITE'], black: ['BLACK', 'BK'], signature: ['SIGNATURE', 'SIG'], mvp: ['MVP', 'MVP'], franchise: ['FRANCHISE', 'FR'], unique: ['ONLY ONE', '1/1'],
 };
 function GradePlate({ grade, team }: { grade: GradeId; team: Team }) {
   const p = PLATE[grade];
@@ -202,9 +203,11 @@ function GradePlate({ grade, team }: { grade: GradeId; team: Team }) {
       {grade === 'mvp' && <Laurel className={c.plLeaf} />}
       {grade === 'franchise' && <Emblem team={team} size={20} decorative className={c.plEmb} />}
       {grade === 'unique' && <Star4 className={c.plStar} />}
+      {grade === 'elite' && <Gem className={c.plGem} />}
       <b className={c.plL}>{p[0]}</b>
       <b className={c.plS}>{p[1]}</b>
       {grade === 'mvp' && <Laurel className={c.plLeaf} flip />}
+      {grade === 'elite' && <Gem className={c.plGem} />}
     </span>
   );
 }
@@ -292,7 +295,7 @@ function CardImpl(props: CardProps) {
           )}
           {(glow || tl >= 5) && <i className={c.holo} aria-hidden />}
           {(glow || tl >= 5) && <i className={c.sparks} aria-hidden />}
-          {grade === 'signature' && <Stars />}
+          {(grade === 'signature' || grade === 'elite') && <Stars />}
           {grade === 'black' && <i className={c.zap} aria-hidden />}
           {crestKind && (
             <div className={c.crest}>
@@ -332,8 +335,9 @@ function CardImpl(props: CardProps) {
         <GradePlate grade={grade} team={t} />
         {grade === 'legend' && <span className={c.lgd}>LEGEND</span>}
         {glow && <i className={c.shine} aria-hidden />}
-        {(grade === 'black' || tl >= 10) && <i className={c.bolt} aria-hidden />}
-        {(grade === 'black' || tl >= 10) && <i className={[c.bolt, c.bolt2].join(' ')} aria-hidden />}
+        {/* 테를 도는 전기 — 블랙(얼음 파랑 두 줄) · 훈련 MAX 는 빛나지 않는 등급만(무지개 한 줄). 빛나는 등급은 훈련 MAX 여도 등급 빛 그대로 */}
+        {(grade === 'black' || (tl >= 10 && !glow)) && <i className={c.bolt} aria-hidden />}
+        {(grade === 'black' || (tl >= 10 && !glow)) && <i className={[c.bolt, c.bolt2].join(' ')} aria-hidden />}
         {(glow || tl >= 5) && <i className={c.glint} aria-hidden />}
       </div>
       {isNew && <span className={c.newTag}>NEW</span>}
@@ -413,7 +417,7 @@ function CardMiniImpl({
         <span className={c.wx} title={weatherTitle(player)}><i><WxIcon k={wx} /></i></span>
         <GradePlate grade={grade} team={t} />
         {glow && <i className={c.shine} aria-hidden />}
-        {(grade === 'black' || tl >= 10) && <i className={c.bolt} aria-hidden />}
+        {(grade === 'black' || (tl >= 10 && !glow)) && <i className={c.bolt} aria-hidden />}
         {(glow || tl >= 5) && <i className={c.glint} aria-hidden />}
       </div>
       {badge != null && <span className={[c.badge, 'num'].join(' ')}>{badge}</span>}

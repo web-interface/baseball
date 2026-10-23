@@ -42,7 +42,7 @@ const LOOK: Record<GradeId, string> = {
   normal: '회색 테 · 기본 카드',
   special: '주황 테',
   rare: '빨간 테 · 광택 한 줄',
-  elite: '보라 테 · 테가 빛나고 빛이 흐름',
+  elite: '자수정 테 · 보라·얼음빛 햇살 · 다이아 별빛 · ELITE 명판',
   legend: '금 테 · 빛이 숨 쉬듯 · 흐르는 금빛',
   franchise: '구단색 핀스트라이프 테 · 구단 엠블럼 · FRANCHISE 명판',
   black: '흑요석 테 · 얼음빛 네온 · 번개 · BLACK 명판',

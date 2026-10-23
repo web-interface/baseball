@@ -26,6 +26,16 @@ export function Star4({ className, fill = 'currentColor' }: { className?: string
   );
 }
 
+/* 다이아(브릴리언트 컷) — 엘리트 명판 양옆. 윗면 · 허리 · 아래 꼭짓점으로 갈리는 면 선 */
+export function Gem({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="-10 -10 20 20" aria-hidden>
+      <path d="M-5.6 -7H5.6L10 -1.8 0 9.6-10 -1.8Z" fill="currentColor" />
+      <path d="M-10 -1.8H10M-5.6 -7-2.7 -1.8 0 9.6 2.7 -1.8 5.6 -7M-2.7 -1.8 0 -7 2.7 -1.8" fill="none" stroke="rgba(255, 255, 255, .8)" strokeWidth=".9" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 /* 월계수 가지 (MVP 명판 양옆) — 아래에서 위로 휘는 줄기 + 번갈아 붙은 잎 5장. 한 번 계산해 둔다 */
 const LAUREL = (() => {
   const A = [9.2, 17.4], C = [1.6, 11.2], B = [4.6, 1.2];
