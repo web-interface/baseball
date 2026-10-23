@@ -194,7 +194,7 @@ function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: 
         </div>
       ) : (
         <div className={s.cta}>
-          <Button variant="secondary" className={s.ctaMain} icon="shop" onClick={() => navigate('/shop')}>스카우트 상점에서 찾기</Button>
+          <Button variant="secondary" className={s.ctaMain} icon="shop" onClick={() => navigate('/shop')}>스카우터에서 찾기</Button>
         </div>
       )}
 

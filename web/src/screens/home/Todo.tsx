@@ -18,8 +18,8 @@ export function Todo() {
   const [open, setOpen] = useState(false);
   const tiles: Tile[] = [
     { key: 'lineup', to: '/lineup', icon: 'lineup', label: '라인업', value: <b className="num">{n.lineup.overall}</b>, note: <>{n.lineup.set ? <>{n.lineup.set} 세트까지 <b className="num">{n.lineup.remain}</b>명</> : '세트덱 모으기'}</>, hot: n.lineup.remain > 0 && n.lineup.remain <= 2 },
-    { key: 'gacha', to: '/gacha', icon: 'pack', label: '영입', value: <b className="num">{n.gacha.pity}<i>/{n.gacha.max}</i></b>, note: '천장까지 — 프리미엄팩', hot: n.gacha.max - n.gacha.pity <= 3 },
-    { key: 'shop', to: '/shop', icon: 'shop', label: '스카우트 상점', value: <b className="num">{n.shop.left}<i>명</i></b>, note: <>오늘 더 데려올 수 있어요</> },
+    { key: 'gacha', to: '/gacha', icon: 'pack', label: '카드구매', value: <b className="num">{n.gacha.pity}<i>/{n.gacha.max}</i></b>, note: '천장까지 — 프리미엄팩', hot: n.gacha.max - n.gacha.pity <= 3 },
+    { key: 'shop', to: '/shop', icon: 'shop', label: '스카우터', value: <b className="num">{n.shop.left}<i>명</i></b>, note: <>오늘 더 데려올 수 있어요</> },
     { key: 'pvp', to: '/pvp', icon: 'versus', label: '대전', value: <b className="num">{n.pvp.left}<i>번</i></b>, note: <>레이팅 <span className="num">{int(n.pvp.rating)}</span></> },
     { key: 'cards', to: '/cards', icon: 'card', label: '카드', value: <b className="num">{int(n.cards.have)}</b>, note: <>도감 <span className="num">{Math.round((n.cards.have / n.cards.total) * 100)}</span>%</> },
     { key: 'season', to: '/season', icon: 'fast', label: '시즌 빨리 감기', value: <b className="num">{line.left}<i>경기</i></b>, note: '남은 시즌 한 번에' },

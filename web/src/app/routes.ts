@@ -33,8 +33,8 @@ export const ROUTES: RouteDef[] = [
   { key: 'match', path: '/match', title: '경기', menu: '경기', owner: '경기 화면 개발자', desc: '빨리 보기(10초) · 주요 장면 · 이닝별 · 자세히(2D) · 강조 문구 · 원인 표시 · ?g=season 지금 바로 경기(엔진) · ?pvp=<id> 대전 다시 보기', load: () => import('../screens/match') },
   { key: 'cards', path: '/cards', title: '카드', menu: '카드', owner: '카드 화면 개발자', desc: '보관함 · 등급 11종 · 강화 I~X · 레벨 · 도감', load: () => import('../screens/cards') },
   { key: 'enhance', path: '/enhance', title: '강화', owner: '카드 화면 개발자', desc: '강화할 카드 고르기 — 보관함이 강화 단계순으로 열려요 · 카드를 눌러 강화(I~X)·레벨·각성', load: () => import('../screens/cards/Enhance') },
-  { key: 'gacha', path: '/gacha', title: '영입', menu: '영입', owner: '뽑기 화면 개발자', desc: '스카우트(카드 뽑기) · 확률 공개 · 천장 · 레전드 이펙트', load: () => import('../screens/gacha') },
-  { key: 'shop', path: '/shop', title: '스카우트 상점', menu: '상점', owner: '상점 화면 개발자', desc: 'AI 스카우트가 매일 진열 · 하루 살 수 있는 인원 제한', load: () => import('../screens/shop') },
+  { key: 'gacha', path: '/gacha', title: '카드구매', menu: '카드구매', owner: '뽑기 화면 개발자', desc: '스카우트(카드 뽑기) · 확률 공개 · 천장 · 레전드 이펙트', load: () => import('../screens/gacha') },
+  { key: 'shop', path: '/shop', title: '스카우터', menu: '스카우터', owner: '상점 화면 개발자', desc: 'AI 스카우트가 매일 진열 · 하루 살 수 있는 인원 제한', load: () => import('../screens/shop') },
   { key: 'pvp', path: '/pvp', title: '대전', menu: '대전', owner: '대전 화면 개발자', desc: '다른 감독 구단과 혼자 대결(상대 접속 필요 없음) · AI 구단 연습 · 레이팅 · 내 기록', load: () => import('../screens/pvp') },
   { key: 'rank', path: '/rank', title: '순위', menu: '순위', owner: '대전 화면 개발자', desc: '감독 순위(레이팅 · 승률 · 구단 전력, 실제 가입자) · 리그 순위', load: () => import('../screens/rank') },
   { key: 'chat', path: '/chat', title: '로비 채팅', back: '/home', chrome: 'bare', owner: '채팅 개발자', desc: '로비 실시간 채팅 · 대화는 5분 뒤 사라짐 · 신고 · 이 감독 숨기기 · ?demo=1 예시', load: () => import('../screens/chat') },
@@ -52,7 +52,7 @@ export const GROUPS: MenuGroup[] = [
     { route: 'lineup', label: '라인업' }, { route: 'cards', label: '선수보관' }, { route: 'sets', label: '세트덱' }, { route: 'enhance', label: '강화' },
   ] },
   { key: 'play', label: '경기', items: [{ route: 'season', label: '시즌' }, { route: 'match', label: '경기' }] },
-  { key: 'scout', label: '스카우터', items: [{ route: 'gacha', label: '영입' }, { route: 'shop', label: '상점' }] },
+  { key: 'scout', label: '상점', items: [{ route: 'gacha', label: '카드구매' }, { route: 'shop', label: '스카우터' }] },
   { key: 'versus', label: '대전·순위', items: [{ route: 'pvp', label: '대전' }, { route: 'rank', label: '순위' }] },
 ];
 
