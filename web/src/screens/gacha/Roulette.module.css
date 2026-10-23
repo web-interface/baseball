@@ -73,7 +73,7 @@
 .mat { position: relative; }
 .matGo { animation: matGo 520ms cubic-bezier(.5, 0, .7, .2) calc(var(--i) * 50ms) forwards; }
 @keyframes matGo { to { transform: translateY(-40px) scale(.6); opacity: 0; } }
-.matEmpty { aspect-ratio: 5 / 7; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--line-2); background: repeating-linear-gradient(135deg, transparent 0 6px, var(--line) 6px 7px); }
+.matEmpty { aspect-ratio: 230 / 290; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--line-2); background: repeating-linear-gradient(135deg, transparent 0 6px, var(--line) 6px 7px); }
 .matDup { position: absolute; right: -3px; top: -4px; padding: 2px 3px 1px; font-size: 10px; font-weight: 700; line-height: 1; color: var(--bg); background: var(--fg); }
 .short { margin-top: 8px; font-size: 12.5px; color: var(--bad); }
 

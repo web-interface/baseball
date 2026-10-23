@@ -117,7 +117,7 @@
   place-items: center;
   align-content: center;
   gap: 4px;
-  aspect-ratio: 5 / 7;
+  aspect-ratio: 230 / 290;
   border-radius: 6px;
   color: var(--field-line);
   background: color-mix(in srgb, var(--field-line) 6%, transparent);

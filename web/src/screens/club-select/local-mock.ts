@@ -2,7 +2,7 @@
 // 서버가 붙으면: 지명 후보·기본 선수단·특별 선수 카드는 서버가 만들고(같은 Player/CardInst 모양), 여기 값은 버린다.
 import { PLAYERS, isTeamId, teamByCode } from '../../game/mock';
 import { SPECIAL_PLAYER_NAMES } from '../../game/world';
-import { makeAppearance, type FacialHair, type HairStyle } from '../../art/character';
+import type { FacialHair, HairStyle } from '../../art/character';
 import type { BatSide, GradeId, Hand, PitcherRole, PitchType, Player, Pos, SignaturePitch, Team } from '../../game/types';
 
 /* ── 시드 난수 ── */
@@ -167,30 +167,9 @@ export function chants(c: SpecialCfg, team: Team) {
   return [`날려라 ${n}! ${t}의 ${n}!`, `안타 ${n}! 안타 ${n}!`, `${n} 홈런! ${t} 승리!`];
 }
 
-/** 얼굴 시드 찾기 — 고른 머리·수염이 나오는 시드를 생성기에서 골라 쓴다 (그림은 PlayerArt 그대로) */
-const LOOKS = new Map<string, string>();
+/** 얼굴 시드 — 고른 머리 · 수염은 SD 그림(src/art/sd)이 그대로 따르도록 시드 끝에 붙인다: 'sp:이름:번호~머리~수염' */
 export function findLook(c: SpecialCfg): string {
-  const pos: Pos = c.type === 'P' ? 'P' : c.pos;
-  const b = BUILD_KO[c.build];
-  const key = `${c.name}|${pos}|${c.build}|${c.hair}|${c.beard}|${c.seed}|${c.throws}${c.bats}`;
-  const hit = LOOKS.get(key);
-  if (hit) return hit;
-  let found = 0;
-  let pick = `sp:${c.name}:0`;
-  let best = pick, bestScore = -1;
-  for (let i = 0; i < 6000; i++) {
-    const id = `sp:${c.name}:${i}`;
-    const ap = makeAppearance({ id, heightCm: b.h, weightKg: b.w, throws: c.throws, bats: c.bats, pos, origin: 'KR', age: 24, number: 77 });
-    const score = (ap.hair.style === c.hair ? 2 : 0) + (ap.facialHair.kind === c.beard ? 1 : 0) + (ap.eyewear === 'none' ? 0.5 : 0);
-    if (score >= 3) {
-      if (found === c.seed) { pick = id; bestScore = 99; break; }
-      found++;
-    }
-    if (score > bestScore) { bestScore = score; best = id; }
-  }
-  const out = bestScore === 99 ? pick : best;
-  LOOKS.set(key, out);
-  return out;
+  return `sp:${c.name}:${c.seed}~${c.hair}~${c.beard}`;
 }
 
 /** 설정 → 선수 (처음엔 강하지만 대전 밸런스를 깨지 않게: OVR 84~86 · 잠재력 최고) */

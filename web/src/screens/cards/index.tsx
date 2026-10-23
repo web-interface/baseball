@@ -37,18 +37,18 @@ const SHORT: Record<GradeId, string> = {
 };
 /** 등급 설명 — 갤러리 */
 const LOOK: Record<GradeId, string> = {
-  normal: '은회색 얇은 테 · 무광',
-  special: '주황 금속 테 · 은은한 빛 띠',
-  rare: '진홍 테 · 광택이 지나감 · 물결 무늬',
-  elite: '보라 크롬 테를 따라 빛이 돎 · 프리즘',
-  legend: '금박 테 · 방사선과 기요셰 문양',
-  franchise: '구단색 테 · 금 FR 명판 · 핀스트라이프',
-  black: '무광 검정 · 크롬 테에 빛이 스침',
-  signature: '움직이는 무지개 홀로그램 테 · 친필 사인',
-  mvp: '플래티넘 테 · 월계관 문장',
-  gg: '금빛 가죽 테 · 황금 글러브 문장 · 바느질',
-  th: '남색 에나멜 테 · 왕관 문장',
-  unique: '진주빛 테 · 흑백 배경 · 세로 이름 띠',
+  normal: '회색 테 · 기본 카드',
+  special: '주황 테',
+  rare: '빨간 테 · 광택 한 줄',
+  elite: '보라 테 · 테가 빛나고 빛이 흐름',
+  legend: '금 테 · 빛이 숨 쉬듯 · 흐르는 금빛',
+  franchise: '구단색 테 · 금 FR 명판 · 흐르는 빛',
+  black: '검정 테 · 하얀 빛 · 크롬 빛이 스침',
+  signature: '돌아가는 무지개 테 · 친필 사인',
+  mvp: '금 테 · 남색 이름 띠 · MVP 문장',
+  gg: '금빛 테 · 황금 글러브 문장',
+  th: '보라 테 · 왕관 문장',
+  unique: '진주빛 테 · 무지개 결 · 숨 쉬는 빛',
 };
 const LIMIT: Partial<Record<GradeId, string>> = { legend: '/99', franchise: '/50', black: '/25', signature: '/10', mvp: '/27', gg: '/27', th: '/27', unique: '1/1' };
 
@@ -449,7 +449,7 @@ function Gallery({ same }: { same: boolean }) {
         </div>
         <p className={s.lead}>
           {mode === 'same'
-            ? '같은 그림에 테·포일·무늬만 바뀌어요. 실물 카드의 패럴렐처럼요.'
+            ? '같은 그림에 테 색 · 이름 띠 · 빛만 바뀌어요. 엘리트부터 테가 빛나요.'
             : '높은 등급일수록 테가 두꺼워지고 빛이 움직여요. 서열은 시그니처 > 블랙 > 프랜차이즈 > 엘리트 > 레전드 > 레어 > 스페셜 > 노멀.'}
         </p>
       </header>

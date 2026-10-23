@@ -190,7 +190,7 @@
 .flip {
   position: relative;
   width: 280px;
-  aspect-ratio: 5 / 7;
+  aspect-ratio: 230 / 290;
   perspective: 1400px;
   transform-style: preserve-3d;
   cursor: pointer;

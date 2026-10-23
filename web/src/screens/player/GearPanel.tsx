@@ -2,8 +2,8 @@
 // 장비 시트: 착용/해제 · 바꾸기 · 장비 강화(+1~+5, 100/90/70/55/40%, 실패마다 +15%p, 단계·장비 그대로)
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Button, Sheet, fmt, useToast } from '../../ui';
-import { PlayerArt, toSpec, toTeamColors } from '../../art/PlayerArt';
-import { makeAppearance, makeKit, renderFigure, standingPose } from '../../art/character';
+import { PlayerArt } from '../../art/PlayerArt';
+import { sdFigurePins } from '../../art/sd';
 import type { Player, Team } from '../../game/types';
 import { Pips, Sec } from './common';
 import { LIcon, type LocalIconName } from './icons';
@@ -19,34 +19,15 @@ const SLOT_ICON: Record<GearSlot, LocalIconName> = {
   bat: 'bat', glove: 'glove', spikes: 'spikes', bgloves: 'bgloves', helmet: 'helmet', wrist: 'wrist', guard: 'guard', cap: 'cap', shirt: 'shirt',
 };
 type Pt = [number, number];
-/** 전신 그림에서 장비가 닿는 몸 위치 — 생성기 관절 좌표(renderFigure.j)로 정확히 (그림 상자 기준 0~1) */
+/** 전신 그림에서 장비가 닿는 몸 위치 — SD 그림의 뼈대(sdFigurePins)로 정확히 (그림 상자 기준 0~1) */
 function figureGeom(p: Player, team: Team) {
   try {
-    const spec = toSpec(p);
-    const ap = makeAppearance(spec);
-    const kit = makeKit(spec, ap, toTeamColors(team), 'home');
-    const f = renderFigure(ap, kit, standingPose(ap));
-    const [x0, y0, x1, y1] = f.box;
-    const W = x1 - x0, H = y1 - y0;
-    const n = (q: readonly number[] | null | undefined): Pt | null => (q ? [(q[0] - x0) / W, (q[1] - y0) / H] : null);
-    const j = f.j;
-    const gloveSide = p.throws === 'R' ? 'L' : 'R';
-    const near = 'R';
-    const freeHand = gloveSide === near ? 'L' : near;
-    const head = n(j.headO)!;
-    const mid = (a: Pt, b: Pt): Pt => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    const f = sdFigurePins(p, team);
     const pts: Record<GearSlot, Pt> = {
-      helmet: [head[0], Math.max(0.015, head[1] - 0.045)],
-      cap: [head[0], Math.max(0.015, head[1] - 0.045)],
-      shirt: mid(n(j.neck)!, n(j.hip)!),
-      guard: n(j.elbow[near])!,
-      wrist: n(j.wrist[freeHand])!,
-      bgloves: n(j.hand[freeHand])!,
-      bat: n(j.batGrip) ?? mid(n(j.hand[freeHand])!, n(j.hip)!),
-      glove: n(j.gloveC) ?? n(j.hand[gloveSide])!,
-      spikes: mid(n(j.heel[near])!, n(j.toe[near])!),
+      helmet: f.head, cap: f.head, shirt: f.chest, guard: f.elbow, wrist: f.wrist, bgloves: f.hand,
+      bat: f.grip ?? f.hip, glove: f.glove ?? f.hand, spikes: f.foot,
     };
-    return { aspect: W / H, pts };
+    return { aspect: f.aspect, pts };
   } catch {
     return { aspect: 0.38, pts: { helmet: [0.3, 0.03], cap: [0.3, 0.03], shirt: [0.3, 0.25], guard: [0.3, 0.4], wrist: [0.5, 0.45], bgloves: [0.35, 0.55], bat: [0.4, 0.6], glove: [0.8, 0.42], spikes: [0.4, 0.96] } as Record<GearSlot, Pt> };
   }

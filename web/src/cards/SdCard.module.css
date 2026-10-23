@@ -1,0 +1,373 @@
+/*
+ * SD 카드 앞면 — 마구마구식 한 틀. 등급마다 '테 색 · 이름 띠 색 · 빛'만 바뀐다.
+ *   등급 테(그라데이션) → 검은 판 → 능력 유형 배경(용암·번개…) + SD 선수 → 이름 띠 → 칩(종합·강화·레벨·포지션) → 날씨 동그라미
+ *   엘리트부터 테가 빛나고(바깥 빛 + 안쪽 빛 선), 위 등급일수록 빛이 테를 따라 흐르고 더 화려하다.
+ * 치수는 카드 너비 기준 cqw (카드 너비 = 100, 시안 230×290 기준). 자리만 쓰는 .card 는 컨테이너, 그림은 .frame 부터.
+ */
+.card {
+  position: relative;
+  flex: none;
+  aspect-ratio: 230 / 290;
+  container: sdcard / inline-size;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  font-family: var(--font-body);
+  color: #fff;
+  /* 등급 기본(노멀) */
+  --c1: #F4F4F4;
+  --c2: #BDBDBD;
+  --bar: #7A7A7A;
+  --glow: transparent;
+  --ring: rgba(255, 255, 255, .45);
+}
+.fluid { width: 100%; }
+.clickable { cursor: pointer; }
+.clickable:focus-visible { outline: none; }
+.clickable:focus-visible .frame { box-shadow: 0 0 0 1cqw var(--bg), 0 0 0 2.2cqw var(--focus); }
+.clickable .frame { transition: transform var(--dur-1) var(--ease-out); }
+.clickable:active .frame { transform: scale(.975); }
+.dimmed { opacity: .42; filter: grayscale(.75); }
+.live { touch-action: pan-y; }
+.live .frame { transform: perspective(180cqw) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); will-change: transform; }
+
+/* ───────── 테 ───────── */
+.frame {
+  position: absolute;
+  inset: 0;
+  border-radius: 5.2cqw;
+  background: linear-gradient(170deg, var(--c1), var(--c2));
+  box-shadow:
+    inset 0 0 0 .45cqw rgba(255, 255, 255, .38),
+    inset 0 -1.2cqw 2.4cqw rgba(0, 0, 0, .22),
+    0 .8cqw 2cqw rgba(0, 0, 0, .28);
+}
+.selected .frame { box-shadow: 0 0 0 1.2cqw var(--bg), 0 0 0 2.6cqw var(--accent), 0 1cqw 3cqw rgba(0, 0, 0, .35); }
+.panel { position: absolute; inset: 2.6cqw; border-radius: 3.5cqw; background: #1b1b1b; }
+
+/* ───────── 그림 칸: 유형 배경 + 선수 ───────── */
+.art {
+  position: absolute;
+  left: 3.9cqw;
+  right: 4.35cqw;
+  top: 3.9cqw;
+  bottom: 20.9cqw;
+  overflow: hidden;
+  border-radius: 1.2cqw;
+  background-color: #10131a;
+  background-size: cover;
+  background-position: center;
+}
+/* 배경 위 아주 옅은 비네트 — 선수가 떠 보이게 */
+.art::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 50% 38%, transparent 55%, rgba(0, 0, 0, .38));
+  pointer-events: none;
+}
+.fig { position: absolute; left: -9.25%; width: 118.5%; top: 0; height: 111%; }
+.fig > * { width: 100%; height: 100%; }
+
+/* 칩 공통 */
+.chip {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: #111;
+  font-weight: 800;
+  line-height: 1;
+}
+.ovr {
+  left: 1.6cqw;
+  top: 1.6cqw;
+  min-width: 15.5cqw;
+  height: 13.5cqw;
+  padding: 0 1.4cqw;
+  border-radius: 2cqw;
+  background: rgba(12, 12, 16, .86);
+  box-shadow: inset 0 -.7cqw 0 var(--c2);
+  font: 900 8.6cqw/1 var(--font-num);
+  letter-spacing: -.02em;
+}
+.left { position: absolute; left: 1.6cqw; top: 16.6cqw; z-index: 2; display: flex; flex-direction: column; align-items: flex-start; gap: 1cqw; }
+.enh, .rc {
+  padding: .9cqw 1.6cqw .8cqw;
+  border-radius: 1.4cqw;
+  font: 900 4.8cqw/1 var(--font-num);
+  color: #fff;
+  background: #2b2b30;
+  box-shadow: inset 0 0 0 .35cqw rgba(255, 255, 255, .3);
+}
+.enh-silver { color: #1d2230; background: linear-gradient(180deg, #F4F7FB, #A9B3C2); }
+.enh-gold { color: #3a2600; background: linear-gradient(180deg, #FFF0A6, #D9A21E); }
+.enh-max { color: #fff; background: linear-gradient(90deg, #ff4f7b, #ffb84f, #6bf09a, #4fb8ff, #b46bff); text-shadow: 0 .3cqw .6cqw rgba(0, 0, 0, .5); }
+.rc { background: #D7263D; }
+.pos {
+  right: 0;
+  bottom: 0;
+  width: 14cqw;
+  height: 12.2cqw;
+  font: 800 6.4cqw/1 var(--font-num);
+}
+.lv {
+  left: 0;
+  bottom: 0;
+  height: 9cqw;
+  padding: 0 1.8cqw;
+  background: rgba(12, 12, 16, .82);
+  font: 800 4.6cqw/1 var(--font-num);
+}
+.pt {
+  left: 1.2cqw;
+  bottom: 10.6cqw;
+  display: flex;
+  gap: 1cqw;
+  align-items: center;
+  padding: .9cqw 1.6cqw;
+  border-radius: 1.4cqw;
+  background: rgba(12, 12, 16, .8);
+  font: 700 4.2cqw/1 var(--font-body);
+}
+.pt i { width: 2.6cqw; height: 2.6cqw; border-radius: 50%; background: var(--sig, #fff); box-shadow: 0 0 1.4cqw var(--sig, #fff); }
+.ser {
+  right: 1.4cqw;
+  top: 1.6cqw;
+  padding: .8cqw 1.4cqw;
+  border-radius: 1.2cqw;
+  background: rgba(12, 12, 16, .78);
+  font: 800 3.8cqw/1 var(--font-num);
+  letter-spacing: .02em;
+}
+.serGold { color: #2a1c00; background: linear-gradient(180deg, #FFF0A6, #D9A21E); }
+.crest { position: absolute; right: 1cqw; top: 9cqw; z-index: 2; width: 18cqw; height: 18cqw; filter: drop-shadow(0 .6cqw 1cqw rgba(0, 0, 0, .5)); }
+.crest svg { width: 100%; height: 100%; }
+/* 시그니처 — 그림 위 사인 */
+.auto { position: absolute; left: 4cqw; right: 22cqw; bottom: 10cqw; height: 15cqw; z-index: 2; pointer-events: none; }
+.auto svg { width: 100%; height: 100%; overflow: visible; }
+.auto path { fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; filter: drop-shadow(0 0 .8px rgba(0, 0, 0, .9)); }
+/* 대표 능력치 6 (큰 카드) */
+.stats {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  padding: 1.2cqw 1cqw 1cqw;
+  background: linear-gradient(180deg, rgba(8, 9, 12, .55), rgba(8, 9, 12, .9));
+}
+.stats span { display: grid; justify-items: center; gap: .6cqw; }
+.stats i { font: 600 3.3cqw/1 var(--font-body); font-style: normal; opacity: .78; }
+.stats b { font: 800 5cqw/1 var(--font-num); }
+.hasStats .pos { bottom: 12.4cqw; }
+.hasStats .lv { bottom: 12.4cqw; }
+.hasStats .pt { bottom: 23cqw; }
+.hasStats .auto { bottom: 20cqw; }
+
+/* ───────── 이름 띠 ───────── */
+.bar {
+  position: absolute;
+  left: 3.9cqw;
+  right: 4.35cqw;
+  bottom: 4.8cqw;
+  height: 15.2cqw;
+  display: flex;
+  align-items: center;
+  gap: 1.6cqw;
+  padding: 0 2.6cqw 0 3.6cqw;
+  border-radius: 0 0 1.2cqw 1.2cqw;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bar) 82%, #fff), var(--bar) 46%, color-mix(in srgb, var(--bar) 80%, #000));
+  box-shadow: inset 0 .4cqw 0 rgba(255, 255, 255, .22);
+}
+.bar b {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font: 800 var(--nm, 7.8cqw)/1 var(--font-body);
+  letter-spacing: -.03em;
+  text-shadow: 0 .3cqw .6cqw rgba(0, 0, 0, .35);
+}
+.bar b small { font: 800 .86em/1 var(--font-num); margin-right: .32em; letter-spacing: 0; }
+.bar em { flex: none; font: 700 4.4cqw/1 var(--font-body); font-style: normal; opacity: .82; }
+
+/* ───────── 날씨 동그라미 (밝혀진 날씨 체질 — 가장 강한 것) ───────── */
+.wx {
+  position: absolute;
+  right: 6.5cqw;
+  top: 5.6cqw;
+  z-index: 3;
+  width: 14.3cqw;
+  height: 14.3cqw;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--c2);
+  border: 1.3cqw solid #111;
+  box-sizing: border-box;
+}
+.wx i { width: 8.4cqw; height: 8.4cqw; border-radius: 50%; background: #fff; display: grid; place-items: center; }
+.wx svg { width: 6.6cqw; height: 6.6cqw; }
+/* 일련번호가 있으면 날씨 아래로 */
+.wx + .serBox { top: 21cqw; }
+.serBox { position: absolute; right: 5.4cqw; top: 5.6cqw; z-index: 3; }
+.serBox .ser { position: static; display: inline-grid; }
+
+/* ───────── 등급 ───────── */
+.g-special { --c1: #FFB54A; --c2: #E07A12; --bar: #D96C0A; }
+.g-rare { --c1: #FF6A5C; --c2: #B3221F; --bar: #A81E1B; }
+.g-elite { --c1: #C9A0FF; --c2: #6A35D6; --bar: #5A2BBE; --glow: #B98CFF; }
+.g-legend { --c1: #FFF1A6; --c2: #C9930C; --bar: #A87708; --glow: #FFD84A; }
+.g-franchise {
+  --c1: color-mix(in srgb, var(--tc1) 55%, #fff);
+  --c2: var(--tc1);
+  --bar: color-mix(in srgb, var(--tc1) 80%, #000);
+  --glow: #FFD84A;
+}
+.g-black { --c1: #6B6F76; --c2: #0B0C0E; --bar: #111214; --glow: #E8F4FF; }
+.g-signature { --c1: #ffffff; --c2: #9aa7ff; --bar: #1b1840; --glow: #ffffff; }
+.g-mvp { --c1: #FFE9A8; --c2: #B8860B; --bar: #12306E; --glow: #FFD84A; }
+.g-gg { --c1: #FFF3B0; --c2: #D4A017; --bar: #8A6A00; --glow: #FFE066; }
+.g-th { --c1: #F3D2FF; --c2: #9B30D9; --bar: #6A1B9A; --glow: #E8A8FF; }
+.g-unique { --c1: #FFFFFF; --c2: #BFE3FF; --bar: #0E1A2B; --glow: #9FE8FF; }
+
+/* 레어 — 테에 광택 한 줄 */
+.g-rare .frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, .5) 42%, transparent 50%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  padding: 2.6cqw;
+  pointer-events: none;
+}
+
+/* 엘리트부터 — 바깥 빛 + 안쪽 빛 선 */
+.glow .frame {
+  box-shadow:
+    inset 0 0 0 .45cqw rgba(255, 255, 255, .5),
+    0 0 3cqw .6cqw color-mix(in srgb, var(--glow) 75%, transparent),
+    0 .8cqw 2cqw rgba(0, 0, 0, .3);
+}
+.glow .frame::after {
+  content: '';
+  position: absolute;
+  inset: 1.25cqw;
+  border-radius: 4.2cqw;
+  border: .8cqw solid var(--glow);
+  box-shadow: 0 0 1.6cqw var(--glow), inset 0 0 1.2cqw color-mix(in srgb, var(--glow) 60%, transparent);
+  pointer-events: none;
+}
+/* 테를 따라 흐르는 빛 — 테 고리 모양(마스크) 안에서만 */
+.shine {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: 5.2cqw;
+  padding: 2.6cqw;
+  pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  background: linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, .85) 48%, transparent 58%) 0 0 / 300% 100% no-repeat;
+  animation: sweep 3.2s linear infinite;
+}
+@keyframes sweep { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.g-legend .shine, .g-mvp .shine, .g-gg .shine, .g-th .shine, .g-franchise .shine { animation-duration: 2.6s; }
+.g-black .shine { background-image: linear-gradient(115deg, transparent 40%, rgba(232, 244, 255, .95) 48%, rgba(160, 200, 255, .6) 52%, transparent 60%); animation-duration: 2.2s; }
+/* 시그니처 — 무지개 테가 돈다 */
+@property --ang { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.g-signature .frame { background: conic-gradient(from var(--ang), #ff4f7b, #ffb84f, #f5ff6b, #6bf09a, #4fd8ff, #8a7bff, #ff6bd6, #ff4f7b); animation: spin 4s linear infinite; }
+.g-signature .frame::after { border-color: #fff; }
+@keyframes spin { to { --ang: 360deg; } }
+/* 특별 선수 — 진주빛 + 무지개 결 */
+.g-unique .frame {
+  background:
+    linear-gradient(135deg, rgba(255, 120, 200, .35), rgba(120, 220, 255, .35), rgba(255, 240, 140, .35)),
+    linear-gradient(170deg, var(--c1), var(--c2));
+}
+/* 레전드 · 블랙 · 시그니처 · 특별 — 빛이 숨 쉬듯 */
+.pulse .frame::after { animation: breathe 2.4s ease-in-out infinite; }
+@keyframes breathe { 50% { box-shadow: 0 0 3.2cqw var(--glow), inset 0 0 2cqw color-mix(in srgb, var(--glow) 70%, transparent); } }
+/* 프랜차이즈 — 금 FR 명판 */
+.fr {
+  position: absolute;
+  left: 50%;
+  top: .4cqw;
+  z-index: 5;
+  transform: translateX(-50%);
+  padding: .8cqw 2.4cqw .7cqw;
+  border-radius: 1.2cqw;
+  font: 900 4.4cqw/1 var(--font-num);
+  letter-spacing: .08em;
+  color: #3a2600;
+  background: linear-gradient(180deg, #FFF0A6, #D9A21E);
+  box-shadow: 0 .4cqw 1cqw rgba(0, 0, 0, .35);
+}
+
+/* 움직임 멈춤(많은 장) · 움직임 줄이기 */
+.still .shine, .still .frame, .still .frame::after { animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .shine, .frame, .frame::after { animation: none !important; }
+}
+
+/* NEW */
+.newTag {
+  position: absolute;
+  left: 50%;
+  top: -2.4cqw;
+  transform: translateX(-50%);
+  z-index: 20;
+  padding: 1.3cqw 2.1cqw 1.1cqw;
+  border-radius: 1cqw;
+  font: 800 max(9px, 5.6cqw)/1 var(--font-num);
+  letter-spacing: .1em;
+  color: var(--accent-ink);
+  background: var(--accent);
+  box-shadow: 0 .6cqw 1.6cqw rgba(0, 0, 0, .35);
+}
+/* 작은 카드 왼쪽 숫자(타순 등) */
+.badge {
+  position: absolute;
+  left: -4.4cqw;
+  top: 50cqw;
+  z-index: 20;
+  min-width: 16cqw;
+  height: 18cqw;
+  padding: 0 2cqw;
+  display: grid;
+  place-items: center;
+  font-size: 12cqw;
+  font-weight: 700;
+  color: var(--fg);
+  background: var(--bg);
+  box-shadow: 0 0 0 1px var(--line-3);
+}
+
+/* ───────── 작은 카드 — 글자는 크게, 잔표시는 감춤 ───────── */
+@container sdcard (max-width: 118px) {
+  .bar em, .lv, .pt, .ser, .serBox, .auto, .crest { display: none; }
+  .bar { height: 17cqw; padding: 0 2cqw; }
+  .bar b { font-size: var(--nmS, 11cqw); text-align: center; }
+  .bar b small { display: none; }
+  .ovr { font-size: 11cqw; height: 16cqw; min-width: 19cqw; }
+  .pos { width: 18cqw; height: 15cqw; font-size: 8.6cqw; }
+  .wx { width: 18cqw; height: 18cqw; border-width: 1.6cqw; }
+  .wx i { width: 10.6cqw; height: 10.6cqw; }
+  .wx svg { width: 8.4cqw; height: 8.4cqw; }
+  .enh, .rc { font-size: 6.6cqw; }
+  .left { top: 19.4cqw; }
+}
+@container sdcard (max-width: 80px) {
+  .wx { display: none; }
+  .rc { display: none; }
+}
+
+/* 이름 줄 없는 작은 카드 — 그림이 아래까지 */
+.noBar .art { bottom: 3.9cqw; border-radius: 1.2cqw; }

@@ -200,7 +200,7 @@
 }
 .cardStage.in { opacity: 1; transform: translate(-50%, -50%); }
 .cardStage.up { transform: translate(-50%, -50%) translateY(-9dvh); transition-duration: 460ms; }
-.cardFlip { position: relative; aspect-ratio: 5 / 7; transform-style: preserve-3d; transform: rotateY(180deg); transition: transform 680ms cubic-bezier(.3, 0, .2, 1) 140ms; }
+.cardFlip { position: relative; aspect-ratio: 230 / 290; transform-style: preserve-3d; transform: rotateY(180deg); transition: transform 680ms cubic-bezier(.3, 0, .2, 1) 140ms; }
 .cardStage.in .cardFlip { transform: rotateY(0deg); }
 .cardBack, .cardFront { position: absolute; inset: 0; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
 .cardBack { transform: rotateY(180deg); }
