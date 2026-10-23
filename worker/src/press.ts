@@ -1,8 +1,9 @@
-// 언론 — AI 뉴스(커뮤니티 글) · 감독 인터뷰. Claude 는 글만 쓴다: 경기 결과 · 숫자 · 인터뷰 효과는 모두 게임 코드가 정한다.
+// 언론 — AI 뉴스(스포츠 기사 + 포털 뉴스식 독자 댓글) · 감독 인터뷰. Claude 는 글만 쓴다: 경기 결과 · 숫자 · 인터뷰 효과는 모두 게임 코드가 정한다.
 // 이 파일은 순수 함수만 — 사이트가 보낸 경기 자료 검사 → 짧은 한국어 자료 글(프롬프트) + JSON 스키마(구조화 출력) → 받은 글 검사·다듬기.
 //   · 이름은 게임 이름만 넘긴다(구단 이름은 이 파일의 표에서 — 사이트가 보낸 글자를 믿지 않는다).
 //   · 받은 글에 실제 구단 별명이 섞이면 게임 별명으로 바꾸고, 실제 기업 · 구단 모기업 · 방송사 · 커뮤니티 사이트 · 실존 인물 이름,
 //     욕설 · 비하 · 정치 · 성적 표현이 있으면 그 글(댓글)을 뺀다. 이모지 · 마크다운 기호는 지운다.
+//   · 뉴스 말투 거름: 초성(ㅋㅋ · ㄹㅇ)은 지우고, 커뮤니티 속어가 남은 댓글은 뺀다.
 // 로그인 · 하루 한도 · 예산 · 사용량 기록 · Claude 호출은 부르는 쪽(index.ts)이 맡는다.
 
 export class PressError extends Error { constructor(public status: number, msg: string) { super(msg); } }
@@ -30,8 +31,20 @@ const POS_KO: Record<string, string> = {
   SP: '선발', RP: '불펜', CL: '마무리', P: '투수',
 };
 const STAGE_KO: Record<string, string> = { wc: '와일드카드 결정전', spo: '준플레이오프', po: '플레이오프', ks: '한국시리즈' };
-export const TAGS = ['속보', '단독', '충격', '실화냐', '분석', '루머'] as const;
+/** 기사 분류 — web/src/game/press.ts 의 PressTag 와 같은 이름 */
+export const TAGS = ['속보', '단독', '충격', '화제', '분석', '이슈'] as const;
 export type Tag = (typeof TAGS)[number];
+/**
+ * 옛 분류 이름(커뮤니티 게시판 시절) ↔ 지금 이름. 사이트와 서버는 따로 배포되니 둘 다 받는다:
+ *  · 요청의 ev.tag 는 옛 이름 · 지금 이름 모두 받아 지금 이름으로 (사이트는 옛 서버도 받게 옛 이름으로 보낸다)
+ *  · 응답은 요청에 tv: 2 가 있을 때만 지금 이름, 없으면(옛 사이트 — 모르는 분류의 글을 버린다) 옛 이름으로 돌려준다
+ */
+const OLD_TO_NEW = new Map<string, Tag>([['실화냐', '화제'], ['루머', '이슈']]);
+const NEW_TO_OLD = new Map<Tag, string>([['화제', '실화냐'], ['이슈', '루머']]);
+export function tagOf(v: unknown): Tag | undefined {
+  if (typeof v !== 'string') return undefined;
+  return (TAGS as readonly string[]).includes(v) ? (v as Tag) : OLD_TO_NEW.get(v);
+}
 export const ANSWER_TYPES = ['trust', 'push', 'calm'] as const;
 export type AnswerType = (typeof ANSWER_TYPES)[number];
 const EV_KINDS = ['nohit', 'first', 'streakW', 'streakL', 'record', 'dropout', 'walkoffW', 'walkoffL', 'comeback', 'injury', 'marathon', 'myRecord', 'postWin', 'postLose', 'champion'];
@@ -78,6 +91,8 @@ export interface GameIn {
 export interface EventIn { kind: string; tag: Tag; big: boolean; mine: boolean; team: string; opp?: string; who?: string; n?: number; text: string }
 export interface NewsIn {
   moment: 'open' | 'event' | 'close';
+  /** 분류 이름 판 — 2 = 화제 · 이슈를 아는 사이트, 1 = 옛 사이트(실화냐 · 루머로 돌려준다) */
+  tv: 1 | 2;
   year: number; date: string; me: string;
   lv?: string; ovr?: number;
   /** 순위 순서 [구단, 승, 무, 패, 연승(+)/연패(-)] */
@@ -163,14 +178,14 @@ export function parseNewsIn(v: unknown): NewsIn {
   if (moment === 'event') {
     const e = isObj(v.ev) ? v.ev : bad('ev');
     const kind = typeof e.kind === 'string' && EV_KINDS.includes(e.kind) ? e.kind : bad('ev.kind');
-    const tag = typeof e.tag === 'string' && (TAGS as readonly string[]).includes(e.tag) ? (e.tag as Tag) : bad('ev.tag');
+    const tag = tagOf(e.tag) ?? bad('ev.tag');
     const team = teamOf(e.team) ?? bad('ev.team');
     const text = lineOf(e.text, 80) ?? bad('ev.text');
     ev = { kind, tag, big: e.big === true, mine: e.mine === true, team, opp: teamOf(e.opp), who: nameOf(e.who), n: int(e.n, 0, 500), text };
   }
   const lv = typeof v.lv === 'string' && LEVELS.includes(v.lv) ? v.lv : undefined;
   return {
-    moment, year, date, me, lv, ovr: int(v.ovr, 1, 200), table, power, first, rival, squad, leaders,
+    moment, tv: v.tv === 2 ? 2 : 1, year, date, me, lv, ovr: int(v.ovr, 1, 200), table, power, first, rival, squad, leaders,
     game: gameIn(v.game), post, ev, notes: listOf(v.notes, 6, (x) => lineOf(x, 70)),
   };
 }
@@ -244,14 +259,15 @@ function gameLine(g: GameIn, me: string) {
 }
 
 const NEWS_SYSTEM = [
-  "가상 프로야구 '한별 리그' 팬 커뮤니티 게시판 글을 쓴다. 자료에 있는 사실로만, 재밌고 자극적으로.",
-  '말투: 낚시성 제목, 반말 인터넷 커뮤니티체(ㅋㅋ, ㄹㅇ, 실화냐, 미쳤다 같은 표현). 짧게.',
+  "가상 프로야구 '한별 리그'의 스포츠 뉴스 기사와, 그 기사에 달린 독자 댓글을 쓴다. 자료에 있는 사실로만.",
+  '기사: 스포츠 신문 기사체. title 은 눈길을 끄는 자극적인 헤드라인 — 따옴표 인용 · 말줄임(…) · 쉼표 끊기를 써도 된다(예: "출구가 안 보인다" ○○, 불펜 또 무너졌다 / ○○, 9회말 끝내기로 웃었다). body 는 ~했다 체 리드 2~3문장.',
+  '댓글: 포털 뉴스 독자 댓글. 완결된 문장으로, 존댓말(~네요 · ~습니다)과 평서문(~다)을 섞고 가끔 짧은 질문. 한 기사 안에서 반응을 서로 다르게 — 칭찬 · 전술 분석 · 아쉬움 · 걱정 · 응원 · 질문(예: 불펜 운용은 다시 점검이 필요해 보입니다. / 오늘처럼만 하면 순위 싸움도 해 볼 만하겠네요. / 선발이 조금 더 버텼으면 어땠을까요?). 예시는 말투만 참고하고 그대로 쓰지 않는다.',
+  '쓰지 않는 것: 초성(ㅋㅋ · ㄷㄷ · ㄹㅇ 등), 커뮤니티 말투와 속어(실화냐 · 미쳤다 · ~각 · ㄱㄱ · 반박 안 받음 · .txt 등), 반말 조롱, 이모지, 해시태그, 매체·기자 이름, 제목 앞 [ ] 머리말(분류는 tag 로).',
   '지킬 것:',
-  '- 구단·선수 이름은 자료에 나온 것만, 적힌 글자 그대로(철자를 고치지 않는다). 실제 프로야구 선수·감독·구단, 기업, 방송사, 커뮤니티 사이트 이름은 쓰지 않는다.',
-  '- 점수·순위·기록 숫자는 자료 그대로. 없는 숫자는 만들지 않는다(루머는 카더라 말투로, 숫자 없이).',
-  '- 욕설, 비하(지역·성별·장애·인종·외모), 성적 표현, 정치, 실존 인물 이야기는 쓰지 않는다. 선수 비판은 경기력만, 가볍게.',
-  '- 이모지와 해시태그는 쓰지 않는다.',
-  '형식: tag 는 속보·단독·충격·실화냐·분석·루머 중 하나. title 28자 이내. body 2~3문장, 90자 이내. comments 는 한 줄 댓글(25자 이내), 서로 다른 반응(드립·반박·한탄·응원).',
+  '- 구단·선수 이름은 자료에 나온 것만, 적힌 글자 그대로(철자를 고치지 않는다). 실제 프로야구 선수·감독·구단, 기업, 언론사·방송사, 커뮤니티 사이트 이름은 쓰지 않는다.',
+  '- 점수·순위·기록 숫자는 자료 그대로. 없는 숫자는 만들지 않는다(이슈 기사는 "~라는 관측이 나온다"처럼 전하는 말로, 숫자 없이).',
+  '- 욕설, 비하(지역·성별·장애·인종·외모), 성적 표현, 정치, 실존 인물 이야기는 쓰지 않는다. 선수 비판은 경기력만, 정중하게.',
+  '형식: tag 는 속보·단독·충격·화제·분석·이슈 중 하나. title 28자 이내. body 90자 이내. comments 는 댓글 하나에 20~45자.',
 ].join('\n');
 
 const NEWS_SCHEMA: Record<string, unknown> = {
@@ -288,7 +304,7 @@ export function newsUser(n: NewsIn): string {
   if (n.rival) L.push(`라이벌: ${full(n.rival.id)} (${n.rival.name})`);
   if (n.moment === 'open') {
     if (n.power.length) L.push(`전력 예상(세기): ${n.power.map(([id, p]) => `${short(id)} ${p}`).join(' · ')}`);
-    if (n.first) L.push(`개막전: ${full(n.first.opp)}전 (${n.first.home ? '우리 홈' : '원정'})${n.first.sp ? ` · 우리 선발 ${n.first.sp}` : ''}`);
+    if (n.first) L.push(`개막전: ${full(n.first.opp)}전 (${n.first.home ? '홈' : '원정'})${n.first.sp ? ` · 선발 ${n.first.sp}` : ''}`);
   }
   if (n.ev) {
     L.push(`사건: ${n.ev.text}${n.ev.big ? ' (대형 사건)' : ''}`);
@@ -301,12 +317,12 @@ export function newsUser(n: NewsIn): string {
       : `가을야구: ${short(me)} ${n.post.seed ? `${n.post.seed}위로 ` : ''}탈락`);
   }
   if (n.leaders.length) L.push(`개인 1위: ${n.leaders.map(([lab, nm, id, val]) => `${lab} ${nm}(${short(id)}) ${val}`).join(' · ')}`);
-  if (n.squad.length) L.push(`우리 주요 선수: ${n.squad.map(([nm, pos, m]) => `${nm}(${POS_KO[pos]}${m ? `, ${m}` : ''})`).join('; ')}`);
+  if (n.squad.length) L.push(`내 구단 주요 선수: ${n.squad.map(([nm, pos, m]) => `${nm}(${POS_KO[pos]}${m ? `, ${m}` : ''})`).join('; ')}`);
   if (n.notes.length) L.push(`참고: ${n.notes.join(' / ')}`);
   L.push('');
-  if (n.moment === 'open') L.push('할 일: 글 5개. 개막 기대, 순위 예상, 우리 구단 전력과 걱정거리, 리그 수준 이야기. 말머리는 골고루, 우리 구단 글 2개 이상. 댓글 2~3개씩.');
-  else if (n.moment === 'close') L.push('할 일: 글 5개. 최종 순위 정리, 개인 기록·MVP 경쟁, 우리 구단 팬 반응, 가을야구 전망. 말머리는 골고루. 댓글 2~3개씩.');
-  else L.push(`할 일: 글 2~3개. 첫 글은 이 사건 기사(말머리 ${n.ev?.tag ?? '속보'}), 나머지는 팬 반응 글. 댓글 2~4개씩.`);
+  if (n.moment === 'open') L.push('할 일: 기사 5개. 개막 판도 전망, 순위 예상, 내 구단 전력과 걱정거리, 리그 수준 이야기. 분류(tag)는 골고루, 내 구단 기사 2개 이상. 댓글 2~3개씩.');
+  else if (n.moment === 'close') L.push('할 일: 기사 5개. 최종 순위 정리, 개인 기록·MVP 경쟁, 내 구단 시즌 평가, 가을야구 전망. 분류(tag)는 골고루. 댓글 2~3개씩.');
+  else L.push(`할 일: 기사 2~3개. 첫 기사는 이 사건 기사(분류 ${n.ev?.tag ?? '속보'}), 나머지는 뒷이야기·분석 기사. 댓글 2~3개씩.`);
   return L.join('\n');
 }
 
@@ -401,8 +417,10 @@ export interface Spec<T> {
 }
 const estimate = (system: string, user: string) => Math.ceil((system.length + user.length) * 1.6) + 400;
 
+/** 사이트로 돌려주는 글 — 옛 사이트(tv 1)에는 분류를 옛 이름(실화냐 · 루머)으로 */
+export type PostWire = Omit<PostOut, 'tag'> & { tag: string };
 /** 뉴스 요청 하나 → Claude 에 보낼 것 + 받은 글 읽기 */
-export function newsSpec(raw: unknown): Spec<{ posts: PostOut[] }> {
+export function newsSpec(raw: unknown): Spec<{ posts: PostWire[] }> {
   const n = parseNewsIn(raw);
   const user = newsUser(n);
   const allow = namesOfNews(n);
@@ -410,7 +428,10 @@ export function newsSpec(raw: unknown): Spec<{ posts: PostOut[] }> {
     system: NEWS_SYSTEM, user, schema: NEWS_SCHEMA,
     maxTokens: n.moment === 'event' ? EVENT_MAX_TOKENS : NEWS_MAX_TOKENS,
     estIn: estimate(NEWS_SYSTEM, user),
-    read: (text, stop) => ({ posts: readNews(text, stop, n, allow) }),
+    read: (text, stop) => {
+      const posts = readNews(text, stop, n, allow);
+      return { posts: n.tv === 2 ? posts : posts.map((p) => ({ ...p, tag: NEW_TO_OLD.get(p.tag) ?? p.tag })) };
+    },
   };
 }
 
@@ -556,6 +577,19 @@ export function cleanText(v: unknown, max: number, allow: Set<string> = new Set(
   return cut(t, max);
 }
 
+/**
+ * 뉴스 말투 거름 (사이트 web/src/game/press.ts 의 newsTone 과 같게) — 초성(ㅋㅋ · ㄷㄷ · ㄹㅇ …)은 지운다.
+ * 댓글이면 커뮤니티 속어(실화냐 · 미쳤다 · 반박 안 받음 · .txt …)가 남거나 너무 짧을 때 그 댓글을 뺀다(null).
+ */
+const JAMO_RUN = /[\u1100-\u11ff\u3131-\u318e]+/g;
+const SLANG = /(실화냐|실화임|미쳤다|미쳤네|미쳤음|개꿀|꿀잼|노잼|반박\s?(안|불가)|\.txt|가즈아|지렸|지린다|오진다|오지네|각이다|각 나온다)/;
+export function newsTone(t: string | null, comment = false): string | null {
+  if (!t) return null;
+  const s = t.replace(JAMO_RUN, ' ').replace(/\s+([.,!?…])/g, '$1').replace(/\s+/g, ' ').trim();
+  if (!s || (comment && (s.length < 6 || SLANG.test(s)))) return null;
+  return s;
+}
+
 export interface PostOut { tag: Tag; title: string; body: string; comments: string[] }
 /** 뉴스 글 읽기 — 형식이 틀린 글 · 걸린 글은 빼고, 모자라면 오류(사이트는 템플릿으로) */
 export function readNews(text: string, stop: string | null, n: NewsIn, allow: Set<string>): PostOut[] {
@@ -564,18 +598,18 @@ export function readNews(text: string, stop: string | null, n: NewsIn, allow: Se
   const posts: PostOut[] = [];
   for (const p of data.posts) {
     if (!isObj(p)) continue;
-    const tag = typeof p.tag === 'string' && (TAGS as readonly string[]).includes(p.tag) ? (p.tag as Tag) : null;
-    const title = cleanText(p.title, 40, allow);
-    const body = cleanText(p.body, 180, allow);
+    const tag = tagOf(p.tag) ?? null;
+    const title = newsTone(cleanText(p.title, 40, allow));
+    const body = newsTone(cleanText(p.body, 180, allow));
     if (!tag || !title || !body) continue;
-    const comments = (Array.isArray(p.comments) ? p.comments : []).map((c) => cleanText(c, 60, allow)).filter((c): c is string => !!c).slice(0, 4);
+    const comments = (Array.isArray(p.comments) ? p.comments : []).map((c) => newsTone(cleanText(c, 60, allow), true)).filter((c): c is string => !!c).slice(0, 4);
     if (!comments.length) continue;
     posts.push({ tag, title, body, comments });
   }
   const min = n.moment === 'event' ? 1 : 3;
   const max = n.moment === 'event' ? 3 : 6;
   if (posts.length < min) throw new PressError(502, 'AI 글이 모자라요');
-  if (n.ev) posts[0].tag = n.ev.tag; // 특이사항 첫 글 말머리는 코드가 정한 것
+  if (n.ev) posts[0].tag = n.ev.tag; // 특이사항 첫 기사 분류는 코드가 정한 것
   return posts.slice(0, max);
 }
 

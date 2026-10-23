@@ -1,4 +1,4 @@
-// 언론 바탕 — AI 뉴스(커뮤니티 글) · 감독 인터뷰의 저장 · 서버 호출 · 특이사항 판정 · 인터뷰 효과.
+// 언론 바탕 — AI 뉴스(스포츠 기사 + 독자 댓글) · 감독 인터뷰의 저장 · 서버 호출 · 특이사항 판정 · 인터뷰 효과.
 // Claude(서버 POST /ai/news · /ai/interview — Haiku 5.5)는 시즌마다 몇 번만 부른다 (사용자 지시):
 //   · 개막 특집 — 내 첫 정규 시즌 경기 전: 뉴스 1번 + 개막 미디어데이 인터뷰 1번 (효과: 내 첫 3경기)
 //   · 시즌 결산 — 정규 시즌이 끝나면: 뉴스 1번 + 인터뷰 1번 (가을야구 진출이면 효과: 내 포스트시즌 첫 3경기, 아니면 효과 없음)
@@ -28,9 +28,19 @@ import type { PostState, SeriesId } from '../season/post';
 import { evaluate, initialLineup, store as lineupStore, unit, type LineupState, type Unit } from '../screens/lineup/calc';
 
 /* ═════════════ 모양 ═════════════ */
-export type PressTag = '속보' | '단독' | '충격' | '실화냐' | '분석' | '루머';
-export const PRESS_TAGS: PressTag[] = ['속보', '단독', '충격', '실화냐', '분석', '루머'];
-/** 글 하나 (Claude 나 템플릿이 쓴 글 — 글쓴이 · 조회 · 추천은 화면이 코드로 붙인다) */
+/** 기사 분류 (목록의 [속보] 같은 머리) — 서버 worker/src/press.ts 의 TAGS 와 같은 이름 */
+export type PressTag = '속보' | '단독' | '충격' | '화제' | '분석' | '이슈';
+export const PRESS_TAGS: PressTag[] = ['속보', '단독', '충격', '화제', '분석', '이슈'];
+/** 옛 분류 이름(커뮤니티 게시판 시절) → 지금 이름. 이 기기에 저장된 글 · 아직 배포 전인 옛 서버의 응답에 남아 있을 수 있다 */
+const OLD_TAG = new Map<string, PressTag>([['실화냐', '화제'], ['루머', '이슈']]);
+/** 분류 읽기 — 지금 이름 · 옛 이름 모두 받는다 (모르는 값이면 null) */
+export function pressTagOf(v: unknown): PressTag | null {
+  if (typeof v !== 'string') return null;
+  return (PRESS_TAGS as string[]).includes(v) ? (v as PressTag) : OLD_TAG.get(v) ?? null;
+}
+/** 서버로 보내는 사건 분류 — 옛 서버(배포 전)는 새 이름을 400 으로 막으니 옛 이름으로 보낸다. 새 서버는 둘 다 받는다 */
+const WIRE_TAG = new Map<PressTag, string>([['화제', '실화냐'], ['이슈', '루머']]);
+/** 기사 하나 (Claude 나 템플릿이 쓴 제목 · 리드 · 댓글 — 매체 · 기자 · 시각 · 공감 수는 화면이 코드로 붙인다) */
 export interface RawPost { tag: PressTag; title: string; body: string; comments: string[] }
 export type Moment = 'open' | 'close';
 export type AnsType = 'trust' | 'push' | 'calm';
@@ -161,10 +171,28 @@ function load(): PressSaved {
   let v = fresh();
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? 'null') as PressSaved | null;
-    if (raw && raw.v === 1 && isObj(raw.news) && isObj(raw.iv) && isObj(raw.ev) && isObj(raw.tries)) v = { ...fresh(), ...raw };
+    if (raw && raw.v === 1 && isObj(raw.news) && isObj(raw.iv) && isObj(raw.ev) && isObj(raw.tries)) v = { ...fresh(), ...raw, news: fixNews(raw.news) };
   } catch { /* 새로 */ }
   saved = v;
   return v;
+}
+/**
+ * 저장된 AI 글 고치기 — 옛 분류(실화냐 · 루머)는 지금 이름(화제 · 이슈)으로, 커뮤니티 시절 글의 초성(ㅋㅋ · ㄹㅇ)은 지우고, 모양이 틀린 글은 뺀다.
+ * 글이 다 빠져도 자리(키)는 남긴다 — 자리가 없어지면 같은 AI 글을 다시 부르게 되니까. 다음 저장 때 고친 모양으로 남는다.
+ */
+function fixNews(news: Record<string, unknown>): PressSaved['news'] {
+  const out: PressSaved['news'] = {};
+  for (const [k, g] of Object.entries(news)) {
+    if (!isObj(g)) continue;
+    const posts: RawPost[] = [];
+    for (const p of Array.isArray(g.posts) ? g.posts : []) {
+      if (!isObj(p) || typeof p.title !== 'string' || typeof p.body !== 'string') continue;
+      const comments = Array.isArray(p.comments) ? p.comments.filter((c): c is string => typeof c === 'string').map(stripJamo).filter((c) => c.length >= 2) : [];
+      posts.push({ tag: pressTagOf(p.tag) ?? '속보', title: stripJamo(p.title) || p.title, body: stripJamo(p.body) || p.body, comments });
+    }
+    out[k] = { at: typeof g.at === 'number' ? g.at : 0, posts };
+  }
+  return out;
 }
 function emit() { snap = null; listeners.forEach((l) => l()); }
 /** 고쳐 쓰고 저장 (오래된 것 정리 — AI 글 40묶음 · 인터뷰 8 · 특이사항 기록 2시즌) */
@@ -229,6 +257,22 @@ export function pressClean(v: unknown, max: number, names: Set<string> = new Set
   if (BLOCK.some((re) => re.test(masked)) || REAL_NICK.some(([real]) => masked.includes(real) && real.length >= 3)) return null;
   return t.length <= max ? t : t.slice(0, max - 1).trimEnd() + '…';
 }
+/**
+ * 뉴스 말투 다듬기 (서버와 같은 거름) — 초성(ㅋㅋ · ㄷㄷ · ㄹㅇ …)은 지운다.
+ * 댓글이면 커뮤니티 속어(실화냐 · 미쳤다 · 반박 안 받음 · .txt …)가 남거나 너무 짧을 때 그 댓글을 뺀다(null).
+ */
+const JAMO_RUN = /[\u1100-\u11ff\u3131-\u318e]+/g;
+const SLANG = /(실화냐|실화임|미쳤다|미쳤네|미쳤음|개꿀|꿀잼|노잼|반박\s?(안|불가)|\.txt|가즈아|지렸|지린다|오진다|오지네|각이다|각 나온다)/;
+/** 초성 묶음 지우기 (띄어쓰기 · 문장 부호 앞 빈칸 정리) */
+function stripJamo(t: string): string {
+  return t.replace(JAMO_RUN, ' ').replace(/\s+([.,!?…])/g, '$1').replace(/\s+/g, ' ').trim();
+}
+export function newsTone(t: string | null, comment = false): string | null {
+  if (!t) return null;
+  const s = stripJamo(t);
+  if (!s || (comment && (s.length < 6 || SLANG.test(s)))) return null;
+  return s;
+}
 /** 요청에 들어간 이름들 (선수 · 구단) — 받은 글을 거를 때 가린다 */
 export function namesOf(req: unknown): Set<string> {
   const out = new Set<string>();
@@ -246,15 +290,15 @@ const safeLine = (t: string | undefined, max: number) => { const s = (t ?? '').r
 const NAME_OK = /^[가-힣A-Za-z][가-힣A-Za-z .·'-]{0,15}$/;
 const okName = (n: string | undefined) => (n && NAME_OK.test(n) ? n : undefined);
 
-/** 서버가 준 뉴스 글 읽기 (사이트 쪽 검사) — 모자라면 null. names: 요청에 보낸 이름 */
+/** 서버가 준 뉴스 글 읽기 (사이트 쪽 검사) — 모자라면 null. names: 요청에 보낸 이름. 분류는 옛 이름(실화냐 · 루머)도 받아 지금 이름으로 */
 export function readPosts(v: unknown, min: number, max: number, names: Set<string> = new Set()): RawPost[] | null {
   if (!isObj(v) || !Array.isArray(v.posts)) return null;
   const out: RawPost[] = [];
   for (const p of v.posts.slice(0, max + 2)) {
     if (!isObj(p)) continue;
-    const tag = typeof p.tag === 'string' && (PRESS_TAGS as string[]).includes(p.tag) ? (p.tag as PressTag) : null;
-    const title = pressClean(p.title, 40, names), body = pressClean(p.body, 180, names);
-    const comments = (Array.isArray(p.comments) ? p.comments : []).map((c) => pressClean(c, 60, names)).filter((c): c is string => !!c).slice(0, 4);
+    const tag = pressTagOf(p.tag);
+    const title = newsTone(pressClean(p.title, 40, names)), body = newsTone(pressClean(p.body, 180, names));
+    const comments = (Array.isArray(p.comments) ? p.comments : []).map((c) => newsTone(pressClean(c, 60, names), true)).filter((c): c is string => !!c).slice(0, 4);
     if (tag && title && body && comments.length) out.push({ tag, title, body, comments });
   }
   return out.length >= min ? out.slice(0, max) : null;
@@ -626,9 +670,11 @@ function gameIn(f: DayFacts) {
   };
 }
 
+/** tv — 분류 이름 판. 2 = 화제 · 이슈를 아는 사이트 (서버는 이게 없으면 옛 사이트로 보고 옛 이름 실화냐 · 루머로 돌려준다) */
+const TAG_V = 2;
 export function newsReqOpen(f: OpenFacts) {
   return {
-    v: 1, moment: 'open', year: f.year, date: f.date, me: f.me, lv: f.lv, ovr: f.ovr || undefined,
+    v: 1, tv: TAG_V, moment: 'open', year: f.year, date: f.date, me: f.me, lv: f.lv, ovr: f.ovr || undefined,
     power: f.power.map(([id, p]) => [id, Math.max(0, Math.round(p))]),
     first: f.first ? { opp: f.first.opp, home: f.first.home, sp: okName(f.players.find((x) => x.key === 'sp')?.p.name) } : undefined,
     rival: f.rival ?? undefined,
@@ -640,7 +686,7 @@ export function newsReqOpen(f: OpenFacts) {
 const leaderRows = (ls: CloseFacts['leaders']) => ls.map((l) => [l.label, playerById(l.id)?.name ?? '', l.team, l.value] as [string, string, string, string]).filter((x) => !!okName(x[1]) && /^[0-9.\-]{1,7}$/.test(x[3]));
 export function newsReqClose(f: CloseFacts) {
   return {
-    v: 1, moment: 'close', year: f.year, date: f.date, me: f.me, lv: f.lv, ovr: f.ovr || undefined,
+    v: 1, tv: TAG_V, moment: 'close', year: f.year, date: f.date, me: f.me, lv: f.lv, ovr: f.ovr || undefined,
     table: tableRows(f.rows), power: [],
     leaders: leaderRows(f.leaders),
     squad: squadOf(f.players.filter((x) => !!x.line).sort((a, b) => (b.tags.includes('hot') ? 1 : 0) - (a.tags.includes('hot') ? 1 : 0)), true),
@@ -650,13 +696,14 @@ export function newsReqClose(f: CloseFacts) {
 }
 export function newsReqEvent(ev: EvRec, f: DayFacts, s: SeasonState) {
   const rows = f.rows ?? standingsOf(s);
+  const tag = evTag(ev);
   return {
-    v: 1, moment: 'event', year: f.year, date: ev.date || f.date, me: f.me,
+    v: 1, tv: TAG_V, moment: 'event', year: f.year, date: ev.date || f.date, me: f.me,
     table: f.latest || ev.day >= POST_BASE ? tableRows(rows) : [],
     power: [], leaders: [], squad: [],
     game: ev.day < POST_BASE ? gameIn(f) : undefined,
     ev: {
-      kind: ev.kind, tag: evTag(ev), big: ev.big, mine: ev.mine, team: ev.team, opp: ev.opp, who: okName(ev.who), n: ev.n,
+      kind: ev.kind, tag: WIRE_TAG.get(tag) ?? tag, big: ev.big, mine: ev.mine, team: ev.team, opp: ev.opp, who: okName(ev.who), n: ev.n,
       text: safeLine(ev.text, 80) ?? `${short(ev.team)} 소식`,
     },
     notes: [
@@ -673,15 +720,19 @@ const MID_CAP = 15;
 const POST_CAP = 4;
 const COOLDOWN = 5;
 export const EV_TAG: Record<EvKind, PressTag> = {
-  nohit: '충격', first: '속보', streakW: '실화냐', streakL: '충격', record: '실화냐', dropout: '충격', walkoffW: '속보', walkoffL: '충격',
-  comeback: '실화냐', injury: '속보', marathon: '실화냐', myRecord: '속보', postWin: '속보', postLose: '충격', champion: '속보',
+  nohit: '화제', first: '속보', streakW: '화제', streakL: '충격', record: '화제', dropout: '충격', walkoffW: '속보', walkoffL: '충격',
+  comeback: '화제', injury: '속보', marathon: '화제', myRecord: '속보', postWin: '속보', postLose: '충격', champion: '속보',
 };
 const EV_RANK: Record<EvKind, number> = {
   champion: 100, nohit: 90, postWin: 86, postLose: 85, first: 80, record: 75, streakW: 70, streakL: 70, dropout: 66,
   walkoffW: 50, walkoffL: 48, comeback: 45, injury: 40, myRecord: 38, marathon: 30,
 };
-/** 특이사항 말머리 — 역전패는 '충격' */
-export const evTag = (e: EvRec): PressTag => (e.kind === 'comeback' && e.team !== ME.teamId ? '충격' : EV_TAG[e.kind]);
+/** 특이사항 기사 분류 — 역전패 · 내 구단이 당한 노히트는 '충격' */
+export function evTag(e: EvRec): PressTag {
+  if (e.kind === 'comeback' && e.team !== ME.teamId) return '충격';
+  if (e.kind === 'nohit' && e.mine && e.team !== ME.teamId) return '충격';
+  return EV_TAG[e.kind];
+}
 /** 뉴스 화면이 보여 주는 날 수 (마지막으로 친 날부터) — 이보다 오래된 특이사항은 AI 로 만들지 않는다(보이지 않으니) */
 export const FEED_DAYS = 4;
 const notable = (a: EvRec, b: EvRec) => Number(b.big) - Number(a.big) || Number(b.mine) - Number(a.mine) || EV_RANK[b.kind] - EV_RANK[a.kind] || b.day - a.day;
@@ -965,10 +1016,10 @@ function ivReq(f: IvFacts) {
     topics: f.topics.map((t) => safeLine(t, 70)).filter((t): t is string => !!t).slice(0, 5),
   };
 }
-/** 가상 매체 · 기자 (실제 언론사 이름 아님) */
-const OUTLETS = ['한별스포츠', '별빛일보', '한별데일리', '9회말뉴스', '마운드통신', '외야석일보', '스탠드리포트', '불펜타임스', '그라운드저널', '베이스라인'];
+/** 가상 매체 · 기자 (실제 언론사 이름 아님) — 인터뷰 기사와 리그 뉴스 목록(screens/press/feed)이 같이 쓴다 */
+export const OUTLETS = ['한별스포츠', '별빛일보', '한별데일리', '9회말뉴스', '마운드통신', '외야석일보', '스탠드리포트', '불펜타임스', '그라운드저널', '베이스라인', '데일리볼', '다이아몬드뉴스'];
 // 가상 기자 — 실제 인물과 겹치지 않게 드문 성으로 (게임 가상 선수 이름 규칙과 같게)
-const REPORTERS = ['남궁태식', '제갈서윤', '독고도현', '황보가람', '선우하율', '사공재민', '서문지후', '편세린', '탁준혁', '용채아', '반다온', '옥하진'];
+export const REPORTERS = ['남궁태식', '제갈서윤', '독고하람', '황보가람', '선우하율', '사공재민', '서문지후', '편세린', '탁준혁', '용채아', '반다온', '옥하진'];
 function withReporters(key: string, qs: Omit<IvQ, 'by' | 'outlet'>[]): IvQ[] {
   const r = rng(`iv:${key}`);
   const outs = OUTLETS.slice().sort(() => r() - 0.5);

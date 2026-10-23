@@ -1,5 +1,5 @@
 // 경기 준비·진행 #/season — 경기 운영의 가운데. 다음 경기(상대 · 승리 예상 · 예상 선발 · 구장 · 날씨) → 경기 전 준비(라인업 점검 ·
-// 감독 인터뷰) → 진행(지금 바로 경기 · 남은 시즌 빨리 감기) → AI 뉴스(커뮤니티 글) → 지난 경기 → 포스트시즌 · 리그 단계.
+// 감독 인터뷰) → 진행(지금 바로 경기 · 남은 시즌 빨리 감기) → 리그 뉴스(기사 · 독자 댓글) → 지난 경기 → 포스트시즌 · 리그 단계.
 // 순위표 · 개인 기록은 순위·리그 기록(#/league), 지난 경기 박스스코어는 경기 기록(#/games), 일정은 시즌 일정(#/schedule).
 // 빨리 감기: 남은 정규 시즌을 하루씩 공용 엔진으로(한 날 = 다섯 경기) — 속도 1·2·4배 · 끝까지, 하이라이트 경기에서 잠깐 멈춤.
 //   ?go=1 바로 시작 · ?speed=1|2|4|end
@@ -153,9 +153,9 @@ export default function SeasonScreen({ query }: ScreenProps) {
         </section>
       )}
 
-      {/* AI 뉴스 — 커뮤니티 글 */}
-      <section className={s.sec} aria-label="야구 커뮤니티 소식">
-        <p className={s.secH}>리그 소식 <small>오늘 커뮤니티에서 뜨거운 글</small></p>
+      {/* 리그 뉴스 — 기사 · 독자 댓글 (특집 · 큰일은 AI, 날마다 기사는 템플릿) */}
+      <section className={s.sec} aria-label="리그 뉴스">
+        <p className={s.secH}>리그 뉴스 <small>최근 기사와 댓글</small></p>
         <NewsFeed limit={6} />
         {!running && news.length > 0 && (
           <details className={s.moreNews}>
