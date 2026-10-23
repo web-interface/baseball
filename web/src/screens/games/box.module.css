@@ -1,0 +1,98 @@
+/* 박스스코어 — 점수판(반대색 면: night 잉크 · broadcast 검정 · classic 초록 나무판) + 기록지 같은 표 */
+.box { padding-bottom: 8px; }
+.kicker { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 10px; margin: 10px var(--gutter) 0; font-size: 11.5px; color: var(--fg-3); }
+.kicker b { color: var(--fg); font-weight: 800; }
+
+/* 점수판 */
+.board { margin: 8px var(--gutter) 0; background: var(--inv); color: var(--inv-fg); border-radius: var(--r-3); overflow: hidden; }
+.final { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; padding: 14px 12px 12px; }
+.fTeam { grid-row: 1; grid-column: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.fHome { grid-column: 3; flex-direction: row-reverse; text-align: right; }
+.fName { display: flex; flex-direction: column; min-width: 0; }
+.fName b { font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 16px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fName small { margin-top: 1px; font-size: 10.5px; color: var(--inv-fg-3); white-space: nowrap; }
+.fLose .fName b { color: var(--inv-fg-2); }
+.fMine .fName small { color: var(--accent); font-weight: 700; }
+.fScore { grid-row: 1; grid-column: 2; display: grid; grid-template-columns: auto auto auto; align-items: center; justify-items: center; column-gap: 8px; }
+.fNum { font-size: 40px; color: var(--inv-fg-2); min-width: 26px; text-align: center; }
+.fNumWin { color: var(--inv-fg); }
+.fScore > i { font-style: normal; font-size: 20px; color: var(--inv-fg-3); transform: translateY(-2px); }
+.fScore small { grid-column: 1 / -1; margin-top: 5px; font-size: 10.5px; font-weight: 600; color: var(--inv-fg-2); white-space: nowrap; }
+
+/* 이닝 점수 */
+.lineWrap { overflow-x: auto; overscroll-behavior-x: contain; padding: 4px 10px 8px; border-top: 1px solid var(--inv-line); scrollbar-width: none; }
+.lineWrap::-webkit-scrollbar { display: none; }
+.line { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.line th, .line td { padding: 4px 0; min-width: 17px; text-align: center; }
+.line thead th { font-size: 10px; font-weight: 600; color: var(--inv-fg-3); }
+.line tbody td { color: var(--inv-fg-3); }
+.lTeam { min-width: 54px !important; padding-right: 6px !important; text-align: left !important; white-space: nowrap; font-size: 12px; font-weight: 700; color: var(--inv-fg); }
+.lScored { color: var(--inv-fg) !important; font-weight: 700; }
+.lWo { box-shadow: inset 0 -2px 0 var(--accent); }
+.lR { padding-left: 4px !important; border-left: 1px solid var(--inv-line); font-weight: 800; color: var(--inv-fg) !important; }
+.line tbody td:nth-last-child(-n + 2) { color: var(--inv-fg-2); }
+
+/* 승 · 패 · 세 */
+.decs { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 8px 12px 10px; border-top: 1px solid var(--inv-line); font-size: 12px; }
+.decs em { margin-right: 5px; font-weight: 800; color: var(--inv-fg-3); }
+.decs a { font-weight: 650; color: var(--inv-fg); }
+.decs a:hover { color: var(--accent); }
+
+.note { margin: 10px var(--gutter) 0; padding: 9px 0 9px 10px; border-left: 3px solid var(--line-3); font-size: 12px; line-height: 1.5; color: var(--fg-2); }
+.loading { margin: 12px var(--gutter) 0; font-size: 12px; color: var(--fg-3); }
+
+/* 구역 */
+.sec { padding: 18px var(--gutter) 0; }
+.secH { display: flex; align-items: center; gap: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--line-2); font-family: var(--font-head); font-size: 14.5px; font-weight: 800; letter-spacing: var(--head-tracking); }
+.teamH small { margin-left: auto; font-family: var(--font-body); font-size: 11px; font-weight: 600; letter-spacing: 0; color: var(--fg-3); }
+
+/* 주요 기록 */
+.notes > div { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; line-height: 1.5; }
+.notes dt { padding-top: 1px; font-size: 11.5px; font-weight: 800; color: var(--fg-3); }
+.notes dd { margin: 0; color: var(--fg); letter-spacing: -.02em; }
+.nGroup { display: inline-flex; align-items: center; gap: 5px; margin-right: 12px; }
+.nGroup > svg { flex: none; }
+.nGroup:last-child { margin-right: 0; }
+
+/* 타자 · 투수 표 */
+.tbl { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12.5px; }
+.tbl th { padding: 7px 0 5px; font-size: 10.5px; font-weight: 650; letter-spacing: -.04em; color: var(--fg-3); text-align: left; white-space: nowrap; border-bottom: 1px solid var(--line-2); }
+.tbl td { padding: 6px 0; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.cOrd { width: 24px; text-align: center !important; color: var(--fg-3); }
+.cPos { width: 26px; text-align: center !important; font-size: 12px; color: var(--fg-2); }
+.cN { width: 27px; text-align: right !important; }
+.cN3 { width: 34px; text-align: right !important; }
+.cIp { width: 32px; text-align: right !important; }
+.tbl tbody td.cN, .tbl tbody td.cN3 { color: var(--fg-2); }
+.tbl tbody td.hot { color: var(--fg); font-weight: 750; }
+.cName { overflow: hidden; }
+.bat .cName, .bat .cNameH { padding-left: 5px; }
+.pName { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 650; letter-spacing: -.03em; color: var(--fg); }
+.pName:hover { color: var(--accent); }
+.sub .pName { padding-left: 12px; font-weight: 500; color: var(--fg-2); }
+.tbl tfoot th, .tbl tfoot td { padding: 7px 0; font-size: 12px; font-weight: 800; text-align: left; color: var(--fg); border-top: 1px solid var(--line-2); border-bottom: 0; }
+.tbl tfoot td.cN { text-align: right !important; }
+.pitWho { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.pitWho .pName { min-width: 0; }
+.dec { flex: none; display: inline-grid; place-items: center; width: 18px; height: 18px; font-size: 10.5px; font-weight: 800; border-radius: var(--r-1); }
+.decW { background: var(--accent); color: var(--accent-ink); }
+.decS { background: var(--fg); color: var(--bg); }
+.decL, .decH { color: var(--fg-2); box-shadow: inset 0 0 0 1px var(--line-3); }
+
+/* broadcast — 검정 띠 머리줄 · 기울인 큰 숫자 */
+:global([data-theme='broadcast']) .board { border-radius: 0; box-shadow: inset 0 3px 0 var(--accent); }
+:global([data-theme='broadcast']) .secH { border-bottom: 2px solid var(--fg); }
+:global([data-theme='broadcast']) .tbl thead th { background: var(--inv); color: var(--inv-fg-2); border-bottom: 0; }
+:global([data-theme='broadcast']) .tbl thead th:first-child { padding-left: 4px; }
+:global([data-theme='broadcast']) .tbl thead th:last-child { padding-right: 4px; }
+:global([data-theme='broadcast']) .dec { border-radius: 0; }
+
+/* classic — 수동 점수판(초록 나무판 · 흰 페인트) · 기록지 괘선 · 별색 */
+:global([data-theme='classic']) .board { border-radius: 0; box-shadow: inset 0 0 0 3px var(--inv-2); }
+:global([data-theme='classic']) .secH { border-bottom: 1.5px solid var(--fg); }
+:global([data-theme='classic']) .tbl thead th { color: var(--fg-2); border-bottom: 1.5px solid var(--fg); }
+:global([data-theme='classic']) .tbl tfoot th, :global([data-theme='classic']) .tbl tfoot td { border-top: 1.5px solid var(--fg); }
+:global([data-theme='classic']) .decW { background: var(--club); color: var(--club-ink); }
+:global([data-theme='classic']) .fMine .fName small { color: var(--club); }
+:global([data-theme='classic']) .lWo { box-shadow: inset 0 -2px 0 var(--club); }
+:global([data-theme='classic']) .fNum { font-family: var(--font-num-display); }

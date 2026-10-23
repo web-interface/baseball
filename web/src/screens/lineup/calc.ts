@@ -16,8 +16,8 @@ import { fullYear } from '../../game/clubSeasons';
 import { yearTag } from '../../ui/format';
 import { getCard, getPlayer, owned, startLayout } from './local-mock';
 import { invVersion, loadLineup, saveLineup } from '../../game/inventory';
-import { trainOvrBonus } from '../../game/training';
-import { LEGEND_MAX, isLegendGrade, potFaceOf, potOvrBonus, teamPotential, type FaceFx, type TeamPot } from '../../game/potential';
+import { LEGEND_MAX, isLegendGrade, potFaceOf, teamPotential, type FaceFx, type TeamPot } from '../../game/potential';
+import { cardBonusOf, ovrBonusOf, type CardBonus } from '../../game/cardBonus';
 
 /* ───────── 자리 ───────── */
 export type BatSlot = 'C' | '1B' | '2B' | '3B' | 'SS' | 'LF' | 'CF' | 'RF' | 'DH';
@@ -151,22 +151,8 @@ export function unit(id: string): Unit {
   return u;
 }
 export const face = (p: Player, code: string, d = 55) => p.face.find((f) => f.code === code)?.v ?? d;
-const enhBonus = (c: CardInst) => Math.round(c.enhance * 0.5);
-/** 훈련 보너스 (game/training) — 훈련으로 오른 능력치 합 ÷ 4. 기본(종합 + 강화)에 더해져 팀 종합이 오른다 */
-const trainBonus = (c: CardInst) => trainOvrBonus(c.train);
-/** 묶음 점수용 — 세트덱 앞면 보너스에 그 카드의 훈련으로 오른 값(앞면 코드 그대로)을 더한다 */
-const withTrain = (b: Record<string, number>, c?: CardInst) => {
-  if (!c?.train) return b;
-  const out = { ...b };
-  for (const [k, v] of Object.entries(c.train.gains)) if (v) out[k] = (out[k] ?? 0) + v;
-  return out;
-};
-/** 묶음 점수용 — 받는 잠재력(앞면 코드별)을 더한다 */
-const withPot = (b: Record<string, number>, f: FaceFx) => {
-  const out = { ...b };
-  for (const [k, v] of Object.entries(f)) if (v) out[k] = (out[k] ?? 0) + v;
-  return out;
-};
+/** 잠재력 몫 (팀 종합에 더해진 것 중 잠재력만 — 표시용) */
+const ovrPotOf = (b: CardBonus, p: Player) => Object.values(b.parts.pot ?? {}).reduce((x, v) => x + v, 0) / (p.face.length || 6);
 /** 이 카드의 종합 — 카드에 따로 적혀 있으면 그것, 없으면 선수 종합 */
 export const cardOvr = (u: Unit) => u.card.ovr ?? u.player.ovr;
 
@@ -278,6 +264,10 @@ export interface UnitEval {
   base: number;
   /** 받는 잠재력 몫 (자기 + 팀 최고 잠재력) */
   pot: number;
+  /** 받는 잠재력 — 앞면 코드별 (선수 시트의 '더해진 값') */
+  potFace?: FaceFx;
+  /** 받는 보너스 전부 (강화 · 훈련 · 잠재력 · 플레이스타일 · 세트덱 — game/cardBonus) — 카드 숫자 · 능력치 · 엔진이 같이 쓴다 */
+  bonus?: CardBonus;
   /** 세트덱 (종합 기준 단계 가치) */
   tc: number;
   chem: number;
@@ -371,9 +361,10 @@ export function evaluate(st: LineupState): Eval {
     const tc = sp?.cur?.v ?? 0;
     const orderL = orderLinks.filter((l) => l.a === String(idx + 1) || l.b === String(idx + 1));
     const ch = chemOf(s, orderL);
-    const pot = potOvrBonus(pf(u));
-    const base = cardOvr(u) + enhBonus(u.card) + trainBonus(u.card) + pot - FIT_PENALTY[fit] + (of === 'good' ? 0.5 : of === 'poor' ? -0.5 : 0);
-    units[s] = { slot: s, id: u.id, fit, base, pot, tc, chem: ch, total: base + tc + ch, tcText: setText(sp, false), set: sp, orderIdx: idx, orderFit: of };
+    const bonus = cardBonusOf(u.card, u.player, { potFace: pf(u), set: sp?.cur ?? null });
+    const pot = ovrPotOf(bonus, u.player);
+    const base = cardOvr(u) + ovrBonusOf(bonus, u.player) - FIT_PENALTY[fit] + (of === 'good' ? 0.5 : of === 'poor' ? -0.5 : 0);
+    units[s] = { slot: s, id: u.id, fit, base, pot, potFace: pf(u), bonus, tc, chem: ch, total: base + tc + ch, tcText: setText(sp, false), set: sp, orderIdx: idx, orderFit: of };
   });
 
   STAFF_SLOTS.forEach((s, i) => {
@@ -381,15 +372,16 @@ export function evaluate(st: LineupState): Eval {
     if (!u) return;
     const fit = fits[s]!;
     const injured = !!u.player.injury;
-    const pot = potOvrBonus(pf(u));
-    const base = cardOvr(u) + enhBonus(u.card) + trainBonus(u.card) + pot - FIT_PENALTY[fit] - (injured ? 10 : 0);
     const sp = setOf(s);
+    const bonus = cardBonusOf(u.card, u.player, { potFace: pf(u), set: sp?.cur ?? null });
+    const pot = ovrPotOf(bonus, u.player);
+    const base = cardOvr(u) + ovrBonusOf(bonus, u.player) - FIT_PENALTY[fit] - (injured ? 10 : 0);
     const tc = sp?.cur?.v ?? 0;
     let ch = 0;
     if (s === 'R0') ch = chemOf('P');
     else if (s[0] === 'R') ch = r1((battery[i]?.level ?? 0) * 0.45);
     else if (s === 'B0' || s === 'CL') ch = r1((backdoor?.level ?? 0) * 0.45);
-    units[s] = { slot: s, id: u.id, fit, base, pot, tc, chem: ch, total: base + tc + ch, tcText: setText(sp, true), set: sp, injured };
+    units[s] = { slot: s, id: u.id, fit, base, pot, potFace: pf(u), bonus, tc, chem: ch, total: base + tc + ch, tcText: setText(sp, true), set: sp, injured };
   });
 
   /* 팀 종합 — 선발 10명 */
@@ -401,15 +393,12 @@ export function evaluate(st: LineupState): Eval {
   const potRaw = exploded ? raw : mean(starters.map((x) => x.total - x.tc + DYNASTY_V));
 
   /* 묶음 점수 — 받는 세트의 능력치 칸만큼 */
-  const fb = (s: Slot, isP: boolean) => {
-    const u = U(getSlot(st, s));
-    const b = withTrain(faceBonus(setOf(s)?.cur, isP), u?.card); // + 훈련으로 오른 값
-    return u ? withPot(b, pf(u)) : b; // + 받는 잠재력
-  };
+  // 받는 보너스 전부 (강화 · 훈련 · 잠재력 · 플레이스타일 · 세트덱) — 앞면 코드별 (game/cardBonus)
+  const fb = (s: Slot, _isP: boolean): Record<string, number> => units[s]?.bonus?.total ?? {};
   const batPart = mean(bat.map(({ s, u }) => {
     const x = units[s]!;
     const b = fb(s, false);
-    return (face(u.player, 'CON') + face(u.player, 'POW') + face(u.player, 'EYE') + (b.CON ?? 0) + (b.POW ?? 0) + (b.EYE ?? 0)) / 3 + enhBonus(u.card) + x.chem
+    return (face(u.player, 'CON') + face(u.player, 'POW') + face(u.player, 'EYE') + (b.CON ?? 0) + (b.POW ?? 0) + (b.EYE ?? 0)) / 3 + x.chem
       + (x.orderFit === 'good' ? 1.5 : x.orderFit === 'poor' ? -1.5 : 0);
   }));
   const defPart = mean(bat.filter(({ s }) => s !== 'DH').map(({ s, u }) => {
@@ -418,9 +407,9 @@ export function evaluate(st: LineupState): Eval {
     const d = s === 'C'
       ? (face(u.player, 'BLK') + face(u.player, 'FRM') + face(u.player, 'CS') + (b.BLK ?? 0) + (b.FRM ?? 0) + (b.CS ?? 0)) / 3
       : (face(u.player, 'DEF') + face(u.player, 'ARM') + (b.DEF ?? 0) + (b.ARM ?? 0)) / 2;
-    return d + enhBonus(u.card) + x.chem - FIT_PENALTY[x.fit] * 1.5;
+    return d + x.chem - FIT_PENALTY[x.fit] * 1.5;
   }));
-  const runPart = mean(bat.map(({ s, u }) => face(u.player, 'SPD') + (fb(s, false).SPD ?? 0) + enhBonus(u.card)));
+  const runPart = mean(bat.map(({ s, u }) => face(u.player, 'SPD') + (fb(s, false).SPD ?? 0)));
   const rot = ROT_SLOTS.slice(1).map((s) => units[s]?.total).filter((v): v is number => v != null);
   const pen = [...PEN_SLOTS, 'CL' as const].map((s) => units[s]?.total).filter((v): v is number => v != null);
   const pitPart = 0.5 * (units.R0?.total ?? 60) + 0.3 * (rot.length ? mean(rot) : 60) + 0.2 * (pen.length ? mean(pen) : 60);

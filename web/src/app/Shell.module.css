@@ -160,4 +160,10 @@
 .subOn { color: var(--menu-fg-on); font-weight: 750; }
 .subOn::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: 0; height: 2px; background: var(--menu-bar); pointer-events: none; }
 :global([data-theme='broadcast']) .subOn::after { height: 3px; }
+/* 좁은 휴대폰 — 작은 탭 4개(경기 운영)가 한 줄에 들어가게 간격만 줄인다 */
+@media (max-width: 400px) {
+  .subList { gap: 0; }
+  .subItem { padding: 0 8px; }
+  .subOn::after { left: 8px; right: 8px; }
+}
 

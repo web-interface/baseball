@@ -11,6 +11,7 @@ import {
 import { nextMyGame } from '../../season/run';
 import { aiTargetOf, clubRoster, myRoster } from '../../season/rosters';
 import { weatherOf } from '../../season/weather';
+import { condsOf, fitScore } from '../../game/weatherFit';
 import { SEASON_GAMES, daysBetween, longDate, shortDate, startTime } from '../../season/schedule';
 
 /** 순위 · 전적 — 헤더 · 시즌 화면과 같은 값 (season/store 의 teamLine) */
@@ -34,8 +35,8 @@ export function nextGameView() {
     const w = weatherOf(nx.day.date, nx.home, s.seed);
     const night = Number(time.slice(0, 2)) >= 18;
     const weather: Weather = {
-      city: home.region, sky: night ? 'night-clear' : 'clear', skyKo: w.dome ? '돔' : '맑음', tempC: w.tC, humidity: 60,
-      windMps: w.windMs, windTo: w.windMs < 1 ? 'calm' : 'out-cf', windKo: w.windMs < 1 ? '바람 없음' : '가운데 담장 쪽으로', rainPct: 10, dust: '보통',
+      city: home.region, sky: w.wet ? 'drizzle' : night ? 'night-clear' : 'clear', skyKo: w.dome ? '돔' : w.wet ? '약한 비' : '맑음', tempC: w.tC, humidity: w.wet ? 85 : 60,
+      windMps: w.windMs, windTo: w.windMs < 1 ? 'calm' : 'out-cf', windKo: w.windMs < 1 ? '바람 없음' : '가운데 담장 쪽으로', rainPct: w.wet ? 70 : 10, dust: '보통',
       effects: [w.dome ? '돔 — 바람 영향 없음' : w.windMs >= 3 ? `가운데 비거리 +${Math.round(w.windMs)}m` : '바람 영향 거의 없음'],
     };
     // 예상 선발 — 날마다 다섯 명이 돌아가며 (엔진과 같은 규칙)
@@ -44,10 +45,15 @@ export function nextGameView() {
     const oppR = clubRoster(opp.id);
     const pickSp = (rot: Player[], id: string) => (rot.length ? rot[((nx.day.day + ti(id)) % rot.length + rot.length) % rot.length] : undefined);
     const myOvr = mineR.ovr, oppOvr = aiTargetOf(opp.id);
+    // 날씨 궁합 — 우리 타자 9 + 예상 선발 중 오늘 날씨가 맞는(+) · 상극(−) 선수 (game/weatherFit)
+    const conds = condsOf(w);
+    const mineSp = pickSp(mineR.rotation, me.id);
+    const fitPeople = [...mineR.batting.map((b) => b.player), ...(mineSp ? [mineSp] : [])];
+    const wx = { conds, good: fitPeople.filter((p) => fitScore(p, conds) > 0), bad: fitPeople.filter((p) => fitScore(p, conds) < 0) };
     const wp = 1 / (1 + Math.exp(-((myOvr - oppOvr) / 7 + (isHome ? 0.08 : -0.08))));
     return {
-      me, opp, venue: home.stadium, isHome, time, weather, wp,
-      mine: pickSp(mineR.rotation, me.id), theirs: pickSp(oppR.rotation, opp.id), oppLine: clubLine(opp.id, s),
+      me, opp, venue: home.stadium, isHome, time, weather, wp, wx,
+      mine: mineSp, theirs: pickSp(oppR.rotation, opp.id), oppLine: clubLine(opp.id, s),
       h2h: h2hOf(opp.id),
       date: nx.day.date, rainedBefore: nx.rainedBefore, over: false,
       /** 개막전인가 (리그 첫날 · 내 첫 경기) */
@@ -63,7 +69,7 @@ export function nextGameView() {
   const theirs = playerById(NEXT_GAME.probable.theirs);
   return {
     me, opp, venue: home.stadium, isHome: NEXT_GAME.home,
-    time: NEXT_GAME.time, weather: NEXT_GAME.weather, wp: NEXT_GAME.wpPreview,
+    time: NEXT_GAME.time, weather: NEXT_GAME.weather, wp: NEXT_GAME.wpPreview, wx: null,
     mine, theirs, oppLine: clubLine(opp.id, s),
     h2h: h2hOf(opp.id),
     date: '', rainedBefore: 0, over: isOver(s), opener: false,

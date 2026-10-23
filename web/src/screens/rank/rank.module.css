@@ -1,6 +1,5 @@
-/* 순위 — 감독 순위(서버) · 리그 순위. 표는 헤어라인 · 자리 맞춤 숫자, 내 줄은 강조 띠 */
+/* 순위 — 감독 순위(서버). 표는 헤어라인 · 자리 맞춤 숫자, 내 줄은 강조 띠. 구단 순위는 #/league 로 잇는 한 줄 */
 .screen { padding-bottom: 36px; }
-.tabsWrap { margin-top: 14px; padding: 0 var(--gutter); }
 .sec { padding: 18px var(--gutter) 6px; }
 .head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line-2); }
 .h { font-size: 19px; flex: none; text-shadow: var(--misreg); }
@@ -28,8 +27,6 @@
 .whoTxt small { font-size: 11.5px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wdl { font-size: 13px; color: var(--fg-2); white-space: nowrap; }
 .val { font-size: 16px; font-weight: 700; white-space: nowrap; }
-.gb { font-size: 13px; color: var(--fg-2); white-space: nowrap; }
-.streak { font-size: 12px; color: var(--fg-2); white-space: nowrap; }
 .gap td { text-align: center; color: var(--fg-4); padding: 2px 0; border-bottom: 0; letter-spacing: .3em; }
 
 /* 내 줄 */
@@ -38,9 +35,13 @@
 .me .rk { color: var(--accent); font-weight: 800; }
 .me .whoTxt small { color: var(--accent); font-weight: 700; }
 
-/* 리그 — 5위 아래 가을야구 선 */
-.cut td { border-bottom: 2px solid var(--fg-2); }
-@media (max-width: 380px) { .hideS { display: none; } }
+/* 구단 순위 · 개인 기록으로 잇는 한 줄 (#/league) */
+.leagueLink { display: flex; align-items: center; gap: 12px; padding: 12px 2px 12px 0; border-top: 1px solid var(--line-2); border-bottom: 1px solid var(--line-2); color: var(--fg); }
+.leagueLink > svg { flex: none; color: var(--fg-3); }
+.llText { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.llText b { font-size: 14px; font-weight: 750; letter-spacing: -.03em; }
+.llText small { font-size: 11.5px; color: var(--fg-3); }
+.leagueLink:hover b { color: var(--accent); }
 
 .note { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; margin-top: 10px; font-size: 11.5px; color: var(--fg-3); line-height: 1.55; }
 .note b { color: var(--fg-2); }

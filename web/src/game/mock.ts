@@ -667,10 +667,14 @@ export const PVP_OPPONENTS: PvpOpponent[] = [
 ];
 
 /* ───────── 뽑기 ───────── */
+// 확률은 카드 한 장마다 따로(30장 모두 각자 뽑음 — 한 팩에 좋은 카드가 여러 장 나올 수도 있다).
+// 10-24 사용자 요청 "좋은 거 나올 확률이 너무 높다, 확 낮춰 … 마구마구 확률 ×100%" — 예전(프리미엄 팩당 레전드급 90%)에서 크게 낮춤.
+//   마구마구 공식 확률 공개(넷마블 가이드)의 '포함팩'(예: TH포함엘리트팩 — 한 팩 1장, 특급 등급 5%)에 맞춰
+//   팩당 레전드급(레전드 · MVP · GG · TH · 프랜차이즈 · 블랙 · 시그니처) 1장 이상 — 일반 0.5% · 프리미엄(연도 · 구단) 5% · 스페셜 10% · 레전드팩 15%
 const PREMIUM_ODDS: Pack['odds'] = [
-  { grade: 'special', pct: 47 }, { grade: 'rare', pct: 33.5 }, { grade: 'elite', pct: 12 }, { grade: 'legend', pct: 4 },
-  { grade: 'mvp', pct: 0.9 }, { grade: 'gg', pct: 0.9 }, { grade: 'th', pct: 0.9 },
-  { grade: 'franchise', pct: 0.5 }, { grade: 'black', pct: 0.25 }, { grade: 'signature', pct: 0.05 },
+  { grade: 'special', pct: 82.729 }, { grade: 'rare', pct: 15 }, { grade: 'elite', pct: 2.1 }, { grade: 'legend', pct: 0.1 },
+  { grade: 'mvp', pct: 0.022 }, { grade: 'gg', pct: 0.022 }, { grade: 'th', pct: 0.022 },
+  { grade: 'franchise', pct: 0.0035 }, { grade: 'black', pct: 0.0012 }, { grade: 'signature', pct: 0.0003 },
 ];
 
 /** 모든 팩 30장 묶음 · 가격은 임시(요구사항 39번) · 확률 공개 · 천장은 팩 종류별 */
@@ -678,34 +682,34 @@ export const PACKS: Pack[] = [
   {
     id: 'basic', name: '일반팩', desc: '노멀~레전드 30장', size: 30,
     price: { gp: 30_000 },
-    odds: [{ grade: 'normal', pct: 68.5 }, { grade: 'special', pct: 24 }, { grade: 'rare', pct: 6 }, { grade: 'elite', pct: 1.2 }, { grade: 'legend', pct: 0.3 }],
-    pity: { count: 3, max: 10, guaranteed: '엘리트 이상 1장' },
+    odds: [{ grade: 'normal', pct: 83.3 }, { grade: 'special', pct: 15 }, { grade: 'rare', pct: 1.53 }, { grade: 'elite', pct: 0.154 }, { grade: 'legend', pct: 0.016 }],
+    pity: { count: 0, max: 30, guaranteed: '엘리트 이상 1장' },
   },
   {
     id: 'premium', name: '프리미엄팩', desc: '스페셜 이상 30장 · 특별 등급 포함', size: 30,
     price: { gp: 270_000 },
     odds: PREMIUM_ODDS,
-    pity: { count: 7, max: 10, guaranteed: '레전드 이상 선택권' },
+    pity: { count: 0, max: 30, guaranteed: '레전드 이상 선택권' },
   },
   {
     id: 'special', name: '스페셜팩', desc: '레어 이상 30장 · MVP·GG·TH 확률 ↑', size: 30,
     price: { gp: 450_000 },
     odds: [
-      { grade: 'rare', pct: 40 }, { grade: 'elite', pct: 30 }, { grade: 'legend', pct: 12 },
-      { grade: 'mvp', pct: 4 }, { grade: 'gg', pct: 4 }, { grade: 'th', pct: 4 },
-      { grade: 'franchise', pct: 4 }, { grade: 'black', pct: 1.6 }, { grade: 'signature', pct: 0.4 },
+      { grade: 'rare', pct: 91.65 }, { grade: 'elite', pct: 8 }, { grade: 'legend', pct: 0.22 },
+      { grade: 'mvp', pct: 0.035 }, { grade: 'gg', pct: 0.035 }, { grade: 'th', pct: 0.035 },
+      { grade: 'franchise', pct: 0.018 }, { grade: 'black', pct: 0.006 }, { grade: 'signature', pct: 0.001 },
     ],
-    pity: { count: 2, max: 8, guaranteed: '블랙 이상 1장' },
+    pity: { count: 0, max: 25, guaranteed: '블랙 이상 1장' },
   },
   {
     id: 'legend', name: '레전드팩', desc: '엘리트 이상 30장 · 이번 주 한정', size: 30,
     price: { ball: 9_000 },
     odds: [
-      { grade: 'elite', pct: 50 }, { grade: 'legend', pct: 25 }, { grade: 'franchise', pct: 10 },
-      { grade: 'mvp', pct: 4 }, { grade: 'gg', pct: 4 }, { grade: 'th', pct: 4 },
-      { grade: 'black', pct: 2.5 }, { grade: 'signature', pct: 0.5 },
+      { grade: 'elite', pct: 99.46 }, { grade: 'legend', pct: 0.32 }, { grade: 'franchise', pct: 0.045 },
+      { grade: 'mvp', pct: 0.05 }, { grade: 'gg', pct: 0.05 }, { grade: 'th', pct: 0.05 },
+      { grade: 'black', pct: 0.02 }, { grade: 'signature', pct: 0.005 },
     ],
-    pity: { count: 1, max: 5, guaranteed: '시그니처 선택권' },
+    pity: { count: 0, max: 15, guaranteed: '시그니처 선택권' },
     limited: '이번 주 한정',
   },
   {
@@ -714,14 +718,14 @@ export const PACKS: Pack[] = [
     odds: PREMIUM_ODDS,
     // 1982 ~ 2027 한 해 단위 (요구 40 + 옛 구단)
     pick: { kind: 'year', options: Array.from({ length: CURRENT_SEASON - FIRST_SEASON + 1 }, (_, i) => CURRENT_SEASON - i) },
-    pity: { count: 0, max: 10, guaranteed: '그 연도 레전드 이상 선택권' },
+    pity: { count: 0, max: 30, guaranteed: '그 연도 레전드 이상 선택권' },
   },
   {
     id: 'club', name: '구단팩', desc: '고른 구단만 · 연도는 고를 수 없음(그 구단이 있던 모든 연도)', size: 30,
     price: { gp: 675_000 }, priceMul: 2.5,
     odds: PREMIUM_ODDS,
     pick: { kind: 'club', options: ALL_CLUBS.map((c) => c.code) },
-    pity: { count: 4, max: 10, guaranteed: '그 구단 카드 중 선택' },
+    pity: { count: 0, max: 30, guaranteed: '그 구단 카드 중 선택' },
   },
 ];
 

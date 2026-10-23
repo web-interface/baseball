@@ -9,6 +9,7 @@
 //   화면·엔진이 쓰는 Player 는 (선수 ID, 시즌) 마다 그때그때 만드는 '보기'다 — id `{선수 ID}~{연도}`. 저장하지 않는다.
 //   연도별 상세 기록(구단별 줄 · WAR)은 rec-<0~f>.json 에 선수 ID 앞자리별로 나뉘어 있어, 선수 정보 '실제 기록' 탭에서만 불러온다.
 import coreJson from './data/kbo/core.json';
+import { defaultWeather } from './weatherFit';
 import { registerResolver } from './mock';
 import { POS_KO } from './labels';
 import type { AttrKey, AttrMap, BatSide, BattingLine, CardInst, ClubCode, GradeId, Hand, Origin, Pitch, PitcherRole, PitchType, PitchingLine, Player, Pos, SignaturePitch } from './types';
@@ -300,7 +301,7 @@ export function viewPlayer(kid: string, year: number): Player | undefined {
     career: spanIn(p, s.code),
     ovr: s.ovr, face, attrs, pitches,
     potential: clamp(Math.round((age <= 22 ? 4.5 : age <= 25 ? 4 : age <= 28 ? 3.5 : age <= 32 ? 3 : 2.5) * 2) / 2, 1.5, 5),
-    traits: [], personality: '균형형', weather: {}, form: {},
+    traits: [], personality: '균형형', weather: defaultWeather(kid), form: {},
     look: `look:${kid}`,
     season: { bat: s.bat, pit: s.pit },
     condition: 3, fatigue: 0,

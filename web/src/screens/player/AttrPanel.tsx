@@ -8,7 +8,7 @@ import { Sec } from './common';
 import { LIcon, PitchPath } from './icons';
 import { BatFormCells, PitchFormCells } from './diagrams';
 import {
-  WEATHER_ROWS, attrBonus, formOf, hiddenOf, pitchBonus, rng, traitInfo, weatherToday, weatherWord, type TraitCat,
+  WEATHER_ROWS, cardAttrBonus, cardBonusSources, formOf, hiddenOf, rng, traitInfo, weatherToday, weatherWord, type TraitCat,
 } from './local-mock';
 import s from './attr.module.css';
 
@@ -18,6 +18,8 @@ const CAT_ICON: Record<TraitCat, 'bat' | 'steal' | 'glove' | 'pitch' | 'users'> 
 
 /** 색 띠 단계 (값을 5등분한 눈금으로 계산 — 화면 숫자는 모두 1~100) */
 const band = (fm: number) => (fm >= 16 ? 5 : fm >= 13 ? 4 : fm >= 9 ? 3 : fm >= 6 ? 2 : 1);
+/** 100 을 넘는 값(강화 · 훈련 · 잠재력 · 장비 보너스) — 10 단위로 다른 색: 100 · 110 · 120 · 130 · 140 이상 */
+const over = (v: number) => (v >= 140 ? 'o140' : v >= 130 ? 'o130' : v >= 120 ? 'o120' : v >= 110 ? 'o110' : v >= 100 ? 'o100' : null);
 
 export interface AttrPanelProps {
   p: Player;
@@ -41,7 +43,9 @@ const SHORT: Partial<Record<AttrKey, string>> = {
 
 export function AttrPanel({ p, card, grade, owned, mineCount, enh, playstyle, gearPer, scale, onScale }: AttrPanelProps) {
   const isP = p.pos === 'P';
-  const bonus = useMemo(() => attrBonus(p, grade, enh, playstyle, gearPer), [p, grade, enh, playstyle, gearPer]);
+  // 더해진 값 — 강화 · 훈련 · 잠재력 · 플레이스타일 · 세트덱(라인업) · 장비 (라인업 선수 시트와 같은 계산)
+  const bonus = useMemo(() => cardAttrBonus(p, card, gearPer), [p, card, gearPer, enh, playstyle]); // eslint-disable-line react-hooks/exhaustive-deps
+  const srcs = useMemo(() => cardBonusSources(p, card, gearPer), [p, card, gearPer, enh, playstyle]); // eslint-disable-line react-hooks/exhaustive-deps
   const groups = ATTR_GROUPS.filter((g) => (isP ? ['pitch', 'mental', 'phys'].includes(g.id) : g.id !== 'pitch' && (g.id !== 'catch' || p.pos === 'C')));
   const fog = !owned;
   const fr = rng('fog:' + p.id);
@@ -62,7 +66,7 @@ export function AttrPanel({ p, card, grade, owned, mineCount, enh, playstyle, ge
         <p className={s.scaleNote}>
           {fog
             ? <>남의 선수라 스카우트가 본 <b>범위</b>로 보여요. 맞대결이 쌓일수록 좁아져요.</>
-            : <>본래 값 + 카드 보너스(강화·플레이스타일·장비) {bonusSum > 0 && <b className="num">최대 +{bonusSum}</b>}</>}
+            : <>본래 값 + 더해진 값{srcs.length ? <> — {srcs.map(([k, v], i) => <span key={k}>{i ? ' · ' : ''}{k} <b className={['num', s.plusV].join(' ')}>+{v}</b></span>)}</> : ' (아직 없음)'}</>}
         </p>
         <div className={s.groups}>
           {groups.map((g) => {
@@ -90,13 +94,14 @@ export function AttrPanel({ p, card, grade, owned, mineCount, enh, playstyle, ge
                       </div>
                     );
                   }
-                  const shown = Math.min(120, v + b);
+                  const shown = v + b;
                   const bd = band(toFm(v + b));
+                  const ov = over(shown);
                   return (
                     <div key={k} className={s.row}>
                       <span className={s.lab}>{label}</span>
                       {b > 0 && <em className={['num', s.plus].join(' ')}>+{b}</em>}
-                      <span className={['num', s.val, s['b' + bd], v + b >= 94 && s.top].filter(Boolean).join(' ')}>{shown}</span>
+                      <span className={['num', s.val, ov ? s[ov] : s['b' + bd], v + b >= 94 && s.top].filter(Boolean).join(' ')}>{shown}</span>
                     </div>
                   );
                 })}
@@ -118,10 +123,11 @@ export function AttrPanel({ p, card, grade, owned, mineCount, enh, playstyle, ge
 
 /* ───────── 고유 구종 + 구종표 ───────── */
 function PitchArsenal({ p, card, grade, enh, playstyle, gearPer, scale, fog }: { p: Player; card: CardInst; grade: GradeId; enh: number; playstyle: string | null; gearPer: Record<string, number>; scale: Scale; fog: boolean }) {
+  const pb = cardAttrBonus(p, card, gearPer); // 구종 위력 · 제구에 더해진 값 (모든 구종 — 엔진과 같게)
   const sig = card.signaturePitch && isRarePlus(card.grade) ? card.signaturePitch : null;
   const pitches = (p.pitches ?? []).slice().sort((a, b) => b.usage - a.usage);
   const sigPitch = sig ? pitches.find((x) => x.type === sig.base) : undefined;
-  const v = (x: number, b: number) => Math.min(120, x + b);
+  const v = (x: number, b: number) => x + b;
   return (
     <>
       {sig && (
@@ -134,8 +140,8 @@ function PitchArsenal({ p, card, grade, enh, playstyle, gearPer, scale, fog }: {
               <p className={s.sigFx}>{sig.effect}</p>
               {sigPitch && (
                 <p className={s.sigStats}>
-                  <span>위력 <b className="num">{v(sigPitch.stuff, pitchBonus(p, sigPitch, grade, enh, playstyle, gearPer).stuff)}</b></span>
-                  <span>제구 <b className="num">{v(sigPitch.command, pitchBonus(p, sigPitch, grade, enh, playstyle, gearPer).command)}</b></span>
+                  <span>위력 <b className="num">{v(sigPitch.stuff, pb.stuff ?? 0)}</b></span>
+                  <span>제구 <b className="num">{v(sigPitch.command, pb.command ?? 0)}</b></span>
                   <span><b className="num">{sigPitch.kmh}</b>km/h</span>
                   <span>구사 <b className="num">{Math.round(sigPitch.usage * 100)}%</b></span>
                 </p>
@@ -156,7 +162,7 @@ function PitchArsenal({ p, card, grade, enh, playstyle, gearPer, scale, fog }: {
           </div>
           {pitches.map((x) => {
             const isSig = sig?.base === x.type;
-            const b = pitchBonus(p, x, grade, enh, playstyle, gearPer);
+            const b = { stuff: pb.stuff ?? 0, command: pb.command ?? 0 };
             const stf = v(x.stuff, b.stuff), cmd = v(x.command, b.command);
             const fmS = toFm(x.stuff), fmC = toFm(x.command);
             return (
@@ -166,8 +172,8 @@ function PitchArsenal({ p, card, grade, enh, playstyle, gearPer, scale, fog }: {
                   <b>{isSig ? sig!.name : x.ko}</b>
                 </span>
                 <span className={['num', s.r].join(' ')} role="cell">{x.kmh}</span>
-                <span className={['num', s.r, s['b' + band(fog ? fmS : toFm(x.stuff + b.stuff))]].join(' ')} role="cell">{fog ? `${Math.max(1, Math.round(x.stuff) - 10)}–${Math.min(100, Math.round(x.stuff) + 10)}` : stf}</span>
-                <span className={['num', s.r, s['b' + band(fog ? fmC : toFm(x.command + b.command))]].join(' ')} role="cell">{fog ? `${Math.max(1, Math.round(x.command) - 10)}–${Math.min(100, Math.round(x.command) + 10)}` : cmd}</span>
+                <span className={['num', s.r, !fog && over(stf) ? s[over(stf)!] : s['b' + band(fog ? fmS : toFm(x.stuff + b.stuff))]].join(' ')} role="cell">{fog ? `${Math.max(1, Math.round(x.stuff) - 10)}–${Math.min(100, Math.round(x.stuff) + 10)}` : stf}</span>
+                <span className={['num', s.r, !fog && over(cmd) ? s[over(cmd)!] : s['b' + band(fog ? fmC : toFm(x.command + b.command))]].join(' ')} role="cell">{fog ? `${Math.max(1, Math.round(x.command) - 10)}–${Math.min(100, Math.round(x.command) + 10)}` : cmd}</span>
                 <span className={s.use} role="cell">
                   <span className={s.useBar} aria-hidden><i style={{ width: `${Math.round(x.usage * 100)}%` }} /></span>
                   <span className="num">{Math.round(x.usage * 100)}%</span>

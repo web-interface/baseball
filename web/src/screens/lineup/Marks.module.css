@@ -1,0 +1,56 @@
+/* 라인업 표시 — 강화 · 훈련 · 잠재력 (줄 안) + 잠재력 발동 띠 */
+.marks { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 3px; min-width: 0; }
+.marks > span { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 6px; border-radius: 3px; font-size: 10.5px; font-weight: 800; letter-spacing: -.01em; white-space: nowrap; }
+/* 강화 */
+.enh { color: var(--fg); background: color-mix(in srgb, var(--fg) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 22%, transparent); font-family: var(--font-num); }
+.enhMax { color: #2a1700; background: linear-gradient(135deg, #fff1b8, #ffc93c); box-shadow: 0 0 8px rgba(255, 201, 60, .5); }
+/* 훈련 — 5단계부터 불빛, MAX 는 무지개 */
+.tr { color: #e9edf2; background: rgba(12, 12, 16, .55); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22); }
+.trLit { color: #10131a; background: #4fd8ff; box-shadow: 0 0 8px rgba(79, 216, 255, .6); }
+.trMax {
+  color: #241600;
+  background: linear-gradient(90deg, #ff4f7b, #ffb84f, #f5ff6b, #6bf09a, #4fd8ff, #8a7bff, #ff4f7b) 0 0 / 200% 100%;
+  box-shadow: 0 0 10px rgba(255, 216, 74, .55);
+  animation: flow 2.4s linear infinite;
+}
+/* 잠재력 — 보통 담백 · 상급 보랏빛 · 최고 무지개 */
+.pot { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.pot i { flex: none; width: 6px; height: 6px; transform: rotate(45deg); background: currentColor; }
+.pC { color: var(--fg-2); background: color-mix(in srgb, var(--fg) 8%, transparent); }
+.pA { color: #fff; background: linear-gradient(135deg, #5b3fc4, #a86cff); box-shadow: 0 0 9px rgba(168, 108, 255, .55); }
+.pS {
+  color: #2a1700;
+  background: linear-gradient(90deg, #ff4f7b, #ffb84f, #f5ff6b, #6bf09a, #4fd8ff, #8a7bff, #ff4f7b) 0 0 / 200% 100%;
+  box-shadow: 0 0 12px rgba(255, 216, 74, .7);
+  animation: flow 2s linear infinite;
+}
+.pS i { background: #fff; box-shadow: 0 0 6px #fff; }
+@keyframes flow { to { background-position: 200% 0; } }
+
+/* 잠재력 발동 띠 */
+.banner {
+  position: relative;
+  overflow: hidden;
+  margin: 8px var(--gutter) 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(91, 63, 196, .28), rgba(168, 108, 255, .1));
+  box-shadow: inset 0 0 0 1px rgba(168, 108, 255, .45);
+}
+.bannerS {
+  background: linear-gradient(135deg, rgba(255, 79, 123, .22), rgba(255, 184, 79, .18) 30%, rgba(107, 240, 154, .14) 60%, rgba(79, 216, 255, .2));
+  box-shadow: inset 0 0 0 1.5px rgba(255, 216, 74, .65), 0 0 22px rgba(255, 184, 79, .28);
+}
+.shine { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, .22) 50%, transparent 65%) 0 0 / 250% 100% no-repeat; animation: sweep 3.2s ease-in-out infinite; }
+@keyframes sweep { from { background-position: 160% 0; } to { background-position: -60% 0; } }
+.bHead { position: relative; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.bHead b { font-family: var(--font-head); font-size: 15px; letter-spacing: var(--head-tracking); }
+.bannerS .bHead b { color: transparent; background: linear-gradient(90deg, #ffe08a, #ff9ad1, #8fe3ff, #ffe08a) 0 0 / 200% 100%; -webkit-background-clip: text; background-clip: text; animation: flow 2.6s linear infinite; }
+.bHead span { font-size: 12px; color: var(--fg-3); }
+.bList { position: relative; margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.bList li { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 4px 8px; }
+.bList .pot { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: 3px; font-size: 11px; font-weight: 800; }
+.who { font-size: 12.5px; font-weight: 700; }
+.bList small { font-size: 11.5px; color: var(--fg-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 380px) { .bList li { grid-template-columns: auto minmax(0, 1fr); } .bList small { grid-column: 1 / -1; } }
+@media (prefers-reduced-motion: reduce) { .trMax, .pS, .shine, .bannerS .bHead b { animation: none; } }

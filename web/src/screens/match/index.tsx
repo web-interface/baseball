@@ -209,7 +209,8 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const switchMode = useCallback((m: Mode) => {
-    if (postLock && phase !== 'done' && !ended) return;
+    // 포스트시즌 — 끝까지 봐야 해서 이닝별 · 주요 장면만 (빨리 보기 · 자세히 · 건너뛰기 막음)
+    if (postLock && phase !== 'done' && !ended && m !== 'inning' && m !== 'key') return;
     queue.clear();
     resetFx();
     const beats = beatsFor(m);
@@ -233,6 +234,7 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
     player.seekBeat(beatIndexForPlay(player.beats, play));
   };
   const toScene = (play: number) => {
+    if (postLock && phase !== 'done' && !ended) return; // 포스트시즌 — 장면 옮기기로 건너뛰지 않게
     queue.clear();
     resetFx();
     const beats = beatsFor('key');
@@ -292,7 +294,8 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
         onMode={switchMode}
         disabled={pre}
         quickLeft={mode === 'quick' && !pre && !done ? quickLeft : undefined}
-        locked={postLock && !done ? ' · 포스트시즌은 끝까지 봐야 넘어가요' : undefined}
+        locked={postLock && !done ? ' · 포스트시즌은 이닝별 · 주요 장면으로 끝까지 봐야 넘어가요' : undefined}
+        allowed={postLock && !done ? ['inning', 'key'] : undefined}
       />
       {blocked === 'halfsum' && !done && (
         <div className={s.next}>

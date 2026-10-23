@@ -6,6 +6,8 @@
 //
 // 앞면 스타일은 SdCard.module.css, 뒷면은 Card.module.css. 크기는 모두 카드 너비 기준(cqw).
 import { memo, useEffect, useRef, type CSSProperties, type KeyboardEvent } from 'react';
+import { cardNow } from '../screens/lineup/ctx';
+import { shownPickOf, type PotTier } from '../game/potential';
 import type { CardInst, GradeId, Player, SignaturePitch, Team } from '../game/types';
 import { GRADES } from '../game/grades';
 import { POS_KO, handKo } from '../game/labels';
@@ -17,7 +19,7 @@ import { awardPos, bandOf, cardCode, enName, enhanceTier, isRookie, mockSerial, 
 import { gearSet, mockGear, slotsOf, type GearPiece } from './gear';
 import { attachMotion } from './motion';
 import { Crest, LeagueMark, autographStroke } from './parts';
-import { CARD_BG, TYPE_KO, WEATHER_KO, WxIcon, cardTypeOf, weatherOf } from './front';
+import { CARD_BG, TYPE_KO, WxIcon, cardTypeOf, weatherOf, weatherTitle } from './front';
 import s from './Card.module.css';
 import c from './SdCard.module.css';
 
@@ -69,14 +71,41 @@ export interface CardProps {
   eager?: boolean;
   /** 훈련 단계 0~10 — 5단계부터 카드에 불빛, 10단계(최종)가 가장 화려 */
   train?: number;
+  /** 켜진 잠재력 등급 — 보통 C · 상급 A · 최고 S (game/potential) */
+  pot?: PotTier | null;
+  /** 종합 칸에 대신 보일 값 — 라인업에서 강화 · 훈련 · 잠재력 · 세트덱 · 케미까지 더한 종합 (오르면 초록 빛, 100 넘으면 10 단위 색) */
+  ovrShown?: number;
+  /** 대표 능력치에 더해진 값 (앞면 코드별 — game/cardBonus: 강화 · 훈련 · 잠재력 · 플레이스타일 · 세트덱) */
+  faceUp?: Partial<Record<string, number>>;
+}
+/** 대표 능력치 숫자 — 더해진 값까지 (오르면 초록, 100 넘으면 10 단위 색) */
+function faceVal(v: number, up?: number) {
+  const add = Math.round(up ?? 0);
+  const t = v + add;
+  const cls = t >= 140 ? 'o140' : t >= 130 ? 'o130' : t >= 120 ? 'o120' : t >= 110 ? 'o110' : t >= 100 ? 'o100' : add > 0 ? 'statUp' : '';
+  return { t, cls };
+}
+/** 종합 칸 꾸밈 — 더해진 값이면 오름/내림 + 100 넘는 10 단위 색 */
+function ovrCls(base: number, shown?: number): string[] {
+  if (shown == null) return [];
+  const t = shown >= 140 ? 'o140' : shown >= 130 ? 'o130' : shown >= 120 ? 'o120' : shown >= 110 ? 'o110' : shown >= 100 ? 'o100' : null;
+  return [shown > base ? 'ovrUp' : shown < base ? 'ovrDown' : '', t ?? ''].filter(Boolean);
 }
 
 /** 카드의 훈련 단계 (보유 카드 저장의 train.lv — 없으면 0) */
+/** 켜진 잠재력 등급 (없으면 null) — 돌리는 연출 중엔 전의 것 */
+export const potTierOf = (cardId: string): PotTier | null => { const k = shownPickOf(cardId); return k === 2 ? 'S' : k === 1 ? 'A' : k === 0 ? 'C' : null; };
+function nowOf(c: CardInst, player: Player): { ovrShown?: number; faceUp?: Partial<Record<string, number>> } {
+  const now = cardNow(c);
+  if (!now) return {};
+  return { ovrShown: now.ovr !== player.ovr ? now.ovr : undefined, faceUp: Object.keys(now.bonus.total).length ? now.bonus.total : undefined };
+}
 export const trainLvOf = (c: unknown) => {
   const v = (c as { train?: { lv?: number } } | null | undefined)?.train?.lv ?? 0;
   return Math.max(0, Math.min(10, Math.floor(Number(v) || 0)));
 };
 /** 훈련 불빛 색 — 5 하늘 · 6 초록 · 7 금 · 8 주황 · 9 빨강 · 10 흰 빛(무지개 고리) */
+const POT_KO: Record<PotTier, string> = { C: '보통', A: '상급', S: '최고' };
 const TRAIN_GLOW = ['', '', '', '', '', '#4fd8ff', '#4cf0a0', '#ffd84a', '#ff9a3c', '#ff4f6b', '#ffffff'];
 
 /** CardInst → Card props (CardMini · CardBack 에도 그대로 펼쳐 넣을 수 있다) */
@@ -107,6 +136,9 @@ export function cardProps(c: CardInst) {
     gear: extra.gear ?? mockGear(c, player),
     set: uniformOf(c),
     train: trainLvOf(c),
+    pot: potTierOf(c.id),
+    // 지금 값 — 라인업이면 라인업 종합, 아니면 카드 자체 보너스까지 (screens/lineup/ctx — 어디서 보든 같은 숫자)
+    ...nowOf(c, player),
   } satisfies Partial<CardProps>;
 }
 
@@ -147,7 +179,7 @@ function nameFit(text: string, base: number, room: number) {
 function CardImpl(props: CardProps) {
   const {
     player, grade, year, level, enhance = 0, signaturePitch, award, team, size = 'm', width, fluid, showStats, selected, dimmed, isNew,
-    onClick, className, style, cardId, serial, set, live, still, eager, train = 0,
+    onClick, className, style, cardId, serial, set, live, still, eager, train = 0, pot = null, ovrShown, faceUp,
   } = props;
   const t = team ?? teamById(player.teamId);
   const g = GRADES[grade];
@@ -199,11 +231,12 @@ function CardImpl(props: CardProps) {
           <div className={c.fig}>
             <PlayerArt player={player} team={t} variant="portrait" set={uni} eager={eager || live} />
           </div>
-          <b className={[c.chip, c.ovr].join(' ')}>{player.ovr}</b>
-          {(tier || rookie || tl > 0) && (
+          <b className={[c.chip, c.ovr, ...ovrCls(player.ovr, ovrShown).map((k) => c[k])].join(' ')} title={ovrShown != null && ovrShown !== player.ovr ? `카드 종합 ${player.ovr} → 라인업 ${ovrShown}` : undefined}>{ovrShown ?? player.ovr}</b>
+          {(tier || rookie || tl > 0 || pot) && (
             <div className={c.left}>
               {tier && <span className={[c.enh, c['enh-' + tier]].join(' ')} title={`강화 ${roman(enhance)}`}>{roman(enhance)}</span>}
               {tl > 0 && <span className={[c.tr, tl >= 5 && c.trLit, tl >= 10 && c.trMax].filter(Boolean).join(' ')} title={`훈련 ${tl}단계`}>{tl >= 10 ? '훈련 MAX' : `훈련 ${tl}`}</span>}
+              {pot && <span className={[c.potc, c['pot' + pot]].join(' ')} title={`잠재력 ${POT_KO[pot]}`}>잠재 {pot}</span>}
               {rookie && <span className={c.rc}>RC</span>}
             </div>
           )}
@@ -227,7 +260,7 @@ function CardImpl(props: CardProps) {
           <span className={[c.chip, c.pos].join(' ')}>{pos}</span>
           {stats && (
             <div className={c.stats}>
-              {player.face.map((f) => <span key={f.code}><i>{f.ko}</i><b>{f.v}</b></span>)}
+              {player.face.map((f) => { const x = faceVal(f.v, faceUp?.[f.code]); return <span key={f.code}><i>{f.ko}</i><b className={x.cls ? c[x.cls] : undefined}>{x.t}</b></span>; })}
             </div>
           )}
         </div>
@@ -236,7 +269,7 @@ function CardImpl(props: CardProps) {
           <em>{g.ko}</em>
         </div>
         {!crestKind && (
-          <span className={c.wx} title={wx ? WEATHER_KO[wx] : '날씨 체질 모름'}><i><WxIcon k={wx} /></i></span>
+          <span className={c.wx} title={weatherTitle(player)}><i><WxIcon k={wx} /></i></span>
         )}
         {ser && (
           <span className={c.serBox}>
@@ -271,7 +304,7 @@ export interface CardMiniProps extends Partial<Omit<CardProps, 'player' | 'grade
 }
 
 function CardMiniImpl({
-  player, grade, enhance = 0, team, size = 's', width, fluid, badge, label = true, selected, dimmed, onClick, className, style, cardId, set, eager, isNew, year, level, still, train = 0,
+  player, grade, enhance = 0, team, size = 's', width, fluid, badge, label = true, selected, dimmed, onClick, className, style, cardId, set, eager, isNew, year, level, still, train = 0, pot = null, ovrShown,
 }: CardMiniProps) {
   const t = team ?? teamById(player.teamId);
   const w = width ?? WIDTH[size];
@@ -309,11 +342,12 @@ function CardMiniImpl({
           <div className={c.fig}>
             <PlayerArt player={player} team={t} variant="portrait" set={uni} eager={eager} />
           </div>
-          <b className={[c.chip, c.ovr].join(' ')}>{player.ovr}</b>
-          {(tier || tl > 0) && (
+          <b className={[c.chip, c.ovr, ...ovrCls(player.ovr, ovrShown).map((k) => c[k])].join(' ')} title={ovrShown != null && ovrShown !== player.ovr ? `카드 종합 ${player.ovr} → 라인업 ${ovrShown}` : undefined}>{ovrShown ?? player.ovr}</b>
+          {(tier || tl > 0 || pot) && (
             <div className={c.left}>
               {tier && <span className={[c.enh, c['enh-' + tier]].join(' ')} title={`강화 ${roman(enhance)}`}>{roman(enhance)}</span>}
               {tl > 0 && <span className={[c.tr, tl >= 5 && c.trLit, tl >= 10 && c.trMax].filter(Boolean).join(' ')} title={`훈련 ${tl}단계`}>{tl >= 10 ? 'MAX' : `T${tl}`}</span>}
+              {pot && <span className={[c.potc, c['pot' + pot]].join(' ')} title={`잠재력 ${POT_KO[pot]}`}>{pot}</span>}
             </div>
           )}
           {(glow || tl >= 5) && <i className={c.holo} aria-hidden />}
@@ -321,7 +355,7 @@ function CardMiniImpl({
           <span className={[c.chip, c.pos].join(' ')}>{posOf(player)}</span>
         </div>
         {label && <div className={c.bar}><b>{yy && <small>{yy}</small>}{player.name}</b></div>}
-        <span className={c.wx} title={wx ? WEATHER_KO[wx] : '날씨 체질 모름'}><i><WxIcon k={wx} /></i></span>
+        <span className={c.wx} title={weatherTitle(player)}><i><WxIcon k={wx} /></i></span>
         {glow && <i className={c.shine} aria-hidden />}
         {(grade === 'black' || tl >= 10) && <i className={c.bolt} aria-hidden />}
         {(glow || tl >= 5) && <i className={c.glint} aria-hidden />}
@@ -378,7 +412,7 @@ function statLine(p: Player): { head: string[]; vals: string[] } {
 }
 
 function InfoBack(props: CardBackProps & { player: Player; w: number }) {
-  const { player: p, grade = 'normal', year, team, w, fluid, className, style, cardId, serial, gear, set, enhance = 0, level, signaturePitch, live } = props;
+  const { player: p, grade = 'normal', year, team, w, fluid, className, style, cardId, serial, gear, set, enhance = 0, level, signaturePitch, live, faceUp } = props;
   const t = team ?? teamById(p.teamId);
   const band = bandOf(t);
   const g = GRADES[grade];
@@ -428,9 +462,10 @@ function InfoBack(props: CardBackProps & { player: Player; w: number }) {
               {level != null && <em className="num">LV {fmtLevel(level)}</em>}
             </div>
             <ul className={s.ibStats}>
-              {p.face.map((f) => (
-                <li key={f.code}><span>{f.ko}</span><i style={vars({ '--v': `${f.v}%` })} /><b className="num">{f.v}</b></li>
-              ))}
+              {p.face.map((f) => {
+                const x = faceVal(f.v, faceUp?.[f.code]);
+                return <li key={f.code}><span>{f.ko}</span><i style={vars({ '--v': `${Math.min(100, x.t)}%` })} /><b className={['num', x.cls && s[x.cls]].filter(Boolean).join(' ')}>{x.t}</b></li>;
+              })}
             </ul>
           </div>
           {line.head.length > 0 && (

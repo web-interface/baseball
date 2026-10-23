@@ -51,7 +51,7 @@
   padding: 9px 0 9px 4px;
   text-align: left;
 }
-.pRow .body { grid-template-columns: 50px 40px minmax(0, 1fr) auto; padding-left: 0; }
+.pRow .body { grid-template-columns: 52px 40px minmax(0, 1fr) auto; padding-left: 10px; } /* 왼쪽 등급 띠(4px)에 '1선발'이 가리지 않게 */
 .body:disabled { cursor: default; }
 .no { font-size: 25px; color: var(--fg); text-align: center; }
 .role { font-size: 12px; font-weight: 700; letter-spacing: -.04em; color: var(--fg-2); line-height: 1.2; }

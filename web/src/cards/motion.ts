@@ -1,4 +1,4 @@
-// 카드 빛·기울임 — 포인터를 따라가고, 손을 떼면 아주 느린 자동 움직임(리사주 곡선)으로 돌아간다.
+// 카드 빛·기울임 — 마우스를 따라가고(터치는 안 따라감 — 스크롤만), 손을 떼면 아주 느린 자동 움직임(리사주 곡선)으로 돌아간다.
 // CSS 변수 5개만 바꾼다: --mx --my(빛 위치 %) · --act(활동도 0~1) · --rx --ry(기울기).
 // requestAnimationFrame 루프 하나로 '살아 있는' 카드 전부를 돌리고, 화면에 보이는 카드만, 값이 멈추면 루프도 멈춘다.
 // 움직임 줄이기 설정이면 붙이지 않는다(정지 광택만 남음).
@@ -72,6 +72,8 @@ export function attachMotion(el: HTMLElement, opts: { max?: number; idle?: boole
   }
   io?.observe(el);
   const move = (e: PointerEvent) => {
+    // 손가락(터치)은 따라가지 않는다 — 스크롤하려고 카드를 밀 때 카드가 휘청이며 '날아다니지' 않게 (마우스 · 펜만)
+    if (e.pointerType === 'touch') return;
     const r = el.getBoundingClientRect();
     s.tx = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
     s.ty = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));

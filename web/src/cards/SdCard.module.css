@@ -711,3 +711,35 @@
 /* 레벨 칩 — 단계 색 (8 이상은 빛) */
 .lv { color: var(--lvc, #fff); box-shadow: inset 0 -.6cqw 0 var(--lvc, transparent); }
 .lvHi { text-shadow: 0 0 1.2cqw var(--lvc); box-shadow: inset 0 -.6cqw 0 var(--lvc), 0 0 1.8cqw color-mix(in srgb, var(--lvc) 70%, transparent); }
+
+/* 잠재력 칩 — 보통(담백) · 상급(보랏빛 맥동) · 최고(무지개가 흐르고 반짝) */
+.potc { padding: .9cqw 1.6cqw .8cqw; border-radius: 1.4cqw; font: 900 4.2cqw/1 var(--font-num); white-space: nowrap; color: #e9edf2; background: rgba(12, 12, 16, .82); box-shadow: inset 0 0 0 .35cqw rgba(255, 255, 255, .28); }
+.potA { color: #fff; background: linear-gradient(135deg, #6c4fd8, #b47bff); box-shadow: 0 0 2cqw rgba(180, 123, 255, .75), inset 0 0 0 .35cqw rgba(255, 255, 255, .35); animation: potPulse 1.8s ease-in-out infinite; }
+.potS {
+  color: #2a1700;
+  background: linear-gradient(90deg, #ff4f7b, #ffb84f, #f5ff6b, #6bf09a, #4fd8ff, #8a7bff, #ff4f7b) 0 0 / 200% 100%;
+  box-shadow: 0 0 2.6cqw rgba(255, 216, 74, .9), 0 0 5cqw rgba(255, 107, 214, .45), inset 0 0 0 .35cqw rgba(255, 255, 255, .55);
+  animation: holoX 2.2s linear infinite, potPulse 1.4s ease-in-out infinite;
+}
+@keyframes potPulse { 50% { filter: brightness(1.25); } }
+.mini .potc { font-size: 6.2cqw; padding: 1cqw 1.8cqw; }
+@media (prefers-reduced-motion: reduce) { .potA, .potS { animation: none; } }
+.still .potA, .still .potS { animation: none; }
+
+/* 종합 칸 — 라인업에서 더해진 종합 (오름 초록 빛 · 내림 빨강 · 100 넘으면 10 단위 색) */
+.ovr.ovrUp { color: #0b2a17; background: linear-gradient(180deg, #8af5b8, #3fd07d); box-shadow: 0 0 2.4cqw rgba(63, 208, 125, .75), inset 0 0 0 .35cqw rgba(255, 255, 255, .5); }
+.ovr.ovrDown { color: #fff; background: #c8343e; }
+.ovr.o100 { color: #032433; background: linear-gradient(180deg, #a6ecff, #4fd8ff); box-shadow: 0 0 2.6cqw rgba(79, 216, 255, .85); }
+.ovr.o110 { color: #04220f; background: linear-gradient(180deg, #b6ffd6, #4cf0a0); box-shadow: 0 0 2.6cqw rgba(76, 240, 160, .85); }
+.ovr.o120 { color: #2a1400; background: linear-gradient(180deg, #ffd0a0, #ff9a3c); box-shadow: 0 0 2.8cqw rgba(255, 154, 60, .9); }
+.ovr.o130 { color: #fff; background: linear-gradient(180deg, #ff8c9e, #ff4f6b); box-shadow: 0 0 3cqw rgba(255, 79, 107, .9); }
+.ovr.o140 { color: #241600; background: linear-gradient(90deg, #ff4f7b, #ffb84f, #f5ff6b, #6bf09a, #4fd8ff, #8a7bff, #ff4f7b) 0 0 / 200% 100%; box-shadow: 0 0 3.2cqw rgba(255, 216, 74, .95); animation: holoX 2.4s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .ovr.o140 { animation: none; } }
+
+/* 대표 능력치 — 더해진 값까지 (오름 초록 · 100 넘으면 10 단위 색) */
+.stats b.statUp { color: #3fd07d; }
+.stats b.o100 { color: #4fd8ff; }
+.stats b.o110 { color: #4cf0a0; }
+.stats b.o120 { color: #ff9a3c; }
+.stats b.o130 { color: #ff4f6b; }
+.stats b.o140 { color: #ffc93c; text-shadow: 0 0 1.4cqw rgba(255, 201, 60, .8); }

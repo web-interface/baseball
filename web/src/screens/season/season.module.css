@@ -118,3 +118,39 @@
 :global([data-theme='classic']) .busy, :global([data-theme='classic']) .k-hot .nlKind { color: var(--club-text); }
 :global([data-theme='classic']) .nlMine, :global([data-theme='classic']) .leaders li.mine { box-shadow: inset 3px 0 0 var(--club); }
 :global([data-theme='classic']) .hl { border-radius: 0; }
+
+/* ── 경기 준비·진행 (#/season) ── */
+.nextWrap { margin-top: 18px; }
+.lastWrap { margin-top: 26px; }
+.sec .prog { padding: 10px 0 2px; }
+.sec .ctrl { padding: 12px 0 0; }
+.sec .ctrlBtns { grid-template-columns: 1fr; }
+/* 경기 전 점검 */
+.prep { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'main list' 'btn btn'; gap: 10px 14px; align-items: center; margin-top: 10px; padding: 12px 0 14px; border-bottom: 1px solid var(--line); }
+.prepMain { grid-area: main; display: grid; justify-items: start; gap: 2px; padding-right: 14px; border-right: 1px solid var(--line); }
+.prepK { font-size: 11px; font-weight: 700; color: var(--fg-3); }
+.prepMain b { font-size: 34px; line-height: .9; }
+.prepList { grid-area: list; margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 12.5px; color: var(--fg-2); min-width: 0; }
+.prepList b { color: var(--fg); font-size: 13.5px; }
+.prepBad { color: var(--bad); font-weight: 700; }
+.prepBad b { color: var(--bad); }
+.prep > button { grid-area: btn; justify-self: stretch; }
+.prepWarn .prepMain b { color: var(--bad); }
+@media (min-width: 560px) { .prep { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'main list btn'; } .prep > button { justify-self: end; } }
+/* 빨리 감기 중 소식 띠 · 지난 소식 */
+.ticker { margin: 12px 0 0; padding: 0; list-style: none; }
+.moreNews { margin-top: 10px; border-top: 1px solid var(--line); }
+.moreNews summary { cursor: pointer; padding: 10px 0; font-size: 12.5px; font-weight: 700; color: var(--fg-2); list-style: none; }
+.moreNews summary::-webkit-details-marker { display: none; }
+.moreNews summary::after { content: ' ›'; color: var(--fg-3); }
+.moreNews[open] summary::after { content: ' ⌄'; }
+.moreNews ul { margin: 0; padding: 0; list-style: none; }
+/* 경기 운영 다른 화면 */
+.jump { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 26px var(--gutter) 0; border-top: 1px solid var(--line-2); border-bottom: 1px solid var(--line); }
+.jump button { display: grid; gap: 3px; padding: 13px 8px 13px 0; text-align: left; color: inherit; min-width: 0; }
+.jump button + button { padding-left: 12px; border-left: 1px solid var(--line); }
+.jump b { font-size: 13.5px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jump small { font-size: 11px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jump button:active { background: var(--line); }
+.boxLink { margin: 10px var(--gutter) 0; text-align: right; }
+.boxLink button { font-size: 12.5px; font-weight: 700; color: var(--accent); padding: 6px 0; }

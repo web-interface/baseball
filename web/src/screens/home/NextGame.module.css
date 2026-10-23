@@ -209,3 +209,11 @@
 
 /* 빨리 감기 — 버튼 줄 아래 한 줄 */
 .ff { grid-column: 1 / -1; }
+
+/* 날씨 궁합 — 오늘 날씨가 맞는(+) · 상극(−) 우리 선수 */
+.fit { display: grid; gap: 3px; padding-top: 6px; margin-top: 2px; border-top: 1px dashed var(--line); font-size: 12px; }
+.fitHead { font-weight: 800; color: var(--fg); }
+.fitHead small { margin-left: 4px; font-weight: 600; color: var(--fg-3); }
+.fitGood { color: var(--good, #3fd07d); font-weight: 700; }
+.fitBad { color: var(--bad); font-weight: 700; }
+.fit > small { color: var(--fg-3); }

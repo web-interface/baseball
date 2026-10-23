@@ -8,7 +8,8 @@ import { GRADES } from '../../game/grades';
 import { ATTR_KO, POS_KO, ROLE_KO, handKo } from '../../game/labels';
 import { teamById } from '../../game/mock';
 import type { AttrKey, Player } from '../../game/types';
-import { recentOf } from '../player/local-mock';
+import { cardAttrBonus, cardBonusSources, gearBonus, gearOf, recentOf } from '../player/local-mock';
+import { cardProps } from '../../cards';
 import { FIT_KO, SLOT_KO, getSlot, unit, type Eval, type LineupState, type Slot } from './calc';
 import s from './PlayerSheet.module.css';
 
@@ -23,13 +24,14 @@ const nameOf = (k: AttrKey) => SHORT[k] ?? ATTR_KO[k];
 const throwsKo = (p: Player) => (p.throws === 'L' ? '좌투' : '우투');
 const ipText = (ip: number) => (Number.isInteger(ip) ? `${ip}.0` : String(ip));
 
-function Bars({ title, keys, p }: { title: string; keys: AttrKey[]; p: Player }) {
+type AB = Partial<Record<AttrKey | 'stuff' | 'command', number>>;
+function Bars({ title, keys, p, bonus }: { title: string; keys: AttrKey[]; p: Player; bonus?: AB }) {
   const list = keys.filter((k) => p.attrs[k] != null);
   if (!list.length) return null;
   return (
     <div className={s.group}>
       <h4 className={s.gh}>{title}</h4>
-      {list.map((k) => <StatBar key={k} label={nameOf(k)} value={p.attrs[k]!} size="s" labelWidth={78} />)}
+      {list.map((k) => <StatBar key={k} label={nameOf(k)} value={p.attrs[k]!} bonus={bonus?.[k] ?? 0} size="s" labelWidth={78} />)}
     </div>
   );
 }
@@ -77,6 +79,10 @@ export function PlayerSheet({ slot, st, ev, onClose, onSwap }: PlayerSheetProps)
   const sig = c.signaturePitch;
   const ovr = c.ovr ?? p.ovr;
   const trend = recent.trend === 'hot' ? '오름세' : recent.trend === 'cold' ? '내림세' : '평소대로';
+  // 더해진 값 — 선수 상세 능력치와 같은 계산: 강화 · 훈련 · 잠재력(팀 몫 포함) · 플레이스타일 · 세트덱 · 장비
+  const gearPer = gearBonus(p, gearOf(c, p).equipped).per;
+  const bonus = cardAttrBonus(p, c, gearPer);
+  const srcs = cardBonusSources(p, c, gearPer);
 
   const batCells = bl ? [
     { k: '타율', v: fmt.avg(bl.avg), hot: bl.avg >= 0.3 },
@@ -118,7 +124,7 @@ export function PlayerSheet({ slot, st, ev, onClose, onSwap }: PlayerSheetProps)
       }
     >
       <div className={s.head}>
-        <CardMini player={p} grade={c.grade} enhance={c.enhance} year={c.year} cardId={c.id} width={64} eager />
+        <CardMini {...cardProps(c)} ovrShown={ue ? Math.round(ue.total) : undefined} width={64} eager />
         <div className={s.who}>
           <p className={s.name}><b><NameYear name={p.name} year={c.year} /></b><span className="num">#{p.number}</span></p>
           <p className={s.meta}>
@@ -135,22 +141,28 @@ export function PlayerSheet({ slot, st, ev, onClose, onSwap }: PlayerSheetProps)
           {p.injury && <p className={s.hurt}>부상 · {p.injury}</p>}
         </div>
         <div className={s.ovr}>
-          <small>종합</small>
-          <b className="num-display">{ovr}</b>
-          {ue && Math.round(ue.total) !== ovr && <small>라인업에선 <span className="num">{Math.round(ue.total)}</span></small>}
+          <small>{ue ? '라인업 종합' : '종합'}</small>
+          <b className={['num-display', ue && Math.round(ue.total) > ovr && s.ovrUp, ue && Math.round(ue.total) < ovr && s.ovrDown].filter(Boolean).join(' ')}>{ue ? Math.round(ue.total) : ovr}</b>
+          {ue && Math.round(ue.total) !== ovr && <small>카드 <span className="num">{ovr}</span> {Math.round(ue.total) > ovr ? '+' : '−'}<span className="num">{Math.abs(Math.round(ue.total) - ovr)}</span></small>}
         </div>
       </div>
 
       <section className={s.sec} aria-label="능력치">
-        <h3 className={s.h}><b>능력치</b><span>1~100</span></h3>
+        <h3 className={s.h}><b>능력치</b><span>{srcs.length ? '막대 끝 빗금 · 초록 + = 더해진 값' : '1~100'}</span></h3>
+        {srcs.length > 0 && (
+          <p className={s.plusLine}>
+            <span>더해진 값</span>
+            {srcs.map(([k, v]) => <b key={k}>{k} <em className="num">+{v}</em></b>)}
+          </p>
+        )}
         {pit ? (
           <div className={s.cols}>
-            <Bars title="투구" keys={PIT_KEYS} p={p} />
+            <Bars title="투구" keys={PIT_KEYS} p={p} bonus={bonus} />
             {p.pitches && p.pitches.length > 0 && (
               <div className={s.group}>
                 <h4 className={s.gh}>구종 위력<span>평균 구속 · 구사율</span></h4>
                 {p.pitches.map((pt) => (
-                  <StatBar key={pt.type} size="s" labelWidth={78} value={pt.stuff}
+                  <StatBar key={pt.type} size="s" labelWidth={78} value={pt.stuff} bonus={bonus.stuff ?? 0}
                     label={pt.ko}
                     note={<span className="num">{pt.kmh} · {Math.round(pt.usage * 100)}%</span>} />
                 ))}
@@ -159,9 +171,9 @@ export function PlayerSheet({ slot, st, ev, onClose, onSwap }: PlayerSheetProps)
           </div>
         ) : (
           <div className={s.cols}>
-            <Bars title="타격" keys={BAT_KEYS} p={p} />
-            <Bars title="주루 · 수비" keys={RUN_FIELD_KEYS} p={p} />
-            {p.pos === 'C' && <Bars title="포수" keys={CATCH_KEYS} p={p} />}
+            <Bars title="타격" keys={BAT_KEYS} p={p} bonus={bonus} />
+            <Bars title="주루 · 수비" keys={RUN_FIELD_KEYS} p={p} bonus={bonus} />
+            {p.pos === 'C' && <Bars title="포수" keys={CATCH_KEYS} p={p} bonus={bonus} />}
           </div>
         )}
         {sig && (

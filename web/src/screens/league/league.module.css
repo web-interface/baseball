@@ -1,0 +1,91 @@
+/* 순위·리그 기록 — 팀 순위 표(안에서만 가로로, 순위 · 구단 칸 고정) · 순위 경쟁 · 포스트시즌 요약 · 개인 기록 TOP 10 */
+.screen { padding-bottom: 36px; }
+.head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 var(--gutter); padding: 18px 0 8px; border-bottom: 1px solid var(--line-2); }
+.h { font-size: 19px; white-space: nowrap; text-shadow: var(--misreg); }
+.meta { min-width: 0; font-size: 12px; text-align: right; color: var(--fg-3); }
+
+.sec { padding: 18px var(--gutter) 0; }
+.secH { display: flex; align-items: center; gap: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line-2); font-family: var(--font-head); font-size: 15px; font-weight: 800; letter-spacing: var(--head-tracking); }
+.secH small { font-family: var(--font-body); font-size: 11px; font-weight: 500; letter-spacing: 0; color: var(--fg-3); }
+.secLink { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; font-family: var(--font-body); font-size: 12px; font-weight: 700; letter-spacing: 0; color: var(--accent); }
+.hint { display: flex; align-items: center; gap: 5px; margin-top: 8px; font-size: 11px; line-height: 1.5; color: var(--fg-3); }
+.empty { padding: 16px 0; font-size: 13px; color: var(--fg-2); border-bottom: 1px solid var(--line); }
+
+/* 팀 순위 */
+.tblWrap { overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+.stand { width: 100%; min-width: 470px; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+.stand th, .stand td { padding: 8px 5px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+.stand thead th { padding: 8px 5px 6px; font-size: 10.5px; font-weight: 650; color: var(--fg-3); border-bottom: 1px solid var(--line-2); }
+.sticky { position: sticky; z-index: 1; background: var(--bg); }
+.cRank { left: 0; width: 34px; min-width: 34px; padding-left: 0 !important; text-align: center !important; }
+.cClub { left: 34px; min-width: 90px; text-align: left !important; box-shadow: inset -1px 0 0 var(--line-2); }
+.rk { font-size: 15px; color: var(--fg-2); }
+.club { display: flex; align-items: center; gap: 7px; }
+.club b { font-size: 13.5px; font-weight: 750; letter-spacing: -.03em; color: var(--fg); }
+.pct { font-weight: 750; color: var(--fg); }
+.txt { font-size: 12px; color: var(--fg-2); }
+.stand tbody td.num { color: var(--fg-2); }
+.stand tbody td.pct { color: var(--fg); }
+.me td, .me th { background: linear-gradient(var(--accent-weak), var(--accent-weak)) var(--bg); }
+.me td.num, .me .txt { color: var(--fg); }
+.me .cRank { box-shadow: inset 3px 0 0 var(--accent); }
+.me .rk { color: var(--accent); font-weight: 800; }
+.cut td, .cut th { border-bottom: 2px solid var(--fg-2); }
+
+/* 포스트시즌 요약 */
+.champ { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 10px 12px; background: var(--inv); color: var(--inv-fg); border-radius: var(--r-2); }
+.champ span { display: flex; flex-direction: column; }
+.champ small { font-size: 10.5px; font-weight: 700; color: var(--inv-fg-2); }
+.champ b { font-family: var(--font-head); font-size: 16px; font-weight: var(--head-weight); letter-spacing: var(--head-tracking); }
+.champMine { box-shadow: inset 4px 0 0 var(--accent); }
+.series li { padding: 8px 0 9px; border-bottom: 1px solid var(--line); }
+.srMine { padding-left: 8px !important; padding-right: 8px !important; background: var(--accent-weak); box-shadow: inset 3px 0 0 var(--accent); }
+.srTop { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.srName { font-size: 11.5px; font-weight: 700; letter-spacing: -.02em; color: var(--fg-2); }
+.srState { font-size: 11px; color: var(--fg-3); white-space: nowrap; }
+.srVs { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; margin-top: 4px; }
+.srT { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font-size: 13.5px; color: var(--fg-2); }
+.srR { flex-direction: row-reverse; justify-self: end; }
+.srT b { font-weight: 650; letter-spacing: -.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.srWin { color: var(--fg); }
+.srWin b { font-weight: 800; }
+.srLose { opacity: .5; }
+.srW { font-size: 17px; font-weight: 700; color: var(--fg); }
+.srW i { margin: 0 4px; font-style: normal; color: var(--fg-4); }
+
+/* 개인 기록 */
+.sideTabs { margin-left: auto; font-family: var(--font-body); letter-spacing: 0; }
+.cats { margin-top: 2px; }
+.cats [role='tablist'] { gap: 18px; }
+.rule { margin-top: 8px; font-size: 11.5px; line-height: 1.5; color: var(--fg-3); }
+.rule b { color: var(--fg); }
+.leaders { margin-top: 4px; }
+.ld { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); color: var(--fg); }
+.ld:hover .ldWho b { color: var(--accent); }
+.ldRank { font-size: 15px; text-align: center; color: var(--fg-3); }
+.ldTop .ldRank { color: var(--fg); font-weight: 800; }
+.ldWho { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ldWho b { font-size: 14px; font-weight: 750; letter-spacing: -.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color var(--dur-1); }
+.ldWho small { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--fg-3); white-space: nowrap; }
+.ldVal { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.ldVal b { font-size: 19px; line-height: 1.05; font-weight: 700; }
+.ldVal small { font-size: 10.5px; color: var(--fg-3); white-space: nowrap; }
+.ldMine { background: var(--accent-weak); box-shadow: inset 3px 0 0 var(--accent); }
+.ldMine .ldRank { color: var(--accent); }
+.ldMine .ldWho small { color: var(--accent); font-weight: 700; }
+
+/* broadcast — 검정 머리줄 · 굵은 숫자 */
+:global([data-theme='broadcast']) .head, :global([data-theme='broadcast']) .secH { border-bottom: 2px solid var(--fg); }
+:global([data-theme='broadcast']) .stand thead th { background: var(--inv); color: var(--inv-fg-2); border-bottom: 0; }
+:global([data-theme='broadcast']) .ldVal b { font-style: italic; font-weight: 800; }
+:global([data-theme='broadcast']) .champ { border-radius: 0; }
+
+/* classic — 기록지 괘선 · 내 구단 별색 */
+:global([data-theme='classic']) .head, :global([data-theme='classic']) .secH { border-bottom: 1.5px solid var(--fg); }
+:global([data-theme='classic']) .stand thead th { border-bottom: 1.5px solid var(--fg); color: var(--fg-2); }
+:global([data-theme='classic']) .me td, :global([data-theme='classic']) .me th { background: linear-gradient(color-mix(in srgb, var(--club) 10%, transparent), color-mix(in srgb, var(--club) 10%, transparent)) var(--bg); }
+:global([data-theme='classic']) .me .cRank { box-shadow: inset 3px 0 0 var(--club); }
+:global([data-theme='classic']) .me .rk, :global([data-theme='classic']) .secLink, :global([data-theme='classic']) .ldMine .ldRank, :global([data-theme='classic']) .ldMine .ldWho small { color: var(--club-text); }
+:global([data-theme='classic']) .ldMine, :global([data-theme='classic']) .srMine { background: color-mix(in srgb, var(--club) 10%, transparent); box-shadow: inset 3px 0 0 var(--club); }
+:global([data-theme='classic']) .champ { border-radius: 0; box-shadow: inset 0 0 0 3px var(--inv-2); }
+:global([data-theme='classic']) .rk { font-family: var(--font-num-display); }

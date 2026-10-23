@@ -4,6 +4,7 @@ import { ThemeProvider } from '../theme/ThemeProvider';
 import { Button, Sheet, ToastProvider, useToast } from '../ui';
 import { AuthProvider, useAuth } from './auth';
 import { AuthScreen } from './AuthScreen';
+import { FirstTheme } from './FirstTheme';
 import { Preview } from './Preview';
 import { ROUTES, SCREENS, type RouteDef } from './routes';
 import { Link, matchPath, navigate, useLocation, type Loc } from './router';
@@ -18,6 +19,7 @@ export default function App() {
         <AuthProvider>
           <Routes />
           <RecoverySheet />
+          <FirstTheme />
         </AuthProvider>
       </ToastProvider>
     </ThemeProvider>

@@ -203,3 +203,27 @@
 :global([data-theme='classic']) .wxNeg { background: var(--fg-2); border-radius: 0; }
 :global([data-theme='classic']) .confBar .cOn { background: var(--fg); }
 :global([data-theme='classic']) .tTrack b { background: var(--club); }
+
+/* 100 을 넘는 능력치 — 10 단위로 색이 바뀐다 (100 하늘 · 110 초록 · 120 주황 · 130 빨강 · 140 이상 금빛 반짝임) */
+.o100, .o110, .o120, .o130, .o140 { font-weight: 800; }
+.o100 { color: #4fd8ff; text-shadow: 0 0 8px rgba(79, 216, 255, .35); }
+.o110 { color: #4cf0a0; text-shadow: 0 0 8px rgba(76, 240, 160, .35); }
+.o120 { color: #ff9a3c; text-shadow: 0 0 9px rgba(255, 154, 60, .4); }
+.o130 { color: #ff4f6b; text-shadow: 0 0 10px rgba(255, 79, 107, .45); }
+.o140 {
+  color: transparent;
+  background: linear-gradient(100deg, #fff1b8, #ffc93c 35%, #ff9a3c 65%, #fff1b8) 0 0 / 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 0 6px rgba(255, 201, 60, .55));
+  animation: oSheen 2.4s linear infinite;
+}
+@keyframes oSheen { to { background-position: -220% 0; } }
+@media (prefers-reduced-motion: reduce) { .o140 { animation: none; } }
+:global([data-theme='classic']) .o100 { color: #1f7fb0; text-shadow: none; }
+:global([data-theme='classic']) .o110 { color: #1c8a55; text-shadow: none; }
+:global([data-theme='classic']) .o120 { color: #c25a12; text-shadow: none; }
+:global([data-theme='classic']) .o130 { color: #c2283f; text-shadow: none; }
+
+.plusV { color: #3fd07d; font-weight: 800; }
+.plus { color: #3fd07d !important; }

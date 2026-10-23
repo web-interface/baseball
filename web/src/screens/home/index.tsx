@@ -16,6 +16,7 @@ import { Feed } from './Feed';
 import { TeamPower } from './TeamPower';
 import { LastGame } from './LastGame';
 import { LobbyChat } from '../chat/LobbyChat';
+import { LEVEL_KO, nextLevel, useLeague } from '../../season/league';
 import s from './home.module.css';
 
 function Masthead({ manager }: { manager: string }) {
@@ -26,6 +27,8 @@ function Masthead({ manager }: { manager: string }) {
   const r = ln.row;
   const streak = r.streak.endsWith('승') ? `${r.streak.replace('승', '')}연승` : r.streak.endsWith('패') ? `${r.streak.replace('패', '')}연패` : '';
   const next = isOver(season) ? '정규 시즌 끝' : ln.played === 0 ? (ln.started ? '첫 경기 앞' : '개막전 앞') : <><span className="num">{ln.nextNo}</span>번째 경기 앞</>;
+  const L = useLeague();
+  const up = nextLevel(L.level);
   return (
     <section className={s.mast} aria-label="구단">
       <div className={s.mastArt} aria-hidden>
@@ -43,6 +46,12 @@ function Masthead({ manager }: { manager: string }) {
           <h1 className={s.name}>{team.name}</h1>
           <p className={s.mgr}>감독 <b>{manager}</b><i aria-hidden>·</i>{team.stadium.name}</p>
         </div>
+        {/* 지금 리그 단계 — 구단 줄 오른쪽 아래에 크게 (누르면 경기 준비·진행의 리그 단계) */}
+        <button type="button" className={[s.lvBadge, s['lv-' + L.level]].join(' ')} onClick={() => navigate('/season')} aria-label={`리그 단계 ${LEVEL_KO[L.level]} — 자세히 보기`}>
+          <span className={s.lvK}>리그 단계</span>
+          <b className={s.lvV}>{LEVEL_KO[L.level]}</b>
+          <small className={s.lvS}>{up ? <>다음 {LEVEL_KO[up]}</> : '최고 단계'}{L.stay > 0 && <> · <span className="num">{L.stay + 1}</span>시즌째</>}</small>
+        </button>
       </div>
       <dl className={s.stats}>
         <div>

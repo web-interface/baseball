@@ -932,3 +932,11 @@
   .frame::before, .enh-max::before { animation: none !important; }
   .g-elite .frame::before, .g-black .frame::before, .g-rare .frame::before, .g-legend .frame::before { opacity: 0; }
 }
+
+/* 뒷면 대표 능력치 — 더해진 값까지 (오름 초록 · 100 넘으면 10 단위 색) */
+.statUp { color: #1c9a55 !important; }
+.o100 { color: #1f8fc0 !important; }
+.o110 { color: #18a466 !important; }
+.o120 { color: #d26a12 !important; }
+.o130 { color: #d0283f !important; }
+.o140 { color: #c99400 !important; }

@@ -7,8 +7,9 @@ import { seasonRoster } from '../game/history';
 import { eraOfCode } from '../game/world';
 import type { Player, PitcherRole, Pos } from '../game/types';
 import type { BatKey, PitKey, SetEffect } from '../game/sets';
-import { trainFx } from '../game/training';
+import { cardBonusOf, engineFxOf } from '../game/cardBonus';
 import { LEGEND_MAX, isLegendGrade, potEngineFx, potFaceOf, teamPotential } from '../game/potential';
+import { interviewFx } from '../game/press';
 import { evaluate, getSlot, initialLineup, store as lineupStore, unit, type LineupState } from '../screens/lineup/calc';
 
 import { LEVEL_KO, aiLevel, aiTargetOf, type AiLevel } from './league';
@@ -102,12 +103,13 @@ export function myRoster(st: LineupState = lineupStore.get() ?? initialLineup())
   // 잠재력 — 엔트리(타자 9 · 투수 11) 카드의 최고 잠재력은 팀 타자 · 투수 전원에게, 벤치 카드는 자기 몫만
   const entryIds = [...st.order.map((slot) => st.field[slot]), ...st.rotation, ...st.bullpen, st.closer].filter((id): id is string => !!id);
   const tp = teamPotential(entryIds.map((id) => unit(id)), st.bench.filter((id) => !entryIds.includes(id)).map((id) => unit(id)));
-  /** 훈련으로 오른 능력치 + 받는 잠재력 → 엔진 보너스 (벤치 카드도 — 대타로 나오면 그대로) */
+  /** 카드 보너스 → 엔진 보너스 — 강화 · 훈련 · 잠재력(팀 몫 포함) · 플레이스타일 (game/cardBonus — 카드 숫자 · 능력치 · 팀 종합과 같은 계산).
+   *  세트덱은 setFx 로 따로. 벤치 카드도 — 대타로 나오면 그대로 */
   const noteTrain = (id: string | null) => {
     const u = pl(id);
     if (!u) return;
     const isP = u.player.pos === 'P';
-    const tf = [...trainFx(u.card.train, isP), ...potEngineFx(potFaceOf(tp, u.card.id, isP), isP)];
+    const tf = engineFxOf(cardBonusOf(u.card, u.player, { potFace: potFaceOf(tp, u.card.id, isP) }), isP);
     if (tf.length) train.set(u.player.id, tf);
   };
   const note = (slot: string, id: string | null) => {
@@ -115,13 +117,14 @@ export function myRoster(st: LineupState = lineupStore.get() ?? initialLineup())
     if (!u) return;
     const fx = ev.units[slot as keyof typeof ev.units]?.set?.cur;
     if (fx) setFx.set(u.player.id, fx);
-    if (u.card.enhance) enh.set(u.player.id, Math.round(u.card.enhance * 0.5));
+    // 강화는 이제 카드 보너스(noteTrain)로 — 대표 능력치마다 강화 단계 상승분 (화면 숫자와 같게)
     noteTrain(id);
   };
   const batting = st.order.map((slot) => {
     note(slot, st.field[slot]);
-    return { player: pl(st.field[slot])!.player, pos: slot };
-  }).filter((b) => !!b.player);
+    const u = pl(st.field[slot]);
+    return u ? { player: u.player, pos: slot } : null; // 빈 자리(레전드급 정리 · 카드 없음)는 건너뜀
+  }).filter((b): b is { player: Player; pos: typeof st.order[number] } => !!b);
   const rotation = st.rotation.map((id, i) => { note(`R${i}`, id); return pl(id)?.player; }).filter((p): p is Player => !!p);
   const bullpen = st.bullpen.map((id, i) => { note(`B${i}`, id); return pl(id)?.player; }).filter((p): p is Player => !!p);
   note('CL', st.closer);
@@ -141,6 +144,10 @@ export function myRoster(st: LineupState = lineupStore.get() ?? initialLineup())
   });
   const bench = benchIds.map((id) => pl(id)!.player);
   benchIds.forEach(noteTrain);
+  // 감독 인터뷰 효과 (game/press) — 인터뷰한 그 몇 경기에서만, 훈련 · 잠재력과 같은 엔진 칸 { k, v } 로 더한다
+  for (const [pid, fx] of interviewFx(st, [...batting.map((b) => b.player), ...bench, ...rotation, ...bullpen, ...(closer ? [closer] : [])])) {
+    train.set(pid, [...(train.get(pid) ?? []), ...fx]);
+  }
   void getSlot;
   return { teamId: ME.teamId, mine: true, batting, rotation, bullpen, closer, bench, delta: new Map(), setFx, enh, train, ovr: Math.round(ev.raw) };
 }

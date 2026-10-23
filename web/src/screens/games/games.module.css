@@ -1,0 +1,85 @@
+/* 경기 기록 — 목록. 우리 경기는 한 줄에 날짜 · 상대 · 결과, 모든 경기는 날짜별 맞대결 줄. 헤어라인 · 자리 맞춤 숫자 */
+.screen { padding-bottom: 36px; }
+.head { padding: 18px var(--gutter) 0; }
+.headTop { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line-2); }
+.h { font-size: 19px; text-shadow: var(--misreg); white-space: nowrap; }
+.meta { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin-top: 8px; font-size: 12px; color: var(--fg-3); }
+.meta b { color: var(--fg); font-size: 13px; }
+.seasonSwitch { font-size: 12px; font-weight: 700; color: var(--accent); }
+.months { margin: 8px var(--gutter) 0; }
+.months [role='tablist'] { gap: 16px; }
+
+/* 우리 경기 */
+.list { margin: 0 var(--gutter); }
+.mrow {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  grid-template-areas: 'date opp res' 'date dec dec';
+  column-gap: 10px;
+  row-gap: 3px;
+  align-items: center;
+  padding: 10px 0 9px;
+  border-bottom: 1px solid var(--line);
+  color: var(--fg);
+}
+.mrow:hover .mOppTxt b { color: var(--accent); }
+.mDate { grid-area: date; align-self: start; display: flex; flex-direction: column; padding-top: 3px; }
+.mDate b { font-size: 15px; line-height: 1.1; }
+.mDate small { font-size: 11px; color: var(--fg-3); }
+.mOpp { grid-area: opp; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mOppTxt { display: flex; flex-direction: column; min-width: 0; }
+.mOppTxt b { font-size: 14px; font-weight: 750; letter-spacing: -.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color var(--dur-1); }
+.mOppTxt small { font-size: 11px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mRes { grid-area: res; display: flex; align-items: center; gap: 8px; }
+.mRes b { font-size: 21px; line-height: 1; font-weight: 700; min-width: 44px; text-align: right; }
+.mRes b i { margin: 0 2px; font-style: normal; color: var(--fg-4); }
+.mDec { grid-area: dec; font-size: 11.5px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.resTag { display: inline-grid; place-items: center; width: 22px; height: 22px; font-size: 12px; font-weight: 800; border-radius: var(--r-1); }
+.rW .resTag { background: var(--accent); color: var(--accent-ink); }
+.rL .resTag { color: var(--fg-2); box-shadow: inset 0 0 0 1px var(--line-3); }
+.rD .resTag { color: var(--fg-2); background: var(--surface-3); }
+.rL .mRes b, .rD .mRes b { color: var(--fg-2); }
+
+/* 모든 경기 — 날짜별 */
+.days { margin: 0 var(--gutter); }
+.day { padding-top: 14px; }
+.dayH { display: flex; align-items: baseline; gap: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--line-2); font-size: 12.5px; }
+.dayH b { font-weight: 800; letter-spacing: -.02em; }
+.dayH small { font-size: 11px; font-weight: 700; color: var(--accent); }
+.arow { display: grid; grid-template-columns: minmax(0, 1fr) 66px minmax(0, 1fr) 36px; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--line); color: var(--fg-2); }
+a.arow:hover .aScore { color: var(--accent); }
+.aTeam, .hTeam { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.aTeam { justify-content: flex-end; }
+.aTeam b, .hTeam b { font-size: 13.5px; font-weight: 600; letter-spacing: -.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.won b { color: var(--fg); font-weight: 800; }
+.aScore { display: flex; align-items: baseline; justify-content: center; gap: 5px; font-size: 18px; color: var(--fg-2); transition: color var(--dur-1); }
+.aScore i { font-style: normal; color: var(--fg-4); font-size: 14px; }
+.aScore b { font-weight: 600; }
+.wonN { color: var(--fg); font-weight: 800 !important; }
+.aNote { font-size: 10.5px; color: var(--fg-3); text-align: right; white-space: nowrap; }
+.aMine .arow { background: var(--accent-weak); box-shadow: inset 3px 0 0 var(--accent); padding-left: 6px; }
+.cancel { font-size: 12px; font-weight: 700; color: var(--fg-3); }
+
+.more { display: block; width: calc(100% - 2 * var(--gutter)); height: 40px; margin: 12px var(--gutter) 0; font-size: 13px; font-weight: 700; color: var(--fg-2); border-radius: var(--r-2); box-shadow: inset 0 0 0 1px var(--line-2); }
+.more:hover { color: var(--fg); }
+.empty { margin: 16px var(--gutter) 0; padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 13px; line-height: 1.55; color: var(--fg-2); }
+.empty b { color: var(--fg); font-weight: 750; }
+.emptyLink { display: inline-flex; align-items: center; gap: 2px; margin-top: 8px; font-size: 13px; font-weight: 700; color: var(--accent); }
+.note { display: flex; gap: 6px; align-items: baseline; margin: 16px var(--gutter) 0; font-size: 11.5px; line-height: 1.55; color: var(--fg-3); }
+.note svg { flex: none; transform: translateY(2px); }
+.back { display: inline-flex; align-items: center; gap: 4px; margin: 14px var(--gutter) 0; font-size: 13px; font-weight: 700; color: var(--fg-2); }
+.back:hover { color: var(--fg); }
+
+/* broadcast — 검정 머리줄 · 굵은 숫자 */
+:global([data-theme='broadcast']) .headTop { border-bottom: 2px solid var(--fg); }
+:global([data-theme='broadcast']) .dayH { border-bottom: 2px solid var(--fg); }
+:global([data-theme='broadcast']) .mRes b { font-style: italic; font-weight: 800; }
+:global([data-theme='broadcast']) .resTag { border-radius: 0; }
+:global([data-theme='broadcast']) .aMine .arow { box-shadow: inset 5px 0 0 var(--accent); }
+
+/* classic — 기록지 괘선 · 내 구단 별색 */
+:global([data-theme='classic']) .headTop, :global([data-theme='classic']) .dayH { border-bottom: 1.5px solid var(--fg); }
+:global([data-theme='classic']) .rW .resTag { background: var(--club); color: var(--club-ink); }
+:global([data-theme='classic']) .aMine .arow { background: color-mix(in srgb, var(--club) 10%, transparent); box-shadow: inset 3px 0 0 var(--club); }
+:global([data-theme='classic']) .seasonSwitch, :global([data-theme='classic']) .dayH small, :global([data-theme='classic']) .emptyLink { color: var(--club-text); }
+:global([data-theme='classic']) .mDate b { font-family: var(--font-num-display); font-weight: 700; }

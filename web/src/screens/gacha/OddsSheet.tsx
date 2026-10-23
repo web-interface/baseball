@@ -2,11 +2,11 @@
 import type { Pack } from '../../game/types';
 import { GRADES } from '../../game/grades';
 import { Sheet, Button } from '../../ui';
-import { atLeastOne, packTitle, type OddsView, type Pick } from './draw';
+import { atLeastOne, packTitle, pctStr, type OddsView, type Pick } from './draw';
 import { OddsBar, PityTally, Swatch } from './bits';
 import s from './OddsSheet.module.css';
 
-const pctText = (v: number) => (v >= 10 ? v.toFixed(1) : v >= 1 ? v.toFixed(2) : v.toFixed(2)) + '%';
+const pctText = (v: number) => pctStr(v) + '%';
 
 export function OddsSheet({ open, onClose, pack, pick, view, pity }: {
   open: boolean; onClose: () => void; pack: Pack; pick: Pick | null; view: OddsView; pity: number;
@@ -37,11 +37,11 @@ export function OddsSheet({ open, onClose, pack, pick, view, pity }: {
             <tr key={r.grade}>
               <th scope="row"><Swatch grade={r.grade} /> {GRADES[r.grade].ko}</th>
               <td className="num">
-                {changed && Math.abs(r.base - r.pct) > 0.004 && <s className={s.was}>{pctText(r.base)}</s>}
+                {changed && Math.abs(r.base - r.pct) > r.base * 0.001 && <s className={s.was}>{pctText(r.base)}</s>}
                 {pctText(r.pct)}
               </td>
-              <td className="num">{(r.pct * 0.3).toFixed(r.pct * 0.3 >= 10 ? 1 : 2)}<small>장</small></td>
-              <td className="num">{(atLeastOne(r.pct) * 100).toFixed(1)}%</td>
+              <td className="num">{pctStr(r.pct * 0.3)}<small>장</small></td>
+              <td className="num">{pctStr(atLeastOne(r.pct) * 100)}%</td>
             </tr>
           ))}
         </tbody>

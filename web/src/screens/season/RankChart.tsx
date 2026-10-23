@@ -54,7 +54,7 @@ export function RankChart({ hist, dates, total }: RankChartProps) {
   if (len < 1) {
     return (
       <figure className={s.chart}>
-        <figcaption className={s.cap}>개막 전 — 경기를 치르면 날마다 순위가 여기 그려져요 · 점선 위 6위까지 가을야구</figcaption>
+        <figcaption className={s.cap}>개막 전 — 경기를 치르면 날마다 순위가 여기 그려져요 · 점선 위 5위까지 가을야구</figcaption>
       </figure>
     );
   }
@@ -69,8 +69,8 @@ export function RankChart({ hist, dates, total }: RankChartProps) {
             <text x={PL - 6} y={y(r) + 3.5} className={s.axis} textAnchor="end">{r}</text>
           </g>
         ))}
-        {/* 가을야구 선 (6위까지) */}
-        <line x1={PL} x2={W - PR + 4} y1={(y(6) + y(7)) / 2} y2={(y(6) + y(7)) / 2} className={s.cut} />
+        {/* 가을야구 선 (5위까지 — season/post 와 같게) */}
+        <line x1={PL} x2={W - PR + 4} y1={(y(5) + y(6)) / 2} y2={(y(5) + y(6)) / 2} className={s.cut} />
         {/* 옅은 구단 먼저, 따라가는 구단은 위에 */}
         {lines.filter((l) => !focus(l.t.id)).map((l) => <path key={l.t.id} d={l.d} className={s.line} />)}
         {lines.filter((l) => focus(l.t.id)).map((l) => <path key={l.t.id} d={l.d} className={[s.line, l.t.id === ME.teamId ? s.mine : s.picked].join(' ')} style={{ stroke: l.t.colors.primary }} />)}
@@ -103,7 +103,7 @@ export function RankChart({ hist, dates, total }: RankChartProps) {
           {!order.slice(0, 5).some((o) => o.t.id === ME.teamId) && <span className={s.tipMe}><span className="num">{hist[ME.teamId]?.[hv]}</span> {meT.short}</span>}
         </figcaption>
       ) : (
-        <figcaption className={s.cap}>날마다 순위 · {meT.short}는 구단색 · 이름을 누르면 그 구단도 따라가요 · 점선 위 6위까지 가을야구</figcaption>
+        <figcaption className={s.cap}>날마다 순위 · {meT.short}는 구단색 · 이름을 누르면 그 구단도 따라가요 · 점선 위 5위까지 가을야구</figcaption>
       )}
     </figure>
   );

@@ -11,11 +11,11 @@
 .bonus {
   position: absolute;
   top: 0; bottom: 0;
-  background: repeating-linear-gradient(90deg, var(--accent) 0 2px, transparent 2px 4px);
+  background: repeating-linear-gradient(90deg, #3fd07d 0 2px, transparent 2px 4px);
 }
 .val { display: inline-flex; align-items: baseline; justify-content: flex-end; gap: 3px; min-width: 30px; }
 .val b { font-size: 17px; line-height: 1; }
-.val em { font-size: 11px; color: var(--accent); font-weight: 600; }
+.val em { font-size: 11px; color: #3fd07d; font-weight: 800; font-style: normal; }
 .val small { margin-left: 4px; font-size: 10.5px; color: var(--fg-3); }
 
 /* 값 띠 (1~100) */
@@ -41,3 +41,12 @@
 :global([data-theme='classic']) .bar { background: var(--surface-3); }
 :global([data-theme='classic']) .bonus { background: repeating-linear-gradient(90deg, var(--accent) 0 1.5px, transparent 1.5px 3.5px); }
 :global([data-theme='broadcast']) .top, :global([data-theme='classic']) .top { color: var(--accent); }
+
+/* 100 을 넘는 값 — 10 단위 색 (선수 화면 능력치와 같게) */
+.o100, .o110, .o120, .o130, .o140 { font-weight: 800; }
+.o100 { color: #4fd8ff; }
+.o110 { color: #4cf0a0; }
+.o120 { color: #ff9a3c; }
+.o130 { color: #ff4f6b; }
+.o140 { color: #ffc93c; text-shadow: 0 0 8px rgba(255, 201, 60, .6); }
+:global([data-theme='classic']) .val em { color: #1c8a55; }

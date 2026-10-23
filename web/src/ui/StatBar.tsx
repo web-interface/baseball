@@ -18,7 +18,8 @@ export interface StatBarProps {
   className?: string;
 }
 
-const band100 = (v: number) => (v >= 90 ? 'top' : v >= 80 ? 'hi' : v >= 60 ? 'mid' : 'lo');
+/** 100 을 넘으면(보너스 포함) 10 단위로 다른 색 — 100 · 110 · 120 · 130 · 140 이상 */
+const band100 = (v: number) => (v >= 140 ? 'o140' : v >= 130 ? 'o130' : v >= 120 ? 'o120' : v >= 110 ? 'o110' : v >= 100 ? 'o100' : v >= 90 ? 'top' : v >= 80 ? 'hi' : v >= 60 ? 'mid' : 'lo');
 const bandFm = (v: number) => (v >= 18 ? 'fm5' : v >= 15 ? 'fm4' : v >= 11 ? 'fm3' : v >= 6 ? 'fm2' : 'fm1');
 
 /** 능력치 막대 — 이름 · 막대 · 숫자 */

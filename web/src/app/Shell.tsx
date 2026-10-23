@@ -7,7 +7,7 @@ import { takeInvNotice } from '../game/inventory';
 import { useWallet } from '../game/wallet';
 import { useTitleOverride } from './title';
 import { record } from '../ui/format';
-import { GROUPS, ROUTES, groupOf, type RouteDef } from './routes';
+import { GROUPS, ROUTES, groupOf, subTabOf, type RouteDef } from './routes';
 import { Link, goBack, navigate } from './router';
 import s from './Shell.module.css';
 
@@ -86,9 +86,11 @@ export function Shell({ route, preview, children }: { route: RouteDef | null; pr
   );
 }
 
-/** 큰 메뉴 5개 + (묶음에 화면이 여럿이면) 아래 작은 탭. 둘 다 좌우로만 움직인다 */
+/** 큰 메뉴 5개 + (묶음에 화면이 여럿이면) 아래 작은 탭. 둘 다 좌우로만 움직인다.
+ *  작은 탭이 아닌 화면도 묶음에 속할 수 있다(routes.ts members — 경기 화면 #/match 는 경기 운영 · 경기 준비·진행) */
 function NavMenu({ current }: { current?: string }) {
   const group = groupOf(current);
+  const subOn = subTabOf(group, current);
   const keep = (ul: HTMLUListElement | null) => {
     const el = ul?.querySelector<HTMLElement>('[aria-current="page"]');
     if (!ul || !el) return;
@@ -109,7 +111,7 @@ function NavMenu({ current }: { current?: string }) {
           const on = g === group;
           return (
             <li key={g.key}>
-              <Link to={path(g.items[0].route)} className={[s.item, on && s.on].filter(Boolean).join(' ')} aria-current={on ? 'page' : undefined}>
+              <Link to={path(g.landing ?? g.items[0].route)} className={[s.item, on && s.on].filter(Boolean).join(' ')} aria-current={on ? 'page' : undefined}>
                 {g.label}
               </Link>
             </li>
@@ -119,7 +121,7 @@ function NavMenu({ current }: { current?: string }) {
       {group && group.items.length > 1 && (
         <ul ref={sub} className={s.subList} aria-label={`${group.label} 메뉴`}>
           {group.items.map((it) => {
-            const on = it.route === current;
+            const on = it.route === subOn;
             return (
               <li key={it.route}>
                 <Link to={path(it.route)} className={[s.subItem, on && s.subOn].filter(Boolean).join(' ')} aria-current={on ? 'page' : undefined}>

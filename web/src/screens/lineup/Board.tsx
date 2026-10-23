@@ -3,10 +3,10 @@
 // 구장 특색(담장 거리 · 높은 담장)은 내 구단 홈구장 값으로 그린다.
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import type { Team } from '../../game/types';
-import { CardMini } from '../../cards';
+import { CardMini, cardProps } from '../../cards';
 import { Emblem, Icon } from '../../ui';
 import {
-  BOOM, FIELD_LINKS, LEVEL_KO, SLOT_KO, boardToSlot, unit,
+  BOOM, FIELD_LINKS, LEVEL_KO, SLOT_KO, boardToSlot, cardOvr, unit,
   type BoardSlot, type Eval, type Level, type LineupState, type Slot,
 } from './calc';
 import s from './Board.module.css';
@@ -225,10 +225,11 @@ export function Board({ st, ev, home, active, onPick, boom, onBoomDone }: BoardP
           const u = id ? unit(id) : null;
           const ue = ev.units[slot];
           const ord = b === 'P' ? null : st.order.indexOf(b) + 1;
-          const bonus = ue ? Math.round(ue.tc + ue.chem) : 0;
+          // 카드 밑 숫자 — 라인업에서 오른 종합: 강화 · 훈련 · 잠재력 · 세트덱 · 케미 (+ 타순 적성, − 자리 적성)
+          const bonus = ue && u ? Math.round(ue.total - cardOvr(u)) : 0;
           const p = SPOT[b];
           const label = u
-            ? `${SLOT_KO[slot]} ${u.player.name}, 종합 ${u.player.ovr}${bonus ? `, 조합 +${bonus}` : ''}${ue?.fit === 'off' ? ', 적성 밖 자리' : ''} — 정보 보기`
+            ? `${SLOT_KO[slot]} ${u.player.name}, 종합 ${cardOvr(u)}${bonus ? `, 라인업에서 ${bonus > 0 ? '+' : ''}${bonus}` : ''}${ue?.fit === 'off' ? ', 적성 밖 자리' : ''} — 정보 보기`
             : `${SLOT_KO[slot]} 비어 있음 — 채우기`;
           return (
             <button
@@ -242,7 +243,7 @@ export function Board({ st, ev, home, active, onPick, boom, onBoomDone }: BoardP
               <span className={s.lift}>
                 {u ? (
                   <span key={u.id} className={[s.cardIn, first.current && s.intro].filter(Boolean).join(' ')}>
-                    <CardMini player={u.player} grade={u.card.grade} enhance={u.card.enhance} year={u.card.year} selected={active === slot} style={{ width: '100%' }} />
+                    <CardMini {...cardProps(u.card)} ovrShown={ue ? Math.round(ue.total) : undefined} selected={active === slot} style={{ width: '100%' }} />
                   </span>
                 ) : (
                   <span className={s.empty}><Icon name="plus" size={20} /><small>{SLOT_KO[slot]}</small></span>
@@ -252,7 +253,7 @@ export function Board({ st, ev, home, active, onPick, boom, onBoomDone }: BoardP
                 {ord != null && <span className={['num', s.ord].join(' ')}>{ord}</span>}
                 {ue && (ue.fit === 'off'
                   ? <span className={[s.bonus, s.bad].join(' ')}>적성 밖</span>
-                  : bonus > 0 && <span key={bonus} className={['num', s.bonus, ev.exploded && s.boomed].filter(Boolean).join(' ')}>+{bonus}</span>)}
+                  : bonus !== 0 && <span key={bonus} className={['num', s.bonus, bonus < 0 && s.bad, ev.exploded && s.boomed].filter(Boolean).join(' ')}>{bonus > 0 ? '+' : ''}{bonus}</span>)}
               </span>
             </button>
           );

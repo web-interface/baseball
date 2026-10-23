@@ -8,6 +8,7 @@ import { GRADES } from '../../game/grades';
 import { LEVEL_KO, PEN_SLOTS, ROT_SLOTS, SLOT_KO, getSlot, unit, type Eval, type Link, type LineupState, type StaffSlot } from './calc';
 import { useFlip } from './hooks';
 import s from './Lists.module.css';
+import { Marks } from './Marks';
 
 /** 빛이 지나가는 줄 — 엘리트 이상 */
 const GLOW_ROW = new Set(['elite', 'legend', 'franchise', 'black', 'signature', 'mvp', 'gg', 'th', 'unique']);
@@ -78,6 +79,7 @@ export function PitchTab({ st, ev, onOpen, onSwap }: PitchTabProps) {
                   {arm && <span>{arm}</span>}
                   {ue?.fit === 'near' && <span className={s.warn}>{u.player.role === 'SP' ? '선발 투수' : '불펜 투수'}</span>}
                 </small>
+                <Marks card={u.card} player={u.player} />
                 {ue?.injured
                   ? <small className={[s.fit, s.hurtText].join(' ')}><Icon name="alert" size={12} /> {u.player.injury}</small>
                   : sig && <small className={s.fit}><span className={s.sig} style={{ ['--sig' as string]: sig.color } as CSSProperties}>{sig.name}</span><span className={s.sigFx}>{sig.effect.split(' · ')[0]}</span></small>}

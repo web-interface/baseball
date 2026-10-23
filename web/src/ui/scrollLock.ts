@@ -4,13 +4,14 @@ let count = 0;
 
 /** 잠그고, 푸는 함수를 돌려준다(여러 번 불러도 한 번만 풂) */
 export function lockScroll(): () => void {
-  if (count++ === 0) document.documentElement.style.overflow = 'hidden';
+  // overscroll-behavior none — 시트가 열린 동안 '당겨서 새로고침' · 뒤 화면 출렁임 막기
+  if (count++ === 0) { document.documentElement.style.overflow = 'hidden'; document.documentElement.style.overscrollBehavior = 'none'; }
   let released = false;
   return () => {
     if (released) return;
     released = true;
     count = Math.max(0, count - 1);
-    if (count === 0) document.documentElement.style.overflow = '';
+    if (count === 0) { document.documentElement.style.overflow = ''; document.documentElement.style.overscrollBehavior = ''; }
   };
 }
 
@@ -18,4 +19,5 @@ export function lockScroll(): () => void {
 export function resetScrollLock() {
   count = 0;
   document.documentElement.style.overflow = '';
+  document.documentElement.style.overscrollBehavior = '';
 }

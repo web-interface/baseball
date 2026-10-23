@@ -254,26 +254,28 @@ export function Scrubber({ live, onSeek, done }: { live: Live; onSeek: (play: nu
 
 /* ───────── 재생 손잡이 ───────── */
 export function Transport({
-  playing, speed, mode, onToggle, onSpeed, onSkip, onMode, disabled, quickLeft, locked,
+  playing, speed, mode, onToggle, onSpeed, onSkip, onMode, disabled, quickLeft, locked, allowed,
 }: {
   playing: boolean; speed: number; mode: Mode; onToggle: () => void; onSpeed: () => void; onSkip: () => void; onMode: (m: Mode) => void;
   disabled?: boolean; quickLeft?: number;
-  /** 포스트시즌 — 이닝별로 끝까지 봐야 해서 보기 방식 · 건너뛰기를 막는다 */
+  /** 포스트시즌 — 끝까지 봐야 해서 건너뛰기를 막는다 (보기 방식은 allowed 만) */
   locked?: string;
+  /** 고를 수 있는 보기 방식 (포스트시즌: 이닝별 · 주요 장면) */
+  allowed?: Mode[];
 }) {
   const skipLabel = mode === 'detail' ? '다음 타석' : mode === 'key' ? '다음 장면' : mode === 'inning' ? '다음 이닝' : '결과로';
   return (
     <div className={s.transport}>
       <div className={s.tRow}>
         <IconButton icon={playing ? 'pause' : 'play'} label={playing ? '멈춤' : '재생'} onClick={onToggle} className={s.play} disabled={disabled} />
-        {locked ? (
+        {locked && !allowed ? (
           <span className={s.locked}><b>이닝별</b>{locked}</span>
         ) : (
           <Tabs<Mode>
             variant="box"
             size="s"
             fill
-            items={MODES.map((m) => ({ value: m.value, label: m.label }))}
+            items={(allowed ? MODES.filter((m) => allowed.includes(m.value)) : MODES).map((m) => ({ value: m.value, label: m.label }))}
             value={mode}
             onChange={onMode}
             aria-label="보기 방식"
@@ -285,6 +287,7 @@ export function Transport({
         {mode === 'quick'
           ? <span className={s.hint}><Icon name="clock" size={13} className={s.hintIco} />{'1~9회를 '}<b className="num">10</b>{'초 안에'}{quickLeft != null ? <>{' · 남은 '}<b className="num">{quickLeft.toFixed(1)}</b>초</> : null}</span>
           : <button type="button" className={s.speed} onClick={onSpeed} aria-label={`빠르기 ${speed}배`}><b className="num">{speed}</b>배속</button>}
+        {locked && allowed && <span className={s.lockNote}>{locked.replace(/^ · /, '')}</span>}
         {!locked && (
           <button type="button" className={s.skip} onClick={onSkip} disabled={disabled}>
             {skipLabel}<Icon name="fast" size={13} />

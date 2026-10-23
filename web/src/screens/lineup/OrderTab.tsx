@@ -11,6 +11,7 @@ import {
 } from './calc';
 import { useFlip } from './hooks';
 import s from './Lists.module.css';
+import { Marks, hasMarks } from './Marks';
 
 /** 빛이 지나가는 줄 — 엘리트 이상 */
 const GLOW_ROW = new Set(['elite', 'legend', 'franchise', 'black', 'signature', 'mvp', 'gg', 'th', 'unique']);
@@ -21,6 +22,8 @@ const GROUPS: Record<number, { ko: string; sub: string; links: number[] }> = {
   5: { ko: '하위 타선', sub: '6~9번', links: [] },
 };
 const ROW_H = 66;
+/** 강화 · 훈련 · 잠재력 표시 줄이 있는 타순 — 줄 높이를 늘린다 (케미 선 길이도 같이) */
+const ROW_H_MARKS = 94;
 const HEAD_H = 34;
 
 export interface OrderTabProps {
@@ -37,6 +40,8 @@ export function OrderTab({ st, ev, onOpen, onSwap, onAuto, initialPick = null }:
   const [pick, setPick] = useState<number | null>(initialPick);
   const list = useRef<HTMLOListElement>(null);
   useFlip(list, [st.order.join(',')]);
+  // 강화 · 훈련 · 잠재력 표시가 한 명이라도 있으면 모든 줄을 같은 높이로 늘린다 (케미 선이 줄 사이를 정확히 잇게)
+  const rowH = st.order.some((slot) => { const id = st.field[slot]; return !!id && hasMarks(unit(id).card); }) ? ROW_H_MARKS : ROW_H;
 
   const tapRow = (i: number, slot: BatSlot) => {
     if (pick == null) { onOpen(slot); return; }
@@ -87,7 +92,7 @@ export function OrderTab({ st, ev, onOpen, onSwap, onAuto, initialPick = null }:
               key={slot}
               data-flip={slot}
               className={[s.row, s.graded, s['g-' + u.card.grade], GLOW_ROW.has(u.card.grade) && s.shine, pick === i && s.picked].filter(Boolean).join(' ')}
-              style={{ height: ROW_H, ['--link-h' as string]: `${ROW_H + nextHead}px`, ['--gr' as string]: `var(--gr-${u.card.grade})` } as CSSProperties}
+              style={{ height: rowH, ['--link-h' as string]: `${rowH + nextHead}px`, ['--gr' as string]: `var(--gr-${u.card.grade})` } as CSSProperties}
             >
               <span className={s.rail} aria-hidden>
                 <i className={s.node} />
@@ -104,6 +109,7 @@ export function OrderTab({ st, ev, onOpen, onSwap, onAuto, initialPick = null }:
                     <span>{u.player.bats === 'L' ? '좌타' : u.player.bats === 'S' ? '양타' : '우타'}</span>
                     <span style={{ color: `var(--gr-${u.card.grade})` }}>{GRADES[u.card.grade].ko}{u.card.year ? ` ${fmt.yearTag(u.card.year)}` : ''}</span>
                   </small>
+                  <Marks card={u.card} player={u.player} />
                   {ue?.orderFit && (
                     <small className={s.fit}>
                       <span className={s['f-' + ue.orderFit]}>{i + 1}번 {ORDER_FIT_KO[ue.orderFit]}</span>

@@ -10,7 +10,8 @@
 //   ?demo=set (’27 독수리스 5명 — 세트 +2) · ?demo=set9 (9명 — +4) · ?demo=boom (5명 → 잠시 뒤 9명, 단계가 오르는 순간) · ?pick=2 (타순 고르는 중)
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
-import { CardMini } from '../../cards';
+import { CardMini, cardProps } from '../../cards';
+import { PotBanner } from './Marks';
 import { Button, Tabs, fmt, useToast } from '../../ui';
 import { myTeam } from '../../game/mock';
 import { isOwned } from '../../game/inventory';
@@ -177,6 +178,7 @@ export default function LineupScreen({ query }: ScreenProps) {
 
       <GaugeBox ev={ev} boom={boom} />
       <LeagueLine st={st} />
+      <PotBanner st={st} />
       <p className={s.legendCap}>
         <span className={s.legendTag}>레전드급</span>
         <span>타자 <b className={['num', ev.legend.bat >= LEGEND_MAX.bat && s.capFull].filter(Boolean).join(' ')}>{ev.legend.bat}</b>/{LEGEND_MAX.bat}</span>
@@ -189,7 +191,7 @@ export default function LineupScreen({ query }: ScreenProps) {
           <Board st={st} ev={ev} home={home} active={slot ?? info ?? pending} onPick={open} boom={boom} onBoomDone={() => setBoom(null)} />
           <div className={s.legend}>
             <LinkLegend />
-            <p>같은 구단 · 권역 · 시즌 카드일수록 선이 굵어져요. 키스톤 · 배터리 · 외야 짝은 한 단 더. 카드 밑은 타순과 조합으로 오른 종합이에요.</p>
+            <p>같은 구단 · 권역 · 시즌 카드일수록 선이 굵어져요. 키스톤 · 배터리 · 외야 짝은 한 단 더. 카드 밑 숫자는 라인업에서 오른 종합이에요 — 강화 · 훈련 · 잠재력 · 세트덱 · 케미까지 더한 값 (빨강은 적성 밖 자리로 깎인 것).</p>
           </div>
           <TeamColorPanel ev={ev} onHint={setSlot} />
           <section className={s.bench} aria-label="벤치">
@@ -203,7 +205,7 @@ export default function LineupScreen({ query }: ScreenProps) {
                 return (
                   <li key={id}>
                     <button type="button" className={s.benchCard} onClick={() => setBenchCard(id)} aria-label={`${u.player.name} 넣을 자리 고르기`}>
-                      <CardMini player={u.player} grade={u.card.grade} enhance={u.card.enhance} year={u.card.year} width={60} />
+                      <CardMini {...cardProps(u.card)} width={60} />
                       <small>{POS_KO[u.player.pos]} · {u.team.short}</small>
                     </button>
                   </li>

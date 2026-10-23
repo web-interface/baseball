@@ -1,6 +1,6 @@
 // 영입(카드 뽑기) — 담당: 뽑기 화면 개발자
 // 모든 팩 30장(요구 39) · 일반/프리미엄/스페셜/레전드 + 연도팩/구단팩(요구 40) · 확률 공개 · 천장 · 등급별 레전드 이펙트(요구 17)
-// 카드 조합(룰렛)은 #/gacha?tab=combo
+// 카드 조합은 팀관리 › 선수조합(#/combine)으로 옮겼다 — 예전 주소 #/gacha?tab=combo 는 그리로 넘긴다
 import { useEffect, useMemo, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { navigate } from '../../app/router';
@@ -12,13 +12,12 @@ import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
 import { GRADES } from '../../game/grades';
 import type { ClubCode, GradeId, Pack } from '../../game/types';
 import { Button, CoinGP, Emblem, GoldenBall, Icon, Tabs, YearPicker, fmt, type YearCell } from '../../ui';
-import { atLeastOne, oddsFor, pullPack, useGacha, type Pick, type PullResult } from './draw';
+import { atLeastOne, oddsFor, pctStr, pullPack, useGacha, type Pick, type PullResult } from './draw';
 import { PACK_LOOK, YEAR_OPTIONS, clubShort, eraText, yearOption } from './local-mock';
 import { PackArt } from './PackArt';
 import { OddsBar, PityTally, Price, Swatch, gradeShort } from './bits';
 import { OddsSheet } from './OddsSheet';
 import { Opening, type OpeningStep } from './Opening';
-import { Roulette } from './Roulette';
 import s from './Gacha.module.css';
 
 const TAB_LABEL: Record<string, string> = { basic: '일반', premium: '프리미엄', special: '스페셜', legend: '레전드', year: '연도', club: '구단' };
@@ -45,7 +44,9 @@ function combosFor(pick: Pick | null) {
 const DEMO_DONE = new Set<string>();
 
 export default function GachaScreen({ query }: ScreenProps) {
-  if (query.get('tab') === 'combo') return <Roulette />;
+  const combo = query.get('tab') === 'combo';
+  useEffect(() => { if (combo) navigate('/combine', { replace: true }); }, [combo]);
+  if (combo) return null;
   return <Store query={query} />;
 }
 
@@ -131,8 +132,8 @@ function Store({ query }: { query: URLSearchParams }) {
               <div key={r.grade} className={s.fact}>
                 <dt><Swatch grade={r.grade} /> {gradeShort(r.grade)}</dt>
                 <dd>
-                  <b className="num">{r.pct < 1 ? r.pct.toFixed(2) : r.pct.toFixed(1)}%</b>
-                  <span>팩당 <span className="num">{(atLeastOne(r.pct) * 100).toFixed(r.pct < 0.5 ? 1 : 0)}%</span></span>
+                  <b className="num">{pctStr(r.pct)}%</b>
+                  <span>팩당 <span className="num">{pctStr(atLeastOne(r.pct) * 100)}%</span></span>
                 </dd>
               </div>
             ))}
@@ -188,7 +189,7 @@ function Store({ query }: { query: URLSearchParams }) {
             <li key={r.grade}>
               <Swatch grade={r.grade} />
               <span>{gradeShort(r.grade)}</span>
-              <b className="num">{r.pct < 1 ? r.pct.toFixed(2) : r.pct.toFixed(1)}%</b>
+              <b className="num">{pctStr(r.pct)}%</b>
             </li>
           ))}
         </ul>
@@ -243,11 +244,11 @@ function Store({ query }: { query: URLSearchParams }) {
         )}
       </section>
 
-      {/* ───── 카드 조합(룰렛) 입구 ───── */}
-      <button type="button" className={s.toCombo} onClick={() => navigate('/gacha?tab=combo')}>
+      {/* ───── 선수조합 입구 (팀관리 › 선수조합) ───── */}
+      <button type="button" className={s.toCombo} onClick={() => navigate('/combine')}>
         <span className={s.toComboText}>
-          <b className="head">카드 조합</b>
-          <span>안 쓰는 카드 5장을 넣고 돌려요. 칸 크기가 곧 확률이에요.</span>
+          <b className="head">선수조합</b>
+          <span>안 쓰는 카드 3~5장으로 새 카드 1장. 공식이 맞으면 위 등급이 잘 떠요.</span>
         </span>
         <Icon name="arrow-right" size={20} />
       </button>
@@ -261,7 +262,7 @@ function Store({ query }: { query: URLSearchParams }) {
           step={demoStep}
           onClose={() => setResult(null)}
           onAgain={affordable ? open : undefined}
-          onCombo={() => { setResult(null); navigate('/gacha?tab=combo'); }}
+          onCombo={() => { setResult(null); navigate('/combine'); }}
         />
       )}
     </div>

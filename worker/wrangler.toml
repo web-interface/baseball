@@ -8,6 +8,7 @@ compatibility_flags = ["nodejs_compat"]
 ALLOWED_ORIGINS = "https://web-interface.github.io,http://localhost:5173,http://127.0.0.1:5173"
 AI_BUDGET_USD = "180"  # 조직 크레딧 $200 — 이 금액(모든 사용자 합계)에 닿으면 Claude 호출을 멈춘다
 AI_DAILY_CALLS = "20"
+AI_DAILY_USD = "5"  # 하루(UTC) 모든 사용자 합계 지출 상한 — AI 뉴스 · 인터뷰 폭주 막기
 
 [[d1_databases]]
 binding = "DB"

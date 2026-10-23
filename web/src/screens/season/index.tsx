@@ -1,20 +1,27 @@
-// 시즌 빨리 감기 #/season — 남은 정규 시즌을 한 번에. 속도 1·2·4배 · 끝까지, 날짜 막대, 순위 경쟁 그래프, 소식 띠,
-// 하이라이트 경기(끝내기 · 노히트 · 대역전)에서 잠깐 멈춰 보여 주고 계속. 끝나면 최종 순위와 개인 기록 1위.
-// 경기는 모두 공용 엔진으로 하루씩 계산(한 날 = 다섯 경기, 날마다 쉬어 가며 — 휴대폰에서 끊기지 않게). 기록은 이 기기에.
+// 경기 준비·진행 #/season — 경기 운영의 가운데. 다음 경기(상대 · 승리 예상 · 예상 선발 · 구장 · 날씨) → 경기 전 준비(라인업 점검 ·
+// 감독 인터뷰) → 진행(지금 바로 경기 · 남은 시즌 빨리 감기) → AI 뉴스(커뮤니티 글) → 지난 경기 → 포스트시즌 · 리그 단계.
+// 순위표 · 개인 기록은 순위·리그 기록(#/league), 지난 경기 박스스코어는 경기 기록(#/games), 일정은 시즌 일정(#/schedule).
+// 빨리 감기: 남은 정규 시즌을 하루씩 공용 엔진으로(한 날 = 다섯 경기) — 속도 1·2·4배 · 끝까지, 하이라이트 경기에서 잠깐 멈춤.
 //   ?go=1 바로 시작 · ?speed=1|2|4|end
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { navigate } from '../../app/router';
-import { Button, Emblem, Icon, Tabs, useToast } from '../../ui';
+import { Button, Emblem, Tabs, useToast } from '../../ui';
 import { ME, playerById, teamById } from '../../game/mock';
 import { longDate, openingDate, shortDate } from '../../season/schedule';
-import { allDays, gbLabel, isOver, leaders, pctLabel, rankLabel, standingsOf, teamLine, useSeason, yearOf, type DayHighlight, type NewsRec } from '../../season/store';
+import { allDays, getSeason, isOver, rankLabel, teamLine, useSeason, yearOf, type DayHighlight, type NewsRec } from '../../season/store';
+import { markFastDay } from '../../game/press';
 import { LeaguePanel, useStartNextSeason } from './LeaguePanel';
 import { PostPanel } from './PostPanel';
 import { playNextDay } from '../../season/run';
-import { LEVEL_KO, aiLevel, ensureClubRosters } from '../../season/rosters';
+import { LEVEL_KO, aiLevel } from '../../season/rosters';
 import type { GameOut } from '../../season/sim';
-import { RankChart } from './RankChart';
+import { NextGame } from '../home/NextGame';
+import { LastGame } from '../home/LastGame';
+import { LEGEND_MAX, evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
+import { useInventory } from '../../game/inventory';
+import { InterviewCard, NewsFeed } from '../press';
+import { boxKeyOfMyGame } from '../../season/box';
 import s from './season.module.css';
 
 type Speed = '1' | '2' | '4' | 'end';
@@ -46,6 +53,7 @@ export default function SeasonScreen({ query }: ScreenProps) {
     try {
       while (runRef.current && alive.current) {
         setBusy(true);
+        { const cur = getSeason(); markFastDay(yearOf(cur), cur.next); } // 빨리 감기로 넘긴 날 — AI 특이사항 뉴스 없음 (문구 틀만)
         const r = await playNextDay();
         setBusy(false);
         if (!r) break;
@@ -74,20 +82,18 @@ export default function SeasonScreen({ query }: ScreenProps) {
 
   useEffect(() => { if (query.get('go') === '1' && !over) void loop(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 순위 경쟁 — 친 날마다 한 칸 (개막 전엔 비어 있음)
-  const dates = useMemo(() => days.slice(0, st.next).map((d) => d.date), [days, st.next]);
   const me = teamById(ME.teamId);
   const ln = teamLine(ME.teamId, st);
   const rec = ln.row;
   const cur = days[Math.min(st.next, days.length - 1)];
   const doneN = st.next, totalN = days.length;
-  const news = st.news.slice(-40).reverse();
+  const news = st.news.slice(-12).reverse();
 
   return (
     <div className={s.screen}>
       <header className={s.top}>
-        <p className={s.kicker}><span className="num">{yearOf(st)}</span> 정규 시즌 · AI 상대 {LEVEL_KO[aiLevel()]}</p>
-        <h2 className={['head', s.title].join(' ')}>{over ? '정규 시즌 끝' : '남은 시즌 빨리 감기'}</h2>
+        <p className={s.kicker}><span className="num">{yearOf(st)}</span> {over ? (st.post ? '포스트시즌' : '정규 시즌 끝') : '정규 시즌'} · 리그 단계 {LEVEL_KO[aiLevel()]}</p>
+        <h2 className={['head', s.title].join(' ')}>경기 준비·진행</h2>
         <div className={s.meRow}>
           <Emblem team={me} size={34} />
           <p className={s.meMain}>
@@ -98,70 +104,124 @@ export default function SeasonScreen({ query }: ScreenProps) {
         </div>
       </header>
 
-      {/* 날짜 막대 */}
-      <section className={s.prog} aria-label="진행">
-        <div className={s.progTop}>
-          <b>{over ? '모든 경기 끝' : cur ? longDate(cur.date) : ''}</b>
-          <span className="num">{doneN}/{totalN}일 {busy && <i className={s.busy}>계산 중</i>}</span>
-        </div>
-        <div className={s.bar} role="progressbar" aria-valuemin={0} aria-valuemax={totalN} aria-valuenow={doneN} aria-label="시즌 진행">
-          <i style={{ width: `${(doneN / Math.max(1, totalN)) * 100}%` }} />
-        </div>
-        <div className={s.progEnds}><span>{shortDate(days[0]?.date ?? openingDate())} 개막</span><span>{shortDate(days[days.length - 1]?.date ?? openingDate())}</span></div>
-      </section>
-
       {/* 포스트시즌 (정규 시즌이 끝나면 — KBO 방식) */}
       <PostPanel />
-      {/* 리그 단계 (AI 상대 난이도 — 자동) · 포스트시즌까지 끝났으면 다음 해 시작 */}
-      <LeaguePanel />
+      {/* 시즌 결산 인터뷰 (정규 시즌이 끝난 뒤 — 가을야구면 포스트시즌 첫 3경기 효과) */}
+      {over && <section className={s.sec} aria-label="시즌 결산 인터뷰"><InterviewCard /></section>}
 
-      {/* 조작 */}
+      {/* 다음 경기 — 상대 · 승리 예상 · 예상 선발 · 구장 · 날씨, 지금 바로 경기 / 라인업 */}
+      {!over && <div className={s.nextWrap}><NextGame inHub /></div>}
+
+      {/* 경기 전 준비 — 라인업 점검 · 감독 인터뷰 */}
       {!over && (
-        <section className={s.ctrl}>
-          <Tabs variant="box" size="s" fill aria-label="속도" value={speed} onChange={setSpeed}
-            items={[{ value: '1', label: '1배' }, { value: '2', label: '2배' }, { value: '4', label: '4배' }, { value: 'end', label: '끝까지' }]} />
-          <div className={s.ctrlBtns}>
-            {running
-              ? <Button size="l" block variant="secondary" icon="pause" onClick={stop}>멈춤</Button>
-              : <Button size="l" block icon="play" onClick={() => void loop()}>{doneN === 0 ? '시작' : '이어서'}</Button>}
-            <Button size="l" variant="ghost" onClick={() => navigate('/match?g=season')} disabled={running}>내 경기 직접 보기</Button>
-          </div>
+        <section className={s.sec} aria-label="경기 전 준비">
+          <p className={s.secH}>경기 전 준비 <small>다음 경기 전에 해 두면 좋아요</small></p>
+          <Prep />
+          <InterviewCard />
         </section>
       )}
 
-      {/* 하이라이트 */}
-      {hl && <HighlightCard h={hl} />}
+      {/* 진행 — 남은 정규 시즌 빨리 감기 */}
+      {!over && (
+        <section className={s.sec} aria-label="남은 시즌 빨리 감기">
+          <p className={s.secH}>남은 시즌 빨리 감기 <small>내 경기도 결과만 — 직접 보려면 '지금 바로 경기'</small></p>
+          <div className={s.prog}>
+            <div className={s.progTop}>
+              <b>{cur ? longDate(cur.date) : ''}</b>
+              <span className="num">{doneN}/{totalN}일 {busy && <i className={s.busy}>계산 중</i>}</span>
+            </div>
+            <div className={s.bar} role="progressbar" aria-valuemin={0} aria-valuemax={totalN} aria-valuenow={doneN} aria-label="시즌 진행">
+              <i style={{ width: `${(doneN / Math.max(1, totalN)) * 100}%` }} />
+            </div>
+            <div className={s.progEnds}><span>{shortDate(days[0]?.date ?? openingDate())} 개막</span><span>{shortDate(days[days.length - 1]?.date ?? openingDate())}</span></div>
+          </div>
+          <div className={s.ctrl}>
+            <Tabs variant="box" size="s" fill aria-label="속도" value={speed} onChange={setSpeed}
+              items={[{ value: '1', label: '1배' }, { value: '2', label: '2배' }, { value: '4', label: '4배' }, { value: 'end', label: '끝까지' }]} />
+            <div className={s.ctrlBtns}>
+              {running
+                ? <Button size="l" block variant="secondary" icon="pause" onClick={stop}>멈춤</Button>
+                : <Button size="l" block variant="secondary" icon="fast" onClick={() => void loop()}>{doneN === 0 ? '빨리 감기 시작' : '빨리 감기 이어서'}</Button>}
+            </div>
+          </div>
+          {hl && <HighlightCard h={hl} />}
+          {running && news.length > 0 && (
+            <ul className={s.ticker} aria-live="polite">
+              {news.slice(0, 4).map((n, i) => <NewsLine key={`${n.idx}-${i}-${n.text}`} n={n} />)}
+            </ul>
+          )}
+        </section>
+      )}
 
-      {/* 소식 띠 */}
-      <section className={s.news} aria-label="소식" aria-live="polite">
-        <p className={s.secH}>소식</p>
-        {news.length ? (
-          <ul>
-            {news.slice(0, 6).map((n, i) => <NewsLine key={`${n.idx}-${i}-${n.text}`} n={n} />)}
-          </ul>
-        ) : <p className={s.empty}>시작하면 연승 · 기록 · 부상 · 비 취소 소식이 여기 흘러요.</p>}
+      {/* AI 뉴스 — 커뮤니티 글 */}
+      <section className={s.sec} aria-label="야구 커뮤니티 소식">
+        <p className={s.secH}>리그 소식 <small>오늘 커뮤니티에서 뜨거운 글</small></p>
+        <NewsFeed limit={6} />
+        {!running && news.length > 0 && (
+          <details className={s.moreNews}>
+            <summary>지난 소식 <span className="num">{news.length}</span>개</summary>
+            <ul>{news.map((n, i) => <NewsLine key={`${n.idx}-${i}-${n.text}`} n={n} />)}</ul>
+          </details>
+        )}
       </section>
 
-      {/* 순위 경쟁 */}
-      <section className={s.sec} aria-label="순위 경쟁">
-        <p className={s.secH}>순위 경쟁 <small>{shortDate(days[0]?.date ?? openingDate())} 개막부터</small></p>
-        <RankChart hist={st.rankHist} dates={dates} total={totalN} />
-      </section>
+      {/* 지난 경기 — 점수판 · 승리 확률 흐름 · 명장면 (+ 박스스코어는 경기 기록에서) */}
+      <div className={s.lastWrap}><LastGame /></div>
+      {st.my.length > 0 && (
+        <p className={s.boxLink}>
+          <button type="button" onClick={() => navigate(`/games?g=${boxKeyOfMyGame(st.my[st.my.length - 1])}`)}>지난 경기 박스스코어 보기 ›</button>
+        </p>
+      )}
 
-      {/* 지금 순위 / 최종 순위 */}
-      <Standings final={over} />
+      {/* 리그 단계 (AI 상대 난이도 — 자동) · 포스트시즌까지 끝났으면 다음 해 시작 */}
+      <LeaguePanel />
 
-      {over && <Leaders />}
       {over && (
         <section className={s.sec}>
           <div className={s.endBtns}>
             {st.post?.champion
               ? <Button size="l" block icon="play" onClick={startNext}><span className="num">{yearOf(st) + 1}</span> 시즌 시작</Button>
               : <Button size="l" block variant="secondary" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>위로 — 포스트시즌</Button>}
-            <Button variant="ghost" onClick={() => navigate('/home')}>홈으로</Button>
           </div>
         </section>
       )}
+
+      {/* 경기 운영 다른 화면 */}
+      <nav className={s.jump} aria-label="경기 운영 더 보기">
+        <button type="button" onClick={() => navigate('/schedule')}><b>시즌 일정</b><small>월별 · 전체 일정</small></button>
+        <button type="button" onClick={() => navigate('/league')}><b>순위·리그 기록</b><small>팀 순위 · 개인 기록</small></button>
+        <button type="button" onClick={() => navigate('/games')}><b>경기 기록</b><small>지난 경기 · 박스스코어</small></button>
+      </nav>
+    </div>
+  );
+}
+
+/** 경기 전 점검 — 팀 종합 · 레전드급 인원 · 비어 있는 자리 · 부상 선수 */
+function Prep() {
+  const inv = useInventory();
+  const st = useSeason();
+  const info = useMemo(() => {
+    const lu = lineupStore.get() ?? initialLineup();
+    const ev = evaluate(lu);
+    const empty = Object.values(lu.field).filter((x) => !x).length + (lu.rotation[0] ? 0 : 1);
+    const hurt = Object.values(ev.units).filter((u) => u?.injured).length;
+    return { ev, empty, hurt };
+  }, [inv, st.next]); // eslint-disable-line react-hooks/exhaustive-deps
+  const { ev, empty, hurt } = info;
+  const warn = empty > 0 || hurt > 0;
+  return (
+    <div className={[s.prep, warn && s.prepWarn].filter(Boolean).join(' ')}>
+      <div className={s.prepMain}>
+        <span className={s.prepK}>팀 종합</span>
+        <b className="num-display">{ev.overall}</b>
+      </div>
+      <ul className={s.prepList}>
+        <li>타격 <b className="num">{ev.parts.find((p) => p.k === 'bat')?.v}</b> · 수비 <b className="num">{ev.parts.find((p) => p.k === 'def')?.v}</b> · 투수 <b className="num">{ev.parts.find((p) => p.k === 'pit')?.v}</b></li>
+        <li>레전드급 타자 <b className="num">{ev.legend.bat}</b>/{LEGEND_MAX.bat} · 투수 <b className="num">{ev.legend.pit}</b>/{LEGEND_MAX.pit}{ev.active.length > 0 && <> · 세트 <b className="num">{ev.active.length}</b>개 켜짐</>}</li>
+        {empty > 0 && <li className={s.prepBad}>비어 있는 자리 <b className="num">{empty}</b>곳</li>}
+        {hurt > 0 && <li className={s.prepBad}>부상 선수 <b className="num">{hurt}</b>명이 엔트리에 있어요</li>}
+      </ul>
+      <Button size="m" variant={warn ? 'primary' : 'secondary'} onClick={() => navigate('/lineup')}>라인업 {warn ? '고치기' : '확인'}</Button>
     </div>
   );
 }
@@ -203,60 +263,5 @@ function NewsLine({ n }: { n: NewsRec }) {
       <span className={s.nlText}>{n.text}</span>
       <span className={['num', s.nlDate].join(' ')}>{shortDate(n.date)}</span>
     </li>
-  );
-}
-
-function Standings({ final }: { final: boolean }) {
-  const st = useSeason();
-  const rows = standingsOf(st);
-  const started = st.next > 0;
-  return (
-    <section className={s.sec} aria-label={final ? '최종 순위' : '지금 순위'}>
-      <p className={s.secH}>{final ? '최종 순위' : '지금 순위'} <small>6위까지 가을야구</small></p>
-      <table className={s.tbl}>
-        <thead><tr><th className={s.cR}>순위</th><th>구단</th><th className={s.cR}>승-무-패</th><th className={s.cR}>승률</th><th className={s.cR}>차</th><th className={[s.cR, s.hideS].join(' ')}>최근</th></tr></thead>
-        <tbody>
-          {rows.map((r, i) => {
-            const t = teamById(r.teamId);
-            return (
-              <tr key={r.teamId} className={[r.teamId === ME.teamId && s.mine, i === 5 && s.cut].filter(Boolean).join(' ') || undefined}>
-                <td className={['num', s.cR, s.rk].join(' ')}>{started ? r.rank : '—'}</td>
-                <td><span className={s.who}><Emblem team={t} size={20} /><b>{t.short}</b></span></td>
-                <td className={['num', s.cR].join(' ')}>{r.w}-{r.d}-{r.l}</td>
-                <td className={['num', s.cR, s.pct].join(' ')}>{pctLabel(r)}</td>
-                <td className={['num', s.cR].join(' ')}>{gbLabel(r)}</td>
-                <td className={[s.cR, s.hideS, s.streak].join(' ')}>{r.streak}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </section>
-  );
-}
-
-function Leaders() {
-  const st = useSeason();
-  // AI 구단 가상 선수 이름 — 화면을 다시 열었을 때도 찾게 선수단을 먼저 만든다
-  const list = useMemo(() => { ensureClubRosters(); return leaders(st); }, [st]);
-  return (
-    <section className={s.sec} aria-label="개인 기록 1위">
-      <p className={s.secH}>개인 기록 1위 <small>개막부터 친 경기</small></p>
-      <ul className={s.leaders}>
-        {list.map((l) => {
-          const p = playerById(l.id);
-          const t = teamById(l.team);
-          return (
-            <li key={l.key} className={l.team === ME.teamId ? s.mine : undefined}>
-              <span className={s.ldLabel}>{l.label}</span>
-              <span className={s.ldWho}><Emblem team={t} size={16} /><b>{p?.name ?? '선수'}</b><small>{t.short}</small></span>
-              <span className={['num-display', s.ldVal].join(' ')}>{l.value}</span>
-              <small className={s.ldSub}>{l.sub}</small>
-            </li>
-          );
-        })}
-      </ul>
-      {!list.length && <p className={s.empty}><Icon name="info" size={13} /> 아직 기록이 없어요.</p>}
-    </section>
   );
 }

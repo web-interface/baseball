@@ -6,6 +6,7 @@ import { freezeAiRef } from './league';
 import { startTime, type DayGames } from './schedule';
 import { allDays, applyDay, getSeason, isOver, myGameOf, regularCount, setPending, type DayHighlight, type DayOutcome } from './store';
 import { rainedOut } from './weather';
+import { noteRun } from './box';
 import type { GameRun } from './sim';
 
 export const loadSim = () => import('./sim');
@@ -45,9 +46,12 @@ export async function computeDay(idx: number, opts: { myRun?: GameRun; snap?: Li
     if (regular && rainedOut(d.date, h, s.seed)) return { cancelled: true as const, away: a, home: h };
     const my = a === ME.teamId || h === ME.teamId;
     if (my) mine = true;
-    if (my && opts.myRun) return opts.myRun.out;
+    if (my && opts.myRun) { noteRun(opts.myRun); return opts.myRun.out; } // [경기 기록] 홈런 이닝 · 결승타 → 박스스코어 (season/box)
     const roster = my ? myRoster(snap) : undefined;
-    return sim.runGame(s.seed, d.day, d.date, a, h, roster ? (a === ME.teamId ? { away: roster } : { home: roster }) : {}).out;
+    // [경기 기록] 내 경기는 기록(log)과 함께 — 박스스코어의 홈런 이닝 · 결승타 (기록을 켜도 결과는 같다, 엔진은 결정적)
+    const run = sim.runGame(s.seed, d.day, d.date, a, h, roster ? { ...(a === ME.teamId ? { away: roster } : { home: roster }), log: true } : {});
+    if (my) noteRun(run);
+    return run.out;
   });
   return { idx, games, mySnap: mine ? snap : undefined };
 }

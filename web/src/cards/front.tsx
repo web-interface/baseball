@@ -37,6 +37,15 @@ export function weatherOf(p: Player): WeatherKey | null {
   return best;
 }
 export const WEATHER_KO: Record<WeatherKey, string> = { heat: '더위에 강함', cold: '추위에 강함', rain: '비에 강함', day: '낮 경기에 강함' };
+const WEAK_KO: Record<WeatherKey, string> = { heat: '더위에 약함', cold: '추위에 약함', rain: '비에 약함', day: '낮 경기에 약함' };
+/** 날씨 동그라미 설명 — 궁합 · 상극 ('더위에 강함 · 추위에 약함') */
+export function weatherTitle(p: Player): string {
+  const good = weatherOf(p);
+  let bad: WeatherKey | null = null, lo = 0;
+  for (const [k, x] of Object.entries(p.weather) as [WeatherKey, number][]) if (x < lo) { lo = x; bad = k; }
+  if (!good && !bad) return '날씨 체질 없음';
+  return [good && `궁합 · ${WEATHER_KO[good]}`, bad && `상극 · ${WEAK_KO[bad]}`].filter(Boolean).join(' / ');
+}
 
 /** 날씨 동그라미 안 그림 — 더위 불꽃 · 추위 눈송이 · 비 우산 · 낮 해 */
 export function WxIcon({ k }: { k: WeatherKey | null }) {

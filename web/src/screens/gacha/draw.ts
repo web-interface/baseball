@@ -4,7 +4,8 @@
 
 import { useSyncExternalStore } from 'react';
 import { CARDS, PACKS, PLAYERS, teamByCode } from '../../game/mock';
-import { addCards, useForRoulette, useInventory } from '../../game/inventory';
+import { addCards, lineupIds, ownedCard, spareOf, useForRoulette, useInventory } from '../../game/inventory';
+import { cryptoRandom, rollCombine, type CombineRoll, type CombineView } from '../../game/combine';
 import { GRADES } from '../../game/grades';
 import { spend, useWallet } from '../../game/wallet';
 import { PITCH_KO, POS_KO } from '../../game/labels';
@@ -111,6 +112,15 @@ export function oddsFor(pack: Pack, pick?: Pick | null): OddsView {
     .map((o) => ({ grade: o.grade, base: o.pct, pct: (o.pct * 100) / sum }))
     .sort((a, b) => rarity(b.grade) - rarity(a.grade));
   return { rows, missing };
+}
+
+/** 확률 글(% 빼고) — 아주 작은 값도 0.00 으로 뭉개지지 않게 유효 숫자 2~3자리 (0.001 · 0.025 · 0.154 · 2.1 · 82.7) */
+export function pctStr(v: number): string {
+  if (!(v > 0)) return '0';
+  if (v >= 10) return v.toFixed(1);
+  if (v >= 1) return v.toFixed(2).replace(/0$/, '').replace(/\.$/, '');
+  const d = Math.min(6, 2 - Math.floor(Math.log10(v)));
+  return v.toFixed(d).replace(/0+$/, '').replace(/\.$/, '');
 }
 
 /** 30장 중 1장 이상 나올 확률 */
@@ -408,6 +418,36 @@ export function rollCombo(slots: ComboSlot[], use: Record<string, number>, seed?
   receive([res]);
   bump();
   return { slot: k, result: res };
+}
+
+/* ───────── 선수조합 (#/combine) — 조합 공식(game/combine)이 정한 확률로 결과를 정해 바로 저장 ───────── */
+export type ComboWithResult =
+  | { ok: true; requestId: string; result: PulledCard; roll: CombineRoll }
+  | { ok: false; why: 'material' | 'gp' | 'pool' };
+
+/**
+ * 선수조합 한 번 (목업 서버) — 재료 확인 → 결과 정하기(난수, 기본 crypto) → 비용 → 재료 빼기 → 결과 카드 넣기를 한 번에.
+ * 룰렛 연출은 돌려준 결과를 따라갈 뿐이다. 실패하면 아무것도 안 바뀐다:
+ *  · material: 재료 장수가 view 와 다르거나, 남는 장보다 많이 쓰거나(라인업 · 강화 · 훈련 카드 마지막 1장 · 특별 선수), 잠근 카드
+ *  · gp: pay() 가 false (비용 모자람) · pool: 카드 풀이 빔(일어나지 않아야 함)
+ * 결과 카드는 넣은 재료와 다른 카드로 (game/combine 의 풀 넓히기 — 끝까지 재료 카드뿐일 때만 같은 카드).
+ */
+export function rollComboWith(o: { view: CombineView; use: Record<string, number>; pay?: () => boolean; rand?: () => number; seed?: string }): ComboWithResult {
+  const { view, use } = o;
+  const guard = lineupIds();
+  const total = Object.values(use).reduce((a, b) => a + b, 0);
+  const bad = Object.entries(use).some(([id, k]) => !(k > 0) || !Number.isInteger(k) || spareOf(id, guard) < k || !!ownedCard(id)?.locked);
+  if (!view.ready || total !== view.n || bad) return { ok: false, why: 'material' };
+  const roll = rollCombine(view, o.rand ?? (o.seed != null ? rng(o.seed) : cryptoRandom), new Set(Object.keys(use)));
+  if (!roll) return { ok: false, why: 'pool' };
+  if (o.pay && !o.pay()) return { ok: false, why: 'gp' };
+  if (!useForRoulette(use)) return { ok: false, why: 'material' };
+  state.pulls += 1;
+  const requestId = `combine-${Date.now().toString(36)}-${state.pulls}`;
+  const res = pulledOf(roll.card, 0);
+  receive([res]);
+  bump();
+  return { ok: true, requestId, result: res, roll };
 }
 
 /* ───────── 표시 도움 ───────── */

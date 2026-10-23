@@ -12,6 +12,7 @@ import { FIRST_DAY, OPENING_DATE, SEASON_GAMES, openingDate, regularDays, resche
 import { closeYear, seasonYear, type LeagueYear } from './league';
 import type { BatRow, GameOut, PitRow } from './sim';
 import type { PostState } from './post';
+import { saveMyBox } from './box';
 
 export interface TeamRec { w: number; d: number; l: number; rs: number; ra: number; streak: number; last10: string }
 export interface GameRec { a: string; h: string; s: [number, number]; inn?: number; wo?: 1; c?: 1 }
@@ -359,6 +360,8 @@ export function applyDay(out: DayOutcome): DayHighlight[] {
         line: [g.line[0].slice(), g.line[1].slice()], hits: [g.hits[0], g.hits[1]], errors: [g.errors[0], g.errors[1]],
         dec: { w: g.decision.win, l: g.decision.loss, s: g.decision.save },
       });
+      // [경기 기록] 내 경기 박스스코어를 따로 저장 ('bb.box.v1' — season/box, 화면 #/games)
+      saveMyBox(s, out.idx, g, s.pending && s.pending.idx === out.idx ? s.pending.snap : out.mySnap);
     }
   }
   s.results[out.idx] = recs;

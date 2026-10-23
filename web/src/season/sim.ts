@@ -5,7 +5,8 @@ import {
   type GameInput, type GameResult, type Park, type PitRole, type PlayerIn, type TeamIn,
 } from '../../../shared/engine/index.ts';
 import { TEAMS, teamById } from '../game/mock';
-import type { AttrKey, Player, Pos } from '../game/types';
+import type { AttrKey, Player, Pos, WeatherKey } from '../game/types';
+import { condsOf, weatherFx } from '../game/weatherFit';
 import type { BatKey, PitKey, SetEffect } from '../game/sets';
 import { rosterOf, type ClubRoster } from './rosters';
 import { startTime } from './schedule';
@@ -98,7 +99,8 @@ const POST_RULES = { ...RULES, maxInnings: 15 };
 
 /* ───────── 선수단 → 엔진 팀 ───────── */
 export interface SideIn { team: TeamIn; webOf: Map<number, string>; idOf: Map<string, number>; roster: ClubRoster }
-export function teamIn(r: ClubRoster, day: number, idBase: number): SideIn {
+/** conds — 그 경기에 걸리는 날씨(더위 · 추위 · 비 · 낮 경기): 선수마다 궁합이면 +, 상극이면 − (game/weatherFit) */
+export function teamIn(r: ClubRoster, day: number, idBase: number, conds: WeatherKey[] = []): SideIn {
   const list: Player[] = [];
   const seen = new Set<string>();
   const add = (p: Player | null | undefined) => { if (p && !seen.has(p.id)) { seen.add(p.id); list.push(p); } };
@@ -112,7 +114,9 @@ export function teamIn(r: ClubRoster, day: number, idBase: number): SideIn {
   const players = list.map((p, i) => {
     const id = idBase + i;
     idOf.set(p.id, id); webOf.set(id, p.id);
-    return toPlayerIn(p, id, r.delta.get(p.id) ?? 0, r.setFx.get(p.id), r.enh.get(p.id) ?? 0, r.train?.get(p.id));
+    const wfx = conds.length ? weatherFx(p, conds) : [];
+    const extra = wfx.length ? [...(r.train?.get(p.id) ?? []), ...wfx] : r.train?.get(p.id);
+    return toPlayerIn(p, id, r.delta.get(p.id) ?? 0, r.setFx.get(p.id), r.enh.get(p.id) ?? 0, extra);
   });
   const rot = r.rotation.length ? r.rotation : r.bullpen.slice(0, 1);
   const sp = rot[((day % rot.length) + rot.length) % rot.length];
@@ -134,7 +138,11 @@ export function teamIn(r: ClubRoster, day: number, idBase: number): SideIn {
 }
 
 /* ───────── 한 경기 ───────── */
-export interface BatRow { id: string; team: string; PA: number; AB: number; H: number; D: number; T: number; HR: number; RBI: number; R: number; BB: number; SO: number; SB: number }
+export interface BatRow {
+  id: string; team: string; PA: number; AB: number; H: number; D: number; T: number; HR: number; RBI: number; R: number; BB: number; SO: number; SB: number;
+  /** [경기 기록] 박스스코어용 — 타순 1~9(교체 선수는 들어간 자리) · 포지션 ('CF' · 'PH' …). season/box 가 저장한다 */
+  ord?: number; pos?: string;
+}
 export interface PitRow { id: string; team: string; outs: number; H: number; R: number; ER: number; BB: number; SO: number; HR: number; W: number; L: number; SV: number; HLD: number; GS: number }
 export interface GameOut {
   away: string; home: string; date: string;
@@ -156,11 +164,12 @@ export interface GameRun { out: GameOut; result: GameResult; input: GameInput; a
 /** 한 경기 — post 면 포스트시즌(연장 15회 · 큰 경기 압박 ↑ · 다른 시드) */
 export function runGame(seasonSeed: string, day: number, date: string, awayId: string, homeId: string, opts: { log?: boolean; away?: ClubRoster; home?: ClubRoster; post?: boolean } = {}): GameRun {
   const ai = TEAMS.findIndex((t) => t.id === awayId), hi = TEAMS.findIndex((t) => t.id === homeId);
-  const away = teamIn(opts.away ?? rosterOf(awayId), day + ai, 1000 + ai * 100);
-  const home = teamIn(opts.home ?? rosterOf(homeId), day + hi, 1000 + hi * 100);
+  const wx = weatherOf(date, homeId, seasonSeed);
+  const conds = condsOf(wx); // 날씨 궁합 — 두 팀 모두 같은 규칙
+  const away = teamIn(opts.away ?? rosterOf(awayId), day + ai, 1000 + ai * 100, conds);
+  const home = teamIn(opts.home ?? rosterOf(homeId), day + hi, 1000 + hi * 100, conds);
   const time = startTime(date);
   const startMin = Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
-  const wx = weatherOf(date, homeId, seasonSeed);
   const input: GameInput = {
     engineVer: ENGINE_VER,
     gameId: `s27-${opts.post ? 'p' : ''}${day}-${awayId}-${homeId}`,
@@ -181,7 +190,7 @@ export function runGame(seasonSeed: string, day: number, date: string, awayId: s
   const pit: PitRow[] = [];
   const decision: GameOut['decision'] = {};
   ([0, 1] as const).forEach((side) => {
-    for (const b of result.box.bat[side]) bat.push({ id: web(side, b.pid), team: teamOf(side), PA: b.PA, AB: b.AB, H: b.H, D: b.D, T: b.T, HR: b.HR, RBI: b.RBI, R: b.R, BB: b.BB + b.HBP, SO: b.SO, SB: b.SB });
+    for (const b of result.box.bat[side]) bat.push({ id: web(side, b.pid), team: teamOf(side), PA: b.PA, AB: b.AB, H: b.H, D: b.D, T: b.T, HR: b.HR, RBI: b.RBI, R: b.R, BB: b.BB + b.HBP, SO: b.SO, SB: b.SB, ord: b.ord, pos: b.pos });
     for (const p of result.box.pit[side]) {
       pit.push({ id: web(side, p.pid), team: teamOf(side), outs: p.outs, H: p.H, R: p.R, ER: p.ER, BB: p.BB + p.HBP, SO: p.SO, HR: p.HR, W: p.W, L: p.L, SV: p.SV, HLD: p.HLD, GS: p.GS });
       if (p.W) decision.win = web(side, p.pid);

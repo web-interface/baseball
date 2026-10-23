@@ -27,6 +27,7 @@ export function Sheet({ open, onClose, title, sub, footer, dismissible = true, h
   const [mounted, setMounted] = useState(open);
   const [closing, setClosing] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
+  const root = useRef<HTMLDivElement>(null);
   const lastFocus = useRef<Element | null>(null);
   const titleId = useId();
 
@@ -57,9 +58,32 @@ export function Sheet({ open, onClose, title, sub, footer, dismissible = true, h
     };
   }, [mounted, closing, dismissible, onClose]);
 
+  // 휴대폰 — 시트 안에서는 목록만 스크롤된다. 머리 · 바깥을 밀거나, 목록 끝에서 더 당겨도 뒤 화면이 움직이거나
+  // '당겨서 새로고침'으로 화면이 날아가지 않게 (overscroll-behavior 를 모르는 옛 iOS 까지 — 터치 이동을 직접 막는다)
+  useEffect(() => {
+    const el = root.current;
+    if (!el || !mounted) return;
+    let x0 = 0, y0 = 0;
+    const start = (e: TouchEvent) => { x0 = e.touches[0]?.clientX ?? 0; y0 = e.touches[0]?.clientY ?? 0; };
+    const move = (e: TouchEvent) => {
+      if (e.touches.length > 1) return; // 두 손가락 확대는 그대로
+      const t = e.target as Element | null;
+      const body = t?.closest?.('[data-sheet-body]') as HTMLElement | null;
+      if (!body) { if (e.cancelable) e.preventDefault(); return; }
+      const dx = (e.touches[0]?.clientX ?? 0) - x0, dy = (e.touches[0]?.clientY ?? 0) - y0;
+      if (Math.abs(dx) > Math.abs(dy)) return; // 가로로 미는 목록은 그대로
+      const atTop = body.scrollTop <= 0;
+      const atEnd = body.scrollTop + body.clientHeight >= body.scrollHeight - 1;
+      if (((dy > 0 && atTop) || (dy < 0 && atEnd)) && e.cancelable) e.preventDefault();
+    };
+    el.addEventListener('touchstart', start, { passive: true });
+    el.addEventListener('touchmove', move, { passive: false });
+    return () => { el.removeEventListener('touchstart', start); el.removeEventListener('touchmove', move); };
+  }, [mounted]);
+
   if (!mounted) return null;
   return createPortal(
-    <div className={[s.root, closing && s.closing].filter(Boolean).join(' ')}>
+    <div ref={root} className={[s.root, closing && s.closing].filter(Boolean).join(' ')}>
       <div className={s.scrim} onClick={dismissible ? onClose : undefined} aria-hidden />
       <div
         ref={panel}
@@ -79,7 +103,7 @@ export function Sheet({ open, onClose, title, sub, footer, dismissible = true, h
             {dismissible && <IconButton icon="close" label="닫기" onClick={onClose} className={s.close} />}
           </header>
         )}
-        <div className={s.body}>{children}</div>
+        <div className={s.body} data-sheet-body>{children}</div>
         {footer && <footer className={s.foot}>{footer}</footer>}
       </div>
     </div>,

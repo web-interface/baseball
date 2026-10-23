@@ -9,6 +9,7 @@
 import { ME } from '../game/mock';
 import { myRoster } from './rosters';
 import { allDays, getSeason, isOver, setPost, standingsOf } from './store';
+import { savePostBox } from './box';
 import type { GameRun } from './sim';
 
 export type SeriesId = 'wc' | 'spo' | 'po' | 'ks';
@@ -161,6 +162,8 @@ export function finishPostMyGame(m: { away: string; home: string; date: string; 
   const nx = nextPostGame(p);
   if (!p || !nx || !nx.mine || nx.no !== m.no || nx.date !== m.date || nx.away !== m.away) return;
   setPost(apply(p, { away: m.away, home: m.home, score: run.out.score, innings: run.out.innings }, true));
+  // [경기 기록] 포스트시즌 내 경기 박스스코어 (season/box — 키 p<n>, n = 이 경기 앞까지 치른 포스트시즌 경기 수)
+  savePostBox(getSeason(), p.n, nx.series.id, m.no, run);
 }
 /** 시리즈 상황 글 — '사자즈 2승 1패 · 4차전' */
 export function seriesLine(sr: SeriesRec, teamShort: (id: string) => string) {

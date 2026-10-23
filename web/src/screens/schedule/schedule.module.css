@@ -1,0 +1,129 @@
+/* 시즌 일정 — 기록지 괘선 달력(7칸) · 날짜별 목록. 칸 안은 엠블럼 · 홈/원정 · 결과 또는 시작 시각 */
+.screen { padding-bottom: 36px; }
+.head { padding: 18px var(--gutter) 0; }
+.headTop { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line-2); }
+.h { font-size: 19px; text-shadow: var(--misreg); white-space: nowrap; }
+.meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; margin-top: 8px; font-size: 12px; color: var(--fg-3); }
+.meta b { color: var(--fg); font-size: 13px; }
+.months { margin: 8px var(--gutter) 0; }
+.months [role='tablist'] { gap: 16px; }
+
+/* 달력 */
+.cal { margin: 12px var(--gutter) 0; container-type: inline-size; }
+.calSum { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding-bottom: 8px; font-size: 12px; color: var(--fg-3); }
+.calSum b { margin-right: 2px; font-family: var(--font-head); font-size: 17px; font-weight: var(--head-weight); letter-spacing: var(--head-tracking); color: var(--fg); }
+.calSum b .num { font-size: 19px; }
+.grid { border-top: 1px solid var(--line-2); border-left: 1px solid var(--line); }
+.wk, .week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.wk span { padding: 5px 0 4px; font-size: 10.5px; font-weight: 700; text-align: center; color: var(--fg-3); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line-2); }
+.cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  min-height: 64px;
+  padding: 17px 2px 6px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  color: var(--fg);
+}
+.blank { background: none; }
+a.cell { transition: background-color var(--dur-1); }
+a.cell:hover { background-color: var(--surface-2); }
+.cDate { position: absolute; top: 4px; left: 4px; font-family: var(--font-num); font-size: 11px; font-weight: 600; line-height: 1; color: var(--fg-2); font-variant-numeric: tabular-nums; }
+.sun { color: var(--bad) !important; }
+.sat { color: var(--info) !important; }
+.cTag { position: absolute; top: 4px; right: 3px; font-size: 9px; font-weight: 700; line-height: 1; letter-spacing: -.05em; color: var(--fg-3); }
+.cHome { color: var(--fg); }
+.cPost { color: var(--accent); font-family: var(--font-num); letter-spacing: 0; font-weight: 700; }
+.cOpp { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; max-width: 100%; }
+.cOpp small { display: none; max-width: 100%; overflow: hidden; font-size: 9.5px; letter-spacing: -.06em; line-height: 1.1; white-space: nowrap; color: var(--fg-2); }
+@container (min-width: 350px) {
+  .cOpp small { display: block; }
+  .cell { min-height: 74px; }
+}
+.cRes { display: flex; align-items: baseline; justify-content: center; gap: 2px; margin-top: auto; padding-top: 4px; font-size: 11.5px; line-height: 1; white-space: nowrap; }
+.cRes em { font-style: normal; font-size: 10.5px; font-weight: 800; }
+.cRes b { font-weight: 700; }
+.rW em, .rW b { color: var(--accent); }
+.rL em { color: var(--fg-3); }
+.rL b { color: var(--fg-2); }
+.rD em, .rD b { color: var(--fg-2); }
+.gW { background-color: var(--accent-weak); }
+.cUp { align-items: center; gap: 3px; color: var(--fg-2); }
+.cUp b { font-weight: 600; }
+.cCancel { align-items: center; gap: 2px; font-size: 10.5px; font-weight: 700; color: var(--fg-3); }
+.gC .cOpp { opacity: .4; }
+.wxRain { color: var(--info); }
+.cOff { margin: auto 0; font-size: 10.5px; color: var(--fg-4); }
+.outside .cDate { color: var(--fg-4) !important; opacity: .7; }
+.other .cDate { color: var(--fg-3); }
+.cOther { margin-top: 2px; font-family: var(--font-num); font-size: 12px; font-weight: 700; color: var(--fg-2); }
+.cOtherSub { margin-top: auto; font-size: 9.5px; color: var(--fg-3); white-space: nowrap; }
+.today { box-shadow: inset 0 0 0 2px var(--accent); }
+.today .cDate { color: var(--accent) !important; font-weight: 800; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; font-size: 11px; color: var(--fg-3); }
+.legend span { display: inline-flex; align-items: center; gap: 4px; }
+.lgToday { display: inline-block; width: 10px; height: 10px; box-shadow: inset 0 0 0 2px var(--accent); }
+
+/* 전체 일정 — 날짜별 */
+.listBar { display: flex; justify-content: flex-end; margin: 10px var(--gutter) 0; }
+.dlist { margin: 0 var(--gutter); }
+.dsec { padding-top: 12px; }
+.dH { display: flex; align-items: baseline; gap: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--line-2); font-size: 12.5px; }
+.dH b { font-weight: 800; letter-spacing: -.02em; }
+.dH small { font-size: 11px; font-weight: 600; color: var(--fg-3); }
+.todayTag { padding: 1px 5px; font-style: normal; font-size: 10.5px; font-weight: 800; color: var(--accent-ink); background: var(--accent); }
+.dToday .dH { border-bottom-color: var(--accent); }
+
+.mline { display: grid; grid-template-columns: 62px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); color: var(--fg); }
+a.mline:hover .lOppTxt b { color: var(--accent); }
+.lWhen b { font-size: 16px; font-weight: 700; }
+.lRes { display: inline-flex; align-items: baseline; gap: 4px; }
+.lRes em { font-style: normal; font-size: 12px; font-weight: 800; }
+.lOpp { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.lOppTxt { display: flex; flex-direction: column; min-width: 0; }
+.lOppTxt b { font-size: 14px; font-weight: 750; letter-spacing: -.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color var(--dur-1); }
+.lOppTxt small { font-size: 11px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lSide { display: flex; align-items: center; gap: 6px; color: var(--fg-3); }
+.lWx { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: var(--fg-2); white-space: nowrap; }
+.lNote { font-size: 11px; color: var(--fg-3); white-space: nowrap; }
+.lCancel { font-style: normal; font-size: 12.5px; font-weight: 700; color: var(--fg-3); }
+.lGo { color: var(--fg-4); }
+
+.aline { display: grid; grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr) 34px; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--line); color: var(--fg-2); }
+a.aline:hover .aMid { color: var(--accent); }
+.aT { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.aAway { justify-content: flex-end; }
+.aT b { font-size: 13.5px; font-weight: 600; letter-spacing: -.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aWin b { color: var(--fg); font-weight: 800; }
+.aMid { display: flex; align-items: baseline; justify-content: center; gap: 5px; font-size: 17px; transition: color var(--dur-1); }
+.aMid i { font-style: normal; font-size: 13px; color: var(--fg-4); }
+.aMid b { font-weight: 600; }
+.aWinN { color: var(--fg); font-weight: 800 !important; }
+.aTime { font-size: 14px; color: var(--fg-2); }
+.aEnd { font-size: 10.5px; color: var(--fg-3); text-align: right; white-space: nowrap; }
+.aMine .aline { background: var(--accent-weak); box-shadow: inset 3px 0 0 var(--accent); padding-left: 6px; }
+
+.empty { margin: 16px var(--gutter) 0; padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--fg-2); }
+.toHub { display: inline-flex; align-items: center; gap: 2px; margin-top: 12px; font-size: 13px; font-weight: 700; color: var(--accent); }
+
+/* broadcast — 검정 머리줄 */
+:global([data-theme='broadcast']) .headTop, :global([data-theme='broadcast']) .dH { border-bottom: 2px solid var(--fg); }
+:global([data-theme='broadcast']) .wk span { background: var(--inv); color: var(--inv-fg-2); border-bottom-color: var(--inv); }
+:global([data-theme='broadcast']) .wk .sun { color: #FF8A80 !important; }
+:global([data-theme='broadcast']) .wk .sat { color: #8FB8FF !important; }
+:global([data-theme='broadcast']) .today { box-shadow: inset 0 0 0 3px var(--accent); }
+:global([data-theme='broadcast']) .aMine .aline { box-shadow: inset 5px 0 0 var(--accent); }
+
+/* classic — 기록지 괘선 · 별색 */
+:global([data-theme='classic']) .headTop, :global([data-theme='classic']) .dH { border-bottom: 1.5px solid var(--fg); }
+:global([data-theme='classic']) .grid { border-top: 1.5px solid var(--fg); }
+:global([data-theme='classic']) .gW { background-color: color-mix(in srgb, var(--club) 10%, transparent); }
+:global([data-theme='classic']) .rW em, :global([data-theme='classic']) .rW b, :global([data-theme='classic']) .cPost, :global([data-theme='classic']) .toHub { color: var(--club-text); }
+:global([data-theme='classic']) .today { box-shadow: inset 0 0 0 2px var(--club); }
+:global([data-theme='classic']) .today .cDate { color: var(--club-text) !important; }
+:global([data-theme='classic']) .lgToday { box-shadow: inset 0 0 0 2px var(--club); }
+:global([data-theme='classic']) .todayTag { background: var(--club); color: var(--club-ink); }
+:global([data-theme='classic']) .aMine .aline { background: color-mix(in srgb, var(--club) 10%, transparent); box-shadow: inset 3px 0 0 var(--club); }

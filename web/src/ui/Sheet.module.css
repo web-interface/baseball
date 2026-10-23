@@ -51,7 +51,12 @@
 .title { font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 19px; line-height: 1.25; }
 .sub { margin-top: 4px; font-size: 13px; color: var(--fg-3); }
 .close { color: var(--fg-2); margin-top: -4px; }
-.body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; padding: 0 var(--gutter) 16px; }
+.body { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; padding: 0 var(--gutter) 16px; }
+/* 시트 안은 위아래 스크롤만 — 좌우로 밀려 흔들리지 않게 (안쪽 가로 목록은 자기 스크롤 그대로) */
+.panel { overflow-x: hidden; }
+/* 시트 바깥 · 머리는 밀어도 아무것도 안 움직인다 (목록만 스크롤) */
+.root { overscroll-behavior: none; }
+.scrim, .grip, .head, .foot { touch-action: none; }
 .head, .foot, .grip { flex: none; }
 .foot {
   display: flex;

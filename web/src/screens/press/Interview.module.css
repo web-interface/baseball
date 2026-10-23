@@ -1,0 +1,95 @@
+/* 감독 인터뷰 — 카드(경기 전 준비 칸) · 시트(질문 → 답 → 속보 자막 → 내일 아침 기사) */
+.card {
+  margin-top: 10px; padding: 12px 14px 12px;
+  border: 1px solid var(--line-2); border-radius: var(--r-3);
+  background: var(--surface);
+}
+.slim { padding: 10px 14px; }
+.note { margin-top: 10px; font-size: 12px; color: var(--fg-3); }
+
+.kicker { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 11.5px; color: var(--fg-3); }
+.kicker b { font-weight: 800; color: var(--fg-2); letter-spacing: -.01em; }
+.kicker span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.teaser { margin-top: 6px; font-size: 15px; font-weight: 700; letter-spacing: -.035em; line-height: 1.4; word-break: keep-all; }
+.meta { margin-top: 3px; font-size: 12px; color: var(--fg-3); letter-spacing: -.02em; }
+.headline { margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
+.headline span { font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 16.5px; line-height: 1.35; word-break: keep-all; }
+.headline small { font-size: 11px; color: var(--fg-3); }
+.fx { margin-top: 8px; font-size: 12px; line-height: 1.5; color: var(--fg-2); }
+.fx b { font-weight: 800; color: var(--fg); }
+.fxItems { display: block; color: var(--fg); font-weight: 650; letter-spacing: -.02em; }
+.actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.lock { font-size: 11.5px; color: var(--fg-3); }
+
+/* 시트 */
+.waitBox { padding: 18px 0; }
+.wait { font-size: 14px; color: var(--fg-2); }
+.skel { display: grid; gap: 8px; margin-top: 14px; }
+.skel i { display: block; height: 10px; border-radius: 2px; background: var(--line-2); animation: pulse 1.1s ease-in-out infinite alternate; }
+.skel i:nth-child(2) { width: 80%; animation-delay: .2s; }
+.skel i:nth-child(3) { width: 55%; animation-delay: .4s; }
+@keyframes pulse { from { opacity: .4; } to { opacity: 1; } }
+
+.step { padding-top: 2px; }
+.count { font-size: 11.5px; color: var(--fg-3); }
+.count b { font-size: 15px; color: var(--fg); }
+.by { margin-top: 10px; font-size: 12px; font-weight: 650; color: var(--fg-2); }
+.to { color: var(--fg-3); font-weight: 500; }
+.qText {
+  margin-top: 6px; padding-left: 12px; border-left: 3px solid var(--accent);
+  font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking);
+  font-size: 19px; line-height: 1.4; word-break: keep-all;
+}
+.opts { display: grid; gap: 8px; margin-top: 16px; }
+.opt {
+  display: flex; flex-direction: column; gap: 4px; width: 100%; min-height: 56px; padding: 11px 14px;
+  text-align: left; color: var(--fg); background: var(--surface-2); border: 1px solid var(--line-2); border-radius: var(--r-3); cursor: pointer;
+}
+.opt:hover { border-color: var(--line-3); }
+.opt:active { transform: translateY(1px); }
+.opt:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.optText { font-size: 15px; font-weight: 650; letter-spacing: -.03em; line-height: 1.4; word-break: keep-all; }
+.optMeta { font-size: 11.5px; color: var(--fg-3); letter-spacing: -.02em; }
+.optMeta b { color: var(--fg-2); font-weight: 750; }
+
+/* 답 공개 — 따옴표 인용 → 속보 자막 */
+.reveal { margin-top: 16px; }
+.quote { margin: 0; display: flex; flex-direction: column; gap: 4px; animation: quote 360ms var(--ease-out) both; }
+.who { font-size: 11px; font-weight: 800; letter-spacing: .04em; color: var(--fg-3); }
+.said { font-size: 18px; font-weight: 700; letter-spacing: -.035em; line-height: 1.45; word-break: keep-all; }
+.said::before { content: '“'; color: var(--accent); margin-right: 1px; }
+.said::after { content: '”'; color: var(--accent); margin-left: 1px; }
+.ticker {
+  display: flex; align-items: stretch; margin-top: 14px; overflow: hidden;
+  background: var(--inv); color: var(--inv-fg); border-radius: var(--r-2);
+  animation: slide 420ms 180ms var(--ease-out) both;
+}
+.ticker b { flex: none; display: grid; place-items: center; padding: 0 10px; font-size: 12px; font-weight: 800; letter-spacing: .02em; background: var(--accent); color: var(--accent-ink); }
+.ticker span { padding: 9px 12px; font-size: 14.5px; font-weight: 700; letter-spacing: -.03em; line-height: 1.35; word-break: keep-all; }
+.eff { margin-top: 8px; font-size: 12px; color: var(--fg-2); animation: quote 300ms 420ms var(--ease-out) both; }
+@keyframes quote { from { opacity: 0; transform: translateY(6px); } }
+@keyframes slide { from { opacity: 0; transform: translateX(-14px); } }
+
+/* 결과 — 내일 아침 기사 */
+.result { padding-top: 2px; }
+.resH { margin-top: 14px; padding-bottom: 6px; border-bottom: 1px solid var(--line-2); font-size: 12px; font-weight: 800; color: var(--fg-2); }
+.resH:first-child { margin-top: 0; }
+.articles li { display: flex; flex-direction: column; gap: 2px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.outlet { font-size: 11px; font-weight: 700; color: var(--fg-3); }
+.art { font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 16px; line-height: 1.35; word-break: keep-all; }
+.artSub { font-size: 12.5px; color: var(--fg-2); letter-spacing: -.02em; }
+.fxList li { padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; font-weight: 650; letter-spacing: -.02em; }
+.fxNone { padding: 8px 0; font-size: 13px; color: var(--fg-2); }
+.fxNote { margin-top: 8px; font-size: 11.5px; color: var(--fg-3); }
+
+:global([data-theme='broadcast']) .card, :global([data-theme='broadcast']) .opt { border-radius: 0; }
+:global([data-theme='broadcast']) .ticker { border-radius: 0; }
+:global([data-theme='classic']) .card, :global([data-theme='classic']) .opt, :global([data-theme='classic']) .ticker { border-radius: 0; }
+:global([data-theme='classic']) .qText { border-left-color: var(--club); }
+:global([data-theme='classic']) .ticker b { background: var(--club); color: var(--club-ink); }
+:global([data-theme='classic']) .said::before, :global([data-theme='classic']) .said::after { color: var(--club-text); }
+
+@media (prefers-reduced-motion: reduce) {
+  .quote, .ticker, .eff { animation: none; }
+  .skel i { animation: none; }
+}

@@ -4,6 +4,13 @@
 // 값은 시드 난수라 매번 같다. 실제 선수·구단·브랜드 이름은 쓰지 않는다.
 
 import { CARDS, LAST_MATCH, NEWS, PLAYERS, TEAMS, TODAY, WEATHER_TODAY, cardById, playerById, teamById } from '../../game/mock';
+import { nextMyGame } from '../../season/run';
+import { getSeason } from '../../season/store';
+import { weatherOf } from '../../season/weather';
+import { FIT, condsOf, condsText, fitScore } from '../../game/weatherFit';
+import { cardNow } from '../lineup/ctx';
+import { attrBonusOf } from '../../game/attrBonus';
+import { SRC_KO, engineFxOf, type BonusSrc } from '../../game/cardBonus';
 import { ENH_STEPS, PITY_STEP as INV_PITY_STEP, chanceAfter as invChanceAfter, enhGainTotal as invGainTotal, entryOf, isOwned, matClass, needFor, ownedCard } from '../../game/inventory';
 import { GRADES } from '../../game/grades';
 import { kboCard, kboCardsOf, parseViewId, personIdOf, playerOfKCard } from '../../game/kbo';
@@ -368,19 +375,20 @@ const WX_WORD: Record<WeatherKey, [string, string, string, string, string]> = {
 export const weatherWord = (k: WeatherKey, v: number) => WX_WORD[k][clamp(Math.round(v), -2, 2) + 2];
 
 /** 오늘 경기 날씨와 궁합 한 줄 */
+/** 다음 경기 날씨에서 이 선수 — 궁합(+) · 상극(−) · 없음 (game/weatherFit · season/weather — 경기 엔진과 같은 규칙) */
 export function weatherToday(p: Player) {
-  const w = WEATHER_TODAY;
-  const hot = w.tempC >= 30, cold = w.tempC <= 8, wet = w.rainPct >= 50 || w.sky === 'rain' || w.sky === 'drizzle';
-  const day = w.sky !== 'night-clear';
-  const hits: { k: WeatherKey; v: number }[] = [];
-  if (hot) hits.push({ k: 'heat', v: p.weather.heat ?? 0 });
-  if (cold) hits.push({ k: 'cold', v: p.weather.cold ?? 0 });
-  if (wet) hits.push({ k: 'rain', v: p.weather.rain ?? 0 });
-  if (day) hits.push({ k: 'day', v: p.weather.day ?? 0 });
-  const net = hits.reduce((s, h) => s + h.v, 0);
-  const sky = `${w.city} ${w.skyKo} ${w.tempC}°C`;
-  if (!hits.length || net === 0) return { sky, net: 0, text: '오늘 날씨에선 따로 붙는 효과가 없어요' };
-  return { sky, net, text: net > 0 ? `오늘 날씨가 잘 맞아요 · 날씨 패널티 ${net >= 2 ? '절반' : '조금'} 줄어듦` : `오늘 날씨는 맞지 않아요 · 날씨 패널티 ${net <= -2 ? '1.45배' : '조금 커짐'}` };
+  const nx = nextMyGame();
+  if (!nx) {
+    const w = WEATHER_TODAY;
+    return { sky: `${w.city} ${w.skyKo} ${w.tempC}°C`, net: 0, text: '정규 시즌 경기가 남아 있지 않아요' };
+  }
+  const w = weatherOf(nx.day.date, nx.home, getSeason().seed);
+  const conds = condsOf(w);
+  const sky = `${teamById(nx.home).region} ${w.dome ? '돔' : w.wet ? '약한 비' : '맑음'} ${w.tC}°C${w.day ? ' · 낮 경기' : ''}`;
+  const sc = fitScore(p, conds);
+  const what = p.pos === 'P' ? '제구 · 구위' : '컨택 · 파워';
+  if (!sc) return { sky, net: 0, text: conds.length ? `다음 경기(${condsText(conds)})에선 따로 붙는 효과가 없어요` : '다음 경기 날씨에선 따로 붙는 효과가 없어요' };
+  return { sky, net: sc, text: sc > 0 ? `다음 경기 날씨 궁합 — ${what} +${FIT}` : `다음 경기 날씨 상극 — ${what} −${FIT}` };
 }
 
 /* ───────── 최근 10경기 ───────── */
@@ -750,36 +758,9 @@ export function rollGear(itemId: string, stage: number, tryNo: number, chance: n
   return rng(`gear-enh:${itemId}:${stage}:${tryNo}`).next() * 100 < chance;
 }
 
-/* ───────── 플레이스타일 (+5 에서 선택, 바꾸기 무료) ───────── */
-export interface Playstyle { id: string; ko: string; text: string; parts: [string, number][]; icon: 'contact' | 'power' | 'speed' | 'eye' | 'glove' | 'arm' | 'fire' | 'curve' | 'aim' | 'stamina' | 'heart' }
-export const PLAYSTYLES_BAT: Playstyle[] = [
-  { id: 'contact', ko: '교타자', text: '컨택 +3 · 선구 +2', parts: [['CON', 3], ['EYE', 2]], icon: 'contact' },
-  { id: 'slugger', ko: '거포', text: '파워 +4 · 컨택 +1', parts: [['POW', 4], ['CON', 1]], icon: 'power' },
-  { id: 'fivetool', ko: '호타준족', text: '파워 +2 · 주루 +3', parts: [['POW', 2], ['SPD', 3]], icon: 'speed' },
-  { id: 'onbase', ko: '출루 머신', text: '선구 +4 · 컨택 +1', parts: [['EYE', 4], ['CON', 1]], icon: 'eye' },
-  { id: 'glove', ko: '수비 장인', text: '수비 +3 · 송구 +2', parts: [['DEF', 3], ['ARM', 2]], icon: 'glove' },
-  { id: 'arm', ko: '강견', text: '송구 +3 · 수비 +2', parts: [['ARM', 3], ['DEF', 2]], icon: 'arm' },
-];
-export const PLAYSTYLES_PIT: Playstyle[] = [
-  { id: 'power', ko: '파이어볼러', text: '구속 +3 · 구위 +2', parts: [['VEL', 3], ['STF', 2]], icon: 'fire' },
-  { id: 'finesse', ko: '기교파', text: '변화 +3 · 제구 +2', parts: [['BRK', 3], ['CTL', 2]], icon: 'curve' },
-  { id: 'command', ko: '제구 아티스트', text: '제구 +4 · 위기관리 +1', parts: [['CTL', 4], ['MNT', 1]], icon: 'aim' },
-  { id: 'eater', ko: '이닝 이터', text: '체력 +4 · 구위 +1', parts: [['STA', 4], ['STF', 1]], icon: 'stamina' },
-  { id: 'closer', ko: '클로저 본능', text: '위기관리 +3 · 구속 +2', parts: [['MNT', 3], ['VEL', 2]], icon: 'heart' },
-];
-export const playstylesFor = (p: Player) => (p.pos === 'P' ? PLAYSTYLES_PIT : PLAYSTYLES_BAT);
-
-/** +5 이상 카드의 지금 플레이스타일 — 대표 능력치가 가장 높은 쪽으로 (목업) */
-export function defaultPlaystyle(p: Player): string {
-  const f = Object.fromEntries(p.face.map((x) => [x.code, x.v]));
-  const list = playstylesFor(p);
-  let best = list[0], bestV = -1;
-  list.forEach((ps) => {
-    const v = ps.parts.reduce((s, [k, w]) => s + (f[k] ?? 50) * w, 0) / ps.parts.reduce((s, [, w]) => s + w, 0);
-    if (v > bestV) { bestV = v; best = ps; }
-  });
-  return best.id;
-}
+/* ───────── 플레이스타일 — game/playstyle 로 옮김 (여기서도 그대로 쓴다) ───────── */
+import { PLAYSTYLES_BAT, PLAYSTYLES_PIT, defaultPlaystyle, playstylesFor, type Playstyle } from '../../game/playstyle';
+export { PLAYSTYLES_BAT, PLAYSTYLES_PIT, defaultPlaystyle, playstylesFor, type Playstyle };
 
 /* ───────── 대표 능력치 묶음 ↔ 깊은 능력치 (카드 층 보너스가 붙는 길, 15 §6.6) ───────── */
 export const FACE_ATTRS: Record<string, AttrKey[]> = {
@@ -790,7 +771,36 @@ export const FACE_ATTRS: Record<string, AttrKey[]> = {
   VEL: ['velocity'], CTL: ['control'], STA: ['stamina'], REC: ['recovery'], MNT: ['composure', 'concentration', 'baseballIQ'],
 };
 
-/** 깊은 능력치마다 카드 층 보너스 (강화 + 플레이스타일 + 장비) */
+/** 깊은 능력치마다 더해진 값 — 어디서 보든 같은 숫자 (선수 상세 능력치 · 라인업 선수 시트)
+ *  강화 · 훈련 · 잠재력 · 플레이스타일 · 세트덱(라인업): 경기 엔진에 들어가는 그대로 (game/cardBonus → game/attrBonus)
+ *  장비: 아직 미리보기(저장 안 됨 · 경기엔 안 들어감) — 화면에만 */
+export function cardAttrBonus(p: Player, card: CardInst, gearPer: Record<string, number>): Partial<Record<AttrKey | 'stuff' | 'command', number>> {
+  const isP = p.pos === 'P';
+  const now = cardNow(card);
+  const keys = Object.keys(p.attrs) as AttrKey[];
+  const setList = now?.set ? (isP ? now.set.pit : now.set.bat) : [];
+  const ab = now ? attrBonusOf({ train: engineFxOf(now.bonus, isP), set: setList }, 0, isP, keys) : null;
+  const out: Partial<Record<AttrKey | 'stuff' | 'command', number>> = { ...(ab?.total ?? {}) };
+  const add = (k: AttrKey | 'stuff' | 'command', v: number) => { out[k] = (out[k] ?? 0) + v; };
+  Object.entries(gearPer).forEach(([c, v]) => (FACE_ATTRS[c] ?? []).forEach((k) => add(k, v)));
+  if (isP) { add('stuff', gearPer.STF ?? 0); add('command', gearPer.CTL ?? 0); }
+  for (const k of Object.keys(out) as (AttrKey | 'stuff' | 'command')[]) out[k] = Math.round(out[k] ?? 0);
+  return out;
+}
+/** 더해진 값의 출처 (대표 능력치에서 가장 크게 오른 몫) — '강화 +6 · 훈련 +14 …' */
+export function cardBonusSources(p: Player, card: CardInst, gearPer: Record<string, number>): [string, number][] {
+  const now = cardNow(card);
+  const out: [string, number][] = [];
+  for (const [src, o] of Object.entries(now?.bonus.parts ?? {}) as [BonusSrc, Record<string, number>][]) {
+    const m = Math.max(0, ...Object.values(o ?? {}));
+    if (m > 0) out.push([SRC_KO[src], Math.round(m)]);
+  }
+  const g = Math.max(0, ...Object.values(gearPer));
+  if (g > 0) out.push(['장비', Math.round(g)]);
+  return out;
+}
+
+/** 깊은 능력치마다 카드 층 보너스 (강화 + 플레이스타일 + 장비) — 예전 길 (cardAttrBonus 로 바뀜) */
 export function attrBonus(p: Player, grade: GradeId, enh: number, playstyle: string | null, gearPer: Record<string, number>) {
   const out: Partial<Record<AttrKey, number>> = {};
   const add = (k: AttrKey, v: number) => { out[k] = (out[k] ?? 0) + v; };

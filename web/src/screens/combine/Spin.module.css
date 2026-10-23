@@ -1,0 +1,217 @@
+/* 조합 룰렛 — 마구마구 '메시지 · 조합 중' 상자를 우리 옷으로. 어두운 면 (night 남색 · broadcast 검정 · classic 초록 점수판) */
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 58;
+  display: flex;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: max(16px, env(safe-area-inset-top)) var(--gutter) max(16px, env(safe-area-inset-bottom));
+  color: var(--inv-fg);
+  /* 상자 안 부품(버튼 등)이 어두운 바탕에 맞게 */
+  --fg: var(--inv-fg);
+  --fg-2: var(--inv-fg-2);
+  --fg-3: var(--inv-fg-3);
+  --fg-4: color-mix(in srgb, var(--inv-fg) 28%, transparent);
+  --line: var(--inv-line);
+  --line-2: color-mix(in srgb, var(--inv-fg) 18%, transparent);
+  --line-3: color-mix(in srgb, var(--inv-fg) 42%, transparent);
+  --surface: var(--inv-2);
+  --good: #5BE08F;
+  /* 등급 색은 어두운 면 기준 (classic 인쇄용 등급색은 어두워서 안 보임) */
+  --gr-normal: #A3ACB8; --gr-special: #F2852A; --gr-rare: #E0384F; --gr-elite: #A07BFF; --gr-legend: #E2B762;
+  --gr-franchise: #D9AE55; --gr-black: #C9CED6; --gr-signature: #E8DDFF; --gr-mvp: #E7BE57; --gr-gg: #E2B342; --gr-th: #DDA63C;
+}
+.scrim { position: fixed; inset: 0; background: rgba(2, 4, 9, .8); animation: fade 220ms ease-out both; }
+@keyframes fade { from { opacity: 0; } }
+:global([data-theme='classic']) .scrim { background: rgba(14, 22, 17, .82); }
+
+/* 화면 전체 빛 (위 등급 · 레전드급) */
+.flood {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(60% 42% at 50% 46%, color-mix(in srgb, var(--glow) 42%, transparent), transparent 74%);
+  animation: flood 1100ms ease-out both;
+}
+@keyframes flood { 0% { opacity: 0; } 14% { opacity: 1; } 100% { opacity: 0; } }
+.legend .flood {
+  background:
+    radial-gradient(46% 34% at 50% 46%, rgba(255, 246, 220, .7), transparent 70%),
+    radial-gradient(80% 60% at 50% 46%, color-mix(in srgb, var(--glow) 60%, transparent), transparent 76%);
+  animation-duration: 1500ms;
+}
+
+/* ───────── 상자 ───────── */
+.box {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 340px);
+  margin: auto;
+  overflow: hidden;
+  outline: none;
+  border-radius: var(--r-3);
+  background: var(--inv-2);
+  box-shadow: 0 0 0 1px var(--inv-line), 0 34px 80px -30px rgba(0, 0, 0, .9);
+  animation: boxIn 260ms var(--ease-out) both;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+@keyframes boxIn { from { opacity: 0; transform: translateY(12px) scale(.97); } }
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 42px; padding: 0 14px; border-bottom: 1px solid var(--inv-line); }
+.bar b { font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 14.5px; }
+.bar > span { font-size: 12px; color: var(--inv-fg-3); white-space: nowrap; }
+.bar > span .num { font-size: 13px; color: var(--inv-fg-2); margin-right: 1px; }
+
+.stage { position: relative; display: grid; place-items: center; padding: 30px 0 18px; }
+/* 카드 창 — 네 모서리 표시 */
+.frame { position: relative; width: 148px; aspect-ratio: 230 / 290; }
+.frame::before {
+  content: '';
+  position: absolute;
+  inset: -11px;
+  z-index: 3;
+  pointer-events: none;
+  --k: color-mix(in srgb, var(--inv-fg) 55%, transparent);
+  background:
+    linear-gradient(var(--k), var(--k)) top left / 14px 1.5px no-repeat,
+    linear-gradient(var(--k), var(--k)) top left / 1.5px 14px no-repeat,
+    linear-gradient(var(--k), var(--k)) top right / 14px 1.5px no-repeat,
+    linear-gradient(var(--k), var(--k)) top right / 1.5px 14px no-repeat,
+    linear-gradient(var(--k), var(--k)) bottom left / 14px 1.5px no-repeat,
+    linear-gradient(var(--k), var(--k)) bottom left / 1.5px 14px no-repeat,
+    linear-gradient(var(--k), var(--k)) bottom right / 14px 1.5px no-repeat,
+    linear-gradient(var(--k), var(--k)) bottom right / 1.5px 14px no-repeat;
+}
+.cell { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+.cell.on { opacity: 1; z-index: 1; animation: roll 80ms linear; }
+@keyframes roll { from { transform: translateY(-9%); filter: blur(1.2px); } }
+
+/* 멈춤 — 충격 */
+.hit .cell.on { animation: impact 480ms cubic-bezier(.2, 1.5, .4, 1) both; }
+@keyframes impact { 0% { transform: scale(1.18); } 55% { transform: scale(.97); } 100% { transform: scale(1); } }
+.flash {
+  position: absolute;
+  inset: -34%;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--glow) 70%, #fff), color-mix(in srgb, var(--glow) 30%, transparent) 55%, transparent 74%);
+  mix-blend-mode: screen;
+}
+.hit .flash { animation: flash 640ms ease-out both; }
+@keyframes flash { 0% { opacity: 0; } 12% { opacity: .75; } 100% { opacity: 0; } }
+.shock {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 120%;
+  aspect-ratio: 1;
+  z-index: 0;
+  border-radius: 50%;
+  border: 2px solid var(--glow);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(.5);
+}
+.hit .shock { animation: shock 720ms cubic-bezier(.1, .7, .3, 1) both; }
+@keyframes shock { 0% { opacity: .85; transform: translate(-50%, -50%) scale(.55); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(2.2); } }
+/* 위 등급 — 빛이 더 크고 길게 */
+.up .hit .flash { inset: -70%; animation-duration: 950ms; }
+.up .hit .flash { animation-name: flashUp; }
+@keyframes flashUp { 0% { opacity: 0; } 10% { opacity: 1; } 35% { opacity: .55; } 100% { opacity: 0; } }
+.up .hit .shock { border-width: 3px; animation-duration: 980ms; }
+.up .box { animation: kick 420ms ease-out; }
+@keyframes kick { 30% { transform: translateY(-5px); } 60% { transform: translateY(2px); } }
+/* 레전드급 — 빛살 */
+.rays {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 560px;
+  height: 560px;
+  margin: -280px 0 0 -280px;
+  z-index: 0;
+  pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--glow) 50%, transparent) 0deg 5deg, transparent 5deg 15deg);
+  -webkit-mask: radial-gradient(closest-side, #000 18%, transparent 72%);
+  mask: radial-gradient(closest-side, #000 18%, transparent 72%);
+  animation: raysIn 500ms ease-out both, spin 9s linear infinite;
+}
+@keyframes raysIn { from { opacity: 0; scale: .6; } }
+@keyframes spin { to { rotate: 360deg; } }
+.legend .hit .shock { border-color: #FFF3D6; }
+
+/* '상위 카드!' — 기울이지 않은 띠, 위쪽 테에 걸쳐 */
+.stamp, .upTag {
+  position: absolute;
+  left: 50%;
+  z-index: 4;
+  padding: 5px 11px 4px;
+  white-space: nowrap;
+  font-family: var(--font-head);
+  font-weight: 900;
+  font-size: 15px;
+  letter-spacing: -.02em;
+  line-height: 1.1;
+  color: var(--glow-ink, #14110D);
+  background: var(--glow);
+  box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--glow) 80%, transparent);
+}
+.stamp { top: -16px; transform: translateX(-50%); animation: stamp 440ms cubic-bezier(.2, 1.6, .4, 1) 140ms both; }
+@keyframes stamp { from { opacity: 0; transform: translateX(-50%) scale(1.9); } to { opacity: 1; transform: translateX(-50%) scale(1); } }
+
+.msg { padding: 0 16px; text-align: center; font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-tracking); font-size: 16px; }
+.prog { height: 2px; margin: 12px 20px 0; overflow: hidden; background: var(--inv-line); }
+.prog i { display: block; height: 100%; background: var(--inv-fg-2); transform-origin: left center; transition: transform 140ms linear; }
+.landed .prog i { background: var(--glow); }
+.tap { height: 34px; line-height: 34px; text-align: center; font-size: 11px; color: var(--inv-fg-3); }
+
+/* ───────── 결과 ───────── */
+.result { width: min(100%, 360px); cursor: default; animation: resIn 380ms var(--ease-out) both; }
+@keyframes resIn { from { opacity: 0; transform: translateY(14px) scale(.96); } }
+.resStage { position: relative; display: grid; place-items: center; padding: 30px 0 8px; }
+.resCard { width: min(200px, 54vw); }
+.upTag { top: 14px; transform: translateX(-50%); }
+.resInfo { padding: 10px 18px 0; text-align: center; }
+.resGrade { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; letter-spacing: -.02em; }
+.resGrade b { color: var(--gc); font-weight: 800; }
+.resGrade span { color: var(--inv-fg-3); }
+.resName { margin-top: 4px; font-size: 24px; line-height: 1.15; }
+.resMeta { margin-top: 3px; font-size: 12.5px; color: var(--inv-fg-2); letter-spacing: -.02em; }
+.resNew { margin-top: 8px; font-size: 12.5px; font-weight: 700; color: var(--good); }
+.resDup { margin-top: 8px; font-size: 12.5px; color: var(--inv-fg-2); }
+.resNote { margin-top: 6px; font-size: 11.5px; line-height: 1.4; color: var(--inv-fg-3); }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 16px; }
+
+.cine { z-index: 6; }
+
+/* ───────── 테마 ───────── */
+:global([data-theme='night']) .box {
+  background:
+    radial-gradient(90% 60% at 50% 34%, rgba(255, 236, 200, .07), transparent 70%),
+    linear-gradient(180deg, #0E1726, #070C16);
+  box-shadow: 0 0 0 1px rgba(160, 186, 230, .18), 0 34px 80px -30px rgba(0, 0, 0, .95);
+}
+:global([data-theme='night']) .bar { background: rgba(160, 186, 230, .05); }
+:global([data-theme='broadcast']) .box { border-radius: 0; background: #0B0E12; box-shadow: inset 0 3px 0 var(--accent), 0 30px 70px -28px rgba(0, 0, 0, .9); }
+:global([data-theme='broadcast']) .bar { height: 46px; padding-top: 3px; }
+:global([data-theme='broadcast']) .bar b { font-style: italic; }
+:global([data-theme='broadcast']) .bar b::before { content: ''; display: inline-block; width: 4px; height: 13px; margin-right: 8px; vertical-align: -1px; background: var(--accent); }
+:global([data-theme='classic']) .box {
+  border-radius: 0;
+  background:
+    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0) 0 46px, rgba(0, 0, 0, .16) 46px 47px, rgba(255, 255, 255, .03) 47px 48px),
+    var(--inv);
+  box-shadow: inset 0 0 0 4px #1A2D22, inset 0 0 0 5px rgba(242, 239, 230, .16), 0 30px 70px -28px rgba(0, 0, 0, .8);
+}
+:global([data-theme='classic']) .bar { border-bottom: 1px solid rgba(242, 239, 230, .2); margin: 0 5px; }
+:global([data-theme='classic']) .prog { margin-left: 24px; margin-right: 24px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .box, .result, .scrim, .flood, .rays, .stamp, .cell.on, .hit .cell.on, .hit .flash, .hit .shock, .up .box { animation: none !important; }
+  .flash, .shock, .flood { display: none; }
+}
+
+.still { animation: none !important; }

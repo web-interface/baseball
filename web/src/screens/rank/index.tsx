@@ -1,18 +1,17 @@
-// 순위 #/rank — 감독 순위(서버: 레이팅 · 승률 · 구단 전력) + 리그 순위(구단 10개, 이 기기의 시즌 진행 — season/store)
-//   ?tab=league · ?by=winrate|power
+// 순위 #/rank — 감독 순위(서버: 레이팅 · 승률 · 구단 전력). 구단 10개 리그 순위는 경기 운영 > 순위·리그 기록(#/league)으로 옮겼다.
+//   ?by=winrate|power  (예전 주소 ?tab=league 는 #/league 로 넘긴다)
 //   감독 순위는 실제 가입한 감독만 나온다(AI 구단은 순위에 없다). 로그인해야 내 순위가 보인다.
 import { useCallback, useEffect, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
-import { navigate, setQueryQuiet } from '../../app/router';
+import { Link, navigate, setQueryQuiet } from '../../app/router';
 import { useAuth } from '../../app/auth';
 import { Button, Emblem, Icon, Tabs, fmt } from '../../ui';
 import { isTeamId, myTeam, teamById } from '../../game/mock';
-import { gbLabel, pctLabel, standingsOf, useSeason } from '../../season/store';
+import { rankLabel, teamLine, useSeason } from '../../season/store';
 import { ApiError, api, type RankingBy, type RankingsRes } from '../../api';
 import { demoRankings } from './demo';
 import s from './rank.module.css';
 
-type Tab = 'mgr' | 'league';
 const BY: { value: RankingBy; label: string; col: string }[] = [
   { value: 'rating', label: '레이팅', col: '레이팅' },
   { value: 'winrate', label: '승률', col: '승률' },
@@ -24,17 +23,17 @@ const showVal = (by: RankingBy, v: number) => (by === 'winrate' ? fmt.avg(v) : f
 type Load = { kind: 'idle' | 'loading' } | { kind: 'error'; msg: string } | { kind: 'ok'; data: RankingsRes };
 
 export default function RankScreen({ query }: ScreenProps) {
-  const [tab, setTabS] = useState<Tab>(query.get('tab') === 'league' ? 'league' : 'mgr');
+  const toLeague = query.get('tab') === 'league';
+  // 예전 주소(리그 순위 탭) — 순위·리그 기록으로
+  useEffect(() => { if (toLeague) navigate('/league', { replace: true }); }, [toLeague]);
   const b = query.get('by');
   const [by, setByS] = useState<RankingBy>(b === 'winrate' || b === 'power' ? b : 'rating');
-  const setTab = (v: Tab) => { setTabS(v); setQueryQuiet({ tab: v === 'mgr' ? null : v }); };
   const setBy = (v: RankingBy) => { setByS(v); setQueryQuiet({ by: v === 'rating' ? null : v }); };
+  if (toLeague) return null;
   return (
     <div className={s.screen}>
-      <div className={s.tabsWrap}>
-        <Tabs items={[{ value: 'mgr' as Tab, label: '감독 순위' }, { value: 'league' as Tab, label: '리그 순위' }]} value={tab} onChange={setTab} fill aria-label="순위 종류" />
-      </div>
-      {tab === 'mgr' ? <Managers by={by} setBy={setBy} demo={query.get('demo') === '1'} /> : <League />}
+      <Managers by={by} setBy={setBy} demo={query.get('demo') === '1'} />
+      <LeagueLink />
     </div>
   );
 }
@@ -155,51 +154,19 @@ function Managers({ by, setBy, demo }: { by: RankingBy; setBy: (v: RankingBy) =>
   );
 }
 
-/* ───────── 리그 순위 (구단 10개 · 이 기기의 시즌 진행 — 개막일엔 모두 0승 0무 0패) ───────── */
-function League() {
-  const mine = myTeam().id;
+/* ───────── 구단 순위는 순위·리그 기록(#/league)에 — 여기서는 한 줄로 이어 준다 ───────── */
+function LeagueLink() {
   const season = useSeason();
-  const rows = standingsOf(season);
-  const started = season.next > 0;
+  const ln = teamLine(myTeam().id, season);
   return (
     <section className={s.sec}>
-      <header className={s.head}>
-        <h2 className={['head', s.h].join(' ')}><span className="num">{season.year ?? 2027}</span> 리그 순위</h2>
-        <p className={s.meta}>{started ? '정규 시즌 · 10개 구단' : '개막 전 · 10개 구단'}</p>
-      </header>
-      <table className={[s.table, s.league].join(' ')}>
-        <thead>
-          <tr>
-            <th className={s.cRank}>순위</th>
-            <th>구단</th>
-            <th className={s.cR}>승-무-패</th>
-            <th className={s.cR}>승률</th>
-            <th className={s.cR}>차</th>
-            <th className={[s.cR, s.hideS].join(' ')}>연속</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => {
-            const tm = teamById(r.teamId);
-            return (
-              <tr key={r.teamId} className={[r.teamId === mine && s.me, i === 5 && s.cut].filter(Boolean).join(' ') || undefined}>
-                <td className={['num', s.cRank, s.rk].join(' ')}>{started ? r.rank : '—'}</td>
-                <td>
-                  <span className={s.who}>
-                    <Emblem team={tm} size={24} />
-                    <span className={s.whoTxt}><b>{tm.name}</b>{r.teamId === mine && <small>내 구단</small>}</span>
-                  </span>
-                </td>
-                <td className={['num', s.cR, s.wdl].join(' ')}>{r.w}-{r.d}-{r.l}</td>
-                <td className={['num', s.cR, s.val].join(' ')}>{pctLabel(r)}</td>
-                <td className={['num', s.cR, s.gb].join(' ')}>{gbLabel(r)}</td>
-                <td className={[s.cR, s.streak, s.hideS].join(' ')}>{r.streak}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      <p className={s.note}><Icon name="info" size={13} /> 굵은 선 위 6위까지 가을야구. 지금 바로 경기 · 시즌 빨리 감기 결과가 그대로 반영돼요(이 기기).</p>
+      <Link to="/league" className={s.leagueLink}>
+        <span className={s.llText}>
+          <b>구단 순위 · 개인 기록</b>
+          <small><span className="num">{season.year ?? 2027}</span> 시즌 · 우리 구단 {rankLabel(ln)} · 순위·리그 기록에서 봐요</small>
+        </span>
+        <Icon name="chevron" size={16} />
+      </Link>
     </section>
   );
 }

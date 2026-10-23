@@ -1,7 +1,7 @@
 // 바꾸기 시트 — 자리를 누르면: 지금 선수 + 넣을 수 있는 선수(벤치 · 보관함 · 다른 자리와 맞바꿈)를
 // '넣으면 팀 종합이 얼마나 되는지' 순서로. 벤치 카드를 누르면 반대로 '어느 자리에 넣을지'.
 import { useEffect, useMemo, useState } from 'react';
-import { CardMini, NameYear } from '../../cards';
+import { CardMini, NameYear, cardProps } from '../../cards';
 import { Sheet, fmt } from '../../ui';
 import { GRADES } from '../../game/grades';
 import { POS_KO } from '../../game/labels';
@@ -130,7 +130,7 @@ export function SwapSheet({ slot, st, ev, onClose, onApply }: SwapSheetProps) {
     >
       {cu && ue && (
         <div className={s.cur}>
-          <CardMini player={cu.player} grade={cu.card.grade} enhance={cu.card.enhance} year={cu.card.year} width={56} />
+          <CardMini {...cardProps(cu.card)} ovrShown={ue ? Math.round(ue.total) : undefined} width={56} />
           <div className={s.curText}>
             <p className={s.curName}><b><NameYear name={cu.player.name} year={cu.card.year} /></b><span>{cu.team.name}</span></p>
             <p className={s.curMeta}>
@@ -161,7 +161,7 @@ export function SwapSheet({ slot, st, ev, onClose, onApply }: SwapSheetProps) {
               <button type="button" className={[s.cand, boom && s.candBoom, c.blocked && s.candOff].filter(Boolean).join(' ')}
                 disabled={!!c.blocked} title={c.blocked ?? undefined}
                 onClick={() => onApply(c.next, { slot: at, id: c.id })}>
-                <span className={s.card}><CardMini player={u.player} grade={u.card.grade} enhance={u.card.enhance} year={u.card.year} width={44} /></span>
+                <span className={s.card}><CardMini {...cardProps(u.card)} ovrShown={c.ev.units[at] ? Math.round(c.ev.units[at]!.total) : undefined} width={44} /></span>
                 <span className={s.who}>
                   <span className={s.nameRow}>
                     <b><NameYear name={u.player.name} year={u.card.year} /></b>

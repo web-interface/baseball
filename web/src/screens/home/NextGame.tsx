@@ -8,6 +8,7 @@ import type { Player, Team, Weather } from '../../game/types';
 import { clubLine, nextGameView, pitchLine } from './local-mock';
 import { longDate, shortDate } from '../../season/schedule';
 import { useSeason } from '../../season/store';
+import { condsText } from '../../game/weatherFit';
 import s from './NextGame.module.css';
 
 const SKY_ICON: Record<Weather['sky'], IconName> = {
@@ -79,7 +80,8 @@ function Starter({ p, team, label }: { p?: Player; team: Team; label: string }) 
   );
 }
 
-export function NextGame() {
+/** inHub — 경기 준비·진행(#/season) 안에 놓일 때: 빨리 감기 버튼은 그 화면에 따로 있어서 뺀다 */
+export function NextGame({ inHub = false }: { inHub?: boolean }) {
   const season = useSeason(); // 시즌 진행이 바뀌면 다시 그린다
   const g = nextGameView();
   const myLine = clubLine(g.me.id, season);
@@ -161,6 +163,14 @@ export function NextGame() {
             <span>비 <b className="num">{w.rainPct}</b><small>%</small> <small>· 미세먼지 {w.dust}</small></span>
           </li>
           {w.effects.slice(0, 1).map((e) => <li key={e} className={s.cause}>↳ {e}</li>)}
+          {g.wx && g.wx.conds.length > 0 && (
+            <li className={s.fit}>
+              <span className={s.fitHead}>날씨 궁합 <small>{condsText(g.wx.conds)}</small></span>
+              {g.wx.good.length > 0 && <span className={s.fitGood}>+ {g.wx.good.map((p) => p.name).join(' · ')}</span>}
+              {g.wx.bad.length > 0 && <span className={s.fitBad}>− {g.wx.bad.map((p) => p.name).join(' · ')}</span>}
+              {!g.wx.good.length && !g.wx.bad.length && <small>우리 선수 중 맞거나 상극인 선수는 없어요</small>}
+            </li>
+          )}
           <li className={s.park}>
             <span className="num">{st.fence[0]}·{st.fence[1]}·{st.fence[2]}</span>m{wallNote && <> · {wallNote}</>}
             <small>{st.note}</small>
@@ -173,7 +183,7 @@ export function NextGame() {
           ? <Button size="l" block icon="arrow-right" onClick={() => navigate('/season')}>시즌 결과 보기</Button>
           : <Button size="l" block icon="play" onClick={() => navigate('/match?g=season')}>지금 바로 경기</Button>}
         <Button size="l" variant="secondary" onClick={() => navigate('/lineup')}>라인업</Button>
-        <Button size="l" variant="ghost" icon="fast" className={s.ff} onClick={() => navigate('/season')}>남은 시즌 빨리 감기</Button>
+        {!inHub && <Button size="l" variant="ghost" icon="fast" className={s.ff} onClick={() => navigate('/season')}>남은 시즌 빨리 감기</Button>}
       </div>
     </section>
   );

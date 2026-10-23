@@ -192,7 +192,7 @@ export const keyAtPlace = (place: TrainPlace, key: TrainKey) => (place.sigOnly ?
 export const trainOvrBonus = (t: CardTrain | undefined | null) => (t ? Math.round(sumGains(t.gains) / 4) : 0);
 
 /** 대표 능력치 코드 → 경기 엔진 보너스 칸 (season/sim 의 B_MAP · P_MAP 키와 몫). 특수구질은 엔진에 구종별 칸이 없어 구위 · 변화로 */
-const ENGINE_OF: Record<string, [BatKey | PitKey, number][]> = {
+export const ENGINE_OF: Record<string, [BatKey | PitKey, number][]> = {
   CON: [['con', 1]], POW: [['pow', 1]], EYE: [['eye', 1]], SPD: [['spd', 1], ['stl', 0.5]], DEF: [['def', 1]], ARM: [['arm', 1]],
   BLK: [['def', 1]], FRM: [['def', 0.8]], CS: [['arm', 1]], GAP: [['gap', 1], ['pow', 0.3]], ADJ: [['con', 0.5], ['eye', 0.5]],
   VEL: [['vel', 1]], STF: [['stf', 1]], BRK: [['brk', 1]], CTL: [['ctl', 1]], STA: [['sta', 1]], REC: [['rec', 1]], MNT: [['mnt', 1]],
