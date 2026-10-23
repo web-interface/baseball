@@ -374,7 +374,9 @@
  *  훈련 5단계부터 단계 색 불빛(테 · 고리), 8단계부터 불티, 10단계(최종)는 무지개 고리 + 흰 빛 맥박 + 무지개 전기. */
 .frame { z-index: 1; }
 .card { --aur: var(--glow); --sp: var(--glow); }
-.trained { --aur: var(--tglow); --sp: var(--tglow); }
+/* 훈련 불빛(5단계~) — 낮은 등급은 카드 전체가 훈련 색으로 빛난다. 레전드급 · 특별 등급은 등급 빛을 지키고
+   훈련 단계는 테 바로 바깥 가는 색 선 + '훈련 N' 표로만 (등급이 한눈에 갈리게 — 아래 '귀한 등급 훈련' 참고) */
+.trained:not(.g-legend, .g-franchise, .g-black, .g-signature, .g-mvp, .g-gg, .g-th, .g-unique) { --aur: var(--tglow); --sp: var(--tglow); }
 /* 테 고리 모양 마스크 (테 위만 빛이 지나가게) */
 .ring { -webkit-mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
 
@@ -579,8 +581,8 @@
   animation: auraT 3.2s linear infinite, flick 2.8s steps(1) infinite;
 }
 @keyframes flick { 0%, 100% { opacity: .95; } 31% { opacity: .3; } 33% { opacity: 1; } 62% { opacity: .5; } 64% { opacity: .95; } }
-.trained .aura { background: conic-gradient(from 0deg, transparent 0 6%, var(--aur) 12%, transparent 20% 32%, var(--aur) 40%, transparent 48% 64%, var(--aur) 72%, transparent 80%); opacity: .9; animation-duration: 4s; }
-.trainMax .aura { background: conic-gradient(#ff4f7b, #ffb84f, #f5ff6b, #6bf09a, #4fd8ff, #8a7bff, #ff6bd6, #ff4f7b); opacity: .95; animation-duration: 2.4s; }
+.trained:not(.g-legend, .g-franchise, .g-black, .g-signature, .g-mvp, .g-gg, .g-th, .g-unique) .aura { background: conic-gradient(from 0deg, transparent 0 6%, var(--aur) 12%, transparent 20% 32%, var(--aur) 40%, transparent 48% 64%, var(--aur) 72%, transparent 80%); opacity: .9; animation-duration: 4s; }
+.trainMax:not(.g-legend, .g-franchise, .g-black, .g-signature, .g-mvp, .g-gg, .g-th, .g-unique) .aura { background: conic-gradient(#ff4f7b, #ffb84f, #f5ff6b, #6bf09a, #4fd8ff, #8a7bff, #ff6bd6, #ff4f7b); opacity: .95; animation-duration: 2.4s; }
 
 /* ───── 테 빛 ───── (등급이 --fsh 를 주면 그것 — 블랙 · 시그니처 · MVP · 특별) */
 .glow .frame {
@@ -590,14 +592,14 @@
     0 0 6.5cqw 1.8cqw color-mix(in srgb, var(--glow) 55%, transparent),
     0 .8cqw 2cqw rgba(0, 0, 0, .3));
 }
-.trained .frame {
+.trained:not(.g-legend, .g-franchise, .g-black, .g-signature, .g-mvp, .g-gg, .g-th, .g-unique) .frame {
   box-shadow:
     inset 0 0 0 .45cqw rgba(255, 255, 255, .55),
     0 0 2.6cqw .5cqw var(--tglow),
     0 0 7.5cqw 2.2cqw color-mix(in srgb, var(--tglow) 50%, transparent),
     0 .8cqw 2cqw rgba(0, 0, 0, .3);
 }
-.trained .frame::after {
+.trained:not(.g-legend, .g-franchise, .g-black, .g-signature, .g-mvp, .g-gg, .g-th, .g-unique) .frame::after {
   content: '';
   position: absolute;
   inset: 1.25cqw;
@@ -632,7 +634,7 @@
   animation-duration: 3.4s;
 }
 .g-unique .holo { background-image: linear-gradient(115deg, transparent 25%, rgba(190, 255, 236, .44) 40%, rgba(170, 236, 255, .4) 52%, transparent 66%); }
-.trained .holo { background-image: linear-gradient(115deg, transparent 25%, color-mix(in srgb, var(--tglow) 45%, transparent) 42%, rgba(255, 255, 255, .35) 50%, transparent 66%); }
+.trained:not(.g-legend, .g-franchise, .g-black, .g-signature, .g-mvp, .g-gg, .g-th, .g-unique) .holo { background-image: linear-gradient(115deg, transparent 25%, color-mix(in srgb, var(--tglow) 45%, transparent) 42%, rgba(255, 255, 255, .35) 50%, transparent 66%); }
 .sparks, .sparks::after {
   position: absolute;
   inset: 0;
@@ -711,8 +713,17 @@
 }
 .bolt2 { animation-duration: 3.3s; animation-direction: reverse; opacity: .75; }
 @keyframes boltSpin { to { --bang: 360deg; } }
-.trainMax .bolt { background: conic-gradient(from var(--bang), #ff4f7b, #ffb84f, #f5ff6b, #6bf09a, #4fd8ff, #8a7bff, #ff6bd6, #ff4f7b); animation-duration: 3s; }
-.trainMax .bolt2 { display: none; }
+.trainMax:not(.g-legend, .g-franchise, .g-black, .g-signature, .g-mvp, .g-gg, .g-th, .g-unique) .bolt { background: conic-gradient(from var(--bang), #ff4f7b, #ffb84f, #f5ff6b, #6bf09a, #4fd8ff, #8a7bff, #ff6bd6, #ff4f7b); animation-duration: 3s; }
+.trainMax:not(.g-legend, .g-franchise, .g-black, .g-signature, .g-mvp, .g-gg, .g-th, .g-unique) .bolt2 { display: none; }
+/* 귀한 등급 훈련 — 바깥 큰 빛은 등급 빛(--glow), 훈련 색은 테를 두르는 가는 선 하나 */
+.trained:is(.g-legend, .g-franchise, .g-black, .g-signature, .g-mvp, .g-gg, .g-th, .g-unique) .frame {
+  box-shadow:
+    inset 0 0 0 .45cqw rgba(255, 255, 255, .55),
+    0 0 0 .55cqw var(--tglow),
+    0 0 1.6cqw .55cqw color-mix(in srgb, var(--tglow) 55%, transparent),
+    0 0 6.5cqw 1.8cqw color-mix(in srgb, var(--glow) 55%, transparent),
+    0 .8cqw 2cqw rgba(0, 0, 0, .3);
+}
 
 /* ───── 엘리트부터 — 몇 초마다 카드 전체를 훑는 섬광 ───── */
 .glint { position: absolute; inset: 0; z-index: 6; border-radius: 5.2cqw; overflow: hidden; pointer-events: none; }
