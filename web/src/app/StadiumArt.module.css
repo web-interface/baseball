@@ -1,107 +1,186 @@
+/* 로그인 그림 — 그림 칸(.art)을 정사각형 무대(.stage)가 늘 덮는다: 한 변 = 칸의 가로 · 세로 중 긴 쪽, 가운데 (세로 화면은 위아래가 꼭 맞고 양옆만 잘린다) */
 .art {
-  display: block;
   width: 100%;
   height: 100%;
+  overflow: hidden;
+  container-type: size;
+  background: var(--hs-sky1);
   /* night 기본 */
-  --hs-sky1: #02050B;
-  --hs-sky2: #0C1A33;
-  --hs-light: #FFF4DE;
-  --hs-glow-a: .62;
-  --hs-beam-a: .15;
-  --hs-haze: #1E3A60;
-  --hs-haze-a: .34;
-  --hs-stand: #0A111F;
-  --hs-row: #7F9CC8;
-  --hs-row-a: .08;
-  --hs-crowd: #FFF2DA;
-  --hs-crowd-a: .32;
-  --hs-board-frame: #03060B;
-  --hs-board-face: #060B14;
-  --hs-board-text: #FFC53D;
-  --hs-tower: #060A12;
-  --hs-head: #101826;
-  --hs-lamp: #FFF8EA;
-  --hs-wall: #0C1626;
-  --hs-wall-top: #E7C44C;
-  --hs-track: #4C3424;
-  --hs-turf1: #1D5E39;
-  --hs-turf2: #0A2616;
-  --hs-stripe-a: .035;
-  --hs-dirt: #6E4A30;
-  --hs-infield: #154A2C;
+  --hs-sky1: #01030A;
+  --hs-sky2: #050C1A;
+  --hs-sky3: #10213C;
+  --hs-haze: #2A4A78;
+  --hs-haze-a: .42;
+  --hs-light: #FFF6E2;
+  --hs-bloom-a: .55;
+  --hs-beam-a: .19;
+  --hs-pool-a: .1;
+  --hs-flare-a: .22;
+  --hs-ribbon: #FF9A3C;
+  --hs-roof-light: #FFF4DC;
+  --hs-tower: #04070D;
+  --hs-bank: #0C121D;
+  --hs-lamp: #FFF9EC;
+  --hs-board-frame: #03050A;
+  --hs-board-face: #070B12;
+  --hs-led: #FFB43C;
+  --hs-led-off: #3A2A12;
+  --hs-stand: #070E1B;
+  --hs-row: #8FB0E0;
+  --hs-row-a: .07;
+  --hs-crowd: #FFEFD6;
+  --hs-crowd-a: .3;
+  --hs-canopy: #02040A;
+  --hs-fascia: #9FC0F0;
+  --hs-fascia-a: .38;
+  --hs-wall: #08111F;
+  --hs-wall-top: #E8C547;
+  --hs-track: #3A2A1D;
+  --hs-turf1: #1E6B40;
+  --hs-turf2: #051A0D;
+  --hs-stripe-a: .036;
+  --hs-dirt: #6A4830;
+  --hs-infield: #145030;
+  --hs-chalk: #F4F1EA;
+  --hs-chalk-a: .42;
   --hs-base: #F4F1EA;
-  --hs-pool-a: .05;
+  --hs-trail: #FFF3DC;
 }
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100cqw, 100cqh);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  animation: stageIn .9s ease-out both;
+}
+.scene, .layer { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+.layer { pointer-events: none; }
 
-.haze { fill: var(--hs-haze); opacity: var(--hs-haze-a); }
-.stand { fill: var(--hs-stand); }
-.row { fill: none; stroke: var(--hs-row); stroke-opacity: var(--hs-row-a); stroke-width: .8; }
-.crowd { stroke: var(--hs-crowd); stroke-opacity: var(--hs-crowd-a); stroke-width: 1.3; stroke-linecap: round; }
-.boardFrame { fill: var(--hs-board-frame); stroke: color-mix(in srgb, var(--hs-board-text) 22%, transparent); stroke-width: .8; }
-.boardFace { fill: var(--hs-board-face); }
-.boardText { font-family: var(--font-num); font-weight: 600; font-size: 10px; fill: var(--hs-board-text); opacity: .9; }
-.boardDots { stroke: var(--hs-board-text); stroke-opacity: .2; stroke-dasharray: 1.2 2.2; }
-.glow { fill: url(#hsGlow); }
+/* ── 멈춘 그림 ── */
 .pole { fill: var(--hs-tower); }
-.head { fill: var(--hs-head); }
+.bank { fill: var(--hs-bank); }
 .lamp { fill: var(--hs-lamp); }
+.boardLeg { stroke: var(--hs-board-frame); stroke-width: 5; }
+.boardFrame { fill: var(--hs-board-frame); stroke: color-mix(in srgb, var(--hs-led) 26%, transparent); stroke-width: 1; }
+.boardFace { fill: var(--hs-board-face); }
+.ledOff { stroke: var(--hs-led-off); stroke-width: 2.3; stroke-linecap: round; opacity: .55; }
+.ledOn { stroke: var(--hs-led); stroke-width: 2.5; stroke-linecap: round; filter: drop-shadow(0 0 2.2px var(--hs-led)); }
+.stand { fill: var(--hs-stand); }
+.row { fill: none; stroke: var(--hs-row); stroke-opacity: var(--hs-row-a); stroke-width: 1; }
+.crowd { stroke: var(--hs-crowd); stroke-opacity: var(--hs-crowd-a); stroke-width: 1.5; stroke-linecap: round; }
+.canopy { fill: var(--hs-canopy); }
+.fascia { fill: none; stroke: var(--hs-fascia); stroke-opacity: var(--hs-fascia-a); stroke-width: 1.3; }
+/* 관중석 띠 전광판(리본 보드) — 어두운 띠 위에 글자 덩어리처럼 밝은 마디 */
+.ribbon { fill: none; stroke: color-mix(in srgb, var(--hs-ribbon) 22%, #000); stroke-width: 4.2; }
+.ribbonText { fill: none; stroke: var(--hs-ribbon); stroke-width: 2; stroke-dasharray: 26 7 9 7 40 12 14 7 22 30; opacity: .8; filter: drop-shadow(0 0 2px var(--hs-ribbon)); }
+.roofLights { stroke: var(--hs-roof-light); stroke-width: 2.4; stroke-linecap: round; opacity: .85; filter: drop-shadow(0 0 2.5px var(--hs-roof-light)); }
 .wall { fill: var(--hs-wall); }
-.wallTop { fill: var(--hs-wall-top); opacity: .85; }
+.wallTop { fill: var(--hs-wall-top); opacity: .55; }
 .track { fill: var(--hs-track); }
 .stripes { fill: #fff; opacity: var(--hs-stripe-a); }
 .dirt { fill: var(--hs-dirt); }
 .infield { fill: var(--hs-infield); }
+.chalk { fill: none; stroke: var(--hs-chalk); stroke-opacity: var(--hs-chalk-a); stroke-width: 2.4; }
 .base { fill: var(--hs-base); }
-.lightPool { fill: var(--hs-light); opacity: var(--hs-pool-a); }
 
-/* broadcast — 같은 밤 구장, 더 검고 대비 강하게 (중계 화면) */
+/* ── 움직이는 층 — transform · opacity 만 ── */
+.beamsL, .beamsR, .blooms, .ball { will-change: opacity, transform; }
+.beamsL { animation: beamOn 1.1s .55s ease-out both, breathe 8s 1.7s ease-in-out infinite alternate; }
+.beamsR { animation: beamOn 1.1s .75s ease-out both, breathe 9.5s 1.9s ease-in-out infinite alternate-reverse; }
+.blooms { animation: powerOn 1s .2s steps(1, end) both, glow 5.5s 1.4s ease-in-out infinite alternate; }
+.flare { fill: var(--hs-light); opacity: var(--hs-flare-a); }
+
+.dust, .flashes { position: absolute; inset: 0; pointer-events: none; }
+.dust i {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--hs-light);
+  opacity: 0;
+  animation: drift linear infinite;
+}
+.flashes i {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  margin: -1.5px 0 0 -1.5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 6px 2px rgba(255, 255, 255, .55);
+  opacity: 0;
+  animation: flash ease-out infinite;
+}
+.scan { position: absolute; overflow: hidden; pointer-events: none; }
+.scan::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 34%;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--hs-led) 34%, transparent), transparent);
+  transform: translateX(-110%);
+  animation: scan 5.2s 1.6s cubic-bezier(.45, 0, .2, 1) infinite;
+}
+.ball { animation: fly 1.05s .55s cubic-bezier(.12, .7, .25, 1) both, float 6s 1.6s ease-in-out infinite alternate; }
+.speed { fill: none; stroke: var(--hs-trail); stroke-opacity: .28; stroke-width: 1.4; stroke-linecap: round; }
+.seam { fill: none; stroke: #D9584E; stroke-opacity: .55; stroke-width: 1.1; }
+.stitch { fill: none; stroke: #C42F27; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.rim { fill: none; stroke: #FFE4BC; stroke-opacity: .85; stroke-width: 1.8; stroke-linecap: round; }
+
+@keyframes stageIn { from { opacity: 0; } to { opacity: 1; } }
+/* 조명 켜짐 — 깜빡였다가 들어온다 */
+@keyframes powerOn { 0% { opacity: 0; } 18% { opacity: .7; } 26% { opacity: .15; } 38% { opacity: .9; } 46% { opacity: .5; } 60%, 100% { opacity: 1; } }
+@keyframes beamOn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes breathe { from { opacity: 1; } to { opacity: .72; } }
+@keyframes glow { from { opacity: 1; } to { opacity: .82; } }
+@keyframes drift {
+  0% { opacity: 0; transform: translate(0, 0); }
+  15% { opacity: .75; }
+  85% { opacity: .5; }
+  100% { opacity: 0; transform: translate(var(--dx), -46px); }
+}
+@keyframes flash { 0%, 91% { opacity: 0; } 93% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes scan { 0% { transform: translateX(-110%); } 55%, 100% { transform: translateX(320%); } }
+/* 타구 — 홈플레이트 쪽에서 날아올라 제자리 */
+@keyframes fly {
+  from { opacity: 0; transform: translate(-16%, 52%) scale(1.5); }
+  30% { opacity: 1; }
+  to { opacity: 1; transform: none; }
+}
+@keyframes float { from { transform: translate(0, 0); } to { transform: translate(-.5%, -1.1%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .stage, .beamsL, .beamsR, .blooms, .ball, .scan::after, .dust i, .flashes i { animation: none !important; }
+  .dust i, .flashes i { display: none; }
+}
+
+/* broadcast — 같은 밤 구장, 더 검고 차갑게 (중계 화면) */
 :global([data-theme='broadcast']) .art {
-  --hs-sky1: #050608;
-  --hs-sky2: #141A22;
-  --hs-haze: #24303F;
-  --hs-haze-a: .3;
-  --hs-stand: #0D1116;
-  --hs-row: #FFFFFF;
-  --hs-row-a: .05;
-  --hs-board-text: #FF8A4F;
-  --hs-wall: #0B0E12;
+  --hs-sky1: #030405;
+  --hs-sky2: #07090D;
+  --hs-sky3: #141A24;
+  --hs-haze: #3A4658;
+  --hs-haze-a: .34;
+  --hs-light: #F4F8FF;
+  --hs-bloom-a: .46;
+  --hs-beam-a: .17;
+  --hs-stand: #07090D;
+  --hs-row: #C9D3E2;
+  --hs-row-a: .06;
+  --hs-crowd: #F4F6FA;
+  --hs-crowd-a: .26;
+  --hs-fascia: #E8EEF8;
+  --hs-fascia-a: .3;
+  --hs-led: #F2641E;
+  --hs-led-off: #2A170C;
+  --hs-turf1: #1B5A37;
+  --hs-turf2: #040D07;
+  --hs-wall: #090B10;
   --hs-wall-top: #F2641E;
-  --hs-turf1: #2B6A3B;
-  --hs-turf2: #10301A;
-  --hs-infield: #24592F;
-  --hs-dirt: #8B5E3C;
-  --hs-glow-a: .55;
+  --hs-ribbon: #F2641E;
 }
-
-/* classic — 인쇄물: 종이 하늘 · 먹 관중석 · 초록 나무 점수판 · 별색 담장 선 (조명 끔) */
-:global([data-theme='classic']) .art {
-  --hs-sky1: #EEEBE3;
-  --hs-sky2: #E8E4D9;
-  --hs-light: #FFFFFF;
-  --hs-glow-a: 0;
-  --hs-beam-a: 0;
-  --hs-haze: #DCD7CA;
-  --hs-haze-a: .55;
-  --hs-stand: #B7B3A8;      /* 먹 30% 망점 */
-  --hs-row: #1D1E21;
-  --hs-row-a: .16;
-  --hs-crowd: #1D1E21;
-  --hs-crowd-a: .45;
-  --hs-board-frame: #22382C;
-  --hs-board-face: #2C4637;
-  --hs-board-text: #F2EFE6;
-  --hs-tower: #1D1E21;
-  --hs-head: #1D1E21;
-  --hs-lamp: #E9E5DA;
-  --hs-wall: #1D1E21;
-  --hs-wall-top: var(--club);
-  --hs-track: #D2C6AA;
-  --hs-turf1: #E3DFD3;
-  --hs-turf2: #D9D4C6;
-  --hs-stripe-a: 0;
-  --hs-dirt: #CDBE9F;
-  --hs-infield: #E2DED1;
-  --hs-base: #1D1E21;
-  --hs-pool-a: 0;
-}
-:global([data-theme='classic']) .beams, :global([data-theme='classic']) .glow { display: none; }
+/* classic — 같은 장면을 먹 한 판으로 눌러 찍은 사진처럼 (회색 · 높은 대비 · 망점은 AuthScreen 이 얹는다) */
+:global([data-theme='classic']) .stage { filter: grayscale(1) contrast(1.22) brightness(1.06); }
+:global([data-theme='classic']) .art { --hs-led: #FFFFFF; --hs-led-off: #2B2B2B; --hs-wall-top: #DADADA; }

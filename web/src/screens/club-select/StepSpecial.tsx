@@ -2,7 +2,7 @@
 // 결과는 단 한 장뿐인 '특별 선수' 카드(전용 테두리) + 이름을 딴 고유 구종(결정구 20가지 · 특징 3개 중 하나)/타격 특기(1~3개) + 이름이 들어간 응원 구호.
 // 고른 숫자는 카드 앞면에서 끝나지 않고 상세 능력치·구종표로 시즌 경기 엔진까지 간다 (local-mock buildSpecial).
 // 얼굴은 캐릭터 생성기 시드로 고른다 — 머리·수염을 고르면 그 모양이 나오는 시드를 찾아 쓴다(그림은 PlayerArt 그대로).
-import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { Button, Field, Icon, Tabs, TextField } from '../../ui';
 import { Card } from '../../cards';
 import { teamById } from '../../game/mock';
@@ -54,26 +54,24 @@ function Chips({ list }: { list: FxChip[] }) {
 
 /**
  * 이름 직접 입력 — 한글 완성 글자(가~힣)만 2~4자.
- * 글자를 조합하는 동안(IME)엔 손대지 않는다(지우면 조합이 깨진다). 조합이 끝나거나 칸을 떠날 때 한글이 아닌 글자를 지운다.
+ * 치는 동안엔 글자를 하나도 지우지 않는다 — 아이폰 한글 자판은 조합 신호(composition) 없이 낱자를 넣고 바꿔치기해서(ㅎ → 호 → 홍)
+ * 치는 중에 낱자를 지우면 한글이 아예 안 써진다. 틀린 글자는 아래에 알려 주기만 하고, 칸을 떠날 때(완료 · Enter) 한글 완성 글자만 남긴다.
  * 맞는 이름이 되면 바로 카드에 들어가고, 틀린 동안엔 마지막으로 맞았던 이름이 카드에 남는다.
  */
 function NameInput({ initial, onValid }: { initial: string; onValid: (name: string) => void }) {
   const [draft, setDraft] = useState(initial);
-  const [why, setWhy] = useState<'' | 'hangul' | 'long'>('');
   const [left, setLeft] = useState(false);
-  const composing = useRef(false);
+  const syll = draft.replace(/[^가-힣]/g, '').length;
+  // 조합 중인 낱자(ㄱ · ㅏ)는 괜찮고, 영문 · 숫자 · 기호 · 띄어쓰기만 알려 준다
+  const foreign = draft.replace(/[가-힣ᄀ-ᇿ㄰-㆏]/g, '') !== '';
   const settle = (raw: string) => {
-    const only = raw.replace(/[^가-힣]/g, '');
-    // 덜 조합된 낱자(ㄱ · ㅏ)는 말없이 지우고, 영문 · 숫자 · 띄어쓰기는 알려 준다
-    const foreign = raw.replace(/[가-힣ᄀ-ᇿ㄰-㆏]/g, '') !== '';
-    const name = only.slice(0, NAME_MAX);
-    setWhy(foreign ? 'hangul' : only.length > NAME_MAX ? 'long' : '');
+    const name = raw.replace(/[^가-힣]/g, '').slice(0, NAME_MAX);
     setDraft(name);
     if (isSpecialName(name)) onValid(name);
   };
-  const error = why === 'hangul' ? '한글만 쓸 수 있어요'
-    : why === 'long' ? `${NAME_MAX}글자까지예요`
-      : left && draft.length > 0 && draft.length < NAME_MIN ? `${NAME_MIN}글자 이상 써 주세요` : undefined;
+  const error = foreign ? '한글만 쓸 수 있어요'
+    : syll > NAME_MAX ? `${NAME_MAX}글자까지예요`
+      : left && draft.length > 0 && syll < NAME_MIN ? `${NAME_MIN}글자 이상 써 주세요` : undefined;
   return (
     <TextField
       className={x.nameInput}
@@ -86,16 +84,14 @@ function NameInput({ initial, onValid }: { initial: string; onValid: (name: stri
       autoComplete="off"
       spellCheck={false}
       enterKeyHint="done"
-      onCompositionStart={() => { composing.current = true; }}
-      onCompositionEnd={(e) => { composing.current = false; settle(e.currentTarget.value); }}
       onChange={(e) => {
         const v = e.target.value;
-        if (composing.current || (e.nativeEvent as InputEvent).isComposing) { setDraft(v); return; }
-        settle(v);
+        setDraft(v);
+        if (isSpecialName(v)) onValid(v);
       }}
       onFocus={() => setLeft(false)}
-      onBlur={(e) => { composing.current = false; setLeft(true); settle(e.currentTarget.value); }}
-      onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) e.currentTarget.blur(); }}
+      onBlur={(e) => { setLeft(true); settle(e.currentTarget.value); }}
+      onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) e.currentTarget.blur(); }}
     />
   );
 }
