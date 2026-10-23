@@ -216,7 +216,7 @@ export function Preview() {
               <StatBar label="컨택" value={84} bonus={5} />
               <StatBar label="파워" value={71} />
               <StatBar label="수비 범위" value={93} />
-              <StatBar label="스피드" value={96} scale="fm" note="FM 1~20" />
+              <StatBar label="스피드" value={96} />
             </div>
           </div>
 

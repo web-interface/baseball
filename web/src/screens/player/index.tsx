@@ -1,6 +1,6 @@
 // 선수 정보 #/player/:id — FM 식 선수 상세 (담당: 선수 상세·대전 개발자, 이 폴더만 고친다)
 //   :id 는 선수 id(p03) 또는 카드 id(c03). ?card= 로 이 선수의 다른 카드, ?tab=attr|record|gear|enhance 로 탭.
-//   큰 카드(얼굴 초상) · 레벨/강화/잠재력 · 능력치(FM 1~20) · 구종 · 특성 · 숨은 특성 · 폼 · 날씨 궁합
+//   큰 카드(얼굴 초상) · 레벨/강화/잠재력 · 능력치(1~100) · 구종 · 특성 · 숨은 특성 · 폼 · 날씨 궁합
 //   기록(시즌 · 최근 10경기 · 명장면 · 부상) · 장비(착용·강화·세트) · 강화(재료 · 확률 · 실패 보정 · +5 플레이스타일)
 import { setQueryQuiet } from '../../app/router';
 import { useScreenTitle } from '../../app/title';
@@ -43,7 +43,7 @@ function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: 
   const toast = useToast();
   useScreenTitle(p.name, `${team.name} · No.${p.number}`);
   const [tab, setTabState] = useState<Tab>(owned ? initTab : initTab === 'record' ? 'record' : 'attr');
-  const [scale, setScale] = useState<Scale>('fm');
+  const [scale, setScale] = useState<Scale>('100');
   const [gears, setGears] = useState<Record<string, GearState>>({});
   const [picks, setPicks] = useState<Record<string, MatPick | null>>({});
   const [spent, setSpent] = useState(0);
@@ -150,7 +150,7 @@ function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: 
       )}
       {!owned && (
         <p className={s.fogNote}>
-          <b>내 카드가 아니에요.</b> 능력치는 스카우트가 본 범위로 보여요. 상점·영입에서 데려오면 강화·장비를 쓸 수 있어요.
+          <b>내 카드가 아니에요.</b> 능력치는 스카우트가 본 범위로 보여요. 상점(카드구매·스카우터)에서 데려오면 강화·장비를 쓸 수 있어요.
         </p>
       )}
 

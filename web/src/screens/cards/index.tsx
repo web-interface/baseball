@@ -72,7 +72,10 @@ export default function CardsScreen({ query }: ScreenProps) {
 
 function Collection({ openId, openBack, colsParam, sortParam, enhance = false }: { openId: string | null; openBack: boolean; colsParam: string | null; sortParam: string | null; enhance?: boolean }) {
   const ver = useInventory();
-  const mine = useMemo(() => ownedIds().map((id) => ownedCard(id)).filter(Boolean) as CardInst[], [ver]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 선수보관함 = 라인업 밖에 있는 카드만 (라인업 선수는 라인업 탭에서). 강화 화면은 라인업 선수도 강화하니 전부.
+  const all = useMemo(() => ownedIds().map((id) => ownedCard(id)).filter(Boolean) as CardInst[], [ver]); // eslint-disable-line react-hooks/exhaustive-deps
+  const mine = useMemo(() => (enhance ? all : all.filter((c) => !inLineup(c.id))), [all, enhance]);
+  const inLine = all.length - mine.length;
   const [grade, setGrade] = useState<GradeId | 'all'>('all');
   const [pos, setPos] = useState<PosGroup>('all');
   const [team, setTeam] = useState<string>('all');
@@ -131,7 +134,7 @@ function Collection({ openId, openBack, colsParam, sortParam, enhance = false }:
           <p className={s.lead}>같은 카드가 표의 장수만큼 모이면 <b>I~V</b> 는 바로 올라가요(재료로 쓴 장수만큼 줄어요). <b>VI~X</b> 는 같은 카드 1장 + GP 로 도전해요 — 실패해도 단계는 그대로예요.</p>
         )}
         <dl className={s.tally}>
-          <div><dt>보유</dt><dd className="num">{mine.length}<small>종</small></dd></div>
+          <div><dt>{enhance ? '보유' : '보관'}</dt><dd className="num">{mine.length}<small>종</small></dd>{!enhance && inLine > 0 && <Link to="/lineup" className={s.inLine}>라인업 {inLine}명 ›</Link>}</div>
           <div><dt>{enhance ? '강화에 쓴 카드' : '같은 카드'}</dt><dd className="num">{enhance ? st.enhUsed : dupTotal}<small>{enhance ? '장' : `/${copies}장`}</small></dd></div>
           <div className={s.album}>
             <dt>도감</dt>
@@ -221,10 +224,17 @@ function Collection({ openId, openBack, colsParam, sortParam, enhance = false }:
       </div>
 
       {list.length === 0 ? (
-        <div className={s.empty}>
-          <p>이 조건에 맞는 카드가 없어요.</p>
-          <Button variant="secondary" size="s" onClick={reset}>거르기 풀기</Button>
-        </div>
+        mine.length === 0 && !enhance ? (
+          <div className={s.empty}>
+            <p>보관함이 비어 있어요. 라인업 밖의 카드가 여기 모여요.</p>
+            <Button variant="secondary" size="s" onClick={() => navigate('/gacha')}>상점 › 카드구매</Button>
+          </div>
+        ) : (
+          <div className={s.empty}>
+            <p>이 조건에 맞는 카드가 없어요.</p>
+            <Button variant="secondary" size="s" onClick={reset}>거르기 풀기</Button>
+          </div>
+        )
       ) : (
         <ul className={[s.grid, cols === 2 ? s.two : s.three].join(' ')}>
           {list.map((c) => (

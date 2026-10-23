@@ -1,6 +1,6 @@
 // 능력치 탭 — 고유 구종 · 구종표 · FM 능력치 묶음 · 특성 · 숨은 특성 · 폼 · 날씨 궁합
 import { useMemo, type CSSProperties } from 'react';
-import { Icon, Tabs, fmt } from '../../ui';
+import { Icon, fmt } from '../../ui';
 import { ATTR_GROUPS, ATTR_KO, PITCH_KO, toFm } from '../../game/labels';
 import type { AttrKey, CardInst, GradeId, Player } from '../../game/types';
 import { isRarePlus } from '../../game/grades';
@@ -16,7 +16,7 @@ export type Scale = 'fm' | '100';
 
 const CAT_ICON: Record<TraitCat, 'bat' | 'steal' | 'glove' | 'pitch' | 'users'> = { 타격: 'bat', 주루: 'steal', 수비: 'glove', 투구: 'pitch', 덕아웃: 'users' };
 
-/** 띠 — FM 1~20 / 1~100 */
+/** 색 띠 단계 (값을 5등분한 눈금으로 계산 — 화면 숫자는 모두 1~100) */
 const band = (fm: number) => (fm >= 16 ? 5 : fm >= 13 ? 4 : fm >= 9 ? 3 : fm >= 6 ? 2 : 1);
 
 export interface AttrPanelProps {
@@ -45,10 +45,10 @@ export function AttrPanel({ p, card, grade, owned, mineCount, enh, playstyle, ge
   const groups = ATTR_GROUPS.filter((g) => (isP ? ['pitch', 'mental', 'phys'].includes(g.id) : g.id !== 'pitch' && (g.id !== 'catch' || p.pos === 'C')));
   const fog = !owned;
   const fr = rng('fog:' + p.id);
-  const fogRange = (fm: number) => {
-    const w = 4;
-    const lo = Math.max(1, Math.min(20 - w, fm - fr.int(0, w)));
-    return [lo, Math.min(20, lo + w)] as const;
+  const fogRange = (v: number) => {
+    const w = 20;
+    const lo = Math.max(1, Math.min(100 - w, Math.round(v) - fr.int(0, w)));
+    return [lo, Math.min(100, lo + w)] as const;
   };
   const bonusSum = Object.values(bonus).reduce((a, b) => Math.max(a, b ?? 0), 0);
 
@@ -58,23 +58,11 @@ export function AttrPanel({ p, card, grade, owned, mineCount, enh, playstyle, ge
 
       <Sec
         title="능력치"
-        meta={
-          <Tabs
-            variant="box"
-            size="s"
-            aria-label="능력치 눈금"
-            value={scale}
-            onChange={onScale}
-            items={[{ value: 'fm', label: '1~20' }, { value: '100', label: '1~100' }]}
-          />
-        }
       >
         <p className={s.scaleNote}>
           {fog
             ? <>남의 선수라 스카우트가 본 <b>범위</b>로 보여요. 맞대결이 쌓일수록 좁아져요.</>
-            : scale === 'fm'
-              ? <>FM 눈금(1~20) · 카드 보너스 빼고 선수 본래 값</>
-              : <>본래 값 + 카드 보너스(강화·플레이스타일·장비) {bonusSum > 0 && <b className="num">최대 +{bonusSum}</b>}</>}
+            : <>본래 값 + 카드 보너스(강화·플레이스타일·장비) {bonusSum > 0 && <b className="num">최대 +{bonusSum}</b>}</>}
         </p>
         <div className={s.groups}>
           {groups.map((g) => {
@@ -85,7 +73,7 @@ export function AttrPanel({ p, card, grade, owned, mineCount, enh, playstyle, ge
               <div key={g.id} className={s.group}>
                 <p className={s.gHead}>
                   <b>{g.ko}</b>
-                  <span className="num">{scale === 'fm' || fog ? toFm(avg) : avg}</span>
+                  <span className="num">{avg}</span>
                 </p>
                 {g.keys.map((k) => {
                   const v = p.attrs[k];
@@ -94,21 +82,21 @@ export function AttrPanel({ p, card, grade, owned, mineCount, enh, playstyle, ge
                   const b = bonus[k] ?? 0;
                   const label = SHORT[k] ?? ATTR_KO[k];
                   if (fog) {
-                    const [lo, hi] = fogRange(fm);
+                    const [lo, hi] = fogRange(v);
                     return (
                       <div key={k} className={s.row}>
                         <span className={s.lab}>{label}</span>
-                        <span className={['num', s.val, s.range, s['b' + band(Math.round((lo + hi) / 2))]].join(' ')}>{lo}–{hi}</span>
+                        <span className={['num', s.val, s.range, s['b' + band(toFm((lo + hi) / 2))]].join(' ')}>{lo}–{hi}</span>
                       </div>
                     );
                   }
-                  const shown = scale === 'fm' ? fm : Math.min(120, v + b);
-                  const bd = scale === 'fm' ? band(fm) : band(toFm(v + b));
+                  const shown = Math.min(120, v + b);
+                  const bd = band(toFm(v + b));
                   return (
                     <div key={k} className={s.row}>
                       <span className={s.lab}>{label}</span>
-                      {scale === '100' && b > 0 && <em className={['num', s.plus].join(' ')}>+{b}</em>}
-                      <span className={['num', s.val, s['b' + bd], (scale === "fm" ? fm >= 19 : v + b >= 94) && s.top].filter(Boolean).join(' ')}>{shown}</span>
+                      {b > 0 && <em className={['num', s.plus].join(' ')}>+{b}</em>}
+                      <span className={['num', s.val, s['b' + bd], v + b >= 94 && s.top].filter(Boolean).join(' ')}>{shown}</span>
                     </div>
                   );
                 })}
@@ -133,7 +121,7 @@ function PitchArsenal({ p, card, grade, enh, playstyle, gearPer, scale, fog }: {
   const sig = card.signaturePitch && isRarePlus(card.grade) ? card.signaturePitch : null;
   const pitches = (p.pitches ?? []).slice().sort((a, b) => b.usage - a.usage);
   const sigPitch = sig ? pitches.find((x) => x.type === sig.base) : undefined;
-  const v = (x: number, b: number) => (scale === 'fm' ? toFm(x) : Math.min(120, x + b));
+  const v = (x: number, b: number) => Math.min(120, x + b);
   return (
     <>
       {sig && (
@@ -157,7 +145,7 @@ function PitchArsenal({ p, card, grade, enh, playstyle, gearPer, scale, fog }: {
           <p className={s.sigNote}>문자 중계에서 이름이 불리고, 2D 중계에선 이 색 꼬리로 날아가요. 강화 V·X 에서 위력이 한 단계씩 올라요.</p>
         </Sec>
       )}
-      <Sec title="구종" meta={<>구사율 순 · {scale === 'fm' ? '1~20' : '1~100'}</>}>
+      <Sec title="구종" meta={<>구사율 순</>}>
         <div className={s.pitchTable} role="table" aria-label="구종표">
           <div className={[s.pRow, s.pHead].join(' ')} role="row">
             <span role="columnheader">구종</span>
@@ -178,8 +166,8 @@ function PitchArsenal({ p, card, grade, enh, playstyle, gearPer, scale, fog }: {
                   <b>{isSig ? sig!.name : x.ko}</b>
                 </span>
                 <span className={['num', s.r].join(' ')} role="cell">{x.kmh}</span>
-                <span className={['num', s.r, s['b' + band(fog ? fmS : scale === 'fm' ? fmS : toFm(x.stuff + b.stuff))]].join(' ')} role="cell">{fog ? `${Math.max(1, fmS - 2)}–${Math.min(20, fmS + 2)}` : stf}</span>
-                <span className={['num', s.r, s['b' + band(fog ? fmC : scale === 'fm' ? fmC : toFm(x.command + b.command))]].join(' ')} role="cell">{fog ? `${Math.max(1, fmC - 2)}–${Math.min(20, fmC + 2)}` : cmd}</span>
+                <span className={['num', s.r, s['b' + band(fog ? fmS : toFm(x.stuff + b.stuff))]].join(' ')} role="cell">{fog ? `${Math.max(1, Math.round(x.stuff) - 10)}–${Math.min(100, Math.round(x.stuff) + 10)}` : stf}</span>
+                <span className={['num', s.r, s['b' + band(fog ? fmC : toFm(x.command + b.command))]].join(' ')} role="cell">{fog ? `${Math.max(1, Math.round(x.command) - 10)}–${Math.min(100, Math.round(x.command) + 10)}` : cmd}</span>
                 <span className={s.use} role="cell">
                   <span className={s.useBar} aria-hidden><i style={{ width: `${Math.round(x.usage * 100)}%` }} /></span>
                   <span className="num">{Math.round(x.usage * 100)}%</span>
