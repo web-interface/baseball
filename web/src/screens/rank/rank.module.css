@@ -62,3 +62,8 @@
 :global([data-theme='classic']) .me .rk, :global([data-theme='classic']) .me .whoTxt small, :global([data-theme='classic']) .meta b { color: var(--club-text); }
 :global([data-theme='classic']) .rk { font-family: var(--font-num-display); }
 .demo { margin: 8px 0 2px; font-size: 11.5px; font-weight: 700; color: var(--warn); }
+
+/* 감독을 누르면 라인업 카드 */
+.whoBtn { width: 100%; text-align: left; border-radius: 6px; }
+.whoBtn:hover b { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-3); }
+.peekNote { padding: 18px 2px; font-size: 13px; color: var(--fg-3); }

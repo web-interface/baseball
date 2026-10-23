@@ -17,6 +17,7 @@ import { Spark } from './Spark';
 import { ME, MY_RANK, PVP_OPPONENTS, myLog, oppSide, ratingSeries, vsClubs } from './local-mock';
 import { clubTeam, mySnapshot, usePvpOnline, type SessionGame } from './online';
 import { listBattles, saveBattle, type BattleRec } from './battles';
+import { TeamLineup, cardsFromMockSide, cardsFromSnapshot } from './TeamLineup';
 import s from './pvp.module.css';
 
 type Tab = 'opp' | 'log';
@@ -310,19 +311,7 @@ function RealSheet({ opp, onClose, onStart, busy }: { opp: PvpClub | null; onClo
       sub={opp ? <>저장된 라인업 · 팀 종합 <span className="num">{opp.ovr}</span> · 전력 <span className="num">{fmt.int(opp.power)}</span> · 레이팅 <span className="num">{fmt.int(opp.rating)}</span></> : undefined}
       footer={opp ? <Button block disabled={busy} onClick={() => onStart(opp)}>대전 시작</Button> : undefined}
     >
-      {opp && (
-        <ol className={s.peekList}>
-          {(opp.lineup ?? []).map((b, i) => (
-            <li key={i}>
-              <span className="num">{b.pos === 'SP' || b.pos === 'CP' || b.pos === 'RP' || b.pos === 'P' ? '' : i + 1}</span>
-              <span className={s.peekPos}>{b.pos === 'SP' ? '선발' : b.pos === 'CP' ? '마무리' : b.pos === 'RP' ? '불펜' : POS_KO[b.pos as keyof typeof POS_KO] ?? b.pos}</span>
-              <b>{b.name ?? b.id.toUpperCase()}</b>
-              <span className={s.peekTeam}>{b.y != null ? <span className="num">’{String(b.y).padStart(2, '0')}</span> : null}</span>
-              <span className={['num', s.peekOvr].join(' ')}>{b.ovr}</span>
-            </li>
-          ))}
-        </ol>
-      )}
+      {opp && <TeamLineup cards={cardsFromSnapshot(opp.lineup ?? [])} onOpen={onClose} />}
     </Sheet>
   );
 }
@@ -338,29 +327,7 @@ function OpponentSheet({ opp, onClose, disabled }: { opp: PvpOpponent | null; on
       sub={side ? `저장 라인업 「${side.lineupName}」 · ${side.savedAgo} 저장 · ${side.style}` : undefined}
       footer={opp ? <Button block disabled={disabled} onClick={() => { onClose(); navigate(`/pvp?vs=${opp.id}`); }} trailing={<span>승 {fmt.int(opp.reward)} GP</span>}>이 라인업에 도전</Button> : undefined}
     >
-      {side && (
-        <div className={s.peek}>
-          <div className={s.peekAce}>
-            <CardMini player={side.sp.player} grade={side.sp.card.grade} enhance={side.sp.card.enhance} width={64} />
-            <div>
-              <p className={s.peekLab}>선발</p>
-              <p className={s.peekName}>{side.sp.player.name} <span className="num">{side.sp.player.ovr}</span></p>
-              {side.sp.card.signaturePitch && <p className={s.peekSig} style={{ ['--sig' as string]: side.sp.card.signaturePitch.color }}>{side.sp.card.signaturePitch.name}</p>}
-            </div>
-          </div>
-          <ol className={s.peekList}>
-            {side.batting.map((b) => (
-              <li key={b.order}>
-                <span className="num">{b.order}</span>
-                <span className={s.peekPos}>{POS_KO[b.pos]}</span>
-                <b>{b.player.name}</b>
-                <span className={s.peekTeam}>{teamById(b.player.teamId).short}</span>
-                <span className={['num', s.peekOvr].join(' ')}>{b.player.ovr}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
+      {side && <TeamLineup cards={cardsFromMockSide(side)} onOpen={onClose} />}
     </Sheet>
   );
 }

@@ -89,3 +89,8 @@
 :global([data-theme='classic']) .ldMine, :global([data-theme='classic']) .srMine { background: color-mix(in srgb, var(--club) 10%, transparent); box-shadow: inset 3px 0 0 var(--club); }
 :global([data-theme='classic']) .champ { border-radius: 0; box-shadow: inset 0 0 0 3px var(--inv-2); }
 :global([data-theme='classic']) .rk { font-family: var(--font-num-display); }
+
+/* 구단을 누르면 그 팀 라인업 카드 */
+.clubBtn { text-align: left; }
+.clubBtn:hover b { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-3); }
+.peekNote { padding: 18px 2px; font-size: 13px; color: var(--fg-3); }

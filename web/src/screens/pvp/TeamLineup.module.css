@@ -1,0 +1,9 @@
+/* 다른 구단 라인업 카드 — 5칸 격자 (타선 9 · 마운드) */
+.wrap { padding-bottom: 4px; }
+.h { margin: 6px 0 8px; font-size: 12px; font-weight: 800; color: var(--fg-3); letter-spacing: .02em; }
+.h:not(:first-child) { margin-top: 16px; }
+.grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px 8px; }
+.cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cap { text-align: center; font-size: 11px; font-weight: 800; color: var(--fg-2); white-space: nowrap; }
+.note { margin-top: 12px; font-size: 11.5px; color: var(--fg-3); }
+.empty { padding: 18px 0; font-size: 13px; color: var(--fg-3); }

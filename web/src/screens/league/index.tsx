@@ -6,12 +6,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { Link, setQueryQuiet } from '../../app/router';
-import { Emblem, Icon, Tabs } from '../../ui';
+import { Emblem, Icon, Sheet, Tabs } from '../../ui';
 import { ME, playerById, teamById } from '../../game/mock';
 import { allDays, avgLabel, batLine, eraLabel, gamesPlayed, gbLabel, isOver, pctLabel, pitLine, standingsOf, useSeason, yearOf, type SeasonState } from '../../season/store';
 import { SERIES_ORDER, type SeriesRec } from '../../season/post';
 import { RankChart } from '../season/RankChart';
 import { SERIES_KO, ipText, useKeepSelected, useRosters } from '../games/shared';
+import { rosterOf } from '../../season/rosters';
+import { TeamLineup, cardsFromRoster } from '../pvp/TeamLineup';
 import s from './league.module.css';
 
 export default function LeagueScreen({ query }: ScreenProps) {
@@ -49,6 +51,9 @@ const last10Of = (s10: string) => {
 };
 function Standings({ st }: { st: SeasonState }) {
   const rows = standingsOf(st);
+  // 구단을 누르면 그 팀의 지금 선수단 카드 (AI 구단은 시즌 선수단, 내 구단은 내 라인업)
+  const [peek, setPeek] = useState<string | null>(null);
+  const peekRoster = useMemo(() => { if (!peek) return null; try { return rosterOf(peek); } catch { return null; } }, [peek]);
   const started = st.next > 0;
   const seeds = st.post?.seeds.length ?? 5;
   return (
@@ -80,7 +85,7 @@ function Standings({ st }: { st: SeasonState }) {
                 <tr key={r.teamId} className={[mine && s.me, i === seeds - 1 && s.cut].filter(Boolean).join(' ') || undefined}>
                   <td className={['num', s.sticky, s.cRank, s.rk].join(' ')}>{started ? r.rank : '—'}</td>
                   <th scope="row" className={[s.sticky, s.cClub].join(' ')}>
-                    <span className={s.club}><Emblem team={t} size={20} /><b>{t.short}</b></span>
+                    <button type="button" className={[s.club, s.clubBtn].join(' ')} onClick={() => setPeek(r.teamId)} aria-label={`${t.name} 라인업 보기`}><Emblem team={t} size={20} /><b>{t.short}</b></button>
                   </th>
                   <td className="num">{r.g}</td>
                   <td className="num">{r.w}</td>
@@ -99,6 +104,15 @@ function Standings({ st }: { st: SeasonState }) {
         </table>
       </div>
       <p className={s.hint}><Icon name="swap" size={12} /> 표는 옆으로 밀어서 봐요 · 굵은 선 위가 포스트시즌</p>
+      <Sheet
+        open={!!peek}
+        onClose={() => setPeek(null)}
+        title={peek ? teamById(peek).name : ''}
+        sub={peekRoster ? <>{peek === ME.teamId ? '내 라인업' : '지금 시즌 선수단'} · 팀 종합 <span className="num">{peekRoster.ovr}</span></> : undefined}
+        height="tall"
+      >
+        {peekRoster ? <TeamLineup cards={cardsFromRoster(peekRoster)} onOpen={() => setPeek(null)} /> : peek ? <p className={s.peekNote}>선수단을 불러오지 못했어요.</p> : null}
+      </Sheet>
     </section>
   );
 }

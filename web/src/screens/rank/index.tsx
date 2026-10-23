@@ -5,10 +5,12 @@ import { useCallback, useEffect, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { Link, navigate, setQueryQuiet } from '../../app/router';
 import { useAuth } from '../../app/auth';
-import { Button, Emblem, Icon, Tabs, fmt } from '../../ui';
+import { Button, Emblem, Icon, Sheet, Tabs, fmt } from '../../ui';
 import { isTeamId, myTeam, teamById } from '../../game/mock';
 import { rankLabel, teamLine, useSeason } from '../../season/store';
-import { ApiError, api, type RankingBy, type RankingsRes } from '../../api';
+import { ApiError, api, type PvpLineupItem, type RankingBy, type RankingsRes, type RankingRow } from '../../api';
+import { TeamLineup, cardsFromSnapshot } from '../pvp/TeamLineup';
+import { mySnapshot } from '../pvp/online';
 import { demoRankings } from './demo';
 import s from './rank.module.css';
 
@@ -52,6 +54,19 @@ function Managers({ by, setBy, demo }: { by: RankingBy; setBy: (v: RankingBy) =>
     if (demo) { setLoad({ kind: 'ok', data: demoRankings(by) }); return; }
     if (status === 'in') void fetchIt(by);
   }, [status, by, fetchIt, demo]);
+
+  // 감독을 누르면 그 감독이 올려 둔 라인업 카드 — 순위 응답엔 라인업이 없어서 대전 상대 목록(GET /pvp/opponents)에서 찾는다(나는 내 라인업)
+  const [peek, setPeek] = useState<Pick<RankingRow, 'userId' | 'username' | 'teamName' | 'club' | 'ovr' | 'power' | 'rating'> & { me?: boolean } | null>(null);
+  const [lineups, setLineups] = useState<Map<number, PvpLineupItem[]> | 'loading' | 'error' | null>(null);
+  const openPeek = (row: NonNullable<typeof peek>) => {
+    setPeek(row);
+    if (demo || row.me || lineups instanceof Map || lineups === 'loading') return;
+    setLineups('loading');
+    api.pvpOpponents()
+      .then((r) => setLineups(new Map(r.opponents.map((o) => [o.userId, o.lineup ?? []]))))
+      .catch(() => setLineups('error'));
+  };
+  const peekLineup = !peek ? null : peek.me ? mySnapshot().lineup : lineups instanceof Map ? lineups.get(peek.userId) ?? null : null;
 
   const col = BY.find((x) => x.value === by)!.col;
   const data = load.kind === 'ok' && load.data.by === by ? load.data : null;
@@ -109,13 +124,13 @@ function Managers({ by, setBy, demo }: { by: RankingBy; setBy: (v: RankingBy) =>
                 <tr key={x.userId} className={[x.me && s.me, x.rank <= 3 && s.top].filter(Boolean).join(' ') || undefined}>
                   <td className={['num', s.cRank, s.rk].join(' ')}>{x.rank}</td>
                   <td>
-                    <span className={s.who}>
+                    <button type="button" className={[s.who, s.whoBtn].join(' ')} onClick={() => openPeek({ ...x, me: x.me })} aria-label={`${x.username} 감독 라인업 보기`}>
                       <Emblem team={tm} size={26} />
                       <span className={s.whoTxt}>
                         <b>{x.teamName}</b>
                         <small>{x.username}{x.me ? ' · 나' : ''}</small>
                       </span>
-                    </span>
+                    </button>
                   </td>
                   <td className={['num', s.cR, s.wdl].join(' ')}>{x.w}-{x.d}-{x.l}</td>
                   <td className={['num', s.cR, s.val].join(' ')}>{showVal(by, x.value)}</td>
@@ -128,10 +143,10 @@ function Managers({ by, setBy, demo }: { by: RankingBy; setBy: (v: RankingBy) =>
                 <tr className={s.me}>
                   <td className={['num', s.cRank, s.rk].join(' ')}>{me.rank ?? '—'}</td>
                   <td>
-                    <span className={s.who}>
+                    <button type="button" className={[s.who, s.whoBtn].join(' ')} onClick={() => openPeek({ ...me, me: true })} aria-label="내 라인업 보기">
                       <Emblem team={clubTeam(me.club)} size={26} />
                       <span className={s.whoTxt}><b>{me.teamName}</b><small>{me.username} · 나</small></span>
-                    </span>
+                    </button>
                   </td>
                   <td className={['num', s.cR, s.wdl].join(' ')}>{me.w}-{me.d}-{me.l}</td>
                   <td className={['num', s.cR, s.val].join(' ')}>{showVal(by, me.value)}</td>
@@ -150,6 +165,21 @@ function Managers({ by, setBy, demo }: { by: RankingBy; setBy: (v: RankingBy) =>
           {' '}상위 50명까지 보여요.
         </p>
       )}
+      <Sheet
+        open={!!peek}
+        onClose={() => setPeek(null)}
+        title={peek ? `${peek.teamName} · ${peek.username}` : ''}
+        sub={peek ? <>저장된 라인업 · 팀 종합 <span className="num">{peek.ovr}</span> · 전력 <span className="num">{fmt.int(peek.power)}</span> · 레이팅 <span className="num">{fmt.int(peek.rating)}</span></> : undefined}
+        height="tall"
+      >
+        {peek && (demo
+          ? <p className={s.peekNote}>예시 순위라 라인업이 없어요.</p>
+          : peekLineup
+            ? <TeamLineup cards={cardsFromSnapshot(peekLineup)} onOpen={() => setPeek(null)} />
+            : lineups === 'loading' ? <p className={s.peekNote}>라인업을 불러오는 중이에요…</p>
+              : lineups === 'error' ? <p className={s.peekNote}>라인업을 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요.</p>
+                : <p className={s.peekNote}>이 감독은 아직 대전 라인업을 올리지 않았어요.</p>)}
+      </Sheet>
     </section>
   );
 }
