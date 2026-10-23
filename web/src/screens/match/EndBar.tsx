@@ -1,6 +1,7 @@
 // 경기 끝 — 시즌 경기는 '다음 경기 바로' · 시즌 성적 · 오늘 다른 구장 결과, 대전은 레이팅 변화 · 전적.
 import { navigate } from '../../app/router';
-import { Button, Emblem, Icon, fmt } from '../../ui';
+import type { ReactNode } from 'react';
+import { Button, Emblem, Icon, Sheet, fmt } from '../../ui';
 import { ME, teamById } from '../../game/mock';
 import { longDate, shortDate } from '../../season/schedule';
 import { allDays, isOver, pctLabel, rankLabel, standingsOf, teamLine, useSeason, yearOf } from '../../season/store';
@@ -172,6 +173,74 @@ function PvpBar({ end }: { end: PvpEnd }) {
         <Button variant="secondary" onClick={() => navigate('/pvp?tab=log')}>내 기록</Button>
       </div>
     </section>
+  );
+}
+
+/**
+ * 경기 끝 팝업 — 끝까지 본 시즌 · 포스트시즌 우리 경기에서 한 번: 점수 + 다음 우리 경기 → [닫기] [다음 경기 진행].
+ * 다음 우리 경기가 없으면(정규 시즌 끝 · 포스트시즌 끝/탈락) [닫기] [홈으로]. 다음 경기는 아래 끝 줄(SeasonBar · PostBar)과 같은 계산.
+ */
+export function NextGameSheet({ ctx, final, awayId, homeId, open, onClose }: {
+  ctx: MatchCtx; final: [number, number]; awayId: string; homeId: string; open: boolean; onClose: () => void;
+}) {
+  const st = useSeason();
+  if (ctx.kind !== 'season' && ctx.kind !== 'post') return null;
+  const meAway = awayId === ME.teamId;
+  const my = meAway ? final[0] : final[1];
+  const their = meAway ? final[1] : final[0];
+  const res = my > their ? 'W' : my < their ? 'L' : 'D';
+  const away = teamById(awayId), home = teamById(homeId);
+
+  // 다음 우리 경기 — 시즌은 그날 결과가 들어간 뒤(applied)에 정한다
+  let next: { label: string; go: () => void } | null = null;
+  let none = '';
+  let applied = true;
+  let sub: ReactNode = null;
+  if (ctx.kind === 'season') {
+    applied = st.next > ctx.idx;
+    const nx = applied ? nextMyGame() : null;
+    const ln = teamLine(ME.teamId, st);
+    sub = applied ? <><span className="num">{ln.row.w}</span>승 <span className="num">{ln.row.d}</span>무 <span className="num">{ln.row.l}</span>패 · {rankLabel(ln)}</> : '오늘 결과를 넣는 중이에요…';
+    if (nx) {
+      const opp = teamById(nx.home === ME.teamId ? nx.away : nx.home);
+      next = { label: `${longDate(nx.day.date)} · ${opp.short}전 · ${nx.home === ME.teamId ? '홈' : '원정'}`, go: () => navigate(`/match?g=season&n=${Date.now()}`) };
+    } else if (applied) none = isOver(st) ? '정규 시즌이 끝났어요. 최종 순위와 가을야구는 홈에서 확인해요.' : '남은 우리 경기가 없어요.';
+  } else {
+    const p = st.post;
+    const nx = nextPostGame(p);
+    sub = ctx.label;
+    if (nx?.mine) next = { label: `${SERIES_KO[nx.series.id]} ${nx.no}차전`, go: () => navigate(`/match?g=post&n=${p?.n ?? 0}`) };
+    else none = p?.champion ? (p.champion === ME.teamId ? '한국시리즈 우승! 올 시즌 우리 경기는 여기까지예요.' : '올 시즌 우리 경기는 여기까지예요.') : '남은 우리 경기가 없어요.';
+  }
+
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="경기 끝"
+      sub={sub}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>닫기</Button>
+          {next || !applied
+            ? <Button icon="play" disabled={!applied || !next} onClick={() => { onClose(); next?.go(); }}>다음 경기 진행</Button>
+            : <Button icon="home" onClick={() => { onClose(); navigate('/home'); }}>홈으로</Button>}
+        </>
+      }
+    >
+      <div className={s.ngScore} aria-label={`${away.short} ${final[0]} 대 ${home.short} ${final[1]}, ${RES_KO[res]}`}>
+        <span className={s.ngTeam}><Emblem team={away} size={34} /><b>{away.short}</b></span>
+        <b className={['num', s.ngNum].join(' ')}>{final[0]}<i>:</i>{final[1]}</b>
+        <span className={s.ngTeam}><Emblem team={home} size={34} /><b>{home.short}</b></span>
+      </div>
+      <p className={[s.ngRes, s['ng' + res]].join(' ')}>{res === 'W' ? '승리' : res === 'L' ? '패배' : '무승부'}</p>
+      {next ? (
+        <div className={s.ngNext}>
+          <small>다음 경기</small>
+          <b>{next.label}</b>
+        </div>
+      ) : none ? <p className={s.ngNone}>{none}</p> : null}
+    </Sheet>
   );
 }
 

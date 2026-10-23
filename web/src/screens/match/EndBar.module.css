@@ -38,3 +38,19 @@
 :global([data-theme='classic']) .end { border-top: 1.5px solid var(--fg); box-shadow: inset 0 3px 0 -1px var(--bg), inset 0 4px 0 -1px var(--line-2); }
 :global([data-theme='classic']) .others li em { color: var(--club-text); }
 :global([data-theme='classic']) .mine { background: color-mix(in srgb, var(--club) 10%, transparent); box-shadow: inset 3px 0 0 var(--club); }
+
+/* 경기 끝 팝업 — 점수 · 결과 · 다음 우리 경기 */
+.ngScore { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; padding: 4px 0 0; }
+.ngTeam { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+.ngTeam b { font-size: 14px; font-weight: 800; letter-spacing: -.03em; }
+.ngNum { display: flex; align-items: center; gap: 10px; font-family: var(--font-num-display); font-size: 46px; font-weight: 700; line-height: 1; }
+.ngNum i { font-style: normal; font-size: 26px; color: var(--fg-3); }
+.ngRes { margin-top: 10px; text-align: center; font-size: 15px; font-weight: 800; letter-spacing: .04em; }
+.ngW { color: var(--accent); }
+.ngL { color: var(--fg-3); }
+.ngD { color: var(--fg-2); }
+.ngNext { display: flex; flex-direction: column; gap: 4px; margin-top: 16px; padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--surface-2); }
+.ngNext small { font-size: 11.5px; font-weight: 700; color: var(--fg-3); }
+.ngNext b { font-size: 15px; font-weight: 800; letter-spacing: -.03em; }
+.ngNone { margin-top: 16px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); font-size: 13.5px; line-height: 1.5; color: var(--fg-2); }
+:global([data-theme='classic']) .ngW { color: var(--club-text); }

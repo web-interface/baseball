@@ -9,7 +9,8 @@ import { ME, teamById } from '../../game/mock';
 import { useTheme } from '../../theme/ThemeProvider';
 import { GAME, LAST_GAME } from './local-mock';
 import { activate, activateLast } from './active';
-import { EndBar, MatchLoading, type MatchCtx } from './EndBar';
+import { EndBar, MatchLoading, NextGameSheet, type MatchCtx } from './EndBar';
+import { LineupButton, LineupSheet } from './LineupSheet';
 import { homerunFx, hrInfoOf, type HrHandle } from './hr-fx';
 import {
   PLAYS, beatIndexForPlay, beatsFor, calloutPace, cursorOf, liveOf, scriptOf, totalMs, type Beat, type Cursor, type Mode,
@@ -141,13 +142,25 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
   }, [blocked, idx, playing, phase, speed, player]);
 
   // 끝까지 보면 요약
+  const sawEnd = useRef(false);
   useEffect(() => {
     if (ended && phase === 'play') {
+      sawEnd.current = true;
       store.set(seenKey(GAME.match.id), '1');
       const t = window.setTimeout(() => setPhase('done'), 700);
       return () => window.clearTimeout(t);
     }
   }, [ended, phase]);
+  // 끝까지 본 시즌 · 포스트시즌 경기 — 끝 장면을 잠깐 보여 준 뒤 '다음 경기 진행 / 닫기' 팝업 (한 번만, 이미 본 경기를 다시 열 땐 없음)
+  const [askNext, setAskNext] = useState(false);
+  const [lineupOpen, setLineupOpen] = useState(false);
+  const asked = useRef(false);
+  useEffect(() => {
+    if (phase !== 'done' || !sawEnd.current || asked.current || (ctx.kind !== 'season' && ctx.kind !== 'post')) return;
+    asked.current = true;
+    const t = window.setTimeout(() => setAskNext(true), 1100);
+    return () => window.clearTimeout(t);
+  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
   // 홈런 — 공이 담장을 넘는 순간(빨리 보기는 그 장면이 번쩍일 때) 홈런 연출(fx/homerun)을 무대 위에 띄운다.
   // 긴 판(주요 장면·이닝별·자세히)은 연출이 끝날 때까지 경기를 멈췄다가 이어 가고, 빨리 보기는 짧은 판을 얹기만 한다.
   const hrAt = useSnapValue(player, (x) => {
@@ -279,6 +292,7 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
         <Stage player={player} live={pre ? liveOf({ play: 0, pitches: 0, applied: false }) : liveShown} showZone={showZone} idle={pre}>
           {pre && <PreGame mode={mode} onStart={start} />}
           {done && <FinalOverlay />}
+          {!pre && <LineupButton onClick={() => setLineupOpen(true)} />}
         </Stage>
       </CalloutStage>
       <CalloutAnnouncer callout={queue.current} />
@@ -309,6 +323,8 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
       {!pre && !done && mode === 'detail' && <Tactics live={live} />}
       {!pre && !done && <Momentum live={live} />}
       {!pre && <Feed live={liveShown} mode={mode} done={done} />}
+      <LineupSheet open={lineupOpen} onClose={() => setLineupOpen(false)} live={liveShown} pre={pre} done={done} />
+      <NextGameSheet ctx={ctx} final={GAME.match.final} awayId={GAME.match.awayId} homeId={GAME.match.homeId} open={askNext} onClose={() => setAskNext(false)} />
       {import.meta.env.DEV && mode === 'quick' && <span hidden data-quick-ms={totalMs(player.beats)} />}
     </div>
   );
