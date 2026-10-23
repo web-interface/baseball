@@ -6,6 +6,7 @@
 //   보유 카드는 모두 보유 카드 저장소(game/inventory)에서 — 카드구매 · 조합 · 스카우터로 얻은 카드가 바로 보이고,
 //   같은 카드가 필요 수량만큼 모이면 자동으로 강화된다(최근 강화 줄에 'II → III').
 import { useCallback, useMemo, useState } from 'react';
+import { useIncremental } from '../../ui/useIncremental';
 import type { ScreenProps } from '../../app/screen';
 import { Link, navigate } from '../../app/router';
 import { Card, CardBack, CardMini, cardProps } from '../../cards';
@@ -111,6 +112,8 @@ function Collection({ openId, openBack, colsParam, sortParam, enhance = false }:
     };
     return out.sort((a, b) => by[sort](a, b) || playerOfCard(a).name.localeCompare(playerOfCard(b).name, 'ko'));
   }, [mine, grade, pos, team, sort]);
+  // 카드가 수천 장이어도 가볍게 — 60장씩 이어 그린다 (거르기 · 정렬이 바뀌면 처음부터)
+  const inc = useIncremental(list, 60, `${grade}|${pos}|${team}|${sort}|${enhance}`);
 
   const dupTotal = mine.reduce((n, c) => n + c.dup, 0);
   const copies = mine.length + dupTotal;
@@ -238,7 +241,7 @@ function Collection({ openId, openBack, colsParam, sortParam, enhance = false }:
         )
       ) : (
         <ul className={[s.grid, cols === 2 ? s.two : s.three].join(' ')}>
-          {list.map((c) => (
+          {inc.shown.map((c) => (
             <li key={c.id} className={s.cell}>
               <div className={[s.stack, c.dup > 0 && s.stacked, c.dup > 1 && s.stacked2].filter(Boolean).join(' ')}>
                 <Card {...cardProps(c)} fluid dense onClick={() => setOpen(c)} />
@@ -250,6 +253,7 @@ function Collection({ openId, openBack, colsParam, sortParam, enhance = false }:
               )}
             </li>
           ))}
+          {inc.more && <li ref={inc.sentinelRef} className={s.moreRow} aria-hidden>카드 <span className="num">{inc.left}</span>장 더 불러오는 중…</li>}
         </ul>
       )}
 

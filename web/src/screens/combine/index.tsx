@@ -17,6 +17,7 @@ import { shortLabel } from '../../game/world';
 import { MAX_MATS, MIN_MATS, analyze, reelOf, type CombineView, type Side } from '../../game/combine';
 import type { GradeId } from '../../game/types';
 import { Button, CoinGP, Icon, Tabs, fmt, useToast } from '../../ui';
+import { useIncremental } from '../../ui/useIncremental';
 import { rollComboWith } from '../gacha/draw';
 import { Swatch, gradeFill, gradeShort } from '../gacha/bits';
 import { Recipe, pctText } from './Recipe';
@@ -68,6 +69,8 @@ export default function CombineScreen({ query }: ScreenProps) {
   const grades = useMemo(() => [...counts.keys()].sort((a, b) => gradeOrder(a) - gradeOrder(b)), [counts]);
   useEffect(() => { if (grade !== 'all' && !counts.has(grade)) setGrade('all'); }, [counts, grade]);
   const list = useMemo(() => sortMats(grade === 'all' ? side : side.filter((m) => m.info.grade === grade), sort), [side, grade, sort]);
+  // 카드가 수천 장이어도 가볍게 — 60장씩 이어 그린다 (탭 · 등급 · 정렬이 바뀌면 처음부터)
+  const inc = useIncremental(list, 60, `${tab}|${grade}|${sort}`);
   const nB = useMemo(() => mats.filter((m) => m.side === 'B').length, [mats]);
   const nP = mats.length - nB;
 
@@ -198,7 +201,7 @@ export default function CombineScreen({ query }: ScreenProps) {
           <div className={s.empty}><p>쓸 수 있는 {tab === 'P' ? '투수' : '타자'} 카드가 없어요.</p></div>
         ) : (
           <ul className={s.grid}>
-            {list.map((m) => {
+            {inc.shown.map((m) => {
               const used = usedOf(m.id);
               const left = m.spare - used;
               const club = m.info.club ? shortLabel(m.info.club) : '';
@@ -221,6 +224,7 @@ export default function CombineScreen({ query }: ScreenProps) {
                 </li>
               );
             })}
+          {inc.more && <li ref={inc.sentinelRef} className={s.moreRow} aria-hidden>카드 <span className="num">{inc.left}</span>장 더 불러오는 중…</li>}
           </ul>
         )}
       </section>
