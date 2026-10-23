@@ -241,7 +241,7 @@ function Collection({ openId, openBack, colsParam, sortParam, enhance = false }:
           {list.map((c) => (
             <li key={c.id} className={s.cell}>
               <div className={[s.stack, c.dup > 0 && s.stacked, c.dup > 1 && s.stacked2].filter(Boolean).join(' ')}>
-                <Card {...cardProps(c)} fluid onClick={() => setOpen(c)} />
+                <Card {...cardProps(c)} fluid dense onClick={() => setOpen(c)} />
               </div>
               {enhance ? <EnhProg card={c} /> : c.dup > 0 && (
                 <span className={s.dup} title={`같은 카드 ${c.dup + 1}장 — ${c.dup}장은 강화 재료`}>
@@ -470,7 +470,7 @@ function Gallery({ same }: { same: boolean }) {
       <ol className={s.ladder}>
         {items.map(({ g, card }, i) => (
           <li key={g} className={[s.rung, s['k-' + GRADES[g].kind]].join(' ')}>
-            <Card {...cardProps(card!)} fluid isNew={false} onClick={() => navigate('/player/' + card!.playerId)} />
+            <Card {...cardProps(card!)} fluid dense isNew={false} onClick={() => navigate('/player/' + card!.playerId)} />
             <div className={s.rungCap}>
               <span className={['num', s.rungNo].join(' ')}>{String(i + 1).padStart(2, '0')}</span>
               <b style={{ color: `var(--gr-${g})` }}>{GRADES[g].ko}{LIMIT[g] && <em className="num">{LIMIT[g]}</em>}</b>

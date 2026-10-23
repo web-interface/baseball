@@ -77,7 +77,26 @@ export interface CardProps {
   ovrShown?: number;
   /** 대표 능력치에 더해진 값 (앞면 코드별 — game/cardBonus: 강화 · 훈련 · 잠재력 · 플레이스타일 · 세트덱) */
   faceUp?: Partial<Record<string, number>>;
+  /** 촘촘한 목록용 가벼운 효과 — 화면을 다시 칠하는 비싼 움직임(테두리 회전 · 홀로 · 번개 …)은 끄고 GPU 로 도는 것만 */
+  lite?: boolean;
+  /** 아주 촘촘한 목록(보관함 격자) — 겹 장식(홀로 · 반짝이 · 불씨 · 섬광 · 번개)을 빼고 테두리 빛 · 칩만 */
+  dense?: boolean;
 }
+/* ───────── 성능 — 화면 밖 카드는 움직임을 멈춘다 (관찰자 하나로 모든 카드 · data-off → CSS 가 animation 을 멈춤) ───────── */
+let offIo: IntersectionObserver | null = null;
+function watchOff(el: HTMLElement | null) {
+  if (!el || typeof IntersectionObserver === 'undefined') return undefined;
+  offIo ??= new IntersectionObserver((es) => {
+    for (const e of es) {
+      const t = e.target as HTMLElement;
+      if (e.isIntersecting) delete t.dataset.off;
+      else t.dataset.off = '1';
+    }
+  }, { rootMargin: '160px 0px' });
+  offIo.observe(el);
+  return () => { offIo?.unobserve(el); };
+}
+
 /** 대표 능력치 숫자 — 더해진 값까지 (오르면 초록, 100 넘으면 10 단위 색) */
 function faceVal(v: number, up?: number) {
   const add = Math.round(up ?? 0);
@@ -179,12 +198,13 @@ function nameFit(text: string, base: number, room: number) {
 function CardImpl(props: CardProps) {
   const {
     player, grade, year, level, enhance = 0, signaturePitch, award, team, size = 'm', width, fluid, showStats, selected, dimmed, isNew,
-    onClick, className, style, cardId, serial, set, live, still, eager, train = 0, pot = null, ovrShown, faceUp,
+    onClick, className, style, cardId, serial, set, live, still, eager, train = 0, pot = null, ovrShown, faceUp, lite, dense,
   } = props;
   const t = team ?? teamById(player.teamId);
   const g = GRADES[grade];
   const w = width ?? WIDTH[size];
   const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => watchOff(ref.current), []);
   const pos = posOf(player);
   const uni = set ?? (cardId ? uniformOf({ id: cardId, grade }) : 'home');
   const ser = serial !== undefined ? serial : cardId ? mockSerial(grade, cardId, player.number) : null;
@@ -207,7 +227,7 @@ function CardImpl(props: CardProps) {
     <div
       ref={ref}
       className={[
-        c.card, c['g-' + grade], glow && c.glow, PULSE.has(grade) && c.pulse, fluid && c.fluid, live && c.live, still && c.still,
+        c.card, c['g-' + grade], glow && c.glow, PULSE.has(grade) && c.pulse, fluid && c.fluid, live && c.live, still && c.still, (lite || dense) && c.lite, dense && c.dense,
         stats && c.hasStats, selected && c.selected, dimmed && c.dimmed, onClick && c.clickable,
         tl >= 5 && c.trained, tl >= 8 && c.trainHi, tl >= 10 && c.trainMax, className,
       ].filter(Boolean).join(' ')}
@@ -308,6 +328,8 @@ function CardMiniImpl({
 }: CardMiniProps) {
   const t = team ?? teamById(player.teamId);
   const w = width ?? WIDTH[size];
+  const miniRef = useRef<HTMLDivElement>(null);
+  useEffect(() => watchOff(miniRef.current), []);
   const uni = set ?? (cardId ? uniformOf({ id: cardId, grade }) : 'home');
   const tier = enhanceTier(enhance);
   const type = cardTypeOf(player);
@@ -317,8 +339,9 @@ function CardMiniImpl({
   const yy = year != null ? String(year).slice(-2) : '';
   return (
     <div
+      ref={miniRef}
       className={[
-        c.card, c.mini, c['g-' + grade], glow && c.glow, PULSE.has(grade) && c.pulse, !label && c.noBar, fluid && c.fluid, still && c.still,
+        c.card, c.mini, c.lite, c['g-' + grade], glow && c.glow, PULSE.has(grade) && c.pulse, !label && c.noBar, fluid && c.fluid, still && c.still,
         selected && c.selected, dimmed && c.dimmed, onClick && c.clickable,
         tl >= 5 && c.trained, tl >= 8 && c.trainHi, tl >= 10 && c.trainMax, className,
       ].filter(Boolean).join(' ')}
