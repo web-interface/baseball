@@ -32,6 +32,7 @@ export const ROUTES: RouteDef[] = [
   { key: 'season', path: '/season', title: '시즌 빨리 감기', menu: '시즌', owner: '경기 화면 개발자', desc: '남은 시즌 한 번에 — 속도 1·2·4배·끝까지 · 날짜 막대 · 순위 경쟁 그래프 · 소식 띠 · 하이라이트 · 최종 순위 · 개인 기록 1위', load: () => import('../screens/season') },
   { key: 'match', path: '/match', title: '경기', menu: '경기', owner: '경기 화면 개발자', desc: '빨리 보기(10초) · 주요 장면 · 이닝별 · 자세히(2D) · 강조 문구 · 원인 표시 · ?g=season 지금 바로 경기(엔진) · ?pvp=<id> 대전 다시 보기', load: () => import('../screens/match') },
   { key: 'cards', path: '/cards', title: '카드', menu: '카드', owner: '카드 화면 개발자', desc: '보관함 · 등급 11종 · 강화 I~X · 레벨 · 도감', load: () => import('../screens/cards') },
+  { key: 'enhance', path: '/enhance', title: '강화', owner: '카드 화면 개발자', desc: '강화할 카드 고르기 — 보관함이 강화 단계순으로 열려요 · 카드를 눌러 강화(I~X)·레벨·각성', load: () => import('../screens/cards/Enhance') },
   { key: 'gacha', path: '/gacha', title: '영입', menu: '영입', owner: '뽑기 화면 개발자', desc: '스카우트(카드 뽑기) · 확률 공개 · 천장 · 레전드 이펙트', load: () => import('../screens/gacha') },
   { key: 'shop', path: '/shop', title: '스카우트 상점', menu: '상점', owner: '상점 화면 개발자', desc: 'AI 스카우트가 매일 진열 · 하루 살 수 있는 인원 제한', load: () => import('../screens/shop') },
   { key: 'pvp', path: '/pvp', title: '대전', menu: '대전', owner: '대전 화면 개발자', desc: '다른 감독 구단과 혼자 대결(상대 접속 필요 없음) · AI 구단 연습 · 레이팅 · 내 기록', load: () => import('../screens/pvp') },
@@ -43,7 +44,24 @@ export const ROUTES: RouteDef[] = [
   { key: 'fx', path: '/fx', title: '홈런 연출', back: '/preview', chrome: 'bare', owner: '연출 개발자', desc: '홈런 폭죽 · 큰 글자 · 만루 세리머니 — 종류 17가지 재생 · ?play=grandslam&t=900 (src/fx/homerun)', load: () => import('../fx/homerun/FxLab') },
 ];
 
-/** 위쪽 메뉴 */
+/** 위쪽 메뉴 — 큰 묶음 5개, 묶음 안 화면은 아래 작은 탭. 기존 경로(#/lineup 등)는 그대로 쓴다 */
+export interface MenuGroup { key: string; label: string; items: { route: string; label: string }[] }
+export const GROUPS: MenuGroup[] = [
+  { key: 'home', label: '홈', items: [{ route: 'home', label: '홈' }] },
+  { key: 'team', label: '팀관리', items: [
+    { route: 'lineup', label: '라인업' }, { route: 'cards', label: '선수보관' }, { route: 'sets', label: '세트덱' }, { route: 'enhance', label: '강화' },
+  ] },
+  { key: 'play', label: '경기', items: [{ route: 'season', label: '시즌' }, { route: 'match', label: '경기' }] },
+  { key: 'scout', label: '스카우터', items: [{ route: 'gacha', label: '영입' }, { route: 'shop', label: '상점' }] },
+  { key: 'versus', label: '대전·순위', items: [{ route: 'pvp', label: '대전' }, { route: 'rank', label: '순위' }] },
+];
+
+/** 화면 key → 속한 묶음 */
+export function groupOf(routeKey?: string): MenuGroup | undefined {
+  return GROUPS.find((g) => g.items.some((i) => i.route === routeKey));
+}
+
+/** (이전 호환) 메뉴에 나오던 화면 목록 */
 export const MENU = ROUTES.filter((r) => r.menu);
 
 /** 화면 컴포넌트 (처음 열 때 불러옴) */

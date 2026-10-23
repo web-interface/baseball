@@ -6,7 +6,7 @@ import { takeNotice, teamLine, useSeason } from '../season/store';
 import { useWallet } from '../game/wallet';
 import { useTitleOverride } from './title';
 import { record } from '../ui/format';
-import { MENU, type RouteDef } from './routes';
+import { GROUPS, ROUTES, groupOf, type RouteDef } from './routes';
 import { Link, goBack, navigate } from './router';
 import s from './Shell.module.css';
 
@@ -82,30 +82,50 @@ export function Shell({ route, preview, children }: { route: RouteDef | null; pr
   );
 }
 
+/** 큰 메뉴 5개 + (묶음에 화면이 여럿이면) 아래 작은 탭. 둘 다 좌우로만 움직인다 */
 function NavMenu({ current }: { current?: string }) {
-  const list = useRef<HTMLUListElement>(null);
-  // 메뉴는 누른 자리에 가만히 있는다 — 지금 메뉴가 화면 밖에 완전히 숨어 있을 때만(주소로 바로 들어온 경우 등)
-  // 메뉴 줄 안에서만, 움직임 없이 보이게 옮긴다. (예전엔 누를 때마다 줄이 굴러가고 밑줄이 미끄러져 날아다녔다)
-  useLayoutEffect(() => {
-    const ul = list.current;
+  const group = groupOf(current);
+  const keep = (ul: HTMLUListElement | null) => {
     const el = ul?.querySelector<HTMLElement>('[aria-current="page"]');
     if (!ul || !el) return;
     const left = el.offsetLeft, right = left + el.offsetWidth;
     const viewL = ul.scrollLeft, viewR = viewL + ul.clientWidth;
     if (right <= viewL + 8) ul.scrollLeft = Math.max(0, left - 16);
     else if (left >= viewR - 8) ul.scrollLeft = right - ul.clientWidth + 16;
-  }, [current]);
+  };
+  const top = useRef<HTMLUListElement>(null);
+  const sub = useRef<HTMLUListElement>(null);
+  // 메뉴는 누른 자리에 가만히 있고, 화면 밖에 완전히 숨은 경우에만 조용히 보이게 옮긴다
+  useLayoutEffect(() => { keep(top.current); keep(sub.current); }, [current]);
+  const path = (key: string) => ROUTES.find((r) => r.key === key)?.path ?? '/home';
   return (
     <nav className={s.menu} aria-label="주 메뉴">
-      <ul ref={list} className={s.menuList}>
-        {MENU.map((r) => (
-          <li key={r.key}>
-            <Link to={r.path} className={[s.item, r.key === current && s.on].filter(Boolean).join(' ')} aria-current={r.key === current ? 'page' : undefined}>
-              {r.menu}
-            </Link>
-          </li>
-        ))}
+      <ul ref={top} className={s.menuList}>
+        {GROUPS.map((g) => {
+          const on = g === group;
+          return (
+            <li key={g.key}>
+              <Link to={path(g.items[0].route)} className={[s.item, on && s.on].filter(Boolean).join(' ')} aria-current={on ? 'page' : undefined}>
+                {g.label}
+              </Link>
+            </li>
+          );
+        })}
       </ul>
+      {group && group.items.length > 1 && (
+        <ul ref={sub} className={s.subList} aria-label={`${group.label} 메뉴`}>
+          {group.items.map((it) => {
+            const on = it.route === current;
+            return (
+              <li key={it.route}>
+                <Link to={path(it.route)} className={[s.subItem, on && s.subOn].filter(Boolean).join(' ')} aria-current={on ? 'page' : undefined}>
+                  {it.label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </nav>
   );
 }

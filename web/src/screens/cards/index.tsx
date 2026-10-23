@@ -60,15 +60,15 @@ function saveCols(n: 2 | 3) {
 //   주소로 바로: ?open=c01 (그 카드 크게) · &back=1 (뒷면부터) · ?cols=2 (한 줄 2장) · ?gallery=1&same=1
 export default function CardsScreen({ query }: ScreenProps) {
   if (query.get('gallery') === '1') return <Gallery same={query.get('same') === '1'} />;
-  return <Collection openId={query.get('open')} openBack={query.get('back') === '1'} colsParam={query.get('cols')} />;
+  return <Collection openId={query.get('open')} openBack={query.get('back') === '1'} colsParam={query.get('cols')} sortParam={query.get('sort')} />;
 }
 
-function Collection({ openId, openBack, colsParam }: { openId: string | null; openBack: boolean; colsParam: string | null }) {
+function Collection({ openId, openBack, colsParam, sortParam }: { openId: string | null; openBack: boolean; colsParam: string | null; sortParam: string | null }) {
   const mine = useMemo(() => MY_CARD_IDS.map((id) => CARDS.find((c) => c.id === id)).filter(Boolean) as CardInst[], []);
   const [grade, setGrade] = useState<GradeId | 'all'>('all');
   const [pos, setPos] = useState<PosGroup>('all');
   const [team, setTeam] = useState<string>('all');
-  const [sort, setSort] = useState<SortKey>('ovr');
+  const [sort, setSort] = useState<SortKey>(() => (['ovr', 'grade', 'level', 'enh'] as const).find((k) => k === sortParam) ?? 'ovr');
   const [cols, setCols] = useState<2 | 3>(() => (colsParam === '2' ? 2 : colsParam === '3' ? 3 : readCols()));
   const [open, setOpen] = useState<CardInst | null>(() => (openId ? CARDS.find((c) => c.id === openId) ?? null : null));
 

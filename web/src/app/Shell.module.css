@@ -126,3 +126,38 @@
 .crash p { margin-top: 6px; font-size: 12.5px; color: var(--fg-3); word-break: break-all; }
 .crash button { margin-top: 10px; font-size: 13px; font-weight: 700; color: var(--accent); }
 :global([data-theme='broadcast']) .club, :global([data-theme='night']) .club { --emblem-edge: rgba(243, 241, 236, .5); }
+
+/* 작은 탭 — 큰 메뉴 아래, 같은 묶음 안 화면 (좌우로만) */
+.subList {
+  display: flex;
+  gap: 4px;
+  max-width: var(--col-now);
+  margin: 0 auto;
+  padding: 0 max(calc(var(--gutter) - 4px), env(safe-area-inset-right)) 0 max(calc(var(--gutter) - 4px), env(safe-area-inset-left));
+  border-top: 1px solid var(--header-line);
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-x;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.subList::-webkit-scrollbar { display: none; }
+.subItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -.03em;
+  color: var(--menu-fg);
+  white-space: nowrap;
+  transition: color var(--dur-2);
+}
+.subItem:hover { color: var(--menu-fg-on); }
+.subOn { color: var(--menu-fg-on); font-weight: 750; }
+.subOn::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: 0; height: 2px; background: var(--menu-bar); pointer-events: none; }
+:global([data-theme='broadcast']) .subOn::after { height: 3px; }
+
