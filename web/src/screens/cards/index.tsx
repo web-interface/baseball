@@ -331,12 +331,13 @@ function CardSheet({ card, onClose, startBack = false }: { card: CardInst | null
       title={<>{p.name} <span className={s.sheetGrade} style={{ color: `var(--gr-${c.grade})` }}>{g.ko}{c.year != null && g.yearTagged ? ' ' + yearTag(c.year) : ''}</span></>}
       sub={`${t.name} · ${posKo} · ${line}`}
       footer={<>
-        {mineHere && !inLineup(c.id)
-          ? <Button variant="secondary" onClick={() => { onClose(); navigate(`/lineup?bench=${c.id}`); }}>라인업에 넣기</Button>
-          : <Button variant="secondary" onClick={() => setBack((v) => !v)} icon="swap">{back ? '앞면 보기' : '뒷면 보기'}</Button>}
-        {mineHere && nx && !nx.auto
-          ? <Button onClick={() => { onClose(); navigate(`/player/${p.id}?card=${c.id}&tab=enhance`); }}>{roman(nx.stage)} 강화 도전</Button>
-          : <Button onClick={() => { onClose(); navigate(`/player/${p.id}?card=${c.id}`); }}>선수 정보</Button>}
+        {/* 선수 교체 — 보관함 카드는 누구와 바꿀지 고르는 라인업 시트로, 이미 라인업에 있으면 라인업 화면으로 (뒤집기는 카드를 누르면 됨) */}
+        {mineHere && (inLineup(c.id)
+          ? <Button icon="swap" onClick={() => { onClose(); navigate('/lineup'); }}>라인업에서 교체</Button>
+          : <Button icon="swap" onClick={() => { onClose(); navigate(`/lineup?bench=${c.id}`); }}>선수 교체</Button>)}
+        {mineHere && nx && !nx.auto && (
+          <Button variant="secondary" onClick={() => { onClose(); navigate(`/player/${p.id}?card=${c.id}&tab=enhance`); }}>{roman(nx.stage)} 강화 도전</Button>
+        )}
       </>}
     >
       <div className={s.detail}>
