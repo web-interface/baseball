@@ -19,46 +19,35 @@
 }
 .btn:active { transform: translateY(1px); }
 
-/* 시트 */
-.tabs { margin: 2px 0 10px; }
-.teamLine { display: flex; align-items: center; gap: 7px; margin: 2px 0 6px; font-size: 13px; }
-.teamLine b { font-weight: 800; letter-spacing: -.03em; }
-.teamLine span { margin-left: auto; font-size: 11px; color: var(--fg-3); }
-.h { margin: 14px 0 2px; font-size: 12px; font-weight: 800; color: var(--fg-3); letter-spacing: .02em; }
-.list { border-top: 1px solid var(--line); }
-.row { border-bottom: 1px solid var(--line); }
-.head {
-  display: grid;
-  grid-template-columns: 18px 40px minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 52px;
-  padding: 7px 2px;
-  text-align: left;
-}
-.ord { font-size: 15px; font-weight: 700; color: var(--fg-2); text-align: center; }
-.pos { font-size: 11.5px; font-weight: 700; color: var(--fg-3); white-space: nowrap; }
-.who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.who b { display: flex; align-items: baseline; gap: 4px; font-size: 14.5px; font-weight: 800; letter-spacing: -.03em; white-space: nowrap; overflow: hidden; }
-.who b small { font-size: 11px; font-weight: 700; color: var(--fg-3); }
-.who b em { margin-left: 2px; font-style: normal; font-size: 10.5px; font-weight: 800; color: var(--accent); }
-.who > small { font-size: 11.5px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.today { font-size: 12.5px; font-weight: 700; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.today i { font-style: normal; font-weight: 500; color: var(--fg-3); }
-.now { box-shadow: inset 3px 0 0 var(--accent); background: var(--accent-weak); }
-.sub .head { padding-left: 14px; }
-.sub .ord { visibility: hidden; }
-.open .head { background: var(--surface-2); }
-.more { padding: 6px 4px 12px 30px; }
-.ovr { font-size: 12.5px; color: var(--fg-2); margin-bottom: 6px; }
-.ovr b { font-size: 16px; color: var(--fg); margin-left: 3px; }
-.ovr small { margin-left: 6px; font-size: 11px; color: var(--fg-3); }
-.bars { display: grid; gap: 4px; }
-.note { margin-top: 14px; font-size: 11.5px; color: var(--fg-3); }
+/* 시트 — 어웨이 · 홈 */
+.team { padding: 4px 0 14px; }
+.team + .team { border-top: 1px solid var(--line); padding-top: 14px; }
+.teamHead { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; font-size: 14px; }
+.teamHead b { font-weight: 800; letter-spacing: -.03em; }
+.side { font-size: 11.5px; font-weight: 700; color: var(--fg-3); }
+.teamHead em { margin-left: auto; font-style: normal; font-size: 11px; font-weight: 800; color: var(--accent); }
 
-@media (max-width: 360px) {
-  .head { grid-template-columns: 16px 34px minmax(0, 1fr); gap: 6px; }
-}
-:global([data-theme='classic']) .now { background: color-mix(in srgb, var(--club) 10%, transparent); box-shadow: inset 3px 0 0 var(--club); }
-:global([data-theme='classic']) .who b em { color: var(--club-text); }
+/* 5칸 × 2줄 — 1~9번 + 투수 */
+.grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px 8px; }
+.cell { display: flex; flex-direction: column; align-items: stretch; gap: 4px; min-width: 0; }
+.cap { display: flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.2; }
+.cap b { font-size: 11px; font-weight: 800; color: var(--fg-2); white-space: nowrap; }
+.cap span { font-size: 11px; font-weight: 700; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.now .cap b { color: var(--accent); }
+.now > :first-child { box-shadow: 0 0 0 2px var(--accent); border-radius: 6px; }
+
+/* 누른 카드 — 그 팀 아래 */
+.detail { margin-top: 12px; padding: 12px 12px 10px; border-radius: 12px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line-2); }
+.dName { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--fg-3); }
+.dName b { font-size: 16px; font-weight: 800; color: var(--fg); letter-spacing: -.03em; }
+.dName small { font-size: 11px; font-weight: 700; }
+.dOvr { margin-left: auto; }
+.dOvr b { font-size: 17px; margin-left: 3px; }
+.dLine { display: flex; gap: 8px; margin-top: 6px; font-size: 12.5px; font-weight: 700; color: var(--fg); }
+.dLine i { flex: none; width: 28px; font-style: normal; font-weight: 700; color: var(--fg-3); }
+.bars { display: grid; gap: 4px; margin-top: 10px; }
+.dNote { margin-top: 8px; font-size: 11px; color: var(--fg-3); }
+.note { margin-top: 6px; font-size: 11.5px; color: var(--fg-3); }
+
+:global([data-theme='classic']) .now .cap b, :global([data-theme='classic']) .teamHead em { color: var(--club-text); }
+:global([data-theme='classic']) .now > :first-child { box-shadow: 0 0 0 2px var(--club); }

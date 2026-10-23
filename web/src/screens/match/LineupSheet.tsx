@@ -1,11 +1,13 @@
-// 경기 중 라인업 — 두 팀 타순 · 투수, 지금 장면까지 오늘 기록 + 시즌 성적. 선수를 누르면 대표 능력치
-// (우리 선수는 강화 · 훈련 · 잠재력 · 세트덱이 더해진 값까지 — 라인업 화면과 같은 숫자, screens/lineup/ctx cardNow).
-// 경기장 오른쪽 아래 '라인업' 단추로 연다. 앞으로 일어날 장면은 세지 않는다(지금 장면까지만).
+// 경기 중 라인업 — 어웨이 · 홈 두 팀을 카드로: 1~9번 타자(지금 그 자리 선수 · 교체 반영) + 지금 투수.
+// 카드 아래 = 포지션 · 짧은 오늘 기록(지금 장면까지). 카드를 누르면 그 팀 아래에 능력치(우리 선수는 강화 · 훈련 · 잠재력 ·
+// 세트덱이 더해진 값까지 — 라인업 화면과 같은 숫자) · 오늘 기록 · 시즌 성적. 경기장 오른쪽 아래 '라인업' 단추로 연다.
 import { useMemo, useState } from 'react';
-import { Emblem, Icon, Sheet, StatBar, Tabs } from '../../ui';
-import { ME, playerById, teamById } from '../../game/mock';
-import { POS_KO, ROLE_KO } from '../../game/labels';
-import type { CardInst, Player } from '../../game/types';
+import { Emblem, Icon, Sheet, StatBar } from '../../ui';
+import { CardMini, cardProps } from '../../cards';
+import { CARDS, ME, playerById, teamById } from '../../game/mock';
+import { POS_KO } from '../../game/labels';
+import { cardInst, seasonCardOf } from '../../game/kbo';
+import type { CardInst, GradeId, Player } from '../../game/types';
 import { avgLabel, batLine, eraLabel, pitLine } from '../../season/store';
 import { cardNow } from '../lineup/ctx';
 import { initialLineup, store as lineupStore, unit } from '../lineup/calc';
@@ -13,16 +15,17 @@ import { avg as fAvg, era as fEra } from '../../ui/format';
 import { GAME } from './local-mock';
 import { PLAYS, type Live } from './timeline';
 import { ipText, isSeasonGame, pitcherToday } from './Panels';
-import { tagOf } from './tags';
 import s from './LineupSheet.module.css';
 
 type Side = 'away' | 'home';
 const HITS = ['1B', '2B', '3B', 'HR'];
+/** 카드 아래 짧은 포지션 */
+const POS_SHORT: Record<string, string> = { C: '포수', '1B': '1루', '2B': '2루', '3B': '3루', SS: '유격', LF: '좌익', CF: '중견', RF: '우익', DH: '지명' };
 
 /** 경기장 오른쪽 아래 단추 */
 export function LineupButton({ onClick }: { onClick: () => void }) {
   return (
-    <button type="button" className={s.btn} onClick={onClick} aria-label="두 팀 라인업 · 오늘 기록 보기">
+    <button type="button" className={s.btn} onClick={onClick} aria-label="두 팀 라인업 보기">
       <Icon name="lineup" size={15} />
       <span>라인업</span>
     </button>
@@ -31,7 +34,7 @@ export function LineupButton({ onClick }: { onClick: () => void }) {
 
 /** 오늘 타자 기록 (지금 장면 앞까지) */
 function batToday(id: string, upto: number) {
-  let pa = 0, ab = 0, h = 0, hr = 0, rbi = 0, bb = 0, so = 0;
+  let pa = 0, ab = 0, h = 0, hr = 0, rbi = 0, bb = 0;
   for (let i = 0; i < upto && i < PLAYS.length; i++) {
     const p = PLAYS[i];
     if (p.batterId !== id || !p.isPA) continue;
@@ -40,21 +43,22 @@ function batToday(id: string, upto: number) {
     else if (p.code !== 'SF' && p.code !== 'SAC') ab++;
     if (HITS.includes(p.code)) h++;
     if (p.code === 'HR') hr++;
-    if (p.code === 'K') so++;
     rbi += p.rbi;
   }
-  return { pa, ab, h, hr, rbi, bb, so };
+  return { pa, ab, h, hr, rbi, bb };
 }
-const batTodayText = (t: ReturnType<typeof batToday>) => {
-  if (!t.pa) return '—';
+function batLong(t: ReturnType<typeof batToday>) {
+  if (!t.pa) return '아직 타석 없음';
   const parts = [`${t.ab}타수 ${t.h}안타`];
   if (t.hr) parts.push(`${t.hr}홈런`);
   if (t.rbi) parts.push(`${t.rbi}타점`);
   if (t.bb) parts.push(`${t.bb}볼넷`);
   return parts.join(' · ');
-};
+}
+/** 카드 아래 짧게 — 안타/타수 (홈런은 HR) */
+const batShort = (t: ReturnType<typeof batToday>) => (t.pa ? `${t.h}/${t.ab}${t.hr ? ` · ${t.hr > 1 ? t.hr : ''}HR` : ''}` : '—');
 
-/** 시즌 성적 한 줄 — 시즌 경기는 이 게임 시즌 기록, 그 밖(대전 · 미리보기)은 카드 시즌 기록 */
+/** 시즌 성적 — 시즌 경기는 이 게임 시즌 기록, 그 밖(대전 · 미리보기)은 카드 시즌 기록 */
 function seasonBat(p: Player) {
   if (isSeasonGame()) {
     const b = batLine(p.id);
@@ -73,7 +77,7 @@ function seasonPit(p: Player) {
   return t ? `평균자책 ${fEra(t.era)} · ${t.w}승 ${t.l}패` : '';
 }
 
-/** 내 라인업 카드 (선수 id → 카드) — 더해진 값을 보여 주려고 */
+/** 내 라인업 카드 (선수 id → 카드) */
 function myCards(): Map<string, CardInst> {
   const m = new Map<string, CardInst>();
   try {
@@ -83,111 +87,134 @@ function myCards(): Map<string, CardInst> {
   } catch { /* 라인업 없음 */ }
   return m;
 }
+/** 선수 → 카드 모양 — 내 선수는 내 카드 그대로(강화 · 훈련 · 잠재력 · 지금 종합), 상대는 그 해 실제 카드(없으면 기본) */
+function cardFor(p: Player, mine: Map<string, CardInst>) {
+  const c = mine.get(p.id);
+  if (c) {
+    const now = cardNow(c);
+    return { props: { ...cardProps(c), ovrShown: now?.ovr }, card: c };
+  }
+  const v = /^(k[0-9a-z]+)~(\d{4})$/.exec(p.id);
+  const kc = v ? seasonCardOf(v[1], Number(v[2])) : undefined;
+  if (kc) { const inst = cardInst(kc); return { props: { player: p, grade: inst.grade, year: inst.year, cardId: inst.id }, card: null }; }
+  const legacy = CARDS.find((x) => x.playerId === p.id);
+  if (legacy) return { props: { player: p, grade: legacy.grade, year: legacy.year, cardId: legacy.id }, card: null };
+  return { props: { player: p, grade: 'normal' as GradeId }, card: null };
+}
 
-interface Row { key: string; p: Player; order?: number; pos: string; sub?: boolean; today: string; season: string; now?: boolean; role?: string }
+interface Cell { key: string; p: Player; badge: string; pos: string; short: string; long: string; season: string; now: boolean; pitcher: boolean }
 
-function rowsOf(side: Side, live: Live, pre: boolean) {
+/** 그 팀 1~9번(지금 그 자리 선수) + 지금 투수 */
+function cellsOf(side: Side, live: Live, pre: boolean): Cell[] {
   const g = GAME[side];
   const upto = pre ? 0 : live.playIdx + (live.applied ? 1 : 0);
-  // 타순 — 선발 + 이 자리에 나온 교체 선수 (지금 장면까지)
-  const bySlot = new Map<number, { pid: string; pos: string }[]>();
-  for (const b of g.batting) bySlot.set(b.slot, [{ pid: b.pid, pos: b.pos }]);
+  const bySlot = new Map<number, { pid: string; pos: string }>();
+  for (const b of g.batting) bySlot.set(b.slot, { pid: b.pid, pos: b.pos });
   for (let i = 0; i < upto && i < PLAYS.length; i++) {
     const p = PLAYS[i];
     if ((p.half === 'top' ? 'away' : 'home') !== side || !p.isPA) continue;
-    const list = bySlot.get(p.slot) ?? [];
-    if (!list.some((x) => x.pid === p.batterId)) list.push({ pid: p.batterId, pos: '교체' });
-    bySlot.set(p.slot, list);
+    const cur = bySlot.get(p.slot);
+    if (cur && cur.pid !== p.batterId) bySlot.set(p.slot, { pid: p.batterId, pos: cur.pos }); // 대타 · 교체 — 그 자리 포지션 그대로
   }
-  const curBat = !pre && (live.play.half === 'top' ? 'away' : 'home') === side ? live.play.batterId : null;
-  const bat: Row[] = [];
+  const batting = !pre && (live.play.half === 'top' ? 'away' : 'home') === side;
+  const cells: Cell[] = [];
   [...bySlot.keys()].sort((a, b) => a - b).forEach((slot) => {
-    bySlot.get(slot)!.forEach((x, k) => {
-      const p = playerById(x.pid);
-      if (!p) return;
-      bat.push({
-        key: `b${slot}-${x.pid}`, p, order: k === 0 ? slot : undefined, sub: k > 0,
-        pos: k === 0 ? (POS_KO[x.pos as keyof typeof POS_KO] ?? x.pos) : '교체',
-        today: batTodayText(batToday(x.pid, upto)), season: seasonBat(p), now: x.pid === curBat,
-      });
+    const x = bySlot.get(slot)!;
+    const p = playerById(x.pid);
+    if (!p) return;
+    const t = batToday(x.pid, upto);
+    cells.push({
+      key: `b${slot}`, p, badge: String(slot), pos: POS_SHORT[x.pos] ?? x.pos, short: batShort(t), long: batLong(t),
+      season: seasonBat(p), now: batting && live.play.batterId === x.pid, pitcher: false,
     });
   });
-  // 투수 — 선발 + 지금 장면까지 마운드에 오른 투수
-  const pids: string[] = [g.starter];
+  // 지금 투수 — 수비 중이면 지금 마운드, 공격 중이면 마지막으로 던진 투수 (경기 전엔 선발)
+  let pid = g.starter;
   for (let i = 0; i <= Math.min(PLAYS.length - 1, pre ? -1 : live.playIdx); i++) {
     const p = PLAYS[i];
-    if ((p.half === 'top' ? 'home' : 'away') === side && !pids.includes(p.pitcherId)) pids.push(p.pitcherId);
+    if ((p.half === 'top' ? 'home' : 'away') === side) pid = p.pitcherId;
   }
-  const curPit = !pre && (live.play.half === 'top' ? 'home' : 'away') === side ? live.play.pitcherId : null;
-  const pit: Row[] = pids.flatMap((pid, k): Row[] => {
-    const p = playerById(pid);
-    if (!p) return [];
+  const pp = playerById(pid);
+  if (pp) {
     const t = pitcherToday(pid, upto);
-    const today = t.outs || t.pitches ? `${ipText(t.outs)}이닝 · ${t.pitches}구 · ${t.k}삼진 · ${t.r}실점` : '—';
-    return [{ key: `p-${pid}`, p, pos: k === 0 ? '선발' : (p.role ? ROLE_KO[p.role] : '구원'), today, season: seasonPit(p), now: pid === curPit }];
-  });
-  return { bat, pit };
+    const thrown = t.outs > 0 || t.pitches > 0;
+    cells.push({
+      key: 'p', p: pp, badge: 'P', pos: pid === g.starter ? '선발' : '구원', short: thrown ? `${ipText(t.outs)}이닝` : '—',
+      long: thrown ? `${ipText(t.outs)}이닝 · ${t.pitches}구 · ${t.k}삼진 · ${t.r}실점` : '아직 투구 없음',
+      season: seasonPit(pp), now: !pre && !batting, pitcher: true,
+    });
+  }
+  return cells;
 }
 
 export function LineupSheet({ open, onClose, live, pre, done }: { open: boolean; onClose: () => void; live: Live; pre: boolean; done: boolean }) {
-  const mySide: Side = GAME.match.homeId === ME.teamId ? 'home' : 'away';
-  const [side, setSide] = useState<Side>(mySide);
-  const [openRow, setOpenRow] = useState<string | null>(null);
-  const cards = useMemo(() => (open ? myCards() : new Map<string, CardInst>()), [open]);
-  const away = teamById(GAME.match.awayId), home = teamById(GAME.match.homeId);
-  const team = side === 'away' ? away : home;
-  const { bat, pit } = useMemo(() => rowsOf(side, live, pre), [side, live, pre]);
+  const [sel, setSel] = useState<string | null>(null);
+  const mine = useMemo(() => (open ? myCards() : new Map<string, CardInst>()), [open]);
   const p = live.play;
-  const when = pre ? '경기 전' : done ? '경기 끝 기록' : `${p.inning}회${p.half === 'top' ? '초' : '말'}까지 오늘 기록`;
-  const mine = team.id === ME.teamId;
-
-  const row = (r: Row) => {
-    const on = openRow === r.key;
-    const card = mine ? cards.get(r.p.id) : undefined;
-    const now = card ? cardNow(card) : null;
-    const ovr = now?.ovr ?? r.p.ovr;
-    return (
-      <li key={r.key} className={[s.row, r.now && s.now, r.sub && s.sub, on && s.open].filter(Boolean).join(' ')}>
-        <button type="button" className={s.head} aria-expanded={on} onClick={() => setOpenRow(on ? null : r.key)}>
-          <span className={['num', s.ord].join(' ')}>{r.order ?? ''}</span>
-          <span className={s.pos}>{r.pos}</span>
-          <span className={s.who}>
-            <b>{r.p.name}<small className="num">{tagOf(r.p.id)}</small>{r.now && <em>{r.order != null || r.sub ? '타석' : '투구 중'}</em>}</b>
-            <span className={['num', s.today].join(' ')}>{r.today === '—' ? <i>오늘 아직 기록 없음</i> : <>오늘 {r.today}</>}</span>
-            {r.season && <small>{r.season}</small>}
-          </span>
-        </button>
-        {on && (
-          <div className={s.more}>
-            <p className={s.ovr}>종합 <b className="num">{ovr}</b>{now && ovr !== r.p.ovr ? <small> 카드 <span className="num">{r.p.ovr}</span> + 더해진 값</small> : null}</p>
-            <div className={s.bars}>
-              {r.p.face.map((f) => {
-                const add = Math.round(now?.bonus.total[f.code] ?? 0);
-                return <StatBar key={f.code} label={f.ko} value={f.v} bonus={add > 0 ? add : undefined} size="s" labelWidth={56} />;
-              })}
-            </div>
-          </div>
-        )}
-      </li>
-    );
-  };
-
+  const when = pre ? '경기 전 · 선발 라인업' : done ? '경기 끝 · 마지막 라인업' : `${p.inning}회${p.half === 'top' ? '초' : '말'} · 지금 라인업`;
   return (
-    <Sheet open={open} onClose={onClose} title="라인업" sub={when} height="tall">
-      <Tabs
-        items={[{ value: 'away' as Side, label: away.short }, { value: 'home' as Side, label: home.short }]}
-        value={side}
-        onChange={(v) => { setSide(v); setOpenRow(null); }}
-        fill
-        aria-label="팀"
-        className={s.tabs}
-      />
-      <p className={s.teamLine}><Emblem team={team} size={18} /><b>{team.name}</b>{mine && <span>우리 팀 · 능력치는 더해진 값까지</span>}</p>
-      <h3 className={s.h}>타순</h3>
-      <ul className={s.list}>{bat.map(row)}</ul>
-      <h3 className={s.h}>투수</h3>
-      <ul className={s.list}>{pit.map(row)}</ul>
-      <p className={s.note}>오늘 기록은 지금 보는 장면까지만 세요. 선수를 누르면 능력치가 나와요.</p>
+    <Sheet open={open} onClose={() => { setSel(null); onClose(); }} title="라인업" sub={when} height="tall">
+      {(['away', 'home'] as Side[]).map((side) => (
+        <TeamBlock key={side} side={side} live={live} pre={pre} mine={mine} sel={sel} onSel={setSel} />
+      ))}
+      <p className={s.note}>카드를 누르면 능력치 · 오늘 기록 · 시즌 성적이 나와요. 오늘 기록은 지금 보는 장면까지만 세요.</p>
     </Sheet>
+  );
+}
+
+function TeamBlock({ side, live, pre, mine, sel, onSel }: { side: Side; live: Live; pre: boolean; mine: Map<string, CardInst>; sel: string | null; onSel: (k: string | null) => void }) {
+  const team = teamById(side === 'away' ? GAME.match.awayId : GAME.match.homeId);
+  const my = team.id === ME.teamId;
+  const cells = useMemo(() => cellsOf(side, live, pre), [side, live, pre]);
+  const picked = cells.find((c) => `${side}:${c.key}` === sel) ?? null;
+  return (
+    <section className={[s.team, my && s.myTeam].filter(Boolean).join(' ')} aria-label={`${side === 'away' ? '원정' : '홈'} ${team.name}`}>
+      <p className={s.teamHead}>
+        <Emblem team={team} size={20} />
+        <b>{team.name}</b>
+        <span className={s.side}>{side === 'away' ? '어웨이' : '홈'}</span>
+        {my && <em>우리 팀</em>}
+      </p>
+      <ol className={s.grid}>
+        {cells.map((c) => {
+          const k = `${side}:${c.key}`;
+          const { props } = cardFor(c.p, mine);
+          return (
+            <li key={c.key} className={[s.cell, c.now && s.now, sel === k && s.on].filter(Boolean).join(' ')}>
+              <CardMini {...props} badge={c.badge} selected={sel === k} onClick={() => onSel(sel === k ? null : k)} style={{ width: '100%' }} />
+              <span className={s.cap}>
+                <b>{c.now ? (c.pitcher ? '투구 중' : '타석') : c.pos}</b>
+                <span className="num">{c.short}</span>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      {picked && <Detail cell={picked} mine={mine} />}
+    </section>
+  );
+}
+
+function Detail({ cell, mine }: { cell: Cell; mine: Map<string, CardInst> }) {
+  const { card } = cardFor(cell.p, mine);
+  const now = card ? cardNow(card) : null;
+  const ovr = now?.ovr ?? cell.p.ovr;
+  return (
+    <div className={s.detail}>
+      <p className={s.dName}>
+        <b>{cell.p.name}</b>
+        <span>{cell.pitcher ? cell.pos + ' 투수' : POS_KO[cell.p.pos as keyof typeof POS_KO] ?? cell.pos}</span>
+        <span className={s.dOvr}>종합 <b className="num">{ovr}</b></span>
+      </p>
+      <p className={s.dLine}><i>오늘</i><span className="num">{cell.long}</span></p>
+      {cell.season && <p className={s.dLine}><i>시즌</i><span className="num">{cell.season}</span></p>}
+      <div className={s.bars}>
+        {cell.p.face.map((f) => {
+          const add = Math.round(now?.bonus.total[f.code] ?? 0);
+          return <StatBar key={f.code} label={f.ko} value={f.v} bonus={add > 0 ? add : undefined} size="s" labelWidth={56} />;
+        })}
+      </div>
+      {card && <p className={s.dNote}>우리 선수 — 강화 · 훈련 · 잠재력 · 세트덱이 더해진 값</p>}
+    </div>
   );
 }
