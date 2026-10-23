@@ -18,7 +18,7 @@ const viteGlob = {
         const v = `__glob${n++}`;
         heads.push(`import ${v} from '${file}';`);
         return `{ '${file}': ${v} }`;
-      }).replace(/import\.meta\.glob\(\s*'[^']+'\s*\)/g, '({})');
+      }).replace(/import\.meta\.glob\(\s*'[^']+'\s*(?:,\s*\{[^}]*\})?\s*\)/g, '({})'); // 필요할 때 불러오는 묶음(eager 아님)은 시험에선 빈 묶음
       return { contents: heads.join('\n') + '\n' + body, loader: args.path.endsWith('x') ? 'tsx' : 'ts' };
     });
   },

@@ -11,6 +11,7 @@ import { PITCH_KO, POS_KO } from '../../game/labels';
 import { CURRENT_SEASON, eraOfCode, isOldCode, shortLabel } from '../../game/world';
 import { championOf } from '../../game/clubSeasons';
 import { seasonRoster, yearPool } from '../../game/history';
+import { cardInst, kboCardsWhere, playerOfKCard, type KCard } from '../../game/kbo';
 import type { CardInst, ClubCode, GradeId, Pack, PitchType, Player, SignaturePitch } from '../../game/types';
 import { CLUB_TIER, LEGEND_SEASONS, YEAR_OPTIONS, clubLegendPool, clubTitleYears, yearOption } from './local-mock';
 
@@ -51,7 +52,34 @@ export const rarity = (g: GradeId) => RARITY[g];
 export interface OddsRow { grade: GradeId; pct: number; base: number }
 export interface OddsView { rows: OddsRow[]; missing: { grade: GradeId; base: number; why: string }[] }
 
-function whyMissing(g: GradeId, pick: Pick): string | null {
+/* ───────── 카드 풀 — 실제 선수 카탈로그(game/kbo)의 카드 종류. 등급 안에서는 카드마다 같은 확률 ───────── */
+const poolCache = new Map<string, KCard[]>();
+/** 그 등급 · 그 팩(연도 · 구단)에서 나올 수 있는 카드 종류 */
+export function catalogPool(g: GradeId, pick: Pick | null): KCard[] {
+  const key = `${g}|${pick?.kind ?? ''}|${pick?.kind === 'year' ? pick.year : pick?.kind === 'club' ? pick.club : ''}`;
+  const hit = poolCache.get(key);
+  if (hit) return hit;
+  let out: KCard[];
+  if (pick?.kind === 'year') out = GRADES[g].kind === 'icon' && g !== 'legend' ? [] : kboCardsWhere({ grade: g, year: pick.year });
+  else if (pick?.kind === 'club') out = kboCardsWhere({ grade: g, code: pick.club });
+  else out = kboCardsWhere({ grade: g });
+  poolCache.set(key, out);
+  return out;
+}
+
+function whyMissing(g: GradeId, pick: Pick | null): string | null {
+  if (catalogPool(g, pick).length) return null;
+  if (!pick) return '아직 이 등급 카드가 없어요';
+  const k = GRADES[g].kind;
+  if (pick.kind === 'club') return `이 구단엔 아직 ${GRADES[g].ko} 카드가 없어요`;
+  if (k === 'icon' && g !== 'legend') return '연도가 붙지 않는 등급이에요';
+  if (k === 'award' && pick.year >= CURRENT_SEASON) return `’${String(pick.year).slice(-2)} 시상 전이라 아직 없어요`;
+  if (g === 'legend') return '이 해를 황금기로 둔 레전드가 없어요';
+  return '이 해 카드가 아직 없어요';
+}
+
+/** (레거시) 가상 선수 시절 규칙 — 카탈로그에 카드가 하나도 없을 때만 */
+export function whyMissingLegacy(g: GradeId, pick: Pick): string | null {
   const k = GRADES[g].kind;
   if (pick.kind === 'year') {
     if (k === 'season') return null;
@@ -69,12 +97,15 @@ function whyMissing(g: GradeId, pick: Pick): string | null {
 }
 
 export function oddsFor(pack: Pack, pick?: Pick | null): OddsView {
-  const missing: OddsView['missing'] = [];
-  const keep = pack.odds.filter((o) => {
-    const why = pick ? whyMissing(o.grade, pick) : null;
+  let missing: OddsView['missing'] = [];
+  const filter = (rule: (g: GradeId) => string | null) => pack.odds.filter((o) => {
+    const why = rule(o.grade);
     if (why) missing.push({ grade: o.grade, base: o.pct, why });
     return !why;
   });
+  let keep = filter((g) => whyMissing(g, pick ?? null));
+  // 그 팩에 실제 선수 카드가 하나도 없으면(수집 전 연도 · 구단) 레거시 가상 선수 규칙으로
+  if (!keep.length) { missing = []; keep = filter((g) => (pick ? whyMissingLegacy(g, pick) : null)); }
   const sum = keep.reduce((s, o) => s + o.pct, 0) || 1;
   const rows = keep
     .map((o) => ({ grade: o.grade, base: o.pct, pct: (o.pct * 100) / sum }))
@@ -248,6 +279,13 @@ function yearFor(g: GradeId, pick: Pick | null, r: () => number): number | undef
   return x < 0.8 ? 27 : x < 0.94 ? 26 : 25;
 }
 
+/** 카탈로그 카드 한 장 (팩 · 조합 공통) — 카드 id 는 카탈로그 id 그대로 */
+function pulledOf(kc: KCard, slot: number): PulledCard {
+  const card = cardInst(kc);
+  const player = playerOfKCard(kc)!;
+  return { card, player, slot, isNew: true, had: 0, tier: tierOf(kc.grade) };
+}
+
 /** 카드 한 장 만들기 (팩 · 조합 공통) */
 function makePulled(requestId: string, slot: number, g: GradeId, p: Player, year: number | undefined, r: () => number): PulledCard {
   const rare = rankOf(g) >= rankOf('rare');
@@ -288,8 +326,13 @@ export function pullPack(pack: Pack, pick: Pick | null, opt: { seed?: string; fo
   const r = rng(opt.seed ?? requestId);
   const odds = oddsFor(pack, pick).rows;
 
-  // 카드 한 장 — 등급 → 연도 → 그 해 · 그 구단 선수
-  const draw = (slot: number, g: GradeId, year = yearFor(g, pick, r)) => makePulled(requestId, slot, g, choosePlayer(poolFor(pick, g, year), g, r), year, r);
+  // 카드 한 장 — 등급 → 그 등급 · 그 팩의 카드 종류 중 하나 (같은 확률). 카탈로그가 비면 레거시 가상 선수
+  const draw = (slot: number, g: GradeId): PulledCard => {
+    const pool = catalogPool(g, pick);
+    if (pool.length) return pulledOf(pool[Math.floor(r() * pool.length)], slot);
+    const year = yearFor(g, pick, r);
+    return makePulled(requestId, slot, g, choosePlayer(poolFor(pick, g, year), g, r), year, r);
+  };
 
   const cards: PulledCard[] = [];
   for (let i = 0; i < pack.size; i++) cards.push(draw(i, sample(odds, r).grade));
@@ -360,8 +403,8 @@ export function rollCombo(slots: ComboSlot[], use: Record<string, number>, seed?
   const hitSlot = sample(slots, r);
   const k = slots.indexOf(hitSlot);
   const g = hitSlot.grade;
-  const p = choosePlayer(poolFor(null, g), g, r);
-  const res = makePulled(requestId, 0, g, p, yearFor(g, null, r), r);
+  const pool = catalogPool(g, null);
+  const res = pool.length ? pulledOf(pool[Math.floor(r() * pool.length)], 0) : makePulled(requestId, 0, g, choosePlayer(poolFor(null, g), g, r), yearFor(g, null, r), r);
   receive([res]);
   bump();
   return { slot: k, result: res };

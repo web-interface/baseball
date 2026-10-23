@@ -8,10 +8,15 @@
 //  · 중복 → 강화: 같은 카드가 ENH_STEPS 의 필요 수량만큼 모이면 +1~+5 는 그 자리에서 자동으로 오른다(재료 수량 차감).
 //    +6~+10 은 GP·확률이 걸려 있어 강화 화면에서 '도전'으로(같은 카드 1장 + GP, 실패 보정). 최대 단계에서 넘치는 중복은 쌓아 둔다(조합 재료).
 //  · 저장: localStorage 'bb.inv' (형식 버전 v). 깨졌거나 모르는 형식이면 처음 선수단으로 다시 시작하고 한 번 안내한다.
+//  · 형식 v2 (실제 선수 카탈로그): 카드 id 는 카탈로그 id(`{선수 ID}-{연도}{등급}` 등 — game/kbo). 카드 → 선수 본체는 ID 로 찾는다.
+//    v1(가상 선수 시절) 저장은 지우지 않고 v2 로 옮긴다 — 모든 카드 · 수량 · 강화 · 라인업을 그대로 두고, 그때의 시작 설정을
+//    legacy.start 에 적어 레거시 카드('k-'·'kd-'·'x-'·'d-'·'g-')를 같은 시드로 다시 만든다(옮긴 뒤 보유 수량 합이 같다 — 시험 scripts/kbo.test.ts).
 import { useSyncExternalStore } from 'react';
 import { CARDS, cardById, playerById, registerPlayers } from './mock';
-import { draftPool, starter } from './starter';
-import { seasonRoster } from './history';
+import { isKboCardId } from './kbo';
+import { readStart, registerLegacyStarter, resetStarter, setStarterKind, starter, type StartPicks } from './starter';
+import { legacyDraftPool } from './legacy/starter';
+import { legacyRoster } from './legacy/history';
 import { spend } from './wallet';
 import type { CardInst, ClubCode, GradeId, SignaturePitch } from './types';
 import type { LineupState } from '../screens/lineup/calc';
@@ -63,7 +68,7 @@ const autoable = (g: GradeId) => g !== 'unique';
 
 /* ───────── 저장 형식 ───────── */
 export const INV_KEY = 'bb.inv';
-export const INV_VERSION = 1;
+export const INV_VERSION = 2;
 /** 뽑기로 새로 생긴 카드 종류 — 다시 열 때 카드를 다시 만들 수 있게 최소 정보 */
 export interface CardDefLite { p: string; g: GradeId; y?: number; a?: string; sig?: SignaturePitch }
 export interface InvEntry {
@@ -89,6 +94,8 @@ export interface EnhEvent { id: string; from: number; to: number; at: number; sr
 export interface InvStats { got: number; enhUsed: number; rouletteUsed: number }
 export interface InvSave {
   v: typeof INV_VERSION;
+  /** v1(가상 선수) 저장을 옮겨 온 경우 — 그때의 시작 설정 (레거시 기본 선수단 카드를 다시 만들 때) */
+  legacy?: { start: StartPicks; from: 1; at: number };
   /** 이 보관함의 시작 구단 — 구단을 새로 고르면 처음 선수단으로 다시 시작 */
   club: string;
   cards: Record<string, InvEntry>;
@@ -135,14 +142,22 @@ export function parseSave(raw: string | null): InvSave | null {
   if (!raw) return null;
   let v: InvSave;
   try { v = JSON.parse(raw) as InvSave; } catch { return null; }
-  if (!v || typeof v !== 'object' || v.v !== INV_VERSION || typeof v.club !== 'string' || !v.cards || typeof v.cards !== 'object') return null;
+  if (!v || typeof v !== 'object' || (v.v !== INV_VERSION && (v.v as number) !== 1) || typeof v.club !== 'string' || !v.cards || typeof v.cards !== 'object') return null;
   if (!Object.values(v.cards).every(validEntry)) return null;
   const s = v.stats;
   if (!s || !isInt(s.got, 0, 1e9) || !isInt(s.enhUsed, 0, 1e9) || !isInt(s.rouletteUsed, 0, 1e9)) return null;
   if (v.lineup != null && typeof v.lineup !== 'object') return null;
   if (!v.shop || typeof v.shop.day !== 'string' || !Array.isArray(v.shop.ids)) v.shop = { day: '', ids: [] };
   if (!Array.isArray(v.recent)) v.recent = [];
+  if ((v.v as number) === 1) migrateV1(v);
   return v;
+}
+
+/** v1 → v2 — 카드 · 수량 · 강화 · 라인업은 그대로, 그때의 시작 설정만 적어 둔다(레거시 카드 다시 만들기) */
+export function migrateV1(v: InvSave) {
+  const st = readStart();
+  v.v = INV_VERSION;
+  v.legacy = { start: { club: v.club, picks: st.club === v.club ? st.picks : [], special: st.special }, from: 1, at: Date.now() };
 }
 
 function load(): InvSave {
@@ -158,8 +173,11 @@ function load(): InvSave {
     s = seed();
   }
   state = s;
+  if (s.legacy) registerLegacyStarter(s.legacy.start);
   for (const [id, e] of Object.entries(s.cards)) if (e.def) ensureCard(id, e.def);
-  if (raw == null || !parsed || parsed.club !== club) persist();
+  for (const id of Object.keys(s.cards)) if (!cardById(id)) ensureLegacyCard(id);
+  const migrated = !!raw && !!parsed && !raw.includes('"legacy"') && !!parsed.legacy; // 방금 v1 → v2 로 옮김
+  if (raw == null || !parsed || parsed.club !== club || migrated) persist();
   return s;
 }
 
@@ -176,18 +194,26 @@ function bump() {
 const commit = () => { persist(); bump(); };
 
 /* ───────── 카드 · 선수 다시 만들기 (뽑기로 생긴 카드) ───────── */
-/** 연도팩·구단팩 선수 'x-{구단}-{연도2}-…' · 지명 'd-{구단}-{n}' 은 시드로 다시 만든다 */
+/** 선수 다시 만들기 — 실제 선수 보기 '{선수 ID}~{연도}' 는 카탈로그에서, 레거시 연도팩·구단팩 'x-{구단}-{연도2}-…' · 지명 'd-{구단}-{n}' 은 시드로 */
 export function ensurePlayer(pid: string): boolean {
   if (playerById(pid)) return true;
   const x = /^x-([a-z]+)-(\d{2})-/.exec(pid);
   if (x) {
     const yy = Number(x[2]);
-    seasonRoster(x[1].toUpperCase() as ClubCode, yy <= 30 ? 2000 + yy : 1900 + yy);
+    legacyRoster(x[1].toUpperCase() as ClubCode, yy <= 30 ? 2000 + yy : 1900 + yy);
     return !!playerById(pid);
   }
   const d = /^d-([a-z]+)-\d+$/.exec(pid);
-  if (d) { draftPool(d[1]); return !!playerById(pid); }
+  if (d) { legacyDraftPool(d[1]); return !!playerById(pid); }
   return false;
+}
+/** 정의 없이 저장된 레거시 카드 — 지명 카드 'kd-d-{구단}-{n}' (레거시 시작 설정 밖에서 받은 것) */
+function ensureLegacyCard(id: string) {
+  const d = /^kd-(d-[a-z]+-\d+)$/.exec(id);
+  if (!d || !ensurePlayer(d[1])) return;
+  const c: CardInst = { id, playerId: d[1], grade: 'special', year: 26, level: 1, enhance: 0, dup: 0 };
+  CARDS.push(c);
+  registerPlayers([], [c]);
 }
 function ensureCard(id: string, def: CardDefLite): CardInst | undefined {
   const hit = cardById(id);
@@ -205,6 +231,7 @@ const kindKey = (c: { playerId: string; grade: GradeId; year?: number }) => `${c
 const kindIndex = new Map<string, string>();
 let indexed = 0;
 function canonicalId(c: CardInst): string {
+  if (isKboCardId(c.id)) return c.id; // 실제 선수 카드 — 카탈로그 id 그대로
   if (indexed !== CARDS.length) {
     for (let i = indexed; i < CARDS.length; i++) { const k = kindKey(CARDS[i]); if (!kindIndex.has(k)) kindIndex.set(k, CARDS[i].id); }
     indexed = CARDS.length;
@@ -434,12 +461,16 @@ export function buyFromShop(itemId: string, card: CardInst): AddResult | null {
 /* ───────── 다시 시작 · 시험 ───────── */
 /** 처음 선수단으로 (구단을 새로 골라 창단) */
 export function resetInventory() {
+  setStarterKind('kbo');
+  resetStarter();
   state = seed();
   commit();
 }
 /** 같은 구단으로 다시 창단 — 모은 카드는 두고, 새 기본 선수단·지명·특별 선수 카드 중 없는 것만 더하고 라인업은 처음 라인업으로 */
 export function mergeStarter() {
   const s = S();
+  setStarterKind('kbo');
+  resetStarter();
   for (const id of starter().cards) {
     const c = cardById(id);
     if (!c) continue;

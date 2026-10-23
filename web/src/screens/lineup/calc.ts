@@ -436,12 +436,15 @@ export interface Cand {
   pitDelta: number;
 }
 
-/** 같은 선수가 다른 자리에 이미 있나 */
+/** 같은 사람인가 — 실제 선수는 시즌마다 보기 id 가 달라('k1a2b3c~2015' · '~2016') 선수 ID 로 비교 */
+const personOfId = (id: string) => id.replace(/~\d{4}$/, '');
+/** 같은 선수(같은 사람)가 다른 자리에 이미 있나 */
 function playerBusy(st: LineupState, slot: Slot, playerId: string) {
+  const me = personOfId(playerId);
   for (const s of [...BAT_SLOTS, ...STAFF_SLOTS] as Slot[]) {
     if (s === slot) continue;
     const id = getSlot(st, s);
-    if (id && unit(id).player.id === playerId) return true;
+    if (id && personOfId(unit(id).player.id) === me) return true;
   }
   return false;
 }

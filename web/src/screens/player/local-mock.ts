@@ -6,6 +6,7 @@
 import { CARDS, LAST_MATCH, NEWS, PLAYERS, TEAMS, TODAY, WEATHER_TODAY, cardById, playerById, teamById } from '../../game/mock';
 import { ENH_STEPS, PITY_STEP as INV_PITY_STEP, chanceAfter as invChanceAfter, enhGainTotal as invGainTotal, entryOf, isOwned, matClass, needFor, ownedCard } from '../../game/inventory';
 import { GRADES } from '../../game/grades';
+import { kboCard, kboCardsOf, parseViewId, personIdOf, playerOfKCard } from '../../game/kbo';
 import type { AttrKey, CardInst, GradeId, Pitch, Player, WeatherKey } from '../../game/types';
 import { makeBatForm, makePitchForm, pitchFormName, batFormName, batFormTags, pitchFormTags } from '../../art/character/forms';
 import type { BatForm, BatPick, PitchForm, PitchPick } from '../../art/character/forms';
@@ -60,6 +61,23 @@ export interface Resolved {
 
 /** #/player/:id — 선수 id(p03) 또는 카드 id(c03) 둘 다 받는다. ?card= 로 카드를 고른다 */
 export function resolvePlayer(id: string | undefined, cardQ: string | null): Resolved {
+  // 실제 선수 — 한 사람(선수 ID)의 모든 카드(시즌별 · 수상 · 상징)를 모으고, 보는 카드의 시즌 능력치로 보여 준다
+  const kid = id ? personIdOf(id) : null;
+  if (kid) {
+    const all = kboCardsOf(kid).map((k) => ownedCard(k.id) ?? cardById(k.id)!).filter(Boolean)
+      .sort((a, b) => gradeRank(b.grade) - gradeRank(a.grade) || (b.year ?? 0) - (a.year ?? 0));
+    const mine = all.filter((c) => isMine(c.id));
+    const byId = id ? all.find((c) => c.id === id) : undefined;
+    const viewYear = parseViewId(id!)?.[1];
+    const want = (cardQ ? all.find((c) => c.id === cardQ) : undefined) ?? byId
+      ?? mine.find((c) => playerById(c.playerId)?.real?.year === viewYear) ?? all.find((c) => playerById(c.playerId)?.real?.year === viewYear);
+    const card = want ?? mine[0] ?? all[0];
+    if (card) {
+      const k = kboCard(card.id);
+      const player = (k && playerOfKCard(k)) ?? playerById(card.playerId)!;
+      return { player, cards: all, mine, card, owned: isMine(card.id) };
+    }
+  }
   const byCard = id ? cardById(id) : undefined;
   const player = (byCard ? playerById(byCard.playerId) : id ? playerById(id) : undefined) ?? playerById('p03') ?? PLAYERS[0];
   // 내 카드는 내 강화 · 레벨이 들어간 것으로

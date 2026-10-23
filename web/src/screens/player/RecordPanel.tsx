@@ -1,10 +1,14 @@
-// 기록 탭 — 2027 시즌 · 최근 10경기 폼 그래프 · 명장면(강조 문구 다시 보기) · 부상 이력 · 수상
-import { useMemo, useState, type CSSProperties } from 'react';
+// 내 시즌 기록 탭 (선수 정보 첫 화면) — 이 게임에서 치른 2027 시즌 기록(season/store — 실제 기록과 따로) · 최근 10경기 폼 그래프 ·
+// 명장면(강조 문구 다시 보기) · 부상 이력 · 수상. 실제 시즌 기록은 '실제 기록' 탭(RealPanel), 여러 게임 시즌 합은 '게임 통산' 탭.
+import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { Button, CalloutAnnouncer, CalloutStage, Field, Icon, fmt, useCalloutQueue, type CalloutData } from '../../ui';
 import { GRADES } from '../../game/grades';
 import { LAST_MATCH, playerById, teamById } from '../../game/mock';
 import type { CardInst, Play, Player } from '../../game/types';
 import { Pips, Sec } from './common';
+import { useSeason } from '../../season/store';
+import { careerKey, careerOf, type BatSum, type PitSum } from '../../season/career';
+import { KBO_SOURCE_NOTE } from '../../game/kbo';
 import { highlightsOf, injuriesOf, hiddenOf, recentOf, type GameRow } from './local-mock';
 import s from './record.module.css';
 
@@ -15,17 +19,66 @@ export function RecordPanel({ p, card, owned, mineCount }: { p: Player; card: Ca
   const hls = useMemo(() => highlightsOf(p), [p]);
   return (
     <div className={s.panel}>
-      <Season p={p} />
+      <MySeason p={p} />
       <Recent p={p} rows={recent.rows} summary={recent.summary} trend={recent.trend} />
       {hls.length > 0 && <Highlights p={p} plays={hls} />}
       <Injuries list={inj.list} lvl={inj.lvl} lvlKo={inj.lvlKo} days={inj.days} revealed={hidden.items.find((x) => x.key === 'injuryProne')!.revealed} />
       {card.award && <Awards card={card} />}
+      {p.real && <p className={s.srcNote}>{KBO_SOURCE_NOTE}</p>}
     </div>
   );
 }
 
-/* ───────── 2027 시즌 — 점수판 ───────── */
-function Season({ p }: { p: Player }) {
+/* ───────── 내 시즌 — 이 게임 2027 시즌 (한 사람의 모든 카드 합) ───────── */
+const r3s = (x: number) => (x ? x.toFixed(3).replace(/^0/, '') : '.000');
+export function batCells(b: BatSum): { head: { k: string; v: string }[]; cells: [string, string][] } {
+  const avg = b.AB ? b.H / b.AB : 0, obp = b.PA ? (b.H + b.BB) / b.PA : 0, slg = b.AB ? (b.H + b.D + 2 * b.T + 3 * b.HR) / b.AB : 0;
+  return {
+    head: [{ k: '타율', v: b.AB ? r3s(avg) : '-' }, { k: '홈런', v: String(b.HR) }, { k: 'OPS', v: b.PA ? r3s(obp + slg) : '-' }],
+    cells: [
+      ['경기', String(b.G)], ['타석', String(b.PA)], ['타수', String(b.AB)], ['안타', String(b.H)], ['2루타', String(b.D)], ['3루타', String(b.T)], ['홈런', String(b.HR)], ['타점', String(b.RBI)],
+      ['득점', String(b.R)], ['도루', String(b.SB)], ['볼넷', String(b.BB)], ['삼진', String(b.SO)], ['타율', r3s(avg)], ['출루율', r3s(obp)], ['장타율', r3s(slg)], ['OPS', r3s(obp + slg)],
+    ],
+  };
+}
+export function pitCells(t: PitSum, role?: string): { head: { k: string; v: string }[]; cells: [string, string][] } {
+  const ip = t.outs / 3;
+  const era = t.outs ? (t.ER * 27) / t.outs : 0;
+  const ipTxt = `${Math.floor(t.outs / 3)}${t.outs % 3 ? `.${t.outs % 3}` : ''}`;
+  return {
+    head: [
+      { k: '평균자책', v: t.outs ? era.toFixed(2) : '-' },
+      role === 'CL' ? { k: '세이브', v: String(t.SV) } : role === 'RP' ? { k: '홀드', v: String(t.HLD) } : { k: '승', v: String(t.W) },
+      { k: '탈삼진', v: String(t.SO) },
+    ],
+    cells: [
+      ['경기', String(t.G)], ['선발', t.GS < 0 ? '-' : String(t.GS)], ['승', String(t.W)], ['패', String(t.L)], ['세이브', String(t.SV)], ['홀드', String(t.HLD)], ['이닝', ipTxt], ['피안타', String(t.H)],
+      ['피홈런', String(t.HR)], ['볼넷', String(t.BB)], ['탈삼진', String(t.SO)], ['평균자책', t.outs ? era.toFixed(2) : '-'], ['WHIP', ip ? ((t.H + t.BB) / ip).toFixed(2) : '-'],
+      ['K/9', ip ? ((t.SO * 9) / ip).toFixed(1) : '-'], ['BB/9', ip ? ((t.BB * 9) / ip).toFixed(1) : '-'], ['K/BB', (t.SO / Math.max(1, t.BB)).toFixed(1)],
+    ],
+  };
+}
+function MySeason({ p }: { p: Player }) {
+  const season = useSeason();
+  const live = careerOf(careerKey(p.id), season).find((r) => r.live);
+  const title = '내 시즌 기록';
+  const meta = <>이 게임 2027 시즌{p.real ? ' · 실제 기록과 따로' : ''}</>;
+  const b = live?.bat, t = live?.pit;
+  const useP = p.pos === 'P' ? !!t : !b && !!t;
+  if (!b && !t) {
+    return (
+      <Sec title={title} meta={meta}>
+        <p className={s.none}>아직 기록이 없어요. 시즌 경기에 나서면 여기에 쌓여요.</p>
+        {p.real && <p className={s.srcNote}>실제 시즌 기록은 ‘실제 기록’ 탭에서 볼 수 있어요.</p>}
+      </Sec>
+    );
+  }
+  const v = useP ? pitCells(t!, p.role) : batCells(b!);
+  return <SeasonBoard head={v.head} cells={v.cells} title={title} meta={meta} />;
+}
+
+/* ───────── (옛) 카드에 적힌 시즌 기록 — 점수판 ───────── */
+export function Season({ p }: { p: Player }) {
   if (p.season.bat) {
     const b = p.season.bat;
     const head = [
@@ -52,9 +105,9 @@ function Season({ p }: { p: Player }) {
   return <SeasonBoard head={head} cells={cells} />;
 }
 
-function SeasonBoard({ head, cells }: { head: { k: string; v: string }[]; cells: [string, string][] }) {
+export function SeasonBoard({ head, cells, title = '2027 시즌', meta = '팀 71경기 · 6월 14일 기준' }: { head: { k: string; v: string }[]; cells: [string, string][]; title?: string; meta?: ReactNode }) {
   return (
-    <Sec title="2027 시즌" meta="팀 71경기 · 6월 14일 기준">
+    <Sec title={title} meta={meta}>
       <div className={s.heads}>
         {head.map((h) => (
           <div key={h.k} className={s.headCell}>
@@ -63,7 +116,7 @@ function SeasonBoard({ head, cells }: { head: { k: string; v: string }[]; cells:
           </div>
         ))}
       </div>
-      <div className={s.board} role="table" aria-label="2027 시즌 기록">
+      <div className={s.board} role="table" aria-label={`${title} 기록`}>
         {[0, 1].map((row) => (
           <div key={row} className={s.bRow} role="row">
             {cells.slice(row * 8, row * 8 + 8).map(([k, v]) => (
@@ -268,7 +321,7 @@ function Awards({ card }: { card: CardInst }) {
     <Sec title="수상" meta="시상식 기록">
       <p className={s.award}>
         <Icon name={card.grade === 'mvp' ? 'laurel' : card.grade === 'th' ? 'crown' : 'glove'} size={22} />
-        <span><b className="num">20{card.year}</b> {g.ko} · {card.award}</span>
+        <span><b className="num">{card.year != null ? (card.year > 30 ? 1900 + card.year : 2000 + card.year) : ''}</b> {g.ko}{card.award ? ` · ${card.award}` : ''}</span>
       </p>
     </Sec>
   );

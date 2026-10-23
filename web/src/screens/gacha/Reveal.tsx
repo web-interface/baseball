@@ -215,7 +215,7 @@ const ro = (w: string) => w + (jong(w) && jong(w) !== 8 ? '으로' : '로');
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 
 function statLine(p: Player, year: number) {
-  const full = year < 2027;
+  const full = year < 2027 && !p.real; // 실제 선수 카드는 그 해 실제 기록 그대로 (옛 목업은 반 시즌 기록이라 늘려 보였음)
   if (p.season.bat) {
     const b = p.season.bat;
     const k = full ? 135 / Math.max(1, b.g) : 1;

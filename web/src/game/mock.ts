@@ -933,10 +933,22 @@ export const teamByCode = (code: string): Team => codeMap.get(code as ClubCode) 
 export const isTeamId = (id: string) => teamMap.has(id);
 /** 서버(대전 순위)가 아는 구단 코드 — 부활 구단은 대신 들어간 현재 구단 자리로 보낸다 */
 export const serverClubId = (id: string) => teamMap.get(id)?.revives?.toLowerCase() ?? id;
-export const playerById = (id: string): Player | undefined => playerMap.get(id);
-export const cardById = (id: string): CardInst | undefined => cardMap.get(id);
+/** 미리 만들어 두지 않는 선수·카드(실제 선수 카탈로그 game/kbo)를 찾을 때 만들어 주는 곳 */
+export interface Resolver { player?: (id: string) => Player | undefined; card?: (id: string) => CardInst | undefined }
+const resolvers: Resolver[] = [];
+export function registerResolver(r: Resolver) { resolvers.push(r); }
+function resolvePlayerId(id: string): Player | undefined {
+  for (const r of resolvers) { const p = r.player?.(id); if (p) return p; }
+  return undefined;
+}
+function resolveCardId(id: string): CardInst | undefined {
+  for (const r of resolvers) { const c = r.card?.(id); if (c) { cardMap.set(id, c); return c; } }
+  return undefined;
+}
+export const playerById = (id: string): Player | undefined => playerMap.get(id) ?? resolvePlayerId(id);
+export const cardById = (id: string): CardInst | undefined => cardMap.get(id) ?? resolveCardId(id);
 /** 카드의 선수 (없으면 첫 선수 — 목업이라 항상 있음) */
-export const playerOfCard = (c: CardInst): Player => playerMap.get(c.playerId) ?? PLAYERS[0];
+export const playerOfCard = (c: CardInst): Player => playerById(c.playerId) ?? PLAYERS[0];
 
 /** 화면이 만든 선수·카드를 찾을 수 있게 등록 (구단팩 가상 선수 등) — 서버가 붙으면 서버 데이터로 */
 export function registerPlayers(players: Player[], cards: CardInst[] = []) {

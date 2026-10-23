@@ -41,7 +41,7 @@ export const revivalSlot = (t: Team) => (t.revives ? teamByCode(t.revives) : und
 
 /* ───────── 2. 지명 후보 (구단마다 8명 — 유망주) ───────── */
 // 만드는 곳은 game/starter (기본 선수단과 같이 맞춘다). 지명 카드는 스페셜, 연도는 지명 순서대로 ’27 · ’26 · ’25 (옛 구단은 그 선수가 뛴 해).
-export { DRAFT_GRADE, DRAFT_YEARS, draftPool, draftYearOf } from '../../game/starter';
+export { DRAFT_GRADE, DRAFT_YEARS, draftGradeOf, draftPool, draftYearOf } from '../../game/starter';
 
 /* ───────── 3. 특별 선수 (요구 29) ───────── */
 export type SpecialName = (typeof SPECIAL_PLAYER_NAMES)[number];

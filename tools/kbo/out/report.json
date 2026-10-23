@@ -1,0 +1,56 @@
+{
+ "inputs": {
+  "list": 4035,
+  "info": 1000,
+  "batRows": 2097,
+  "pitRows": 1732
+ },
+ "mappingMiss": {
+  "rows": 1,
+  "of": 3829,
+  "pct": 0.026,
+  "detail": {
+   "p:?:2026": 1
+  }
+ },
+ "nameFail": 0,
+ "persons": 561,
+ "personsAll": 670,
+ "seasons": 3789,
+ "cards": 3272,
+ "byGrade": {
+  "black": 23,
+  "elite": 193,
+  "franchise": 39,
+  "gg": 72,
+  "legend": 21,
+  "mvp": 10,
+  "normal": 1572,
+  "rare": 303,
+  "signature": 12,
+  "special": 877,
+  "th": 150
+ },
+ "awardsFromBoxes": 228,
+ "awardsCalculated": 5,
+ "sizes": {
+  "rec-0.json": 15259,
+  "rec-1.json": 13071,
+  "rec-2.json": 14768,
+  "rec-3.json": 13148,
+  "rec-4.json": 13145,
+  "rec-5.json": 13588,
+  "rec-6.json": 19399,
+  "rec-7.json": 17305,
+  "rec-8.json": 12287,
+  "rec-9.json": 14933,
+  "rec-a.json": 17745,
+  "rec-b.json": 16246,
+  "rec-c.json": 15142,
+  "rec-d.json": 14829,
+  "rec-e.json": 11951,
+  "rec-f.json": 12451,
+  "core.json": 323742
+ },
+ "totalBytes": 559009
+}

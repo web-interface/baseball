@@ -1,7 +1,10 @@
 // 시즌 선수단 — 내 구단은 라인업 화면의 1군 엔트리(카드 · 세트덱 효과 그대로), AI 구단은 구단 선택에서 고른 난이도만큼.
-// AI 구단: 그 구단 목업 선수 + 모자란 자리는 가상 선수. 엔진에 넣을 때 종합을 난이도에 맞춘다(능력치를 더하거나 빼서).
+// AI 구단: 그 구단의 마지막 실제 시즌 선수(실제 선수 카탈로그 game/kbo — 바뀐 이름) + 모자란 자리는 가상 선수.
+// 엔진에 넣을 때 종합을 난이도에 맞춘다(능력치를 더하거나 빼서).
 import { ME, PLAYERS, TEAMS, registerPlayers } from '../game/mock';
 import { synthPlayer } from '../game/starter';
+import { seasonRoster } from '../game/history';
+import { eraOfCode } from '../game/world';
 import type { Player, PitcherRole, Pos } from '../game/types';
 import type { SetEffect } from '../game/sets';
 import { evaluate, getSlot, initialLineup, store as lineupStore, unit, type LineupState } from '../screens/lineup/calc';
@@ -50,7 +53,9 @@ export function clubRoster(teamId: string, level: AiLevel = aiLevel()): ClubRost
   if (hit) return hit;
   const team = TEAMS.find((t) => t.id === teamId) ?? TEAMS[0];
   const target = LEVEL_OVR[level] + (TIER_ADJ[team.tier] ?? 0);
-  const own = PLAYERS.filter((p) => p.teamId === teamId && /^p\d+$/.test(p.id) && p.id !== 'p41');
+  // 그 구단 2027 선수단 = 마지막 실제 시즌 선수단 (부활 옛 구단은 그 이름의 마지막 시즌)
+  const real = seasonRoster(team.code, team.old ? eraOfCode(team.code)[1] : 2027).filter((p) => !!p.real);
+  const own = real.length >= 12 ? real : PLAYERS.filter((p) => p.teamId === teamId && /^p\d+$/.test(p.id) && p.id !== 'p41');
   const used = new Set<string>();
   const delta = new Map<string, number>();
   const names = new Set(PLAYERS.map((p) => p.name));
@@ -60,7 +65,7 @@ export function clubRoster(teamId: string, level: AiLevel = aiLevel()): ClubRost
     const real = own.find((p) => !used.has(p.id) && pred(p));
     if (real) {
       used.add(real.id);
-      delta.set(real.id, target + off + 2 - real.ovr); // 이름난 선수는 그 구단에서 조금 더 세게
+      delta.set(real.id, target + off + 2 - real.ovr); // 주전은 그 구단에서 조금 더 세게
       return real;
     }
     const id = `ai-${teamId}-${String(k++).padStart(2, '0')}`;

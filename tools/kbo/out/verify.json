@@ -1,0 +1,23 @@
+{
+ "mappingMissRows": 1,
+ "mappingMissPct": 0.026,
+ "persons": 561,
+ "nameDup": 0,
+ "nameEqualsReal": 0,
+ "nameEqualsSpecial": 0,
+ "allNamesAssigned": 4035,
+ "allNameFail": 0,
+ "allNameDup": 0,
+ "allNameEqualsReal": 0,
+ "oneSyllableChanged": 4023,
+ "realNameInData": 0,
+ "realNameInText": 0,
+ "idPattern": true,
+ "idFromPidHash": true,
+ "cardsListed": 327,
+ "cardRefOk": true,
+ "seasonCards": 2945,
+ "deterministic": true,
+ "ok": true,
+ "problems": []
+}

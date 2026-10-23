@@ -210,6 +210,8 @@ export interface Player {
   fatigue: number;
   /** 부상 중이면 설명 */
   injury?: string;
+  /** 실제 선수 카탈로그(game/kbo)에서 만든 보기 — 선수 ID · 능력치를 가져온 시즌 (season 은 그 해 실제 기록) */
+  real?: { kid: string; year: number };
 }
 
 /* ───────── 카드 ───────── */

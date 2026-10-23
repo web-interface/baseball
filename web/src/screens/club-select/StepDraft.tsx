@@ -7,7 +7,7 @@ import { teamById } from '../../game/mock';
 import { shortLabel } from '../../game/world';
 import { POS_KO, ROLE_KO, handKo } from '../../game/labels';
 import type { Player } from '../../game/types';
-import { DRAFT_GRADE, draftPool, draftYearOf } from './local-mock';
+import { draftGradeOf, draftPool, draftYearOf } from './local-mock';
 import type { StepProps } from './index';
 import s from './cs.module.css';
 import d from './StepDraft.module.css';
@@ -34,9 +34,9 @@ export function StepDraft({ st, set, go, Dock }: StepProps) {
         <p className={s.kicker}>{t.old ? '부활 구단 창단' : '클럽 창단'} · {t.name}</p>
         <h1 className={s.title}>{shortLabel(t.code)}에서 세 명을 데려와요</h1>
         {t.old ? (
-          <p className={s.lead}>후보는 {t.name}의 옛 시즌 주축이에요. 지명한 선수는 <b>스페셜</b> 카드로 오고, 연도는 <b>그 선수가 뛴 해</b>예요. 나머지 기본 선수단 22장은 2027 리그의 다른 구단·연도로 채워 드려요.</p>
+          <p className={s.lead}>후보는 {t.name}의 옛 시즌 주축이에요. 지명한 선수는 <b>그 선수가 뛴 해의 시즌 카드</b>로 와요(등급은 그 해 실제 성적으로). 나머지 기본 선수단 22장은 2027 리그의 다른 구단 최근 시즌 카드로 채워 드려요.</p>
         ) : (
-          <p className={s.lead}>지명한 선수는 <b>스페셜</b> 카드로 와요 — 연도는 지명 순서대로 <b>’27 · ’26 · ’25</b>. 나머지 기본 선수단 22장은 여러 구단·연도로 채워 드려요.</p>
+          <p className={s.lead}>후보는 최근 세 시즌의 젊은 선수예요. 지명한 선수는 <b>그 시즌 카드</b>로 와요(등급은 그 해 실제 성적으로). 나머지 기본 선수단 22장은 다른 구단 최근 시즌 카드로 채워 드려요.</p>
         )}
       </header>
 
@@ -47,7 +47,7 @@ export function StepDraft({ st, set, go, Dock }: StepProps) {
             <div key={i} className={d.slot}>
               {p ? (
                 <button type="button" className={d.slotCard} onClick={() => toggle(p)} aria-label={`${p.name} 지명 취소`}>
-                  <Card player={p} team={t} grade={DRAFT_GRADE} year={draftYearOf(p, i)} level={1} width={98} showStats={false} />
+                  <Card player={p} team={t} grade={draftGradeOf(p)} year={draftYearOf(p, i)} level={1} width={98} showStats={false} />
                 </button>
               ) : (
                 <span className={d.empty}><span className="num-display">{i + 1}</span><small>지명</small></span>
@@ -83,7 +83,7 @@ export function StepDraft({ st, set, go, Dock }: StepProps) {
                 <span className={d.who}>
                   <b>{p.name}</b>
                   <small>
-                    {t.old && <><span className="num">{draftYearOf(p, 0) + (draftYearOf(p, 0) > 27 ? 1900 : 2000)}</span> 시즌 · </>}
+                    {(t.old || p.real) && <><span className="num">{p.real ? p.real.year : draftYearOf(p, 0) + (draftYearOf(p, 0) > 27 ? 1900 : 2000)}</span> 시즌 · </>}
                     {p.pos === 'P' ? (p.role ? ROLE_KO[p.role] : '투수') : POS_KO[p.pos]} · {handKo(p.throws, p.bats)} · <span className="num">{p.age}</span>세
                   </small>
                   <span className={d.stats}>

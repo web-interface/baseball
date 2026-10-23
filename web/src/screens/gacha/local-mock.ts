@@ -5,7 +5,7 @@
 import { ALL_TEAMS, PLAYERS, teamById, teamByCode } from '../../game/mock';
 import { ALL_CLUBS, CURRENT_SEASON, FIRST_SEASON, clubsIn, eraOfCode, isOldCode, shortLabel } from '../../game/world';
 import { championOf, clubSeason, clubTitles, leagueYear, runnerUpOf, seasonLine, traitTag } from '../../game/clubSeasons';
-import { seasonRoster } from '../../game/history';
+import { LAST_REAL_SEASON, seasonRoster } from '../../game/history';
 import type { ClubCode, Player } from '../../game/types';
 
 /* ───────── 우승 시즌 (구단별 우승 연도 — 레전드 카드가 나오는 해) ───────── */
@@ -46,10 +46,10 @@ export interface YearOption {
 const yy = (y: number) => `’${String(y).slice(-2)}`;
 const RECENT: Record<number, string> = { [CURRENT_SEASON]: '이번 시즌 · 시상 전', [CURRENT_SEASON - 1]: '지난 시즌', [CURRENT_SEASON - 2]: '2년 전 시즌' };
 
-/** 연도팩 선택지 — 1982~2027 한 해 단위 (최근 순) */
+/** 연도팩 선택지 — 1982~2026 한 해 단위 (최근 순). 카드는 그 해 실제 기록으로 만든 실제 선수 카드라, 기록이 없는 2027(이번 시즌)은 없다 */
 export const YEAR_OPTIONS: YearOption[] = (() => {
   const out: YearOption[] = [];
-  for (let y = CURRENT_SEASON; y >= FIRST_SEASON; y--) {
+  for (let y = Math.min(CURRENT_SEASON, LAST_REAL_SEASON); y >= FIRST_SEASON; y--) {
     const lg = leagueYear(y);
     // 그 해 정규시즌 순위대로 (기록이 없으면 원래 순서)
     const clubs = clubsIn(y).map((c, i) => ({ c, k: (clubSeason(c, y)?.rank ?? 50) * 100 + i })).sort((a, b) => a.k - b.k).map((x) => x.c);

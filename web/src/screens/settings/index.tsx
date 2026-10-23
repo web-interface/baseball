@@ -1,5 +1,6 @@
 // 설정 — 담당: 홈·시작·설정 개발자
 // 테마(미리보기와 함께 바로 바뀜) · 경기 보기 방식(기본 빨리 보기) · 강조 문구 · 소리(자리) · 로그인된 기기(자리) · 경기 운영 · 정보
+import { KBO_SOURCE_NOTE } from '../../game/kbo';
 import { useState, type ReactNode } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { useAuth } from '../../app/auth';
@@ -242,6 +243,7 @@ export default function SettingsScreen(_: ScreenProps) {
         <Devices />
       </Section>
       <p className={s.ver}>야구 매니저 · 2027 시즌 시험판</p>
+      <p className={s.ver}>{KBO_SOURCE_NOTE} · 구단은 게임 속 구단 이름</p>
     </div>
   );
 }

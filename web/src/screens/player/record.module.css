@@ -148,3 +148,21 @@
 :global([data-theme='classic']) .ball { fill: #F6F4EE; stroke: #1D1E21; }
 :global([data-theme='classic']) .noteRow td { background: color-mix(in srgb, var(--club) 9%, transparent); }
 :global([data-theme='classic']) .award svg { color: var(--accent); }
+
+/* ── 실제 기록 · 게임 통산 — 연도별 표 (가로로 넘기기) ── */
+.srcNote { margin: 0; font-size: 11px; line-height: 1.5; color: var(--fg-4); }
+.realHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: -4px 0 12px; font-size: 12.5px; color: var(--fg-3); }
+.realHead b { color: var(--fg); font-weight: 700; }
+.kind { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--surface-2); color: var(--fg-2); box-shadow: inset 0 0 0 1px var(--line); }
+.kindReal { background: var(--inv); color: var(--inv-fg); box-shadow: none; }
+.ytWrap { overflow-x: auto; margin: 0 calc(var(--gutter) * -1); padding: 0 var(--gutter); -webkit-overflow-scrolling: touch; }
+.yt { border-collapse: collapse; min-width: 100%; font-size: 12.5px; white-space: nowrap; }
+.yt th, .yt td { padding: 7px 8px; text-align: right; border-bottom: 1px solid var(--line); }
+.yt th { font-size: 11px; font-weight: 700; color: var(--fg-3); background: var(--bg); position: sticky; top: 0; }
+.yt th:first-child, .yt td:first-child { text-align: left; position: sticky; left: 0; background: var(--bg); padding-left: 0; }
+.yt th:nth-child(2), .yt td:nth-child(2) { text-align: left; }
+.yt td { color: var(--fg-2); }
+.yt tr.ytHi td { color: var(--fg); font-weight: 700; background: var(--surface-2); }
+.yt tr.ytHi td:first-child { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--accent); padding-left: 6px; }
+.yt tr.ytSum td { color: var(--fg); font-weight: 700; border-top: 2px solid var(--line-3); border-bottom: 0; }
+.loading { font-size: 13px; color: var(--fg-3); padding: 8px 0; }

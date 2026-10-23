@@ -11,7 +11,7 @@
 | `theme/` | `tokens.css`(3테마 토큰) · `base.css`(리셋·숫자·접근성) · `fonts.ts`(글꼴) · `themes.ts`(테마·내 구단 색) · `ThemeProvider.tsx` | 기반 |
 | `ui/` | 공용 부품 — `index.ts` 에서만 가져다 쓴다 | 기반 |
 | `app/` | `App`(뿌리) · `router`(해시) · `routes`(경로 표) · `auth`(로그인 상태) · `AuthScreen`(로그인 게이트) · `Shell`(헤더+메뉴) · `Preview`(#/preview) · `ScreenStub`(자리 안내판) · `StadiumArt` | 기반 |
-| `game/` | `types.ts` · `mock.ts` · `world.ts`(세계관 구단 10 + 옛 구단 10 · 계보 · 리그 · 특별 선수 이름) · `clubSeasons.ts`(1982~ 구단 연도 기록 — `data/club-seasons.json`) · `history.ts`(옛 시즌 선수단 — 연도팩·구단팩) · `grades.ts`(등급 11종 + 특별 선수) · `labels.ts`(한국어 이름표) · `field.ts`(경기장 좌표) | 기반 |
+| `game/` | `types.ts` · `mock.ts` · `world.ts`(세계관 구단 10 + 옛 구단 10 · 계보 · 리그 · 특별 선수 이름) · `clubSeasons.ts`(1982~ 구단 연도 기록 — `data/club-seasons.json`) · `kbo.ts`(실제 선수 카탈로그 — 바뀐 이름·고정 ID·카드 종류·연도별 기록, `data/kbo/` · 규칙 docs/실제선수데이터.md) · `history.ts`(옛 시즌 선수단 = 그 해 그 구단 실제 선수 — 연도팩·구단팩) · `legacy/`(옛 가상 선수 생성기 — 이미 저장된 옛 카드용) · `grades.ts`(등급 11종 + 특별 선수) · `labels.ts`(한국어 이름표) · `field.ts`(경기장 좌표) | 기반 |
 | `cards/` | `Card` · `CardMini` · `CardBack` — 지금은 임시, props 는 최종 | 카드 디자이너 |
 | `art/` | `PlayerArt.tsx`(선수 그림 입구) · `interim.ts`(생성기 오류 때 대체 초상) | 기반 |
 | `art/character/` | 캐릭터 생성기 (외모·체격·유니폼·초상·전신) | 캐릭터 팀 |

@@ -6,6 +6,7 @@ import type { ScreenProps } from '../../app/screen';
 import { navigate } from '../../app/router';
 import { CURRENT_TEAMS, OLD_TEAMS, PACKS, isTeamId, myTeam, teamByCode } from '../../game/mock';
 import { CURRENT_SEASON, FIRST_SEASON } from '../../game/world';
+import { LAST_REAL_SEASON } from '../../game/history';
 import { SET_KIND_KO, statLine } from '../../game/sets';
 import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
 import { GRADES } from '../../game/grades';
@@ -52,7 +53,7 @@ function Store({ query }: { query: URLSearchParams }) {
   const g = useGacha();
   const qp = query.get('pack');
   const [packId, setPackId] = useState(() => (qp && PACKS.some((p) => p.id === qp) ? qp : 'premium'));
-  const [year, setYear] = useState(() => { const y = Number(query.get('year')); return y >= FIRST_SEASON && y <= CURRENT_SEASON ? y : CURRENT_SEASON; });
+  const [year, setYear] = useState(() => { const y = Number(query.get('year')); return y >= FIRST_SEASON && y <= LAST_REAL_SEASON ? y : LAST_REAL_SEASON; });
   const [club, setClub] = useState<ClubCode>(() => { const q = query.get('club')?.toLowerCase(); return q && isTeamId(q) ? (q.toUpperCase() as ClubCode) : myTeam().code; });
   const [oddsOpen, setOddsOpen] = useState(query.get('odds') === '1');
   const [result, setResult] = useState<PullResult | null>(null);
@@ -162,7 +163,7 @@ function Store({ query }: { query: URLSearchParams }) {
       {/* ───── 골라 뽑기 ───── */}
       {pack.pick?.kind === 'year' && (
         <section className={s.pick} aria-label="시즌 고르기">
-          <div className={s.secHead}><h3 className="head">시즌 고르기</h3><span>{FIRST_SEASON}~{CURRENT_SEASON} 한 해씩 · 그 해 리그에 있던 구단 카드만</span></div>
+          <div className={s.secHead}><h3 className="head">시즌 고르기</h3><span>{FIRST_SEASON}~{LAST_REAL_SEASON} 한 해씩 · 그 해 그 구단에서 뛴 실제 선수 카드만</span></div>
           <YearPicker className={s.yearPicker} cells={YEAR_CELLS} value={year} onChange={setYear} aria-label="시즌" />
           <YearNote year={year} />
         </section>

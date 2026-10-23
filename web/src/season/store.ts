@@ -3,6 +3,7 @@
 // 헤더 · 홈 · 순위 탭 · 시즌 빨리 감기 · 경기 화면은 모두 이 파일의 standingsOf · teamLine · batLine · pitLine 을 쓴다 — 어디서 봐도 같은 값.
 // 저장 형식 2(bb.season.v2). 예전 형식 1(목업 71경기 뒤 6월 15일부터 이어 치던 것)은 일정이 달라 이어 쓸 수 없어 지우고 새 시즌으로(안내 한 줄).
 // 시즌은 내 구단(ME.teamId — 구단 선택에서 고른 구단)의 것 — 내 구단이 바뀌면 새 시즌으로 시작한다.
+import { archiveSeason } from './career';
 import { useSyncExternalStore } from 'react';
 import { ME, TEAMS, playerById, teamById } from '../game/mock';
 import type { LineupState } from '../screens/lineup/calc';
@@ -121,9 +122,10 @@ export function useSeason(): SeasonState {
   return useSyncExternalStore((l) => { listeners.add(l); return () => { listeners.delete(l); }; }, load);
 }
 /** 처음부터 다시 (2027 개막일 · 모든 구단 0승 0무 0패) */
-export function resetSeason() { clearSeen(); state = fresh(); save(); }
+export function resetSeason() { archiveSeason(state ?? load()); clearSeen(); state = fresh(); save(); }
 /** 저장된 시즌을 지운다 — 구단을 바꿔 화면을 다시 불러오기 직전(다시 뜨면 새 구단으로 개막일부터, 안내 없이) */
 export function clearSeason() {
+  archiveSeason(state ?? load()); // 지우기 전에 게임 통산(season/career)으로 옮겨 적는다
   try { localStorage.removeItem(KEY); for (const k of OLD_KEYS) localStorage.removeItem(k); } catch { /* */ }
   clearSeen();
   state = null;

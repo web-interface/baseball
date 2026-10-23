@@ -109,7 +109,7 @@ export default function ShopScreen(_: ScreenProps) {
       {/* ───── 오늘의 진열 ───── */}
       <div className={s.listHead}>
         <h3 className="head">오늘의 진열</h3>
-        <span>감독님만 보는 진열 · <span className="num">{SCOUT_SHOP.items.length}</span>명</span>
+        <span>감독님만 보는 진열 · <span className="num">{SHELF.length}</span>명</span>
       </div>
       <ol className={s.list}>
         {SHELF.map((it, n) => {
