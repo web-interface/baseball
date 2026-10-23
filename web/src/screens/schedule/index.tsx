@@ -1,7 +1,7 @@
 // 시즌 일정 #/schedule — 월별 달력(우리 경기 · 상대 · 홈/원정 · 결과 · 시작 시각 · 날씨 · 휴식 · 취소, 다음 경기 날 강조)
 // · 전체 일정(날짜별 목록, 우리 경기/모든 경기). 지난 경기를 누르면 박스스코어(#/games?g=), 남은 우리 경기는 경기 준비·진행(#/season).
 //   ?view=list 전체 일정 · ?m=6 그 달(m=post 포스트시즌) · ?all=1 모든 경기
-//   일정 = season/schedule(정규 135경기 · 월요일 · 올스타 휴식) + 비로 밀린 경기(시즌 끝 뒤) + 포스트시즌(season/post).
+//   일정 = season/schedule(정규 144경기 · 월요일 · 올스타 휴식) + 비로 밀린 경기(시즌 끝 뒤) + 포스트시즌(season/post).
 import { useEffect, useMemo, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { Link, navigate, setQueryQuiet } from '../../app/router';

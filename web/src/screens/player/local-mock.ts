@@ -241,13 +241,13 @@ export function hiddenOf(p: Player, owned: boolean, mineCards: number) {
   if (p.traits.includes('철완')) v.injuryProne = Math.min(v.injuryProne, 6);
   // 함께한 경기 — 내 구단 선수는 한 시즌(71경기), 다른 구단 카드는 카드를 가진 뒤 경기만
   const games = !owned ? 0 : p.teamId === 'dj' ? 71 : 18 + mineCards * 6;
-  // 확신도: 30경기 50% · 100경기 80% · 한 시즌(135) 100% (15 §3.3)
-  const confOf = (g: number) => (g <= 30 ? 0.5 * g / 30 : g <= 100 ? 0.5 + 0.3 * (g - 30) / 70 : Math.min(1, 0.8 + 0.2 * (g - 100) / 35));
+  // 확신도: 30경기 50% · 100경기 80% · 한 시즌(144) 100% (15 §3.3)
+  const confOf = (g: number) => (g <= 30 ? 0.5 * g / 30 : g <= 100 ? 0.5 + 0.3 * (g - 30) / 70 : Math.min(1, 0.8 + 0.2 * (g - 100) / 44));
   const items: HiddenItem[] = (['consistency', 'bigGame', 'pressure', 'injuryProne'] as HiddenKey[]).map((k) => {
     const gate = k === 'injuryProne' ? 0.95 : 0.5; // 부상 경향은 한 시즌을 함께해야
     const c = owned ? confOf(games) : 0;
     const revealed = owned && c >= gate;
-    const needG = k === 'injuryProne' ? 128 : 30;
+    const needG = k === 'injuryProne' ? 133 : 30;
     const left = Math.max(1, needG - games);
     const w = hiddenWord(k, v[k]);
     return {

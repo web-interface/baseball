@@ -14,6 +14,7 @@ import { PlayerArt } from '../../art/PlayerArt';
 import { Button, Emblem, Icon } from '../../ui';
 import { avg as fAvg, era as fEra, roman, yearTag } from '../../ui/format';
 import { PAPER, eraOf } from './local-mock';
+import { SEASON_GAMES } from '../../season/schedule';
 import type { Pick, PulledCard } from './draw';
 import { Swatch } from './bits';
 import s from './Reveal.module.css';
@@ -218,7 +219,7 @@ function statLine(p: Player, year: number) {
   const full = year < 2027 && !p.real; // 실제 선수 카드는 그 해 실제 기록 그대로 (옛 목업은 반 시즌 기록이라 늘려 보였음)
   if (p.season.bat) {
     const b = p.season.bat;
-    const k = full ? 135 / Math.max(1, b.g) : 1;
+    const k = full ? SEASON_GAMES / Math.max(1, b.g) : 1;
     return { kind: 'bat' as const, avg: b.avg, hr: Math.round(b.hr * k), rbi: Math.round(b.rbi * k), sb: Math.round(b.sb * k), h: Math.round(b.h * k), ops: b.ops };
   }
   const t = p.season.pit!;

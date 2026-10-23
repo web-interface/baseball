@@ -5,14 +5,14 @@ import { LEAGUE } from '../../game/world';
 import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
 import type { LineScore, MatchRecord, Player, Team, Weather } from '../../game/types';
 import {
-  allDays, eraLabel, getSeason, isOver, myGameOf, notStarted, pitLine, seasonToday, teamLine,
+  allDays, eraLabel, getSeason, isOver, myGameOf, notStarted, pitLine, seasonToday, teamLine, yearOf,
   type MyGameRec, type NewsRec, type SeasonState, type TeamLine,
 } from '../../season/store';
 import { nextMyGame } from '../../season/run';
 import { aiTargetOf, clubRoster, myRoster } from '../../season/rosters';
 import { weatherOf } from '../../season/weather';
 import { condsOf, fitScore } from '../../game/weatherFit';
-import { SEASON_GAMES, daysBetween, longDate, shortDate, startTime } from '../../season/schedule';
+import { daysBetween, longDate, seasonGames, shortDate, startTime } from '../../season/schedule';
 
 /** 순위 · 전적 — 헤더 · 시즌 화면과 같은 값 (season/store 의 teamLine) */
 export type ClubLine = TeamLine;
@@ -138,7 +138,7 @@ export function feedItems(s: SeasonState = getSeason()): FeedItem[] {
   const out: FeedItem[] = [];
   // 개막 안내
   if (notStarted(s)) {
-    out.push({ id: 'open', kind: '시즌', text: `${LEAGUE.name} 2027 개막`, detail: `${longDate(allDays(s)[0].date)} — 10개 구단 모두 0승 0무 0패에서, 구단마다 ${SEASON_GAMES}경기`, when: '오늘' });
+    out.push({ id: 'open', kind: '시즌', text: `${LEAGUE.name} ${yearOf(s)} 개막`, detail: `${longDate(allDays(s)[0].date)} — 10개 구단 모두 0승 0무 0패에서, 구단마다 ${seasonGames()}경기`, when: '오늘' });
   }
   // 다음 시리즈 (라이벌이면 더비 예고)
   const nx = nextMyGame();

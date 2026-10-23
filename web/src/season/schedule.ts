@@ -1,24 +1,30 @@
-// 정규 시즌 일정 — 개막(3월 넷째 주 토요일, 2027년은 3월 27일)부터 구단마다 135경기. 시즌 연도는 setScheduleYear 로(2027 → 2028 …). 상대 9구단과 15경기씩(세계관 · 기획서 14.1 '정규 135경기, 상대마다 15경기').
-// 3연전 45번 = 9판 × 5바퀴, 바퀴마다 홈/원정을 뒤집는다. 월요일과 7월 중순 별빛 올스타 휴식(목~일)은 쉰다 → 9월 초에 끝.
+// 정규 시즌 일정 — 개막(3월 넷째 주 토요일, 2027년은 3월 27일)부터 구단마다 144경기(KBO 식). 시즌 연도는 setScheduleYear 로(2027 → 2028 …). 상대 9구단과 16경기씩(세계관 · 기획서 14.1).
+// 3연전 45번 = 9판 × 5바퀴(바퀴마다 홈/원정을 뒤집는다) 뒤에, 마지막 바퀴는 상대마다 1경기씩 9일. 월요일과 7월 중순 별빛 올스타 휴식(목~일)은 쉰다 → 9월 중순에 끝.
 // 첫 3연전은 목업 '다음 경기'(NEXT_GAME)와 같은 상대·홈/원정. 비로 취소된 경기는 시즌 끝 뒤 빈 날로 다시 잡는다(store 가 들고 있음).
-// KBO 식 144경기로 바꾸려면 PER_OPP 를 16 으로 (마지막 바퀴는 남는 경기 수만큼 짧은 시리즈) — 세계관·구단 선택 화면의 '135경기' 글도 같이.
+// 예전 135경기 시즌(상대마다 15경기)과 앞 135일 일정이 같다 — 치던 시즌은 끝에 9일을 더해 이어 치고, 이미 끝난 시즌만 135경기로 마친다(season/store).
 import { ME, NEXT_GAME, TEAMS } from '../game/mock';
 
-/** 상대 구단마다 경기 수 */
-export const PER_OPP = 15;
-/** 구단마다 정규 시즌 경기 수 (= 정규 경기일 수 — 날마다 모든 구단이 한 경기씩) */
+/** 상대 구단마다 경기 수 — 새 시즌 */
+export const PER_OPP = 16;
+/** 예전 시즌(135경기)의 상대마다 경기 수 — 그 시즌을 마칠 때까지만 */
+export const OLD_PER_OPP = 15;
+/** 새 시즌 구단마다 정규 경기 수 (144) */
 export const SEASON_GAMES = PER_OPP * (TEAMS.length - 1);
 /** 0부터 센 첫 경기일 (개막전) */
 export const FIRST_DAY = 0;
-/** 일정을 짤 시즌 연도 — season/store 가 시즌을 불러올 때 맞춘다 */
+/** 일정을 짤 시즌 연도 · 상대마다 경기 수 — season/store 가 시즌을 불러올 때 맞춘다 */
 let YEAR = 2027;
+let PER = PER_OPP;
 let cache: DayGames[] | null = null;
-export function setScheduleYear(y: number) {
-  if (y === YEAR) return;
+export function setScheduleYear(y: number, per = PER_OPP) {
+  if (y === YEAR && per === PER) return;
   YEAR = y;
+  PER = per;
   cache = null;
   breakCache = null;
 }
+/** 지금 시즌 구단마다 정규 경기 수 (= 정규 경기일 수 — 날마다 모든 구단이 한 경기씩) */
+export const seasonGames = () => PER * (TEAMS.length - 1);
 export const scheduleYear = () => YEAR;
 /** 그 해 개막일 — 3월 22~28일 사이 토요일 (2027년 3월 27일) */
 export function openingDate(y = YEAR) {
@@ -73,7 +79,7 @@ export function startTime(date: string) {
   return dow === 6 ? '17:00' : dow === 0 ? '14:00' : '18:30';
 }
 
-/** 정규 시즌 전체 (개막전부터 135번째 경기일까지) */
+/** 정규 시즌 전체 (개막전부터 144번째 경기일까지 — 예전 시즌은 135번째) */
 export function regularDays(): DayGames[] {
   if (cache) return cache;
   const me = ME.teamId;
@@ -84,7 +90,7 @@ export function regularDays(): DayGames[] {
   const n = arr.length;
   const rounds: [string, string][][] = [];
   const rot = arr.slice();
-  // 기본 홈/원정 — 지금까지 홈이 적은 쪽이 홈 (구단마다 9판 중 4~5판 홈 → 시즌 홈 경기 66~69).
+  // 기본 홈/원정 — 지금까지 홈이 적은 쪽이 홈 (구단마다 9판 중 4~5판 홈 → 시즌 홈 경기 71~73, 예전 135경기는 66~69).
   // 첫 판(내 구단 vs 상대)은 목업 다음 경기의 홈/원정 그대로
   const homes = new Map<string, number>(arr.map((id) => [id, 0]));
   for (let r = 0; r < n - 1; r++) {
@@ -102,10 +108,10 @@ export function regularDays(): DayGames[] {
   const out: DayGames[] = [];
   let date = openingDate();
   let day = FIRST_DAY;
-  // 한 바퀴 = 9판 × 3연전 (마지막 바퀴는 남은 경기 수만큼). 바퀴마다 홈/원정 뒤집기
-  const laps = Math.ceil(PER_OPP / 3);
+  // 한 바퀴 = 9판 × 3연전 (마지막 바퀴는 남은 경기 수만큼 — 144경기는 1경기씩). 바퀴마다 홈/원정 뒤집기
+  const laps = Math.ceil(PER / 3);
   for (let lap = 0; lap < laps; lap++) {
-    const len = Math.min(3, PER_OPP - lap * 3);
+    const len = Math.min(3, PER - lap * 3);
     const flip = lap % 2 === 1;
     for (const base of rounds) {
       const games = base.map(([a, b]) => (flip ? [b, a] : [a, b]) as [string, string]);

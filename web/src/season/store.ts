@@ -8,7 +8,7 @@ import { archiveSeason } from './career';
 import { useSyncExternalStore } from 'react';
 import { ME, TEAMS, playerById, teamById } from '../game/mock';
 import type { LineupState } from '../screens/lineup/calc';
-import { FIRST_DAY, OPENING_DATE, SEASON_GAMES, openingDate, regularDays, rescheduled, setScheduleYear, type DayGames } from './schedule';
+import { FIRST_DAY, OLD_PER_OPP, OPENING_DATE, PER_OPP, SEASON_GAMES, openingDate, regularDays, rescheduled, seasonGames, setScheduleYear, type DayGames } from './schedule';
 import { closeYear, seasonYear, type LeagueYear } from './league';
 import type { BatRow, GameOut, PitRow } from './sim';
 import type { PostState } from './post';
@@ -31,6 +31,8 @@ export interface SeasonState {
   club: string;
   /** 시즌 연도 (예전 저장엔 없음 → 2027) */
   year?: number;
+  /** 상대 구단마다 경기 수 — 16(144경기). 예전 저장엔 없음 → 불러올 때 정한다(upgradePer) */
+  per?: number;
   seed: string;
   /** 다음에 칠 날 (allDays 의 순번, 0 = 개막전) */
   next: number;
@@ -74,8 +76,24 @@ function fresh(): SeasonState {
   const rankHist: Record<string, number[]> = {};
   for (const t of TEAMS) { table[t.id] = emptyRec(); rankHist[t.id] = []; }
   const year = seasonYear();
-  setScheduleYear(year);
-  return { v: 2, club: ME.teamId, year, seed: newSeed(), next: FIRST_DAY, table, results: [], postponed: [], bat: {}, pit: {}, news: [], my: [], rankHist };
+  setScheduleYear(year, PER_OPP);
+  return { v: 2, club: ME.teamId, year, per: PER_OPP, seed: newSeed(), next: FIRST_DAY, table, results: [], postponed: [], bat: {}, pit: {}, news: [], my: [], rankHist };
+}
+/**
+ * 예전 135경기 시즌(상대마다 15경기) 저장 — 앞 135일 일정이 144경기와 같다.
+ * 아직 정규 시즌 중이면(135번째 날 전 · 포스트시즌 전) 144경기로 늘려 이어 치고(끝에 상대마다 1경기씩 9일),
+ * 이미 정규 시즌을 마쳤으면(비로 밀린 경기 · 포스트시즌 중) 이번 시즌만 135경기로 마친다. 바꿨으면 true.
+ */
+function upgradePer(v: SeasonState): boolean {
+  if (v.per != null) return false;
+  const oldDays = OLD_PER_OPP * (TEAMS.length - 1);
+  if (v.next < oldDays && !v.post) {
+    v.per = PER_OPP;
+    if (v.next > 0) v.notice = `정규 시즌이 KBO처럼 ${SEASON_GAMES}경기로 늘었어요 — 시즌 끝에 상대마다 1경기씩 더 쳐요`;
+  } else {
+    v.per = OLD_PER_OPP;
+  }
+  return true;
 }
 /** 이 시즌 연도 */
 export const yearOf = (s: SeasonState = load()) => s.year ?? 2027;
@@ -98,7 +116,13 @@ function load(): SeasonState {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const v = JSON.parse(raw) as SeasonState;
-      if (valid(v) && v.club === ME.teamId) { state = v; setScheduleYear(v.year ?? 2027); return v; }
+      if (valid(v) && v.club === ME.teamId) {
+        const up = upgradePer(v);
+        state = v;
+        setScheduleYear(v.year ?? 2027, v.per ?? OLD_PER_OPP);
+        if (up) persist();
+        return v;
+      }
       // 다른 구단으로 치던 시즌 — 구단 선택에서 구단을 바꿨다 (진행이 있었으면 알려 준다)
       if (valid(v) && v.next > 0) notice = `내 구단이 ${ro(teamById(ME.teamId).name)} 바뀌어 개막전부터 새로 시작해요`;
     }
@@ -236,7 +260,7 @@ export interface TeamLine {
   /** 같은 순위 구단이 더 있나 (공동) */
   tied: boolean;
   row: StandRow;
-  /** 친 경기 · 남은 경기 (정규 135 기준) · 다음은 몇 번째 경기 */
+  /** 친 경기 · 남은 경기 (정규 144 기준 — 예전 시즌은 135) · 다음은 몇 번째 경기 */
   played: number; left: number; nextNo: number;
   /** 최근 10경기 (옛 것 → 최근, 화면 왼쪽부터) */
   form: string;
@@ -250,7 +274,7 @@ export function teamLine(teamId: string, s: SeasonState = load()): TeamLine {
   const played = row.g;
   return {
     rank: row.rank, tied: rows.some((r) => r !== row && r.rank === row.rank), row,
-    played, left: Math.max(0, SEASON_GAMES - played), nextNo: played + 1,
+    played, left: Math.max(0, seasonGames() - played), nextNo: played + 1,
     form: [...row.last10].reverse().join(''), started: !notStarted(s),
   };
 }
@@ -429,7 +453,7 @@ export function leaders(s: SeasonState = load()): Leader[] {
   return out;
 }
 
-export { FIRST_DAY, OPENING_DATE, SEASON_GAMES };
+export { FIRST_DAY, OPENING_DATE, SEASON_GAMES, seasonGames };
 
 /** 포스트시즌에서 내 구단이 어디까지 갔나 — '한국시리즈 우승' · '플레이오프 탈락' · '진출 실패' */
 export function postResultOf(p: PostState | undefined): string {

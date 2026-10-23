@@ -14,7 +14,7 @@ import { AI_LEVELS, RECOMMENDED, buildSpecial, draftGradeOf, draftPool, draftYea
 import { resetStarter } from '../../game/starter';
 import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
 import { mergeStarter, resetInventory } from '../../game/inventory';
-import { clearSeason, getSeason, setNextNotice } from '../../season/store';
+import { SEASON_GAMES, clearSeason, getSeason, setNextNotice } from '../../season/store';
 import { GATE, LEVELS, LEVEL_INFO, LEVEL_KO, resetLeague } from '../../season/league';
 import type { StepProps } from './index';
 import s from './cs.module.css';
@@ -67,7 +67,7 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
       <section className={o.poster} aria-label="2027 시즌 개막">
         <span className={o.beams} aria-hidden />
         <div className={o.posterTop}>
-          <p className={o.posterKicker}>한별 리그 · 정규 시즌 <span className="num">135</span>경기</p>
+          <p className={o.posterKicker}>한별 리그 · 정규 시즌 <span className="num">{SEASON_GAMES}</span>경기</p>
           <p className={o.year}><span className="num-display">2027</span></p>
           <p className={o.opening}>시즌 개막</p>
         </div>
