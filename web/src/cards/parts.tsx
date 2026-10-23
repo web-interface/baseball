@@ -26,6 +26,32 @@ export function Star4({ className, fill = 'currentColor' }: { className?: string
   );
 }
 
+/* 월계수 가지 (MVP 명판 양옆) — 아래에서 위로 휘는 줄기 + 번갈아 붙은 잎 5장. 한 번 계산해 둔다 */
+const LAUREL = (() => {
+  const A = [9.2, 17.4], C = [1.6, 11.2], B = [4.6, 1.2];
+  const at = (t: number) => { const u = 1 - t; return [u * u * A[0] + 2 * u * t * C[0] + t * t * B[0], u * u * A[1] + 2 * u * t * C[1] + t * t * B[1]]; };
+  const tan = (t: number) => [2 * (1 - t) * (C[0] - A[0]) + 2 * t * (B[0] - C[0]), 2 * (1 - t) * (C[1] - A[1]) + 2 * t * (B[1] - C[1])];
+  const leaves: { x: number; y: number; r: number }[] = [];
+  [0.18, 0.36, 0.54, 0.72, 0.9].forEach((t, i) => {
+    const [x, y] = at(t), [dx, dy] = tan(t);
+    const ang = (Math.atan2(dy, dx) * 180) / Math.PI;
+    const side = i % 2 ? 1 : -1;
+    const len = Math.hypot(dx, dy) || 1;
+    leaves.push({ x: f2(x + (-dy / len) * 1.25 * side), y: f2(y + (dx / len) * 1.25 * side), r: f2(ang + 90 + side * 34) });
+  });
+  return { stem: `M${A[0]} ${A[1]}Q${C[0]} ${C[1]} ${B[0]} ${B[1]}`, leaves, tip: [4.7, 1.6] };
+})();
+
+export function Laurel({ className, flip }: { className?: string; flip?: boolean }) {
+  return (
+    <svg className={className} viewBox="0 0 12 18" aria-hidden style={flip ? { transform: 'scaleX(-1)' } : undefined}>
+      <path d={LAUREL.stem} fill="none" stroke="currentColor" strokeWidth=".9" strokeLinecap="round" />
+      {LAUREL.leaves.map((l, i) => <ellipse key={i} cx={l.x} cy={l.y} rx=".95" ry="2.3" transform={`rotate(${l.r} ${l.x} ${l.y})`} fill="currentColor" />)}
+      <ellipse cx={LAUREL.tip[0]} cy={LAUREL.tip[1]} rx=".9" ry="2" fill="currentColor" />
+    </svg>
+  );
+}
+
 /* ───────── 고유 구종 궤적 (16 격자) — 구종마다 공이 가는 길이 다르다 ───────── */
 const PITCH_PATH: Record<PitchType, string> = {
   FF: 'M2 8.6C6 8.2 9.6 7.6 12.6 7',            // 직구 — 거의 곧게(살짝 떠오름)
@@ -193,10 +219,29 @@ export function bandGeometry(seed: string) {
 }
 
 /** 친필 사인 끝 획 — 선수마다 조금씩 다르게 */
+//   큰 첫 글자 고리 → 이어 쓴 작은 글자 물결(가끔 높은 고리) → 끝에서 아래로 감아 밑줄을 길게 긋는 휘갈김. 점들을 부드러운 곡선으로 잇는다
 export function autographStroke(seed: string) {
   const r = seeded('auto:' + seed);
-  const a = f2(2 + r() * 3), b = f2(10 + r() * 3);
-  return `M${a} ${b}C${f2(26 + r() * 10)} ${f2(2 + r() * 4)} ${f2(54 + r() * 10)} ${f2(13 + r() * 3)} ${f2(92 + r() * 6)} ${f2(2 + r() * 3)}`;
+  const P: [number, number][] = [];
+  let x = 3 + r() * 2;
+  P.push([x, 12.6], [x + 5 + r() * 1.5, 1.4 + r() * 1.2], [x + 8.4, 4.4], [x + 3.6, 12.4], [x + 2.4, 9.6], [x + 10, 8.4]);
+  x += 10;
+  const n = 4 + Math.floor(r() * 3);
+  for (let i = 0; i < n; i++) {
+    const w = 6 + r() * 3;
+    const tall = r() < 0.3;
+    P.push([x + w * 0.38, tall ? 1.8 + r() * 1.6 : 5.4 + r() * 2.2], [x + w * 0.64, 11.2 + r() * 1.4]);
+    if (tall) P.push([x + w * 0.3, 8.6]);
+    x += w;
+  }
+  const end = Math.min(x, 72);
+  P.push([end + 3, 13.6], [end - 12 - r() * 6, 14.8], [end - 5, 13.2], [Math.min(94, end + 18), 8 + r() * 2.5], [98, 2.6 + r() * 2]);
+  let d = `M${f2(P[0][0])} ${f2(P[0][1])}`;
+  for (let i = 0; i < P.length - 1; i++) {
+    const p0 = P[i - 1] ?? P[i], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2] ?? p2;
+    d += `C${f2(p1[0] + (p2[0] - p0[0]) / 6)} ${f2(p1[1] + (p2[1] - p0[1]) / 6)} ${f2(p2[0] - (p3[0] - p1[0]) / 6)} ${f2(p2[1] - (p3[1] - p1[1]) / 6)} ${f2(p2[0])} ${f2(p2[1])}`;
+  }
+  return d;
 }
 
 /* ───────── 레전드 기요셰(지폐식 겹원) — 한 번 만들어 그림으로 재사용 ───────── */

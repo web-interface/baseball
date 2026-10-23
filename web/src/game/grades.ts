@@ -7,13 +7,13 @@ export const GRADES: Record<GradeId, GradeInfo> = {
   rare:      { id: 'rare',      ko: '레어',             short: 'R',   kind: 'season', rank: 3, yearTagged: true,  levelMax: 9,  frame: '진홍 테 + 광택' },
   elite:     { id: 'elite',     ko: '엘리트',           short: 'E',   kind: 'season', rank: 5, yearTagged: true,  levelMax: 9,  frame: '보라 테 + 테두리를 따라 흐르는 빛' },
   legend:    { id: 'legend',    ko: '레전드',           short: 'L',   kind: 'icon',   rank: 4, yearTagged: false, levelMax: 10, frame: '금박 + 문양' },
-  franchise: { id: 'franchise', ko: '프랜차이즈 엘리트', short: 'FR',  kind: 'icon',   rank: 6, yearTagged: false, levelMax: 10, frame: '구단색 + 금 FR 명판' },
-  black:     { id: 'black',     ko: '블랙',             short: 'BK',  kind: 'icon',   rank: 7, yearTagged: false, levelMax: 10, frame: '무광 검정 + 크롬 테에 빛이 스침' },
-  signature: { id: 'signature', ko: '시그니처',         short: 'SIG', kind: 'icon',   rank: 8, yearTagged: false, levelMax: 10, frame: '움직이는 무지개 홀로그램 테' },
-  mvp:       { id: 'mvp',       ko: 'MVP',              short: 'MVP', kind: 'award',  rank: 5, yearTagged: true,  levelMax: 10, frame: '월계관 장식' },
+  franchise: { id: 'franchise', ko: '프랜차이즈 엘리트', short: 'FR',  kind: 'icon',   rank: 6, yearTagged: false, levelMax: 10, frame: '구단색 핀스트라이프 + 구단 엠블럼 FRANCHISE 명판' },
+  black:     { id: 'black',     ko: '블랙',             short: 'BK',  kind: 'icon',   rank: 7, yearTagged: false, levelMax: 10, frame: '흑요석 다이아몬드 컷 + 얼음 파랑 네온 · 크롬 BLACK 명판' },
+  signature: { id: 'signature', ko: '시그니처',         short: 'SIG', kind: 'icon',   rank: 8, yearTagged: false, levelMax: 10, frame: '무지개 프리즘 포일 + 금빛 친필 사인 · 별빛' },
+  mvp:       { id: 'mvp',       ko: 'MVP',              short: 'MVP', kind: 'award',  rank: 5, yearTagged: true,  levelMax: 10, frame: '왕실 남색 + 금 테 · 월계수 MVP 명판' },
   gg:        { id: 'gg',        ko: '골든글러브',       short: 'GG',  kind: 'award',  rank: 5, yearTagged: true,  levelMax: 10, frame: '황금 글러브 장식' },
   th:        { id: 'th',        ko: '타이틀 홀더',      short: 'TH',  kind: 'award',  rank: 5, yearTagged: true,  levelMax: 10, frame: '왕관 장식' },
-  unique:    { id: 'unique',    ko: '특별 선수',        short: '1/1', kind: 'unique', rank: 6, yearTagged: false, levelMax: 10, frame: '단 하나뿐인 전용 테두리 (11등급과 다른 디자인)' },
+  unique:    { id: 'unique',    ko: '특별 선수',        short: '1/1', kind: 'unique', rank: 6, yearTagged: false, levelMax: 10, frame: '진주 + 오로라 민트 · 별 ONLY ONE 명판 (단 하나뿐)' },
 };
 
 /** 화면에 늘어놓는 순서 (높은 것부터) */

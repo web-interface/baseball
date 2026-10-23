@@ -223,18 +223,20 @@
 .g-rare { --c1: #FF6A5C; --c2: #B3221F; --bar: #A81E1B; }
 .g-elite { --c1: #C9A0FF; --c2: #6A35D6; --bar: #5A2BBE; --glow: #B98CFF; }
 .g-legend { --c1: #FFF1A6; --c2: #C9930C; --bar: #A87708; --glow: #FFD84A; }
+/* 다섯 등급(블랙 · 시그니처 · MVP · 프랜차이즈 · 특별)은 색 계열부터 서로 다르게 — 맨 아래 '등급 개성' 블록이 재질 · 명판 · 움직임을 더한다
+ *   블랙 흑요석 + 얼음 파랑 · 시그니처 무지개 프리즘 + 금 사인 · MVP 왕실 남색 + 금 · 프랜차이즈 구단색 + 핀스트라이프 · 특별 진주 + 오로라 민트 */
 .g-franchise {
-  --c1: color-mix(in srgb, var(--tc1) 55%, #fff);
-  --c2: var(--tc1);
-  --bar: color-mix(in srgb, var(--tc1) 80%, #000);
-  --glow: #FFD84A;
+  --c1: color-mix(in srgb, var(--tf, var(--tc1)) 55%, #fff);
+  --c2: var(--tf, var(--tc1));
+  --bar: var(--fband, color-mix(in srgb, var(--tc1) 80%, #000));
+  --glow: color-mix(in srgb, var(--tf, var(--tc1)) 78%, #fff);
 }
-.g-black { --c1: #6B6F76; --c2: #0B0C0E; --bar: #111214; --glow: #E8F4FF; }
-.g-signature { --c1: #ffffff; --c2: #9aa7ff; --bar: #1b1840; --glow: #ffffff; }
-.g-mvp { --c1: #FFE9A8; --c2: #B8860B; --bar: #12306E; --glow: #FFD84A; }
+.g-black { --c1: #3A404B; --c2: #5CC2FF; --bar: #050607; --glow: #5CC2FF; }
+.g-signature { --c1: #ffffff; --c2: #FFC93C; --bar: #2a1650; --glow: #FFF1C9; }
+.g-mvp { --c1: #2C56C9; --c2: #F2C14E; --bar: #12306E; --glow: #FFD54A; }
 .g-gg { --c1: #FFF3B0; --c2: #D4A017; --bar: #8A6A00; --glow: #FFE066; }
 .g-th { --c1: #F3D2FF; --c2: #9B30D9; --bar: #6A1B9A; --glow: #E8A8FF; }
-.g-unique { --c1: #FFFFFF; --c2: #BFE3FF; --bar: #0E1A2B; --glow: #9FE8FF; }
+.g-unique { --c1: #FFFFFF; --c2: #3FE0C0; --bar: #E9FBF6; --glow: #4FF0C4; }
 
 /* 레어 — 테에 광택 한 줄 */
 .g-rare .frame::before {
@@ -280,36 +282,16 @@
 }
 @keyframes sweep { from { background-position: 120% 0; } to { background-position: -120% 0; } }
 .g-legend .shine, .g-mvp .shine, .g-gg .shine, .g-th .shine, .g-franchise .shine { animation-duration: 2.6s; }
-.g-black .shine { background-image: linear-gradient(115deg, transparent 40%, rgba(232, 244, 255, .95) 48%, rgba(160, 200, 255, .6) 52%, transparent 60%); animation-duration: 2.2s; }
+.g-black .shine { background-image: linear-gradient(115deg, transparent 40%, rgba(236, 246, 255, .95) 47%, rgba(92, 194, 255, .75) 52%, transparent 60%); animation-duration: 2.2s; }
+.g-mvp .shine { background-image: linear-gradient(115deg, transparent 38%, rgba(255, 236, 170, .95) 48%, transparent 58%); }
+.g-unique .shine { background-image: linear-gradient(115deg, transparent 36%, rgba(255, 255, 255, .95) 46%, rgba(120, 255, 214, .7) 52%, transparent 62%); animation-duration: 3.6s; }
 /* 시그니처 — 무지개 테가 돈다 */
 @property --ang { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
-.g-signature .frame { background: conic-gradient(from var(--ang), #ff4f7b, #ffb84f, #f5ff6b, #6bf09a, #4fd8ff, #8a7bff, #ff6bd6, #ff4f7b); animation: spin 4s linear infinite; }
-.g-signature .frame::after { border-color: #fff; }
+.g-signature .frame { background: conic-gradient(from var(--ang), #ff3d6e, #ff9b3d, #ffe14d, #49e08a, #34c8ff, #6f6bff, #d55cff, #ff3d6e); animation: spin 4s linear infinite; }
 @keyframes spin { to { --ang: 360deg; } }
-/* 특별 선수 — 진주빛 + 무지개 결 */
-.g-unique .frame {
-  background:
-    linear-gradient(135deg, rgba(255, 120, 200, .35), rgba(120, 220, 255, .35), rgba(255, 240, 140, .35)),
-    linear-gradient(170deg, var(--c1), var(--c2));
-}
 /* 레전드 · 블랙 · 시그니처 · 특별 — 빛이 숨 쉬듯 */
 .pulse .frame::after { animation: breathe 2.4s ease-in-out infinite; }
 @keyframes breathe { 50% { box-shadow: 0 0 3.2cqw var(--glow), inset 0 0 2cqw color-mix(in srgb, var(--glow) 70%, transparent); } }
-/* 프랜차이즈 — 금 FR 명판 */
-.fr {
-  position: absolute;
-  left: 50%;
-  top: .4cqw;
-  z-index: 5;
-  transform: translateX(-50%);
-  padding: .8cqw 2.4cqw .7cqw;
-  border-radius: 1.2cqw;
-  font: 900 4.4cqw/1 var(--font-num);
-  letter-spacing: .08em;
-  color: #3a2600;
-  background: linear-gradient(180deg, #FFF0A6, #D9A21E);
-  box-shadow: 0 .4cqw 1cqw rgba(0, 0, 0, .35);
-}
 
 /* 움직임 멈춤(많은 장) · 움직임 줄이기 */
 .still .shine, .still .frame, .still .frame::after { animation: none !important; }
@@ -381,11 +363,13 @@
  *  레어   빨강 에나멜 — 광택이 지나감
  *  레전드 금박 판각 — 햇살이 돌고 금가루가 피어오름 · LEGEND 명판
  *  엘리트 보라 프리즘 — 테 색이 돌고 빛 두 줄기가 카드를 감쌈 · 보라 홀로
- *  MVP 플래티넘 + 금 테 · GG 금빛 가죽 + 바느질 · TH 왕실 보라·금 — 셋 다 금빛 햇살
- *  프랜차이즈 구단색 핀스트라이프 + 금 테 · 구단색 햇살 · FR 명판
- *  블랙   카본 · 크롬 — 그림을 가르는 번개 · 테를 도는 전기 두 줄 · 깜빡이는 빛 고리 · BLACK 명판
- *  시그니처 무지개 홀로 포일 — 무지개 테 · 무지개 고리 · 금빛 친필 사인 · 색이 도는 반짝이
- *  특별   진주/오팔 — 파스텔이 흐르고 빛 구슬이 떠다님
+ *  MVP    왕실 남색 에나멜 + 금 테 · 금 글자 이름 띠 — 금+파랑 햇살 · 금가루 · 월계수 MVP 명판
+ *  GG 금빛 가죽 + 바느질 · TH 왕실 보라·금 — 금빛 햇살
+ *  프랜차이즈 구단색 핀스트라이프 + 흰 · 보조색 파이핑 · 구단 띠 이름 띠 — 구단색 햇살 · 엠블럼 워터마크 · FRANCHISE 명판
+ *  블랙   흑요석 다이아몬드 컷 + 얼음 파랑 네온 — 그림을 가르는 번개 · 테를 도는 전기 두 줄 · 깜빡이는 빛 고리 · 크롬 BLACK 명판
+ *  시그니처 무지개 프리즘 포일 — 무지개 테 · 무지개 이름 띠 · 금빛 친필 사인(다시 써짐) · 네 갈래 별빛 · 프리즘 명판 (무지개는 시그니처만)
+ *  특별   진주 + 오로라 민트 — 진주 이름 띠 · 민트 오로라 고리 · 빛 구슬이 떠다님 · 별 ONLY ONE 명판
+ *  다섯 등급(블랙 · 시그니처 · MVP · 프랜차이즈 · 특별)은 작은 카드에도 짧은 명판(BK · SIG · MVP · FR · 1/1)이 붙는다 — 멈춘 그림만으로도 갈리게.
  *  엘리트부터 몇 초마다 카드 전체를 섬광이 훑는다(glint).
  *  훈련 5단계부터 단계 색 불빛(테 · 고리), 8단계부터 불티, 10단계(최종)는 무지개 고리 + 흰 빛 맥박 + 무지개 전기. */
 .frame { z-index: 1; }
@@ -421,8 +405,7 @@
 .g-legend .bar em { color: #3a2600; opacity: .9; }
 .g-elite .frame { background: conic-gradient(from var(--ang), #D2B0FF, #7A5CFF, #4FD8FF, #B46BFF, #FF6BD6, #D2B0FF); animation: spin 7s linear infinite; }
 .g-elite .bar { background: linear-gradient(180deg, #9A70FF, #5A2BBE 50%, #33176F); }
-.g-mvp .frame { background: linear-gradient(160deg, #FFFFFF, #DDE1E7 35%, #A9B0BA 60%, #F4F6F8 80%, #B7BEC8); }
-.g-mvp .frame::before, .g-franchise .frame::before, .g-th .frame::before {
+.g-th .frame::before {
   content: '';
   position: absolute;
   inset: 1.5cqw;
@@ -434,37 +417,131 @@
 .g-gg .frame { background: radial-gradient(circle at 30% 18%, rgba(255, 255, 255, .3), transparent 42%), repeating-radial-gradient(circle at 12% 12%, rgba(90, 55, 0, .08) 0 .22cqw, transparent .22cqw .7cqw), linear-gradient(160deg, #FFE59A, #D4A017 50%, #9C7408); }
 .g-gg .frame::before { content: ''; position: absolute; inset: 1.3cqw; border-radius: 4.3cqw; border: .38cqw dashed rgba(80, 48, 0, .8); pointer-events: none; }
 .g-th .frame { background: linear-gradient(160deg, #F3D2FF, #9B30D9 40%, #5B1785 62%, #E7BE57 100%); }
-.g-franchise .frame { background: repeating-linear-gradient(90deg, rgba(255, 255, 255, .16) 0 .25cqw, transparent .25cqw 2.2cqw), linear-gradient(170deg, color-mix(in srgb, var(--tc1) 55%, #fff), var(--tc1) 55%, color-mix(in srgb, var(--tc1) 65%, #000)); }
-.g-black .frame {
-  background:
-    linear-gradient(155deg, rgba(255, 255, 255, .28) 0%, transparent 16%, transparent 72%, rgba(159, 232, 255, .16) 100%),
-    repeating-linear-gradient(45deg, #191b20 0 .9cqw, #08090b .9cqw 1.8cqw),
-    repeating-linear-gradient(-45deg, rgba(255, 255, 255, .04) 0 .9cqw, transparent .9cqw 1.8cqw),
-    #0b0c0e;
-  box-shadow:
-    inset 0 0 0 .5cqw rgba(232, 244, 255, .65),
-    inset 0 0 3cqw rgba(160, 220, 255, .25),
-    0 0 2.6cqw .5cqw rgba(200, 235, 255, .9),
-    0 0 9cqw 2.4cqw rgba(120, 200, 255, .38),
+/* ═════ 등급 개성 — 다섯 등급은 테 재질 · 안쪽 띠 · 이름 띠 · 바깥 빛이 모두 다른 색 계열 (--fsh = 테 빛, 훈련 불빛이 오면 그쪽이 이긴다) ═════ */
+/* 블랙 — 흑요석: 다이아몬드 컷 면(테를 도는 밝은·어두운 면) + 얼음 파랑 네온 두 줄(바깥 끝 · 그림 둘레) + 크롬 이름 띠 */
+.g-black {
+  --fsh:
+    inset 0 0 0 .28cqw #A8E0FF,
+    inset 0 0 0 .62cqw #000,
+    inset 0 .9cqw 1.2cqw rgba(255, 255, 255, .16),
+    0 0 0 .22cqw rgba(0, 0, 0, .9),
+    0 0 1.4cqw .25cqw rgba(92, 194, 255, .8),
+    0 0 5.5cqw 1.2cqw rgba(40, 140, 255, .3),
     0 .8cqw 2.4cqw rgba(0, 0, 0, .6);
 }
-.g-black .panel { background: #030304; }
-.g-black .bar { background: linear-gradient(180deg, #30353e, #0b0c0e 55%, #000); box-shadow: inset 0 .35cqw 0 rgba(232, 244, 255, .4), inset 0 -.3cqw 0 rgba(159, 232, 255, .45); }
-.g-black .bar b { color: #f2f8ff; text-shadow: 0 0 1.2cqw rgba(159, 232, 255, .9); }
-.g-black .bar em { color: #9fe8ff; opacity: 1; }
+.g-black .frame {
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, .26) 0%, transparent 18%, transparent 70%, rgba(92, 194, 255, .2) 100%),
+    repeating-conic-gradient(from 4deg at 50% 47%, #07080b 0deg 13.4deg, #a7b2c2 13.4deg 14deg, #252a33 14deg 29.4deg, #d6dee8 29.4deg 30deg),
+    #07080a;
+}
+.g-black .frame::after { inset: 1.7cqw; border-width: .26cqw; border-color: rgba(206, 220, 236, .75); box-shadow: 0 0 .8cqw rgba(92, 194, 255, .55); }
+.g-black .panel { background: #000; }
+.g-black .art { box-shadow: 0 0 0 .32cqw rgba(110, 200, 255, .85), 0 0 1.6cqw rgba(92, 194, 255, .5); }
+.g-black .bar {
+  background: linear-gradient(180deg, #4a525f 0%, #12151b 28%, #000 62%, #0b0d12 100%);
+  box-shadow: inset 0 .4cqw 0 rgba(236, 246, 255, .6), inset 0 -.42cqw 0 #5CC2FF;
+}
+.g-black .bar b { color: #f4f9ff; text-shadow: 0 0 1.2cqw rgba(92, 194, 255, .95), 0 .3cqw .5cqw rgba(0, 0, 0, .8); }
+.g-black .bar em { color: #8fd3ff; opacity: 1; }
 .g-black .art::after {
   content: '';
   position: absolute;
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background: radial-gradient(120% 70% at 50% 120%, rgba(0, 0, 0, .72), transparent 60%), radial-gradient(70% 30% at 50% -6%, rgba(159, 232, 255, .42), transparent 70%);
+  background:
+    radial-gradient(120% 70% at 50% 120%, rgba(0, 0, 0, .72), transparent 60%),
+    radial-gradient(70% 30% at 50% -6%, rgba(92, 194, 255, .45), transparent 70%),
+    radial-gradient(140% 110% at 50% 42%, transparent 58%, rgba(0, 0, 0, .55) 100%);
 }
-.g-signature .bar { background: linear-gradient(90deg, #2a1f5c, #1b1840 40%, #3a1a4f); box-shadow: inset 0 .35cqw 0 rgba(255, 255, 255, .25); }
-.g-signature .auto path { stroke: #FFD86B; filter: drop-shadow(0 0 .8px rgba(0, 0, 0, .9)) drop-shadow(0 0 3px rgba(255, 216, 107, .85)); }
-.g-unique .frame { background: linear-gradient(120deg, #ffffff, #dff0ff 18%, #fbe0ff 36%, #e0fff0 54%, #fff3d2 72%, #ffffff 90%) 0 0 / 300% 100%; animation: opal 9s linear infinite; }
+/* 시그니처 — 무지개 프리즘 포일: 무지개 테(돈다) + 금 실선 + 무지개 이름 띠(포일 결) + 금빛 친필 사인 + 별빛 */
+.g-signature {
+  --fsh:
+    inset 0 0 0 .2cqw rgba(255, 255, 255, .7),
+    inset 0 .8cqw 1.2cqw rgba(255, 255, 255, .25),
+    0 0 1.6cqw .3cqw rgba(255, 226, 170, .75),
+    0 0 7cqw 2cqw rgba(255, 110, 210, .3),
+    0 .8cqw 2cqw rgba(0, 0, 0, .3);
+}
+.g-signature .frame::after { inset: 1.85cqw; border-width: .28cqw; border-color: #FFE7A3; box-shadow: 0 0 .8cqw rgba(255, 231, 163, .8); }
+.g-signature .panel { background: #120a26; }
+.g-signature .art { box-shadow: 0 0 0 .32cqw #FFD36B; }
+.g-signature .bar {
+  background:
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, .17) 0 .5cqw, transparent .5cqw 1.7cqw),
+    linear-gradient(100deg, #e0306a, #ee7b26 17%, #d9b222 33%, #22b066 50%, #1a96de 66%, #6450ee 82%, #cf3cba);
+  box-shadow: inset 0 .4cqw 0 rgba(255, 255, 255, .6), inset 0 -.4cqw 0 rgba(40, 10, 70, .35);
+}
+.g-signature .bar b, .g-signature .bar em { color: #fff; text-shadow: 0 0 .5cqw rgba(34, 10, 64, .95), 0 .3cqw .4cqw rgba(34, 10, 64, .7); }
+.g-signature .bar em { opacity: 1; }
+.g-signature .auto path { stroke: #FFD86B; stroke-width: 1.5; stroke-linejoin: round; filter: drop-shadow(0 0 .8px rgba(0, 0, 0, .9)) drop-shadow(0 0 3px rgba(255, 216, 107, .9)); }
+/* MVP — 왕실 남색 에나멜 + 금 베젤(바깥 끝 · 안쪽 실선 · 그림 둘레) · 금 글자 이름 띠 · 금+파랑 햇살 */
+.g-mvp {
+  --fsh:
+    inset 0 0 0 .36cqw #F6CB5A,
+    inset 0 0 0 .56cqw #4a3205,
+    0 0 1.4cqw .3cqw rgba(255, 213, 74, .85),
+    0 0 7cqw 2.2cqw rgba(64, 112, 255, .42),
+    0 .8cqw 2cqw rgba(0, 0, 0, .35);
+}
+.g-mvp .frame {
+  background:
+    repeating-linear-gradient(135deg, rgba(255, 214, 110, .12) 0 .22cqw, transparent .22cqw 1.3cqw),
+    linear-gradient(160deg, #4677ee 0%, #2350c2 24%, #12317f 52%, #2a5ad0 78%, #0f2766 100%);
+}
+.g-mvp .frame::after { inset: 1.75cqw; border-width: .3cqw; border-color: #F2C14E; box-shadow: 0 0 .8cqw rgba(242, 193, 78, .7); }
+.g-mvp .panel { background: #0a1a48; }
+.g-mvp .art { box-shadow: 0 0 0 .34cqw #E2B243; }
+.g-mvp .bar {
+  background: linear-gradient(180deg, #2f5bd0, #14347a 46%, #0a1d4a);
+  box-shadow: inset 0 .45cqw 0 #F2C14E, inset 0 .8cqw 0 rgba(0, 0, 0, .25), inset 0 -.42cqw 0 #B8860B;
+}
+.g-mvp .bar b { color: #FFE08A; text-shadow: 0 .3cqw .6cqw rgba(0, 0, 0, .55); }
+.g-mvp .bar em { color: #F2C14E; opacity: 1; }
+/* 프랜차이즈 엘리트 — 구단색 핀스트라이프 테 + 흰 · 구단 보조색 파이핑(유니폼 테두리) + 구단 띠 색 이름 띠 + 엠블럼 */
+.g-franchise .frame {
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .3) 0 .3cqw, transparent .3cqw 2.3cqw),
+    linear-gradient(170deg, color-mix(in srgb, var(--tf, var(--tc1)) 62%, #fff), var(--tf, var(--tc1)) 42%, color-mix(in srgb, var(--tf, var(--tc1)) 62%, #000));
+}
+.g-franchise .frame::before { content: ''; position: absolute; inset: 1.55cqw; border-radius: 4.2cqw; border: .5cqw solid var(--tc2); pointer-events: none; }
+.g-franchise .frame::after { inset: .75cqw; border-width: .3cqw; border-color: rgba(255, 255, 255, .92); }
+.g-franchise .panel { background: color-mix(in srgb, var(--tf, var(--tc1)) 30%, #0b0b0d); }
+.g-franchise .art { box-shadow: 0 0 0 .32cqw var(--tc2); }
+.g-franchise .bar {
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .2) 0 .35cqw, transparent .35cqw 3cqw),
+    linear-gradient(180deg, color-mix(in srgb, var(--bar) 78%, #fff), var(--bar) 45%, color-mix(in srgb, var(--bar) 70%, #000));
+  box-shadow: inset 0 .55cqw 0 var(--fline, var(--tc2)), inset 0 .85cqw 0 rgba(0, 0, 0, .2);
+}
+.g-franchise .bar b, .g-franchise .bar em { color: #fff; text-shadow: 0 .3cqw .8cqw rgba(0, 0, 0, .6); }
+.g-franchise .bar em { opacity: .92; }
+/* 구단 엠블럼 — 선수 뒤 큰 워터마크 (큰 카드만) */
+.frMark { position: absolute; left: 50%; top: 40%; width: 86cqw; height: 86cqw; transform: translate(-50%, -50%); opacity: .34; pointer-events: none; }
+.frMark svg { width: 100%; height: 100%; }
+/* 특별 선수 — 진주 + 오로라 민트: 진주 테(빛이 흐름) · 진주 안쪽 띠 · 민트 실선 · 진주 이름 띠에 청록 글자 */
+.g-unique {
+  --fsh:
+    inset 0 0 0 .45cqw rgba(255, 255, 255, .95),
+    inset 0 0 0 .75cqw rgba(38, 185, 154, .5),
+    0 0 2.2cqw .4cqw rgba(79, 240, 196, .9),
+    0 0 7cqw 2cqw rgba(50, 220, 186, .35),
+    0 .8cqw 2cqw rgba(0, 0, 0, .3);
+}
+.g-unique .frame { background: linear-gradient(120deg, #ffffff 0%, #d4fff2 13%, #7fe9cf 27%, #f4fffb 41%, #a6e8ff 55%, #eafff7 69%, #7be3c5 83%, #ffffff 100%) 0 0 / 300% 100%; animation: opal 9s linear infinite; }
 @keyframes opal { to { background-position: 300% 0; } }
-.g-unique .bar { background: linear-gradient(90deg, #0E1A2B, #22385c 50%, #0E1A2B); }
+.g-unique .frame::after { inset: 1.6cqw; border-width: .4cqw; border-color: #2FD3B0; }
+.g-unique .panel { background: linear-gradient(180deg, #f2fffc, #c4f1e7); }
+.g-unique .art { box-shadow: 0 0 0 .32cqw #22b598; }
+.g-unique .bar {
+  background:
+    linear-gradient(100deg, transparent 18%, rgba(110, 250, 210, .32) 38%, rgba(150, 222, 255, .3) 54%, transparent 74%),
+    linear-gradient(180deg, #ffffff 0%, #e9fcf7 45%, #bcede2 100%);
+  box-shadow: inset 0 .4cqw 0 #fff, inset 0 -.42cqw 0 #35cfae;
+}
+.g-unique .bar b { color: #0a5a50; text-shadow: 0 .25cqw 0 rgba(255, 255, 255, .9); }
+.g-unique .bar em { color: #0e7d6c; opacity: 1; }
 
 /* ───── 바깥 빛 고리 (뒤) ───── */
 .aura {
@@ -489,11 +566,15 @@
   opacity: .65;
   animation-duration: 18s;
 }
-.g-franchise .aura { --aur: color-mix(in srgb, var(--tc1) 70%, #fff); }
-.g-signature .aura, .g-unique .aura { background: conic-gradient(#ff4f7b, #ffb84f, #f5ff6b, #6bf09a, #4fd8ff, #8a7bff, #ff6bd6, #ff4f7b); opacity: .66; animation-duration: 4.5s; }
-.g-unique .aura { opacity: .45; animation-duration: 9s; }
+.g-franchise .aura { --aur: var(--glow); }
+/* MVP — 금 햇살 사이로 파란 빛줄기 (레전드 · GG 의 금 햇살과 갈림) */
+.g-mvp .aura { background: repeating-conic-gradient(from 0deg, #FFD54A 0deg 3.4deg, transparent 3.4deg 8.2deg, rgba(96, 146, 255, .9) 8.2deg 10deg, transparent 10deg 15deg); opacity: .7; }
+/* 무지개는 시그니처만 */
+.g-signature .aura { background: conic-gradient(#ff3d6e, #ff9b3d, #ffe14d, #49e08a, #34c8ff, #6f6bff, #d55cff, #ff3d6e); opacity: .7; animation-duration: 4.5s; }
+/* 특별 — 오로라 (민트 · 하늘 · 진주가 천천히 돈다) */
+.g-unique .aura { background: conic-gradient(from 0deg, #4ff0c4, #9fe6ff 14%, #f0fffa 26%, #4ff0c4 40%, #22c79f 54%, #b6ffe8 68%, #6fd8ff 84%, #4ff0c4); opacity: .62; animation-duration: 9s; }
 .g-black .aura {
-  background: conic-gradient(from 0deg, transparent 0 5%, #e8f4ff 9%, transparent 13% 38%, #9fe8ff 44%, transparent 48% 70%, #ffffff 75%, transparent 79%);
+  background: conic-gradient(from 0deg, transparent 0 5%, #e8f6ff 9%, transparent 13% 38%, #5CC2FF 44%, transparent 48% 70%, #ffffff 75%, transparent 79%);
   opacity: .95;
   animation: auraT 3.2s linear infinite, flick 2.8s steps(1) infinite;
 }
@@ -501,13 +582,13 @@
 .trained .aura { background: conic-gradient(from 0deg, transparent 0 6%, var(--aur) 12%, transparent 20% 32%, var(--aur) 40%, transparent 48% 64%, var(--aur) 72%, transparent 80%); opacity: .9; animation-duration: 4s; }
 .trainMax .aura { background: conic-gradient(#ff4f7b, #ffb84f, #f5ff6b, #6bf09a, #4fd8ff, #8a7bff, #ff6bd6, #ff4f7b); opacity: .95; animation-duration: 2.4s; }
 
-/* ───── 테 빛 ───── */
+/* ───── 테 빛 ───── (등급이 --fsh 를 주면 그것 — 블랙 · 시그니처 · MVP · 특별) */
 .glow .frame {
-  box-shadow:
+  box-shadow: var(--fsh,
     inset 0 0 0 .45cqw rgba(255, 255, 255, .55),
     0 0 2.4cqw .4cqw var(--glow),
     0 0 6.5cqw 1.8cqw color-mix(in srgb, var(--glow) 55%, transparent),
-    0 .8cqw 2cqw rgba(0, 0, 0, .3);
+    0 .8cqw 2cqw rgba(0, 0, 0, .3));
 }
 .trained .frame {
   box-shadow:
@@ -542,14 +623,15 @@
 }
 @keyframes holoMove { 0% { background-position: 130% 0; } 60%, 100% { background-position: -130% 0; } }
 .g-legend .holo, .g-mvp .holo, .g-gg .holo, .g-th .holo { background-image: linear-gradient(115deg, transparent 25%, rgba(255, 226, 140, .4) 42%, rgba(255, 255, 255, .35) 50%, rgba(255, 200, 90, .32) 58%, transparent 70%); }
-.g-black .holo { background-image: linear-gradient(115deg, transparent 32%, rgba(159, 232, 255, .32) 46%, rgba(255, 255, 255, .3) 50%, transparent 62%); animation-duration: 3.2s; }
+.g-black .holo { background-image: linear-gradient(115deg, transparent 32%, rgba(92, 194, 255, .34) 46%, rgba(255, 255, 255, .3) 50%, transparent 62%); animation-duration: 3.2s; }
+.g-franchise .holo { background-image: linear-gradient(115deg, transparent 25%, rgba(255, 255, 255, .32) 44%, color-mix(in srgb, var(--glow) 40%, transparent) 52%, transparent 68%); }
 .g-signature .holo {
   background:
     linear-gradient(115deg, transparent 12%, rgba(255, 90, 170, .4) 26%, rgba(255, 210, 90, .38) 37%, rgba(120, 240, 160, .36) 48%, rgba(90, 200, 255, .38) 58%, rgba(170, 120, 255, .4) 68%, transparent 80%) 0 0 / 250% 100% no-repeat,
     repeating-linear-gradient(115deg, rgba(255, 255, 255, .08) 0 .6cqw, transparent .6cqw 1.6cqw);
   animation-duration: 3.4s;
 }
-.g-unique .holo { background-image: linear-gradient(115deg, transparent 25%, rgba(255, 220, 245, .4) 40%, rgba(210, 245, 255, .4) 52%, transparent 66%); }
+.g-unique .holo { background-image: linear-gradient(115deg, transparent 25%, rgba(190, 255, 236, .44) 40%, rgba(170, 236, 255, .4) 52%, transparent 66%); }
 .trained .holo { background-image: linear-gradient(115deg, transparent 25%, color-mix(in srgb, var(--tglow) 45%, transparent) 42%, rgba(255, 255, 255, .35) 50%, transparent 66%); }
 .sparks, .sparks::after {
   position: absolute;
@@ -584,31 +666,31 @@
 /* 시그니처 — 반짝이 색이 돈다 */
 .g-signature .sparks { animation: twinkle 2.2s ease-in-out infinite, hue 5s linear infinite; }
 @keyframes hue { to { filter: hue-rotate(360deg); } }
-/* 특별 — 빛 구슬이 떠다닌다 */
+/* 특별 — 진주 빛 구슬이 떠다닌다 */
 .g-unique .sparks, .g-unique .sparks::after {
   background:
-    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, .95) 0 1cqw, rgba(255, 220, 245, .4) 1.6cqw, transparent 2.6cqw),
-    radial-gradient(circle at 78% 58%, rgba(255, 255, 255, .9) 0 .8cqw, rgba(200, 240, 255, .4) 1.4cqw, transparent 2.4cqw),
-    radial-gradient(circle at 46% 84%, rgba(255, 255, 255, .85) 0 .7cqw, rgba(220, 255, 230, .4) 1.3cqw, transparent 2.2cqw);
+    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, .95) 0 1cqw, rgba(150, 255, 220, .45) 1.6cqw, transparent 2.6cqw),
+    radial-gradient(circle at 78% 58%, rgba(255, 255, 255, .9) 0 .8cqw, rgba(160, 230, 255, .45) 1.4cqw, transparent 2.4cqw),
+    radial-gradient(circle at 46% 84%, rgba(255, 255, 255, .85) 0 .7cqw, rgba(120, 245, 205, .45) 1.3cqw, transparent 2.2cqw);
   animation: orb 6s ease-in-out infinite;
 }
 .g-unique .sparks::after { animation-delay: -3s; }
 @keyframes orb { 0%, 100% { transform: translate(0, 3cqw); opacity: .3; } 50% { transform: translate(2cqw, -4cqw); opacity: 1; } }
 
 /* ───── 블랙 — 그림을 가르는 번개 ───── */
-.zap { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0; filter: drop-shadow(0 0 1.4cqw #9fe8ff) drop-shadow(0 0 3cqw rgba(255, 255, 255, .9)); animation: zap 3.6s steps(1) infinite; }
+.zap { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0; filter: drop-shadow(0 0 1.4cqw #5CC2FF) drop-shadow(0 0 3cqw rgba(255, 255, 255, .9)); animation: zap 3.6s steps(1) infinite; }
 .zap::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, #ffffff, #bff1ff);
+  background: linear-gradient(180deg, #ffffff, #c4e6ff);
   clip-path: polygon(64% 0, 55% 28%, 63% 30%, 45% 60%, 55% 62%, 36% 100%, 40% 100%, 60% 65%, 50% 63%, 68% 33%, 59% 31%, 67% 0);
 }
 .zap::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, #e8faff, #9fe8ff);
+  background: linear-gradient(180deg, #eef8ff, #8fd3ff);
   clip-path: polygon(22% 0, 18% 18%, 24% 19%, 14% 40%, 17% 40%, 27% 21%, 21% 20%, 24% 0);
 }
 @keyframes zap { 0%, 100% { opacity: 0; } 68% { opacity: 1; } 70% { opacity: 0; } 72% { opacity: .85; } 74% { opacity: 0; } }
@@ -622,7 +704,7 @@
   border-radius: 5.2cqw;
   padding: 1.7cqw;
   pointer-events: none;
-  background: conic-gradient(from var(--bang), transparent 0deg 292deg, rgba(159, 232, 255, .25) 312deg, #9fe8ff 340deg, #ffffff 352deg, #9fe8ff 357deg, transparent 360deg);
+  background: conic-gradient(from var(--bang), transparent 0deg 292deg, rgba(92, 194, 255, .25) 312deg, #5CC2FF 340deg, #ffffff 352deg, #8fd3ff 357deg, transparent 360deg);
   -webkit-mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
   animation: boltSpin 2.2s linear infinite;
@@ -646,12 +728,12 @@
   transform: translateX(-130%) skewX(-14deg);
   animation: glint 5.4s ease-in-out infinite;
 }
-.g-black .glint::before { background: linear-gradient(100deg, transparent, rgba(159, 232, 255, .0) 15%, rgba(200, 245, 255, .85) 50%, rgba(159, 232, 255, 0) 85%, transparent); mix-blend-mode: screen; animation-duration: 4.2s; }
+.g-black .glint::before { background: linear-gradient(100deg, transparent, rgba(92, 194, 255, .0) 15%, rgba(200, 232, 255, .85) 50%, rgba(92, 194, 255, 0) 85%, transparent); mix-blend-mode: screen; animation-duration: 4.2s; }
 .g-signature .glint::before { background: linear-gradient(100deg, transparent, rgba(255, 120, 200, .5) 30%, rgba(255, 240, 150, .7) 50%, rgba(120, 220, 255, .5) 70%, transparent); mix-blend-mode: screen; }
 @keyframes glint { 0%, 68% { transform: translateX(-130%) skewX(-14deg); } 86%, 100% { transform: translateX(400%) skewX(-14deg); } }
 
-/* ───── 명판 — LEGEND · BLACK (FR 은 위) ───── */
-.lgd, .blk {
+/* ───── 명판 — LEGEND ───── */
+.lgd {
   position: absolute;
   left: 50%;
   top: .2cqw;
@@ -664,7 +746,105 @@
   white-space: nowrap;
 }
 .lgd { color: #3a2600; background: linear-gradient(180deg, #FFF3B0, #D9A21E); box-shadow: 0 .4cqw 1cqw rgba(0, 0, 0, .35), 0 0 2cqw rgba(255, 216, 74, .8); }
-.blk { color: #fff; background: linear-gradient(180deg, #2b2f37, #050506); box-shadow: inset 0 0 0 .3cqw rgba(159, 232, 255, .8), 0 0 2.4cqw rgba(159, 232, 255, .9); text-shadow: 0 0 1.4cqw #9fe8ff; }
+
+/* ───── 등급 명판 — 블랙 · 시그니처 · MVP · 프랜차이즈 · 특별 (큰 카드 이름 / 작은 카드 짧은 표) ───── */
+.plate {
+  position: absolute;
+  left: 50%;
+  top: .2cqw;
+  z-index: 5;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 1cqw;
+  height: 7.2cqw;
+  padding: 0 2.8cqw;
+  border-radius: 1.4cqw;
+  white-space: nowrap;
+  font: 900 5cqw/1 var(--font-num);
+  letter-spacing: .2em;
+}
+.plate b { font: inherit; padding-left: .2em; }
+.plS { display: none; }
+.plLeaf { flex: none; width: 3.4cqw; height: 5.2cqw; color: #F2C14E; }
+.plEmb { flex: none; width: 5.4cqw; height: 5.4cqw; filter: drop-shadow(0 .2cqw .3cqw rgba(0, 0, 0, .5)); }
+.plStar { flex: none; width: 4.6cqw; height: 4.6cqw; color: #14b493; filter: drop-shadow(0 0 .6cqw rgba(79, 240, 196, .9)); }
+/* 블랙 — 검은 크롬 판 + 얼음 파랑 테두리 + 크롬 글자(위 흰빛 · 가운데 지평선) */
+.pl-black {
+  background: linear-gradient(180deg, #454d5a 0%, #11141a 46%, #000 54%, #1b1f27 100%);
+  box-shadow: inset 0 0 0 .3cqw #8fd3ff, inset 0 .6cqw .6cqw rgba(255, 255, 255, .14), 0 0 2.2cqw rgba(92, 194, 255, .9), 0 .5cqw 1.2cqw rgba(0, 0, 0, .5);
+}
+.pl-black b {
+  background: linear-gradient(180deg, #ffffff 0%, #e4ecf5 42%, #8794a5 52%, #f4f8fc 72%, #b6c3d2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 .7cqw rgba(92, 194, 255, .85));
+}
+/* 시그니처 — 무지개 포일 판(결 무늬) + 짙은 보라 글자 */
+.pl-signature {
+  background:
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, .38) 0 .4cqw, transparent .4cqw 1.4cqw),
+    linear-gradient(100deg, #ff8fb4, #ffc06e 18%, #ffe97a 34%, #8ff0b4 50%, #8fd6ff 66%, #b4a6ff 82%, #ff9ee6);
+  box-shadow: inset 0 0 0 .3cqw rgba(255, 255, 255, .95), 0 0 2.4cqw rgba(255, 214, 120, .85), 0 .5cqw 1.2cqw rgba(0, 0, 0, .4);
+}
+.pl-signature b { color: #2a1050; font-style: italic; text-shadow: 0 .2cqw 0 rgba(255, 255, 255, .75); }
+/* MVP — 왕실 남색 판 + 금 테 · 금 글자 · 양옆 월계수 */
+.pl-mvp {
+  gap: .5cqw;
+  padding: 0 1.6cqw;
+  font-size: 6cqw;
+  letter-spacing: .12em;
+  background: linear-gradient(180deg, #3563d6, #12307a 52%, #0a1d4a);
+  box-shadow: inset 0 0 0 .34cqw #F2C14E, inset 0 0 0 .62cqw #4a3205, 0 0 2.4cqw rgba(255, 213, 74, .85), 0 .5cqw 1.2cqw rgba(0, 0, 0, .45);
+}
+.pl-mvp b { padding-left: .12em; background: linear-gradient(180deg, #fff6cf, #F2C14E 52%, #b07d0e); -webkit-background-clip: text; background-clip: text; color: transparent; }
+/* 프랜차이즈 — 구단 띠 색 핀스트라이프 판 + 흰 · 구단 선 두 줄 테두리 + 엠블럼 */
+.pl-franchise {
+  padding: 0 2.6cqw 0 1.3cqw;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .24) 0 .3cqw, transparent .3cqw 2cqw),
+    linear-gradient(180deg, color-mix(in srgb, var(--fband, var(--tc1)) 78%, #fff), var(--fband, var(--tc1)) 55%, color-mix(in srgb, var(--fband, var(--tc1)) 70%, #000));
+  box-shadow: inset 0 0 0 .3cqw #fff, inset 0 0 0 .62cqw var(--fline, var(--tc2)), 0 0 2cqw var(--glow), 0 .5cqw 1.2cqw rgba(0, 0, 0, .45);
+}
+.pl-franchise b { color: #fff; text-shadow: 0 .25cqw .5cqw rgba(0, 0, 0, .6); }
+/* 특별 — 진주 판 + 민트 테두리 + 청록 글자 · 네 갈래 별 */
+.pl-unique {
+  gap: .8cqw;
+  background: linear-gradient(180deg, #ffffff, #e6fcf6 55%, #b7ebdf);
+  box-shadow: inset 0 0 0 .3cqw #2FD3B0, 0 0 2.4cqw rgba(79, 240, 196, .85), 0 .5cqw 1.2cqw rgba(0, 0, 0, .35);
+}
+.pl-unique b { color: #0b6a5d; }
+
+/* ───── 시그니처 — 그림 위 네 갈래 별빛 (크기 · 커짐만 움직여 GPU 로) ───── */
+.stars { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.stars i {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--s, 11cqw);
+  height: var(--s, 11cqw);
+  margin: calc(var(--s, 11cqw) / -2) 0 0 calc(var(--s, 11cqw) / -2);
+  opacity: 0;
+  animation: starPop 2.8s ease-in-out infinite;
+}
+/* 둥근 빛무리 + 가늘고 긴 네 갈래 별 */
+.stars i::before, .stars i::after { content: ''; position: absolute; }
+.stars i::before { inset: -35%; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--st, #fff4c8) 75%, transparent) 0, transparent 62%); }
+.stars i::after {
+  inset: 0;
+  background: radial-gradient(circle, #fff 0 14%, var(--st, #fff4c8) 34%, transparent 70%);
+  clip-path: polygon(50% 0, 54.5% 45.5%, 100% 50%, 54.5% 54.5%, 50% 100%, 45.5% 54.5%, 0 50%, 45.5% 45.5%);
+}
+.stars i:nth-child(1) { --x: 17%; --y: 26%; --s: 13cqw; --st: #ffe39a; }
+.stars i:nth-child(2) { --x: 84%; --y: 42%; --s: 17cqw; --st: #ff9fd8; animation-delay: -.7s; }
+.stars i:nth-child(3) { --x: 22%; --y: 66%; --s: 10cqw; --st: #8fdcff; animation-delay: -1.4s; }
+.stars i:nth-child(4) { --x: 64%; --y: 13%; --s: 11cqw; --st: #b9a6ff; animation-delay: -2.1s; }
+.stars i:nth-child(5) { --x: 88%; --y: 76%; --s: 12cqw; --st: #9dffc4; animation-delay: -1.05s; }
+@keyframes starPop { 0%, 100% { opacity: 0; transform: scale(.2) rotate(0deg); } 40% { opacity: 1; transform: scale(1) rotate(45deg); } 62% { opacity: .2; transform: scale(.5) rotate(70deg); } }
+/* 사인이 몇 초마다 다시 써진다 (큰 카드) */
+.g-signature .auto path { stroke-dasharray: 100; animation: sign 7s ease-in-out infinite; }
+@keyframes sign { 0% { stroke-dashoffset: 100; } 22%, 100% { stroke-dashoffset: 0; } }
 
 /* ───── 훈련 8단계부터 — 카드 둘레로 불티 ───── */
 .embers {
@@ -697,15 +877,34 @@
 @keyframes holoX { to { background-position: 200% 0; } }
 @container sdcard (max-width: 118px) {
   .tr { font-size: 6.4cqw; padding: 1cqw 1.8cqw; }
-  .lgd, .blk { font-size: 5.6cqw; letter-spacing: .2em; }
+  .lgd { font-size: 5.6cqw; letter-spacing: .2em; }
   .zap::after { display: none; }
+  /* 작은 카드 — 명판은 짧은 표(BK · SIG · MVP · FR · 1/1)를 크게 */
+  .plate { top: 0; height: 13cqw; padding: 0 2.6cqw; gap: .9cqw; border-radius: 2cqw; font-size: 10cqw; letter-spacing: .05em; }
+  .plate b { padding-left: .05em; }
+  .plL, .plLeaf, .frMark { display: none; }
+  .plS { display: inline; }
+  .pl-mvp { font-size: 10.4cqw; padding: 0 2.6cqw; }
+  .pl-franchise { padding: 0 2.6cqw 0 1.6cqw; }
+  .plEmb { width: 9cqw; height: 9cqw; }
+  .plStar { width: 8cqw; height: 8cqw; }
+  .stars i { --s: 13cqw; }
+}
+@container sdcard (max-width: 80px) {
+  .plate { height: 16cqw; font-size: 12cqw; padding: 0 3cqw; }
+  .pl-franchise { padding: 0 3cqw 0 1.8cqw; }
+  .plEmb { width: 11cqw; height: 11cqw; }
+  .plStar { width: 10cqw; height: 10cqw; }
+  .stars { display: none; }
 }
 
 /* 많이 그릴 때 · 움직임 줄이기 — 효과는 멈춘 채 */
 .still .aura, .still .embers::before, .still .embers::after, .still .holo, .still .sparks, .still .sparks::after, .still .bolt, .still .tr,
-.still .frame::after, .still .frame::before, .still .glint::before, .still .zap { animation: none !important; }
+.still .frame::after, .still .frame::before, .still .glint::before, .still .zap, .still .auto path { animation: none !important; }
+.still .stars i { animation: none !important; opacity: .9; transform: scale(.8); }
 @media (prefers-reduced-motion: reduce) {
-  .aura, .embers::before, .embers::after, .holo, .sparks, .sparks::after, .bolt, .tr, .glint::before, .zap, .frame::before { animation: none !important; }
+  .aura, .embers::before, .embers::after, .holo, .sparks, .sparks::after, .bolt, .tr, .glint::before, .zap, .frame::before, .auto path { animation: none !important; }
+  .stars i { animation: none !important; opacity: .9; transform: scale(.8); }
 }
 
 /* 레벨 칩 — 단계 색 (8 이상은 빛) */
@@ -750,9 +949,11 @@
  *    색 돌리기 · 번개 · 칩 맥동)을 끄고, GPU 로만 도는 것(오라 회전 · 반짝임 · 불씨 · 섬광)만 남긴다. 큰 카드(상세 · 뽑기)는 그대로 */
 .card[data-off], .card[data-off] *, .card[data-off] *::before, .card[data-off] *::after { animation-play-state: paused !important; }
 .lite .frame, .lite .frame::before, .lite .frame::after, .lite .holo, .lite .bolt, .lite .zap,
-.lite .tr, .lite .potA, .lite .potS, .lite .ovr, .lite .shine { animation: none !important; }
+.lite .tr, .lite .potA, .lite .potS, .lite .ovr, .lite .shine, .lite .auto path { animation: none !important; }
 .lite.g-signature .sparks { animation: twinkle 2.2s ease-in-out infinite !important; }
 .lite .holo { opacity: .55; }
+/*    등급 개성(명판 · 재질 · 이름 띠)은 멈춘 그림만으로 갈리게 — 작은 카드의 시그니처 별빛도 멈춘 채 */
+.lite .stars i { animation: none !important; opacity: .9; transform: scale(.8); }
 /* 3) 보관함 격자(.dense) — 겹 장식은 빼고 테두리 빛 · 칩만 (스크롤 중 새로 들어오는 카드를 칠하는 값이 크게 준다) */
-.dense .holo, .dense .sparks, .dense .embers, .dense .glint, .dense .zap, .dense .bolt { display: none !important; }
+.dense .holo, .dense .sparks, .dense .embers, .dense .glint, .dense .zap, .dense .bolt, .dense .stars { display: none !important; }
 .dense .aura { animation: none !important; }

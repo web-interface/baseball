@@ -157,7 +157,7 @@
   --gr-elite: #9466FF;
   --gr-legend: #D9AE55;
   --gr-franchise: #CFA14A;
-  --gr-black: #C9CED6;      /* 검은 카드 위 크롬 테 — 글자로 쓸 땐 이 색 */
+  --gr-black: #B9E3FF;      /* 흑요석 카드의 얼음빛 네온 — 글자로 쓸 땐 이 색 */
   --gr-signature: #E8DDFF;
   --gr-mvp: #E7BE57;
   --gr-gg: #E2B342;
@@ -406,6 +406,6 @@
 /* 어두운 무대(뽑기 공개·시상식 등) 위 등급색 — 테마와 상관없이 밝은 판. 판에 class="on-dark" */
 .on-dark {
   --gr-normal: #A3ACB8; --gr-special: #F2852A; --gr-rare: #E0384F; --gr-elite: #A07BFF; --gr-legend: #E2B762;
-  --gr-franchise: #D9AE55; --gr-black: #C9CED6; --gr-signature: #E8DDFF; --gr-mvp: #E7BE57; --gr-gg: #E2B342; --gr-th: #DDA63C;
+  --gr-franchise: #D9AE55; --gr-black: #B9E3FF; --gr-signature: #E8DDFF; --gr-mvp: #E7BE57; --gr-gg: #E2B342; --gr-th: #DDA63C;
   --gr-unique: #7FE3D4;
 }

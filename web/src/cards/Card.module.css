@@ -877,10 +877,12 @@
 .glow-special .face { box-shadow: 0 0 0 1px rgba(0, 0, 0, .4), 0 0 5cqw 0 rgba(255, 150, 70, .45); }
 .glow-rare .face { box-shadow: 0 0 0 1px rgba(0, 0, 0, .4), 0 0 6cqw 0 rgba(238, 44, 79, .5); }
 .glow-elite .face { box-shadow: 0 0 0 1px rgba(0, 0, 0, .4), 0 0 7cqw 0 rgba(158, 107, 255, .55); }
-.glow-legend .face, .glow-mvp .face, .glow-gg .face, .glow-th .face { box-shadow: 0 0 0 1px rgba(0, 0, 0, .4), 0 0 8cqw 0 rgba(240, 196, 80, .6); }
+.glow-legend .face, .glow-gg .face, .glow-th .face { box-shadow: 0 0 0 1px rgba(0, 0, 0, .4), 0 0 8cqw 0 rgba(240, 196, 80, .6); }
+/* MVP — 금 + 왕실 파랑 (앞면의 남색 · 금과 같은 짝) */
+.glow-mvp .face { box-shadow: 0 0 0 1px rgba(242, 193, 78, .7), -3cqw -2cqw 8cqw 0 rgba(240, 196, 80, .6), 3cqw 2cqw 8cqw 0 rgba(70, 120, 255, .5); }
 .glow-franchise .face { box-shadow: 0 0 0 1px rgba(0, 0, 0, .4), 0 0 8cqw 0 rgba(233, 196, 106, .55); }
-.glow-black .face { box-shadow: 0 0 0 1px rgba(255, 255, 255, .5), 0 0 8cqw 0 rgba(220, 226, 236, .55); }
-.glow-signature .face { box-shadow: 0 0 0 1px rgba(0, 0, 0, .4), -3cqw -2cqw 8cqw 0 rgba(255, 156, 219, .55), 3cqw 2cqw 8cqw 0 rgba(166, 228, 255, .55); }
+.glow-black .face { box-shadow: 0 0 0 1px rgba(168, 224, 255, .7), 0 0 8cqw 0 rgba(92, 194, 255, .5); }
+.glow-signature .face { box-shadow: 0 0 0 1px rgba(0, 0, 0, .4), -3cqw -2cqw 8cqw 0 rgba(255, 156, 219, .55), 3cqw 2cqw 8cqw 0 rgba(166, 228, 255, .55), 0 3cqw 8cqw 0 rgba(255, 214, 110, .45); }
 .glow-unique .face { box-shadow: 0 0 0 1px rgba(0, 0, 0, .4), 0 0 9cqw 0 rgba(160, 255, 230, .6); }
 
 /* ───────── 기록 뒷면 (선수 있음) — 종이 카드 ───────── */

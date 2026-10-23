@@ -43,13 +43,13 @@ const LOOK: Record<GradeId, string> = {
   rare: '빨간 테 · 광택 한 줄',
   elite: '보라 테 · 테가 빛나고 빛이 흐름',
   legend: '금 테 · 빛이 숨 쉬듯 · 흐르는 금빛',
-  franchise: '구단색 테 · 금 FR 명판 · 흐르는 빛',
-  black: '검정 테 · 하얀 빛 · 크롬 빛이 스침',
-  signature: '돌아가는 무지개 테 · 친필 사인',
-  mvp: '금 테 · 남색 이름 띠 · MVP 문장',
+  franchise: '구단색 핀스트라이프 테 · 구단 엠블럼 · FRANCHISE 명판',
+  black: '흑요석 테 · 얼음빛 네온 · 번개 · BLACK 명판',
+  signature: '무지개 프리즘 테 · 금빛 친필 사인 · 별빛',
+  mvp: '왕실 남색 테 · 금 테두리 · 월계수 MVP 명판',
   gg: '금빛 테 · 황금 글러브 문장',
   th: '보라 테 · 왕관 문장',
-  unique: '진주빛 테 · 무지개 결 · 숨 쉬는 빛',
+  unique: '진주 테 · 민트 오로라 · ONLY ONE 명판',
 };
 const LIMIT: Partial<Record<GradeId, string>> = { legend: '/99', franchise: '/50', black: '/25', signature: '/10', mvp: '/27', gg: '/27', th: '/27', unique: '1/1' };
 
