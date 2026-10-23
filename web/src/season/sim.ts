@@ -30,15 +30,16 @@ const B_MAP: Record<BatKey, [string | number, number][]> = {
 const P_MAP: Record<PitKey, [string | number, number][]> = {
   vel: [['velocity', 1]], stf: [[45, 1]], brk: [[45, 0.6]], ctl: [['control', 1], [46, 0.8]], sta: [['stamina', 1]], rec: [['recovery', 1]], mnt: [['composure', 1], ['concentration', 0.6]],
 };
-function bonusArr(fx: SetEffect | undefined, enh: number, isP: boolean): number[] | undefined {
-  if (!fx && !enh) return undefined;
+function bonusArr(fx: SetEffect | undefined, enh: number, isP: boolean, train?: { k: string; v: number }[]): number[] | undefined {
+  if (!fx && !enh && !train?.length) return undefined;
   const out = new Array(47).fill(0);
   if (enh) for (let i = 0; i < 47; i++) if (!/Tend$/.test(String(ATTR_KEYS[i] ?? ''))) out[i] += enh;
-  if (fx) {
-    const list: { k: string; v: number }[] = isP ? fx.pit : fx.bat;
+  if (fx || train?.length) {
+    // 세트덱 효과 + 카드 훈련으로 오른 능력치(game/training trainFx — 같은 { k, v } 칸)
+    const list: { k: string; v: number }[] = [...(fx ? (isP ? fx.pit : fx.bat) : []), ...(train ?? [])];
     for (const x of list) {
-      const map = (isP ? P_MAP : B_MAP)[x.k as never] as [string | number, number][];
-      for (const [key, w] of map) {
+      const map = (isP ? P_MAP : B_MAP)[x.k as never] as [string | number, number][] | undefined;
+      for (const [key, w] of map ?? []) {
         const i = typeof key === 'number' ? key : AIDX.get(key);
         if (i != null) out[i] += x.v * w;
       }
@@ -50,7 +51,7 @@ const armSlot = (p: Player): PlayerIn['armSlot'] => {
   const f = p.form?.pitch ?? '';
   return /사이드/.test(f) ? 'side' : /언더/.test(f) ? 'under' : /오버/.test(f) ? 'over' : 'threeQuarter';
 };
-export function toPlayerIn(p: Player, id: number, delta: number, fx?: SetEffect, enh = 0): PlayerIn {
+export function toPlayerIn(p: Player, id: number, delta: number, fx?: SetEffect, enh = 0, train?: { k: string; v: number }[]): PlayerIn {
   const isP = p.pos === 'P';
   const attrs = ATTR_KEYS.map((k) => {
     const raw = p.attrs[k as AttrKey];
@@ -64,7 +65,7 @@ export function toPlayerIn(p: Player, id: number, delta: number, fx?: SetEffect,
     pitches: isP ? (p.pitches ?? [{ type: 'FF', ko: '포심', stuff: 50, command: 50, usage: 1, kmh: 140 }]).map((x) => ({ t: x.type, stuff: clamp(x.stuff + delta), cmd: clamp(x.command + delta), use: Math.round(x.usage * 100) })) : [],
     traits: [],
     role: isP ? (p.role === 'SP' ? 'SP' : p.role === 'CL' ? 'CL' : 'RP') : undefined,
-    bonus: bonusArr(fx, enh, isP),
+    bonus: bonusArr(fx, enh, isP, train),
   };
 }
 
@@ -92,6 +93,8 @@ export function parkOf(teamId: string): Park {
 
 const UMP = { id: 'u-std', size: 0, low: 0, high: 0, inside: 0, outside: 0, consistency: 1, countBias: 0, closeCall: 1 };
 const RULES = { maxInnings: 12, dh: true, zone: 'ABS' as const, shift: 'restricted' as const, pitchClock: true, heatRule: false, reviews: 2 };
+/** 포스트시즌 — 연장 15회까지 (KBO) */
+const POST_RULES = { ...RULES, maxInnings: 15 };
 
 /* ───────── 선수단 → 엔진 팀 ───────── */
 export interface SideIn { team: TeamIn; webOf: Map<number, string>; idOf: Map<string, number>; roster: ClubRoster }
@@ -109,7 +112,7 @@ export function teamIn(r: ClubRoster, day: number, idBase: number): SideIn {
   const players = list.map((p, i) => {
     const id = idBase + i;
     idOf.set(p.id, id); webOf.set(id, p.id);
-    return toPlayerIn(p, id, r.delta.get(p.id) ?? 0, r.setFx.get(p.id), r.enh.get(p.id) ?? 0);
+    return toPlayerIn(p, id, r.delta.get(p.id) ?? 0, r.setFx.get(p.id), r.enh.get(p.id) ?? 0, r.train?.get(p.id));
   });
   const rot = r.rotation.length ? r.rotation : r.bullpen.slice(0, 1);
   const sp = rot[((day % rot.length) + rot.length) % rot.length];
@@ -150,7 +153,8 @@ export interface GameOut {
 }
 export interface GameRun { out: GameOut; result: GameResult; input: GameInput; away: SideIn; home: SideIn }
 
-export function runGame(seasonSeed: string, day: number, date: string, awayId: string, homeId: string, opts: { log?: boolean; away?: ClubRoster; home?: ClubRoster } = {}): GameRun {
+/** 한 경기 — post 면 포스트시즌(연장 15회 · 큰 경기 압박 ↑ · 다른 시드) */
+export function runGame(seasonSeed: string, day: number, date: string, awayId: string, homeId: string, opts: { log?: boolean; away?: ClubRoster; home?: ClubRoster; post?: boolean } = {}): GameRun {
   const ai = TEAMS.findIndex((t) => t.id === awayId), hi = TEAMS.findIndex((t) => t.id === homeId);
   const away = teamIn(opts.away ?? rosterOf(awayId), day + ai, 1000 + ai * 100);
   const home = teamIn(opts.home ?? rosterOf(homeId), day + hi, 1000 + hi * 100);
@@ -159,10 +163,10 @@ export function runGame(seasonSeed: string, day: number, date: string, awayId: s
   const wx = weatherOf(date, homeId, seasonSeed);
   const input: GameInput = {
     engineVer: ENGINE_VER,
-    gameId: `s27-${day}-${awayId}-${homeId}`,
-    seed: seedFromString(`${seasonSeed}|${day}|${awayId}|${homeId}`),
-    rules: RULES,
-    ctx: { date, startMin, importance: 1 },
+    gameId: `s27-${opts.post ? 'p' : ''}${day}-${awayId}-${homeId}`,
+    seed: seedFromString(`${seasonSeed}|${opts.post ? 'post|' : ''}${day}|${awayId}|${homeId}`),
+    rules: opts.post ? POST_RULES : RULES,
+    ctx: { date, startMin, importance: opts.post ? 2 : 1 },
     park: parkOf(homeId),
     wx: neutralTimeline(startMin, wx.tC, wx.windMs, wx.windFromDeg, 0),
     ump: UMP,

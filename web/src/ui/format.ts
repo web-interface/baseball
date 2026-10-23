@@ -29,7 +29,12 @@ export const signed = (n: number, digits = 0) => {
 };
 
 /** 카드 레벨 8.99 (= 8레벨 99%) */
-export const level = (lv: number) => lv.toFixed(2);
+export const level = (lv: number) => String(Math.floor(lv));
+/** 레벨 단계 색 — 1~3 회색 · 4~5 초록 · 6~7 파랑 · 8 보라 · 9 주황 · 10 금(최고). 화면은 color 로 쓴다 */
+export const levelColor = (lv: number) => {
+  const n = Math.floor(lv);
+  return n >= 10 ? '#FFC93C' : n >= 9 ? '#FF8A3D' : n >= 8 ? '#B47BFF' : n >= 6 ? '#4FA8FF' : n >= 4 ? '#3FD07D' : '#9AA3AD';
+};
 /** 레벨 정수부와 진행률 */
 export const levelParts = (lv: number) => ({ lv: Math.floor(lv), progress: Math.round((lv - Math.floor(lv)) * 100) });
 

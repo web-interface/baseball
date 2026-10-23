@@ -2,6 +2,7 @@
 import { ME } from '../game/mock';
 import { initialLineup, store as lineupStore, type LineupState } from '../screens/lineup/calc';
 import { myRoster } from './rosters';
+import { freezeAiRef } from './league';
 import { startTime, type DayGames } from './schedule';
 import { allDays, applyDay, getSeason, isOver, myGameOf, regularCount, setPending, type DayHighlight, type DayOutcome } from './store';
 import { rainedOut } from './weather';
@@ -33,6 +34,7 @@ export function nextMyGame(): { idx: number; day: DayGames; away: string; home: 
 
 /** 하루 계산 — 내 경기는 넘긴 run(이미 본 경기) 또는 얼려 둔/지금 라인업으로 */
 export async function computeDay(idx: number, opts: { myRun?: GameRun; snap?: LineupState } = {}): Promise<DayOutcome> {
+  freezeAiRef(); // 이번 시즌 AI 세기는 첫 경기 때 내 팀 종합으로 고정
   const sim = await loadSim();
   const s = getSeason();
   const d = allDays(s)[idx];
@@ -69,6 +71,7 @@ export async function prepareMyGame(): Promise<{ idx: number; day: DayGames; run
     const r = await playNextDay();
     if (!r) break;
   }
+  freezeAiRef();
   const s = getSeason();
   // 이미 시작한 경기면 얼린 라인업 그대로, 경기 전 화면만 봤으면 지금 라인업으로 다시 얼린다
   const keep = s.pending && s.pending.idx === target.idx && s.pending.started;

@@ -1,6 +1,6 @@
 // 선수 정보 #/player/:id — FM 식 선수 상세 (담당: 선수 상세·대전 개발자, 이 폴더만 고친다)
 //   :id 는 선수 id(p03 · 실제 선수 보기 k1a2b3c~2016) 또는 카드 id(c03 · k1a2b3c-2016r). ?card= 로 이 선수의 다른 카드,
-//   ?tab=season(기본)|real|career|attr|gear|enhance 로 탭. 첫 탭 = 내 시즌 기록(이 게임), 실제 기록, 게임 통산(이 게임 시즌 합).
+//   ?tab=season(기본)|real|career|attr|pot|gear|enhance 로 탭. 첫 탭 = 내 시즌 기록(이 게임), 실제 기록, 게임 통산(이 게임 시즌 합).
 //   큰 카드(얼굴 초상) · 레벨/강화/잠재력 · 능력치(1~100) · 구종 · 특성 · 숨은 특성 · 폼 · 날씨 궁합
 //   기록(시즌 · 최근 10경기 · 명장면 · 부상) · 장비(착용·강화·세트) · 강화(재료 · 확률 · 실패 보정 · +5 플레이스타일)
 import { setQueryQuiet } from '../../app/router';
@@ -19,14 +19,15 @@ import { RecordPanel } from './RecordPanel';
 import { CareerPanel, RealPanel } from './RealPanel';
 import { GearPanel, type GearState } from './GearPanel';
 import { EnhancePanel, EnhanceResultSheet, type EnhanceResult, type MatPick } from './EnhancePanel';
+import { PotentialPanel } from './PotentialPanel';
 import {
   chanceAfter, defaultPlaystyle, enhTable, gearBonus, gearOf, isMine, materialsFor, resolvePlayer, slotsFor,
 } from './local-mock';
 import { entryOf, inLineup, setPlaystyle, tryEnhance, useInventory } from '../../game/inventory';
 import s from './player.module.css';
 
-type Tab = 'season' | 'real' | 'career' | 'attr' | 'gear' | 'enhance';
-const TAB_IDS: Tab[] = ['season', 'real', 'career', 'attr', 'gear', 'enhance'];
+type Tab = 'season' | 'real' | 'career' | 'attr' | 'pot' | 'gear' | 'enhance';
+const TAB_IDS: Tab[] = ['season', 'real', 'career', 'attr', 'pot', 'gear', 'enhance'];
 
 
 export default function PlayerScreen({ params, query }: ScreenProps) {
@@ -44,7 +45,7 @@ function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: 
   const team = teamById(p.teamId);
   const toast = useToast();
   useScreenTitle(p.name, `${team.name} · No.${p.number}`);
-  const [tab, setTabState] = useState<Tab>(owned || ['season', 'real', 'career', 'attr'].includes(initTab) ? initTab : 'season');
+  const [tab, setTabState] = useState<Tab>(owned || ['season', 'real', 'career', 'attr', 'pot'].includes(initTab) ? initTab : 'season');
   const [scale, setScale] = useState<Scale>('100');
   const [gears, setGears] = useState<Record<string, GearState>>({});
   const [picks, setPicks] = useState<Record<string, MatPick | null>>({});
@@ -52,6 +53,7 @@ function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: 
   const [result, setResult] = useState<EnhanceResult | null>(null);
   const [stuck, setStuck] = useState(false);
   const sentinel = useRef<HTMLDivElement>(null);
+  const bar = useRef<HTMLDivElement>(null);
 
   // 강화 · 실패 보정 · 플레이스타일 · 레벨은 보유 카드 저장소에서 (새로고침해도 그대로)
   const ent = entryOf(card.id);
@@ -93,6 +95,13 @@ function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: 
     return () => io.disconnect();
   }, []);
 
+  // 고른 탭이 가로 스크롤 밖이면 가운데로 (탭 7개 — 좁은 화면에서 잘린다)
+  useEffect(() => {
+    const box = bar.current?.querySelector<HTMLElement>('[role="tablist"]');
+    const on = box?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (box && on) box.scrollLeft = Math.max(0, on.offsetLeft - (box.clientWidth - on.offsetWidth) / 2);
+  }, [tab]);
+
   const setTab = useCallback((next: Tab) => {
     setTabState(next);
     setQueryQuiet({ tab: next === 'season' ? null : next });
@@ -128,12 +137,13 @@ function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: 
   };
 
   const onKpi = (k: 'level' | 'enhance' | 'potential') => {
+    if (k === 'potential') { setTab('pot'); return; }
     if (!owned) return;
-    setTab(k === 'potential' ? 'attr' : 'enhance');
+    setTab('enhance');
   };
 
   const g = GRADES[card.grade];
-  const recTabs = [{ value: 'season' as Tab, label: '내 시즌' }, { value: 'real' as Tab, label: '실제 기록' }, { value: 'career' as Tab, label: '게임 통산' }, { value: 'attr' as Tab, label: '능력치' }];
+  const recTabs = [{ value: 'season' as Tab, label: '내 시즌' }, { value: 'real' as Tab, label: '실제 기록' }, { value: 'career' as Tab, label: '게임 통산' }, { value: 'attr' as Tab, label: '능력치' }, { value: 'pot' as Tab, label: '잠재력' }];
   const tabItems = owned ? [...recTabs, { value: 'gear' as Tab, label: '장비' }, { value: 'enhance' as Tab, label: '강화' }] : recTabs;
 
   return (
@@ -156,7 +166,7 @@ function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: 
       )}
 
       <div ref={sentinel} className={s.sentinel} aria-hidden />
-      <div className={s.tabsBar}>
+      <div ref={bar} className={s.tabsBar}>
         <div className={s.mini} aria-hidden={!stuck}>
           <span className={s.miniFace}><PlayerArt player={p} team={team} variant="mini" /></span>
           <span className={s.miniText}>
@@ -177,6 +187,7 @@ function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: 
         {tab === 'season' && <RecordPanel p={p} card={card} owned={owned} mineCount={mine.length} />}
         {tab === 'real' && <RealPanel p={p} card={card} />}
         {tab === 'career' && <CareerPanel p={p} card={card} />}
+        {tab === 'pot' && <PotentialPanel p={p} card={card} owned={owned} />}
         {tab === 'gear' && owned && (
           <GearPanel p={p} team={team} gear={gear} onChange={(ng) => setGears((x) => ({ ...x, [card.id]: ng }))} onTry={(gp) => setSpent((x) => x + gp)} />
         )}

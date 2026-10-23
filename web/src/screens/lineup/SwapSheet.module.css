@@ -77,3 +77,7 @@
 :global([data-theme='classic']) .candBoom { box-shadow: inset 3px 0 0 var(--club); background: color-mix(in srgb, var(--club) 7%, transparent); }
 :global([data-theme='classic']) .pick { color: var(--accent); }
 :global([data-theme='classic']) .eq b { color: var(--accent); }
+
+/* 레전드급 제한으로 못 넣는 후보 */
+.candOff { opacity: .42; cursor: not-allowed; }
+.candOff:hover, .candOff:active { background: none; }

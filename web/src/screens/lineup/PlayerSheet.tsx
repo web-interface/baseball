@@ -1,7 +1,7 @@
 // 선수 정보 시트 — 라인업에서 자리의 선수를 누르면: 얼굴 · 능력치 막대 · 이번 시즌 점수판 · 최근 10경기.
 // 아래 '교체'는 지금까지의 바꾸기 시트로, '자세히'는 선수 화면(#/player/:id)으로.
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { CardMini } from '../../cards';
+import { CardMini, NameYear } from '../../cards';
 import { Button, Sheet, StatBar, fmt } from '../../ui';
 import { navigate } from '../../app/router';
 import { GRADES } from '../../game/grades';
@@ -118,9 +118,9 @@ export function PlayerSheet({ slot, st, ev, onClose, onSwap }: PlayerSheetProps)
       }
     >
       <div className={s.head}>
-        <CardMini player={p} grade={c.grade} enhance={c.enhance} cardId={c.id} width={64} eager />
+        <CardMini player={p} grade={c.grade} enhance={c.enhance} year={c.year} cardId={c.id} width={64} eager />
         <div className={s.who}>
-          <p className={s.name}><b>{p.name}</b><span className="num">#{p.number}</span></p>
+          <p className={s.name}><b><NameYear name={p.name} year={c.year} /></b><span className="num">#{p.number}</span></p>
           <p className={s.meta}>
             <span>{u.team.name}</span>
             <span>{pit ? (p.role ? `${ROLE_KO[p.role]} 투수` : '투수') : `주 포지션 ${POS_KO[p.pos]}`}</span>

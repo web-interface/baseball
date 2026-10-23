@@ -37,7 +37,7 @@ export function Shell({ route, preview, children }: { route: RouteDef | null; pr
         <b>{team.name}</b>
         <small>
           {preview && <em className={s.pv}>미리보기 · </em>}
-          <span className="num">2027</span> · {ln.started ? <><span className="num">{ln.rank}</span>위</> : '개막 전'} · {record(row.w, row.d, row.l)}
+          <span className="num">{season.year ?? 2027}</span> · {ln.started ? <><span className="num">{ln.rank}</span>위</> : '개막 전'} · {record(row.w, row.d, row.l)}
         </small>
       </span>
     </Link>

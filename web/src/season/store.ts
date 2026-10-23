@@ -1,5 +1,6 @@
 // 시즌 상태 — 순위표 · 날마다 결과 · 선수 시즌 기록 · 소식 · 내 경기. 지금은 이 기기(localStorage)에만 둔다(서버 저장은 다음 단계).
-// 2027 개막일(3월 27일 토)에 모든 구단 0승 0무 0패로 시작해, 친 경기만 쌓는다(목업 순위표는 쓰지 않는다).
+// 개막일에 모든 구단 0승 0무 0패로 시작해, 친 경기만 쌓는다(목업 순위표는 쓰지 않는다).
+// 시즌이 끝나면 처음으로 돌아가지 않고 다음 해로(nextSeason — 2027 → 2028 …): 기록은 게임 통산으로 옮기고, 리그 단계(season/league)를 성적대로 옮긴다.
 // 헤더 · 홈 · 순위 탭 · 시즌 빨리 감기 · 경기 화면은 모두 이 파일의 standingsOf · teamLine · batLine · pitLine 을 쓴다 — 어디서 봐도 같은 값.
 // 저장 형식 2(bb.season.v2). 예전 형식 1(목업 71경기 뒤 6월 15일부터 이어 치던 것)은 일정이 달라 이어 쓸 수 없어 지우고 새 시즌으로(안내 한 줄).
 // 시즌은 내 구단(ME.teamId — 구단 선택에서 고른 구단)의 것 — 내 구단이 바뀌면 새 시즌으로 시작한다.
@@ -7,8 +8,10 @@ import { archiveSeason } from './career';
 import { useSyncExternalStore } from 'react';
 import { ME, TEAMS, playerById, teamById } from '../game/mock';
 import type { LineupState } from '../screens/lineup/calc';
-import { FIRST_DAY, OPENING_DATE, SEASON_GAMES, regularDays, rescheduled, type DayGames } from './schedule';
+import { FIRST_DAY, OPENING_DATE, SEASON_GAMES, openingDate, regularDays, rescheduled, setScheduleYear, type DayGames } from './schedule';
+import { closeYear, seasonYear, type LeagueYear } from './league';
 import type { BatRow, GameOut, PitRow } from './sim';
+import type { PostState } from './post';
 
 export interface TeamRec { w: number; d: number; l: number; rs: number; ra: number; streak: number; last10: string }
 export interface GameRec { a: string; h: string; s: [number, number]; inn?: number; wo?: 1; c?: 1 }
@@ -25,6 +28,8 @@ export interface SeasonState {
   v: 2;
   /** 이 시즌을 치르는 내 구단 (구단 선택에서 고른 구단) */
   club: string;
+  /** 시즌 연도 (예전 저장엔 없음 → 2027) */
+  year?: number;
   seed: string;
   /** 다음에 칠 날 (allDays 의 순번, 0 = 개막전) */
   next: number;
@@ -44,6 +49,8 @@ export interface SeasonState {
   lastSnap?: { idx: number; snap: LineupState };
   /** 한 번 보여 줄 안내 (예전 저장 정리) — Shell 이 토스트로 띄우고 지운다 */
   notice?: string;
+  /** 포스트시즌 (정규 시즌이 끝난 뒤 — season/post) */
+  post?: PostState;
 }
 
 const KEY = 'bb.season.v2';
@@ -60,13 +67,17 @@ const ro = (word: string) => { const c = word.charCodeAt(word.length - 1) - 0xac
 const newSeed = () => {
   try { return Array.from(crypto.getRandomValues(new Uint8Array(6)), (b) => b.toString(16).padStart(2, '0')).join(''); } catch { return String(Date.now()); }
 };
-/** 개막일 — 모든 구단 0승 0무 0패 */
+/** 개막일 — 모든 구단 0승 0무 0패 (리그가 세는 지금 시즌 연도로) */
 function fresh(): SeasonState {
   const table: Record<string, TeamRec> = {};
   const rankHist: Record<string, number[]> = {};
   for (const t of TEAMS) { table[t.id] = emptyRec(); rankHist[t.id] = []; }
-  return { v: 2, club: ME.teamId, seed: newSeed(), next: FIRST_DAY, table, results: [], postponed: [], bat: {}, pit: {}, news: [], my: [], rankHist };
+  const year = seasonYear();
+  setScheduleYear(year);
+  return { v: 2, club: ME.teamId, year, seed: newSeed(), next: FIRST_DAY, table, results: [], postponed: [], bat: {}, pit: {}, news: [], my: [], rankHist };
 }
+/** 이 시즌 연도 */
+export const yearOf = (s: SeasonState = load()) => s.year ?? 2027;
 /** 경기 화면이 '본 경기'로 적어 둔 시즌 경기 표시 — 새 시즌에서 같은 순번 경기를 본 것으로 착각하지 않게 지운다 */
 function clearSeen() {
   try { for (const k of Object.keys(localStorage)) if (k.startsWith('bb.match.seen.s27-')) localStorage.removeItem(k); } catch { /* */ }
@@ -86,9 +97,9 @@ function load(): SeasonState {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const v = JSON.parse(raw) as SeasonState;
-      if (valid(v) && v.club === ME.teamId) { state = v; return v; }
+      if (valid(v) && v.club === ME.teamId) { state = v; setScheduleYear(v.year ?? 2027); return v; }
       // 다른 구단으로 치던 시즌 — 구단 선택에서 구단을 바꿨다 (진행이 있었으면 알려 준다)
-      if (valid(v) && v.next > 0) notice = `내 구단이 ${ro(teamById(ME.teamId).name)} 바뀌어 2027 개막전부터 새로 시작해요`;
+      if (valid(v) && v.next > 0) notice = `내 구단이 ${ro(teamById(ME.teamId).name)} 바뀌어 개막전부터 새로 시작해요`;
     }
     if (OLD_KEYS.some((k) => localStorage.getItem(k) != null)) {
       for (const k of OLD_KEYS) localStorage.removeItem(k);
@@ -121,8 +132,27 @@ export const getSeason = (): SeasonState => load();
 export function useSeason(): SeasonState {
   return useSyncExternalStore((l) => { listeners.add(l); return () => { listeners.delete(l); }; }, load);
 }
-/** 처음부터 다시 (2027 개막일 · 모든 구단 0승 0무 0패) */
+/** 이번 시즌을 개막일부터 다시 (같은 해 · 모든 구단 0승 0무 0패) */
 export function resetSeason() { archiveSeason(state ?? load()); clearSeen(); state = fresh(); save(); }
+/** 포스트시즌 저장 (season/post 가 부른다) */
+export function setPost(p: PostState | undefined) {
+  const s = load();
+  state = { ...s, post: p };
+  save();
+}
+/** 시즌을 마치고 다음 해 개막일로 — 기록은 게임 통산으로 옮기고, 리그 단계는 성적 · 팀 조건대로
+ *  (정규 시즌 · 포스트시즌이 끝나지 않았으면 아무것도 안 함) */
+export function nextSeason(): LeagueYear | null {
+  const s = load();
+  if (!isOver(s) || !s.post?.champion) return null;
+  const row = standingsOf(s).find((r) => r.teamId === ME.teamId);
+  archiveSeason(s);
+  const rec = closeYear({ rank: row?.rank ?? 5, w: row?.w ?? 0, d: row?.d ?? 0, l: row?.l ?? 0, post: postResultOf(s.post) });
+  clearSeen();
+  state = fresh();
+  save();
+  return rec;
+}
 /** 저장된 시즌을 지운다 — 구단을 바꿔 화면을 다시 불러오기 직전(다시 뜨면 새 구단으로 개막일부터, 안내 없이) */
 export function clearSeason() {
   archiveSeason(state ?? load()); // 지우기 전에 게임 통산(season/career)으로 옮겨 적는다
@@ -157,7 +187,7 @@ export const regularCount = () => regularDays().length;
 /** '오늘' — 다음에 칠 날의 날짜 (시즌이 끝났으면 마지막 날) */
 export function seasonToday(s: SeasonState = load()): string {
   const days = allDays(s);
-  return days[Math.min(s.next, days.length - 1)]?.date ?? OPENING_DATE;
+  return days[Math.min(s.next, days.length - 1)]?.date ?? openingDate();
 }
 /** 그날 내 구단 경기 [원정, 홈] */
 export const myGameOf = (d: DayGames) => d.games.find(([a, h]) => a === ME.teamId || h === ME.teamId);
@@ -397,3 +427,16 @@ export function leaders(s: SeasonState = load()): Leader[] {
 }
 
 export { FIRST_DAY, OPENING_DATE, SEASON_GAMES };
+
+/** 포스트시즌에서 내 구단이 어디까지 갔나 — '한국시리즈 우승' · '플레이오프 탈락' · '진출 실패' */
+export function postResultOf(p: PostState | undefined): string {
+  if (!p) return '';
+  if (p.champion === ME.teamId) return '한국시리즈 우승';
+  const KO: Record<string, string> = { wc: '와일드카드', spo: '준플레이오프', po: '플레이오프', ks: '한국시리즈' };
+  for (let i = p.series.length - 1; i >= 0; i--) {
+    const sr = p.series[i];
+    if (sr.hi !== ME.teamId && sr.lo !== ME.teamId) continue;
+    if (sr.winner && sr.winner !== ME.teamId) return sr.id === 'ks' ? '한국시리즈 준우승' : `${KO[sr.id]} 탈락`;
+  }
+  return p.seeds.includes(ME.teamId) ? '' : '포스트시즌 진출 실패';
+}

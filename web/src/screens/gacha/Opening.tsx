@@ -269,7 +269,7 @@ export function Opening({ result, step, onClose, onAgain, onCombo }: OpeningProp
                       {c.tier >= 1 && <i className={s.glow} />}
                     </span>
                     <span className={[s.face, s.front].join(' ')}>
-                      <CardMini player={c.player} grade={c.card.grade} style={{ width: '100%' }} />
+                      <CardMini player={c.player} grade={c.card.grade} year={c.card.year} style={{ width: '100%' }} />
                     </span>
                   </span>
                   {on && (c.isNew ? <em className={s.newMark}>NEW</em>

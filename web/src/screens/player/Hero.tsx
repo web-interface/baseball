@@ -1,5 +1,5 @@
 // 선수 상세 머리 — 큰 카드(얼굴 초상) + 이름·구단·투타·체격 + 컨디션 + 레벨·강화·잠재력 세 칸
-import type { CSSProperties } from 'react';
+import { useSyncExternalStore, type CSSProperties } from 'react';
 import { Card, CardMini, cardProps } from '../../cards';
 import { Emblem, fmt } from '../../ui';
 import { GRADES } from '../../game/grades';
@@ -7,8 +7,9 @@ import { POS_KO, ROLE_KO, handKo } from '../../game/labels';
 import type { CardInst, Player, Team } from '../../game/types';
 import { initialLineup, store as lineupStore } from '../lineup/calc';
 import { CondArrow } from './icons';
-import { Pips, Stars } from './common';
+import { Pips } from './common';
 import { chanceAfter, enhTable } from './local-mock';
+import { TIER_KO, potVersion, potentialsOf, shownPickOf, subscribePot } from '../../game/potential';
 import s from './hero.module.css';
 
 const COND_KO = { 5: '최상', 4: '좋음', 3: '보통', 2: '나쁨', 1: '최악' } as const;
@@ -50,7 +51,9 @@ export function Hero({ p, team, card, cards, owned, isMineCard, enh, fails, leve
   const table = enhTable(card.grade);
   const next = table[enh];
   const nextChance = next ? chanceAfter(next.base, fails) : null;
-  const pMax = potentialMax(p);
+  useSyncExternalStore(subscribePot, potVersion);
+  const potK = shownPickOf(card.id);
+  const pot = potK >= 0 ? potentialsOf(p, card.grade)[potK] : null;
   const vars = { '--team': team.colors.primary, '--team-2': team.colors.secondary, '--gr': `var(--gr-${card.grade})` } as CSSProperties;
 
   return (
@@ -96,7 +99,7 @@ export function Hero({ p, team, card, cards, owned, isMineCard, enh, fails, leve
       <div className={s.kpis} role="list">
         <button type="button" role="listitem" className={s.kpi} onClick={() => onKpi('level')}>
           <span className={s.kLabel}>레벨</span>
-          <b className={['num-display', s.kVal].join(' ')}>{fmt.level(level)}</b>
+          <b className={['num-display', s.kVal].join(' ')} style={{ color: fmt.levelColor(level) }}>{fmt.level(level)}</b>
           <span className={s.lvBar} aria-hidden><i style={{ width: atMax ? '100%' : `${lv.progress}%` }} /></span>
           <span className={s.kSub}>{atMax ? <>최대 레벨 <span className="num">{lvMax}</span></> : <>Lv <span className="num">{lv.lv + 1}</span>까지 <span className="num">{100 - lv.progress}%</span></>}</span>
         </button>
@@ -109,12 +112,11 @@ export function Hero({ p, team, card, cards, owned, isMineCard, enh, fails, leve
           </span>
         </button>
         <button type="button" role="listitem" className={s.kpi} onClick={() => onKpi('potential')}>
-          <span className={s.kLabel}>잠재력 {owned ? '최대' : '추정'}</span>
-          {owned
-            ? <b className={['num-display', s.kVal].join(' ')}>{pMax}</b>
-            : <b className={['num-display', s.kVal, s.kValS].join(' ')}>{Math.max(p.ovr, pMax - 3)}–{Math.min(99, pMax + 3)}</b>}
-          <Stars v={p.potential} size={12} className={s.kStars} />
-          <span className={s.kSub}>지금 <span className="num">{p.ovr}</span>{pMax > p.ovr ? <> · 성장 <span className="num">+{pMax - p.ovr}</span></> : ' · 완성형'}</span>
+          <span className={s.kLabel}>잠재력</span>
+          {pot
+            ? <b className={[s.kVal, s.potVal, s['pot' + pot.tier]].join(' ')}>{TIER_KO[pot.tier]}</b>
+            : <b className={[s.kVal, s.potVal, s.potNone].join(' ')}>{owned ? '미개방' : '—'}</b>}
+          <span className={[s.kSub, s.potName].join(' ')}>{pot ? pot.name : owned ? '눌러서 열기' : '후보 보기'}</span>
         </button>
       </div>
 

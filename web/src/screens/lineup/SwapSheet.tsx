@@ -1,7 +1,7 @@
 // 바꾸기 시트 — 자리를 누르면: 지금 선수 + 넣을 수 있는 선수(벤치 · 보관함 · 다른 자리와 맞바꿈)를
 // '넣으면 팀 종합이 얼마나 되는지' 순서로. 벤치 카드를 누르면 반대로 '어느 자리에 넣을지'.
 import { useEffect, useMemo, useState } from 'react';
-import { CardMini } from '../../cards';
+import { CardMini, NameYear } from '../../cards';
 import { Sheet, fmt } from '../../ui';
 import { GRADES } from '../../game/grades';
 import { POS_KO } from '../../game/labels';
@@ -130,9 +130,9 @@ export function SwapSheet({ slot, st, ev, onClose, onApply }: SwapSheetProps) {
     >
       {cu && ue && (
         <div className={s.cur}>
-          <CardMini player={cu.player} grade={cu.card.grade} enhance={cu.card.enhance} width={56} />
+          <CardMini player={cu.player} grade={cu.card.grade} enhance={cu.card.enhance} year={cu.card.year} width={56} />
           <div className={s.curText}>
-            <p className={s.curName}><b>{cu.player.name}</b><span>{cu.team.name}</span></p>
+            <p className={s.curName}><b><NameYear name={cu.player.name} year={cu.card.year} /></b><span>{cu.team.name}</span></p>
             <p className={s.curMeta}>
               <span style={{ color: `var(--gr-${cu.card.grade})` }}>{GRADES[cu.card.grade].ko}{cu.card.year ? ` ${fmt.yearTag(cu.card.year)}` : ''}</span>
               <span>{fitText(ue.fit, at)}</span>
@@ -158,19 +158,21 @@ export function SwapSheet({ slot, st, ev, onClose, onApply }: SwapSheetProps) {
           const boom = c.ev.exploded && !ev.exploded;
           return (
             <li key={c.id}>
-              <button type="button" className={[s.cand, boom && s.candBoom].filter(Boolean).join(' ')}
+              <button type="button" className={[s.cand, boom && s.candBoom, c.blocked && s.candOff].filter(Boolean).join(' ')}
+                disabled={!!c.blocked} title={c.blocked ?? undefined}
                 onClick={() => onApply(c.next, { slot: at, id: c.id })}>
-                <span className={s.card}><CardMini player={u.player} grade={u.card.grade} enhance={u.card.enhance} width={44} /></span>
+                <span className={s.card}><CardMini player={u.player} grade={u.card.grade} enhance={u.card.enhance} year={u.card.year} width={44} /></span>
                 <span className={s.who}>
                   <span className={s.nameRow}>
-                    <b>{u.player.name}</b>
+                    <b><NameYear name={u.player.name} year={u.card.year} /></b>
                     <span>{u.team.short}</span>
-                    {c === best && c.delta >= 0 && c.ev.raw > ev.raw && <em className={s.pick}>추천</em>}
+                    {c === best && !c.blocked && c.delta >= 0 && c.ev.raw > ev.raw && <em className={s.pick}>추천</em>}
                   </span>
                   <small className={s.meta}>
                     <span>{srcText(c)}</span>
                     <span className={c.fit === 'off' ? s.bad : c.fit === 'near' ? s.down : undefined}>{fitText(c.fit, at)}</span>
                     <span style={{ color: `var(--gr-${u.card.grade})` }}>{GRADES[u.card.grade].ko}</span>
+                    {c.blocked && <span className={s.bad}>{c.blocked}</span>}
                   </small>
                   <Effects fx={fx} />
                 </span>
@@ -219,7 +221,8 @@ export function BenchSheet({ cardId, st, ev, onClose, onApply }: BenchSheetProps
           const cur = r.cur ? unit(r.cur) : null;
           return (
             <li key={r.slot}>
-              <button type="button" className={[s.cand, s.place, r.ev.exploded && !ev.exploded && s.candBoom].filter(Boolean).join(' ')}
+              <button type="button" className={[s.cand, s.place, r.ev.exploded && !ev.exploded && s.candBoom, r.blocked && s.candOff].filter(Boolean).join(' ')}
+                disabled={!!r.blocked} title={r.blocked ?? undefined}
                 onClick={() => onApply(r.next, { slot: r.slot, id })}>
                 <span className={s.slotBox}>
                   <b>{SLOT_KO[r.slot]}</b>
@@ -229,6 +232,7 @@ export function BenchSheet({ cardId, st, ev, onClose, onApply }: BenchSheetProps
                   <small className={s.meta}>
                     <span className={r.fit === 'off' ? s.bad : r.fit === 'near' ? s.down : undefined}>{fitText(r.fit, r.slot)}</span>
                     {cur && <span>{cur.player.name}{josa(cur.player.name, '은', '는')} 벤치로</span>}
+                    {r.blocked && <span className={s.bad}>{r.blocked}</span>}
                   </small>
                   <Effects fx={effects(ev, r.ev)} />
                 </span>

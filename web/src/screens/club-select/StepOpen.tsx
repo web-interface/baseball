@@ -1,4 +1,4 @@
-// 4단계 — 2027 시즌 개막: 우리 선수단 · AI 상대 난이도 6단계(요구 38) · 창단 자금(요구 39) → 홈으로
+// 4단계 — 2027 시즌 개막: 우리 선수단 · 리그 단계 안내(AI 상대 난이도는 고르지 않고 성적 · 팀 조건으로 자동) · 창단 자금(요구 39) → 홈으로
 import { useMemo } from 'react';
 import { Button, CoinGP, GoldenBall, Icon, useToast } from '../../ui';
 import { Card } from '../../cards';
@@ -15,6 +15,7 @@ import { resetStarter } from '../../game/starter';
 import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
 import { mergeStarter, resetInventory } from '../../game/inventory';
 import { clearSeason, getSeason, setNextNotice } from '../../season/store';
+import { GATE, LEVELS, LEVEL_INFO, LEVEL_KO, resetLeague } from '../../season/league';
 import type { StepProps } from './index';
 import s from './cs.module.css';
 import o from './StepOpen.module.css';
@@ -27,7 +28,8 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
   const picked = st.picks.map((id) => pool.find((p) => p.id === id)).filter(Boolean) as Player[];
   const special = useMemo(() => buildSpecial(st.special, t), [st.special, t]);
   const sig = specialSignature(st.special);
-  const level = AI_LEVELS.find((l) => l.id === st.level) ?? AI_LEVELS[1];
+  void AI_LEVELS; void RECOMMENDED; // 예전 '난이도 고르기' 값 — 이제 리그 단계는 자동(season/league)
+  const level = { ko: LEVEL_KO.trainee, ...LEVEL_INFO.trainee };
   // 이 설정으로 받는 기본 선수단의 팀 종합 (지명·특별 선수를 넣고 계산)
   const ovr = useMemo(() => {
     try { localStorage.setItem('bb.special', JSON.stringify(special)); } catch { /* 이번 방문만 */ }
@@ -47,6 +49,7 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
     // 보유 카드 — 구단이 바뀌면 이 구단의 처음 선수단으로, 같은 구단이면 모은 카드는 두고 새 지명 · 특별 선수 카드만 더한다
     if (switching) resetInventory(); else mergeStarter();
     if (switching) {
+      resetLeague(); // 새 구단 — 2027 · 연습생부터
       // 고른 구단이 앱 전체의 내 구단(ME.teamId)이 되게 — 시즌 진행을 지우고 화면을 다시 불러
       // 내 구단 · 순위표 · 일정 · 라인업 · 구단 색을 새 구단(부활 구단이면 바뀐 리그 구성)으로 맞춘다
       clearSeason();
@@ -97,31 +100,36 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
       </section>
 
       <section className={s.group} aria-labelledby="ai-h">
-        <div className={s.groupHead}><h2 id="ai-h">AI 상대 난이도</h2><small>시즌 중엔 못 바꿔요</small></div>
-        <ol className={o.ladder} role="radiogroup" aria-label="AI 상대 난이도">
-          {AI_LEVELS.map((l, i) => {
-            const on = l.id === st.level;
+        <div className={s.groupHead}><h2 id="ai-h">리그 단계 · AI 상대</h2><small>고르지 않아요 — 성적과 팀 조건으로 자동</small></div>
+        <ol className={o.ladder} aria-label="리그 단계">
+          {LEVELS.map((id, i) => {
+            const g = GATE[id];
+            const need = [
+              g.ovr ? `팀 종합 ${g.ovr}` : '처음 시작',
+              g.teamYear ? (g.teamYear >= 20 ? '단일팀 연도덱 전원(왕조) · 우승 연도' : `단일팀 연도덱 ${g.teamYear}명 · 우승 연도`) : '',
+              g.enh ? `평균 강화 ${['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][g.enh]}` : '',
+            ].filter(Boolean).join(' · ');
             return (
-              <li key={l.id}>
-                <button type="button" role="radio" aria-checked={on} className={[o.rung, on && o.rungOn].filter(Boolean).join(' ')} onClick={() => set({ level: l.id })}>
+              <li key={id}>
+                <div className={[o.rung, i === 0 && o.rungOn].filter(Boolean).join(' ')}>
                   <span className={['num', o.step].join(' ')}>{i + 1}</span>
                   <span className={o.rungMain}>
-                    <b>{l.ko}{l.id === RECOMMENDED && <em>추천</em>}</b>
-                    <small>{l.desc}</small>
+                    <b>{LEVEL_KO[id]}{i === 0 && <em>시작</em>}</b>
+                    <small>{need}</small>
                     <span className={o.grades}>
-                      {l.grades.map((g) => <span key={g}><i style={{ background: `var(--gr-${g})` }} />{GRADES[g].ko}</span>)}
+                      {LEVEL_INFO[id].grades.map((gr) => <span key={gr}><i style={{ background: `var(--gr-${gr})` }} />{GRADES[gr].ko}</span>)}
                     </span>
                   </span>
                   <span className={o.reward}>
-                    <b className="num">×{l.reward.toFixed(1)}</b>
+                    <b className="num">×{LEVEL_INFO[id].reward.toFixed(1)}</b>
                     <small>보상</small>
                   </span>
-                </button>
+                </div>
               </li>
             );
           })}
         </ol>
-        <p className={o.fair}>엔진 규칙과 확률은 모든 단계가 같아요. 달라지는 건 상대 선수단과 감독의 판단뿐 — 우승하면 <b>{level.prize}</b>.</p>
+        <p className={o.fair}>연습생에서 시작해요. 시즌이 끝날 때 <b>정규 시즌 1위</b>이고 다음 단계 조건을 모두 채웠으면 한 단계 올라가고, <b>9·10위</b>면 한 단계 내려가요. 상대 전력은 내 팀 종합을 따라와서 성적 올리기가 쉽지 않아요. 엔진 규칙과 확률은 모든 단계가 같아요.</p>
       </section>
 
       <section className={s.group} aria-labelledby="fund-h">
@@ -132,7 +140,7 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
         </dl>
       </section>
 
-      <Dock note={<span><b>{level.ko} 상대로 개막</b><small>보상 ×{level.reward.toFixed(1)} · {shortLabel(t.code)}</small>{switching && played > 0 && <small>지금 시즌 진행은 지우고 {t.short}로 개막전부터 다시 시작해요</small>}</span>}>
+      <Dock note={<span><b>{level.ko} 상대로 개막</b><small>AI 상대는 성적대로 자동 · {shortLabel(t.code)}</small>{switching && played > 0 && <small>지금 시즌 진행은 지우고 {t.short}로 개막전부터 다시 시작해요</small>}</span>}>
         <Button size="l" icon="play" onClick={start}>개막</Button>
       </Dock>
     </>

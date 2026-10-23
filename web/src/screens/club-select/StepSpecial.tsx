@@ -1,16 +1,18 @@
-// 3단계 — 특별 선수 만들기 (요구 29): 11명 중 한 명 · 투수/타자 · 포지션 · 투타 · 팔 각도/타격 폼 · 외모
-// 결과는 단 한 장뿐인 '특별 선수' 카드(전용 테두리) + 이름을 딴 고유 구종/타격 특기 + 이름이 들어간 응원 구호.
+// 3단계 — 특별 선수 만들기 (요구 29): 이름(추천 11명 또는 직접 입력 · 한글 2~4자) · 투수/타자 · 포지션 · 투타 · 팔 각도/타격 폼 · 외모
+// 결과는 단 한 장뿐인 '특별 선수' 카드(전용 테두리) + 이름을 딴 고유 구종(결정구 20가지 · 특징 3개 중 하나)/타격 특기(1~3개) + 이름이 들어간 응원 구호.
+// 고른 숫자는 카드 앞면에서 끝나지 않고 상세 능력치·구종표로 시즌 경기 엔진까지 간다 (local-mock buildSpecial).
 // 얼굴은 캐릭터 생성기 시드로 고른다 — 머리·수염을 고르면 그 모양이 나오는 시드를 찾아 쓴다(그림은 PlayerArt 그대로).
-import { useMemo, type ReactNode } from 'react';
-import { Button, Field, Icon, Tabs } from '../../ui';
+import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Button, Field, Icon, Tabs, TextField } from '../../ui';
 import { Card } from '../../cards';
 import { teamById } from '../../game/mock';
 import { FIELD_SPOTS } from '../../game/field';
 import type { BatSide, Hand, PitcherRole, Pos } from '../../game/types';
 import {
-  ARM_KO, BEARD_KO, BUILD_KO, HAIR_KO, PITCH_CHOICES, PITCH_NAME, POS_SHORT, ROLE_INFO, SKILL_KO, SPECIAL_META, SPECIAL_NAMES,
-  STANCE_KO, TIMING_KO, buildSpecial, chants, specialSignature, specialSkill,
-  type ArmSlot, type BatSkill, type BuildPreset, type SpecialCfg, type Stance, type Timing,
+  ARM_KO, BEARD_KO, BUILD_KO, FINISHERS, FINISHER_IDS, HAIR_KO, NAME_MAX, NAME_MIN, PITCH_FAMILIES, POS_SHORT, ROLE_INFO, SKILLS, SKILL_IDS, SKILL_MAX,
+  SPECIAL_META, SPECIAL_NAMES, STANCE_KO, TIMING_KO, buildSpecial, chants, finisherKmh, isPresetName, isSpecialName, metaOfName, oddThrow,
+  pitchFxChips, pitchTrait, skillChips, specialSignature, specialSkills,
+  type ArmSlot, type BatSkill, type BuildPreset, type FinisherId, type FxChip, type SpecialCfg, type Stance, type Timing,
 } from './local-mock';
 import type { StepProps } from './index';
 import s from './cs.module.css';
@@ -25,6 +27,9 @@ function Group({ title, note, children }: { title: string; note?: ReactNode; chi
   );
 }
 
+/** 빈칸 채우기 — 격자 마지막 줄이 줄 색으로 비지 않게 */
+const fillers = (n: number, cols: number) => Array.from({ length: (cols - (n % cols)) % cols }, (_, i) => <span key={'f' + i} className={x.plateFill} aria-hidden />);
+
 /** 글자 판 고르기 (알약 아님 — 각진 판) */
 function Plates<V extends string>({ items, value, onChange, cols = 4, label }: {
   items: { value: V; label: ReactNode; sub?: ReactNode }[]; value: V; onChange: (v: V) => void; cols?: number; label: string;
@@ -37,8 +42,152 @@ function Plates<V extends string>({ items, value, onChange, cols = 4, label }: {
           {it.sub && <small>{it.sub}</small>}
         </button>
       ))}
-      {Array.from({ length: (cols - (items.length % cols)) % cols }, (_, i) => <span key={"f" + i} className={x.plateFill} aria-hidden />)}
+      {fillers(items.length, cols)}
     </div>
+  );
+}
+
+/** 효과 숫자 칩 ('위력 +4' · '제구 −2') */
+function Chips({ list }: { list: FxChip[] }) {
+  return <span className={x.chips}>{list.map((ch) => <em key={ch.text} className={x[ch.tone]}>{ch.text}</em>)}</span>;
+}
+
+/**
+ * 이름 직접 입력 — 한글 완성 글자(가~힣)만 2~4자.
+ * 글자를 조합하는 동안(IME)엔 손대지 않는다(지우면 조합이 깨진다). 조합이 끝나거나 칸을 떠날 때 한글이 아닌 글자를 지운다.
+ * 맞는 이름이 되면 바로 카드에 들어가고, 틀린 동안엔 마지막으로 맞았던 이름이 카드에 남는다.
+ */
+function NameInput({ initial, onValid }: { initial: string; onValid: (name: string) => void }) {
+  const [draft, setDraft] = useState(initial);
+  const [why, setWhy] = useState<'' | 'hangul' | 'long'>('');
+  const [left, setLeft] = useState(false);
+  const composing = useRef(false);
+  const settle = (raw: string) => {
+    const only = raw.replace(/[^가-힣]/g, '');
+    // 덜 조합된 낱자(ㄱ · ㅏ)는 말없이 지우고, 영문 · 숫자 · 띄어쓰기는 알려 준다
+    const foreign = raw.replace(/[가-힣ᄀ-ᇿ㄰-㆏]/g, '') !== '';
+    const name = only.slice(0, NAME_MAX);
+    setWhy(foreign ? 'hangul' : only.length > NAME_MAX ? 'long' : '');
+    setDraft(name);
+    if (isSpecialName(name)) onValid(name);
+  };
+  const error = why === 'hangul' ? '한글만 쓸 수 있어요'
+    : why === 'long' ? `${NAME_MAX}글자까지예요`
+      : left && draft.length > 0 && draft.length < NAME_MIN ? `${NAME_MIN}글자 이상 써 주세요` : undefined;
+  return (
+    <TextField
+      className={x.nameInput}
+      label="직접 입력"
+      placeholder="예: 홍길동"
+      hint={`한글 ${NAME_MIN}~${NAME_MAX}자`}
+      error={error}
+      value={draft}
+      lang="ko"
+      autoComplete="off"
+      spellCheck={false}
+      enterKeyHint="done"
+      onCompositionStart={() => { composing.current = true; }}
+      onCompositionEnd={(e) => { composing.current = false; settle(e.currentTarget.value); }}
+      onChange={(e) => {
+        const v = e.target.value;
+        if (composing.current || (e.nativeEvent as InputEvent).isComposing) { setDraft(v); return; }
+        settle(v);
+      }}
+      onFocus={() => setLeft(false)}
+      onBlur={(e) => { composing.current = false; setLeft(true); settle(e.currentTarget.value); }}
+      onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) e.currentTarget.blur(); }}
+    />
+  );
+}
+
+/** 결정구 — 계열별 판 (한 무리로 하나만) */
+function PitchPick({ c, onPick }: { c: SpecialCfg; onPick: (id: FinisherId) => void }) {
+  return (
+    <div role="radiogroup" aria-label="결정구">
+      {PITCH_FAMILIES.map((fam) => {
+        const ids = FINISHER_IDS.filter((id) => FINISHERS[id].family === fam.id);
+        return (
+          <div key={fam.id} className={x.fam}>
+            <p className={x.famLabel}>{fam.ko}</p>
+            <div className={x.plates} style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+              {ids.map((id) => {
+                const f = FINISHERS[id];
+                const on = c.pitch === id;
+                return (
+                  <button key={id} type="button" role="radio" aria-checked={on} className={[x.plate, on && x.plateOn].filter(Boolean).join(' ')} style={{ '--sig': f.color } as CSSProperties} onClick={() => onPick(id)}>
+                    <b><i className={x.pdot} aria-hidden />{f.short}</b>
+                    <small><span className="num">{finisherKmh(c, id)}</span>km/h</small>
+                  </button>
+                );
+              })}
+              {fillers(ids.length, 3)}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** 결정구 특징 — 셋 중 하나 */
+function TraitPick({ c, onPick }: { c: SpecialCfg; onPick: (i: number) => void }) {
+  const f = FINISHERS[c.pitch];
+  const cur = f.traits.indexOf(pitchTrait(c));
+  return (
+    <div className={x.traitBox}>
+      <p className={x.traitHead}><b>{f.ko} 특징</b><span>{f.desc}</span></p>
+      <div className={x.traits} role="radiogroup" aria-label={`${f.ko} 특징`}>
+        {f.traits.map((tr, i) => (
+          <button key={tr.t} type="button" role="radio" aria-checked={cur === i} className={[x.trait, cur === i && x.plateOn].filter(Boolean).join(' ')} onClick={() => onPick(i)}>
+            <span className={x.radio} aria-hidden />
+            <span className={x.traitBody}>
+              <b>{tr.t}</b>
+              <small>{tr.d}</small>
+              <Chips list={pitchFxChips(tr.fx)} />
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** 타격 특기 — 1~3개 (먼저 고른 것이 대표) */
+function SkillPick({ c, onChange }: { c: SpecialCfg; onChange: (skills: BatSkill[]) => void }) {
+  const n = c.skills.length;
+  const list = specialSkills(c);
+  const toggle = (k: BatSkill) => {
+    if (c.skills.includes(k)) { if (n > 1) onChange(c.skills.filter((v) => v !== k)); return; }
+    if (n < SKILL_MAX) onChange([...c.skills, k]);
+  };
+  return (
+    <>
+      <div className={x.plates} style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }} role="group" aria-label={`타격 특기 · 최대 ${SKILL_MAX}개`}>
+        {SKILL_IDS.map((k) => {
+          const on = c.skills.includes(k);
+          const off = !on && n >= SKILL_MAX;
+          return (
+            <button key={k} type="button" role="checkbox" aria-checked={on} aria-disabled={off || undefined} className={[x.plate, on && x.plateOn, off && x.plateOff].filter(Boolean).join(' ')} onClick={() => toggle(k)}>
+              <b>{SKILLS[k].ko}</b>
+              <small>{SKILLS[k].sub}</small>
+            </button>
+          );
+        })}
+        {fillers(SKILL_IDS.length, 3)}
+      </div>
+      <ol className={x.skillList} aria-label="고른 특기">
+        {list.map((sk) => (
+          <li key={sk.id}>
+            <p className={x.skillHead}>
+              <b>{sk.name}</b>
+              {sk.main ? <em>대표</em> : <button type="button" className={x.toMain} onClick={() => onChange([sk.id, ...c.skills.filter((v) => v !== sk.id)])}>대표로</button>}
+            </p>
+            <p className={x.skillLines}>{sk.effect}</p>
+            <Chips list={skillChips(sk.id)} />
+          </li>
+        ))}
+      </ol>
+    </>
   );
 }
 
@@ -95,17 +244,20 @@ export function StepSpecial({ st, set, go, Dock }: StepProps) {
   const player = useMemo(() => buildSpecial(c, t), [c, t]);
   const isP = c.type === 'P';
   const sig = specialSignature(c);
-  const skill = specialSkill(c);
+  const skills = specialSkills(c);
+  const meta = metaOfName(c.name);
   const chantList = chants(c, t);
   const chant = chantList[c.chant % chantList.length];
-  const oddThrow = !isP && c.throws === 'L' && ['C', '2B', 'SS', '3B'].includes(c.pos);
+  // 추천 이름을 누르면 직접 입력 칸을 비운다 (새로 그려서)
+  const [nameKey, setNameKey] = useState(0);
+  const nameTabs = [{ value: 'initials' as const, label: `이니셜 · ${meta.init}` }, { value: 'given' as const, label: `이름 · ${meta.given}` }];
 
   return (
     <>
       <header className={s.head}>
         <p className={s.kicker}>특별 선수 · 세상에 한 장</p>
         <h1 className={s.title}>나만의 특별 선수</h1>
-        <p className={s.lead}>열한 명 가운데 한 명을 골라 던지고 치는 방식까지 정해요. 처음엔 강하고, 경기와 훈련으로 더 크게 자라요.</p>
+        <p className={s.lead}>이름을 고르거나 직접 짓고, 던지고 치는 방식까지 정해요. 처음엔 강하고, 경기와 훈련으로 더 크게 자라요.</p>
       </header>
 
       <div className={x.preview}>
@@ -116,9 +268,19 @@ export function StepSpecial({ st, set, go, Dock }: StepProps) {
           <p className={x.infoKicker}>{isP ? '고유 구종' : '타격 특기'}</p>
           <p className={x.sigName} style={isP ? { ['--sig' as string]: sig.color } : undefined}>
             {isP && <i aria-hidden />}
-            {isP ? sig.name : skill.name}
+            {isP ? sig.name : skills[0].name}
           </p>
-          <p className={x.sigEff}>{isP ? sig.effect.replace(' (특별 선수 전용)', '') : skill.effect}</p>
+          <p className={x.sigEff}>{isP ? sig.effect.replace(' (특별 선수 전용)', '') : skills[0].effect}</p>
+          {isP ? (
+            <p className={x.more} aria-label="구종표">
+              {(player.pitches ?? []).map((p, i, all) => (
+                <span key={p.type}>
+                  {i > 0 && ' · '}
+                  <span className={x.nowrap}>{p.type === FINISHERS[c.pitch].base ? FINISHERS[c.pitch].short : p.ko} <span className="num">{p.kmh}</span>{i === all.length - 1 && 'km/h'}</span>
+                </span>
+              ))}
+            </p>
+          ) : skills.length > 1 && <p className={x.more}>+ {skills.slice(1).map((k) => k.name).join(' · ')}</p>}
           <div className={x.chant}>
             <p className={x.infoKicker}>응원 구호</p>
             <blockquote>“{chant}”</blockquote>
@@ -129,14 +291,18 @@ export function StepSpecial({ st, set, go, Dock }: StepProps) {
       </div>
 
       <div className={x.form}>
-        <Group title="이름" note="사용자 지정 11명">
+        <Group title="이름" note="추천 11명 · 직접 입력">
           <Plates
-            label="이름"
+            label="추천 이름"
             cols={4}
             value={c.name}
-            onChange={(v) => put({ name: v, pitch: SPECIAL_META[v].pitch, seed: 0 })}
-            items={SPECIAL_NAMES.map((n) => ({ value: n, label: n }))}
+            onChange={(v) => {
+              if (isPresetName(v)) put({ name: v, pitch: SPECIAL_META[v].pitch, pitchFx: 0, seed: 0 });
+              setNameKey((k) => k + 1);
+            }}
+            items={SPECIAL_NAMES.map((n) => ({ value: n as string, label: n }))}
           />
+          <NameInput key={nameKey} initial={isPresetName(c.name) ? '' : c.name} onValid={(n) => { if (n !== c.name) put({ name: n, seed: 0 }); }} />
         </Group>
 
         <Group title="투수 / 타자">
@@ -154,7 +320,7 @@ export function StepSpecial({ st, set, go, Dock }: StepProps) {
             />
           </Group>
         ) : (
-          <Group title="포지션" note={oddThrow ? '좌투는 드문 자리 — 송구 −3' : '자리를 눌러 고르세요'}>
+          <Group title="포지션" note={oddThrow(c) ? '좌투는 드문 자리 — 송구 −3' : '자리를 눌러 고르세요'}>
             <Diamond value={c.pos} onChange={(v) => put({ pos: v })} throws={c.throws} />
           </Group>
         )}
@@ -178,37 +344,26 @@ export function StepSpecial({ st, set, go, Dock }: StepProps) {
                 ))}
               </div>
             </Group>
-            <Group title="결정구" note={`${sig.name}`}>
-              <Plates
-                label="결정구"
-                cols={3}
-                value={c.pitch}
-                onChange={(v) => put({ pitch: v })}
-                items={PITCH_CHOICES.map((p) => ({ value: p, label: PITCH_NAME[p] }))}
-              />
+            <Group title="결정구" note={sig.name}>
+              <PitchPick c={c} onPick={(id) => { if (id !== c.pitch) put({ pitch: id, pitchFx: 0 }); }} />
+              <TraitPick c={c} onPick={(i) => put({ pitchFx: i })} />
               <div className={x.nameStyle}>
-                <Tabs variant="underline" size="s" aria-label="구종 이름 짓기" value={c.sigStyle} onChange={(v) => put({ sigStyle: v })} items={[{ value: 'initials', label: `이니셜 · ${SPECIAL_META[c.name].init}` }, { value: 'given', label: `이름 · ${SPECIAL_META[c.name].given}` }]} />
+                <Tabs variant="underline" size="s" aria-label="구종 이름 짓기" value={c.sigStyle} onChange={(v) => put({ sigStyle: v })} items={nameTabs} />
               </div>
             </Group>
           </>
         ) : (
           <>
             <Group title="타격 폼" note={`${STANCE_KO[c.stance]} 스탠스 · ${TIMING_KO[c.timing]}`}>
-              <div className={x.hands}>
+              <div className={x.rows}>
                 <Tabs variant="box" fill aria-label="스탠스" value={c.stance} onChange={(v: Stance) => put({ stance: v })} items={(Object.keys(STANCE_KO) as Stance[]).map((k) => ({ value: k, label: STANCE_KO[k] }))} />
                 <Tabs variant="box" fill aria-label="타이밍" value={c.timing} onChange={(v: Timing) => put({ timing: v })} items={(Object.keys(TIMING_KO) as Timing[]).map((k) => ({ value: k, label: TIMING_KO[k] }))} />
               </div>
             </Group>
-            <Group title="타격 특기" note={skill.name}>
-              <Plates<BatSkill>
-                label="타격 특기"
-                cols={3}
-                value={c.skill}
-                onChange={(v) => put({ skill: v })}
-                items={(Object.keys(SKILL_KO) as BatSkill[]).map((k) => ({ value: k, label: SKILL_KO[k].ko }))}
-              />
+            <Group title="타격 특기" note={<><span className="num">{c.skills.length}</span>/{SKILL_MAX} · 먼저 고른 게 대표</>}>
+              <SkillPick c={c} onChange={(v) => put({ skills: v })} />
               <div className={x.nameStyle}>
-                <Tabs variant="underline" size="s" aria-label="특기 이름 짓기" value={c.sigStyle} onChange={(v) => put({ sigStyle: v })} items={[{ value: 'initials', label: `이니셜 · ${SPECIAL_META[c.name].init}` }, { value: 'given', label: `이름 · ${SPECIAL_META[c.name].given}` }]} />
+                <Tabs variant="underline" size="s" aria-label="특기 이름 짓기" value={c.sigStyle} onChange={(v) => put({ sigStyle: v })} items={nameTabs} />
               </div>
             </Group>
           </>
@@ -227,7 +382,7 @@ export function StepSpecial({ st, set, go, Dock }: StepProps) {
         </Group>
       </div>
 
-      <Dock note={<span><b>{c.name} · {isP ? ROLE_INFO[c.role].ko : POS_SHORT[c.pos]}</b><small>{isP ? sig.name : skill.name} · {ARM_KO[c.arm].ko && isP ? ARM_KO[c.arm].ko : STANCE_KO[c.stance] + ' ' + TIMING_KO[c.timing]}</small></span>}>
+      <Dock note={<span><b>{c.name} · {isP ? ROLE_INFO[c.role].ko : POS_SHORT[c.pos]}</b><small>{isP ? sig.name : `${skills[0].name}${skills.length > 1 ? ` 외 ${skills.length - 1}` : ''}`} · {isP ? ARM_KO[c.arm].ko : `${STANCE_KO[c.stance]} ${TIMING_KO[c.timing]}`}</small></span>}>
         <Button size="l" onClick={() => go('open')} trailing={<Icon name="arrow-right" size={18} />}>이 선수로</Button>
       </Dock>
     </>

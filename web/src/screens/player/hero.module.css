@@ -203,3 +203,11 @@
   .hero { grid-template-columns: 124px minmax(0, 1fr); gap: 12px; }
   .kVal { font-size: 26px; }
 }
+
+/* ── 잠재력 칸 — 켜진 잠재력 등급 ── */
+.potVal { font-family: var(--font-head); font-size: 26px; line-height: .95; letter-spacing: -.02em; }
+.potC { color: var(--fg-2); }
+.potA { color: var(--gr-elite); }
+.potS { background: linear-gradient(100deg, #ffe08a, #ff9ad1 40%, #8fe3ff 70%, #ffe08a); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 6px rgba(255, 190, 90, .45)); }
+.potNone { font-size: 20px; color: var(--fg-3); }
+.potName { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }

@@ -1,5 +1,6 @@
 // SD 카드 앞면 부품 — 능력 유형 배경 · 날씨 동그라미 그림
 import type { Player, WeatherKey } from '../game/types';
+import c from './SdCard.module.css';
 import power from './bg/power.webp';
 import contact from './bg/contact.webp';
 import speed from './bg/speed.webp';
@@ -52,4 +53,9 @@ export function WxIcon({ k }: { k: WeatherKey | null }) {
   return (
     <svg viewBox="0 0 20 20" aria-hidden><circle cx="10" cy="10" r="4.2" fill="#ffb21e" /><g stroke="#ffb21e" strokeWidth="2" strokeLinecap="round"><path d="M10 1.6v2.2M10 16.2v2.2M1.6 10h2.2M16.2 10h2.2M4 4l1.6 1.6M14.4 14.4 16 16M4 16l1.6-1.6M14.4 5.6 16 4" /></g></svg>
   );
+}
+
+/** 선수 이름 + 카드 연도 — '김밍규 ’25' (연도가 없는 카드는 이름만) */
+export function NameYear({ name, year }: { name: string; year?: number | null }) {
+  return <>{name}{year != null && <small className={c.nameYr}>’{String(year).slice(-2)}</small>}</>;
 }

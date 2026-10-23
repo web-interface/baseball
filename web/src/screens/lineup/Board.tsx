@@ -242,7 +242,7 @@ export function Board({ st, ev, home, active, onPick, boom, onBoomDone }: BoardP
               <span className={s.lift}>
                 {u ? (
                   <span key={u.id} className={[s.cardIn, first.current && s.intro].filter(Boolean).join(' ')}>
-                    <CardMini player={u.player} grade={u.card.grade} enhance={u.card.enhance} selected={active === slot} style={{ width: '100%' }} />
+                    <CardMini player={u.player} grade={u.card.grade} enhance={u.card.enhance} year={u.card.year} selected={active === slot} style={{ width: '100%' }} />
                   </span>
                 ) : (
                   <span className={s.empty}><Icon name="plus" size={20} /><small>{SLOT_KO[slot]}</small></span>

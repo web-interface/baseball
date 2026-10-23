@@ -22,7 +22,7 @@ export interface GaugeProps {
 
 /** 팀 종합 게이지 — 큰 숫자 + 막대 + 폭발 목표 */
 export function Gauge({
-  value, base, potential, min = 60, max = 100, label = '팀 종합', parts, potentialLabel, ticks = [70, 80, 90], className,
+  value, base, potential, min = 60, max = 115, label = '팀 종합', parts, potentialLabel, ticks = [80, 100, 110], className,
 }: GaugeProps) {
   const pos = (v: number) => `${Math.max(0, Math.min(100, ((v - min) / (max - min)) * 100))}%`;
   const bonus = base != null ? value - base : 0;

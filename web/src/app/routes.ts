@@ -32,7 +32,7 @@ export const ROUTES: RouteDef[] = [
   { key: 'season', path: '/season', title: '시즌 빨리 감기', menu: '시즌', owner: '경기 화면 개발자', desc: '남은 시즌 한 번에 — 속도 1·2·4배·끝까지 · 날짜 막대 · 순위 경쟁 그래프 · 소식 띠 · 하이라이트 · 최종 순위 · 개인 기록 1위', load: () => import('../screens/season') },
   { key: 'match', path: '/match', title: '경기', menu: '경기', owner: '경기 화면 개발자', desc: '빨리 보기(10초) · 주요 장면 · 이닝별 · 자세히(2D) · 강조 문구 · 원인 표시 · ?g=season 지금 바로 경기(엔진) · ?pvp=<id> 대전 다시 보기', load: () => import('../screens/match') },
   { key: 'cards', path: '/cards', title: '카드', menu: '카드', owner: '카드 화면 개발자', desc: '보관함 · 등급 11종 · 강화 I~X · 레벨 · 도감', load: () => import('../screens/cards') },
-  { key: 'enhance', path: '/enhance', title: '강화', owner: '카드 화면 개발자', desc: '강화할 카드 고르기 — 보관함이 강화 단계순으로 열려요 · 카드를 눌러 강화(I~X)·레벨·각성', load: () => import('../screens/cards/Enhance') },
+  { key: 'enhance', path: '/enhance', title: '훈련', owner: '카드 화면 개발자', desc: '훈련 — 카드 한 장 · 능력치 하나씩 골라 훈련(단계 0~10, 5부터 카드 불빛 · 10 최종) · 장소 13곳 · 특수구질 훈련 · ?card=<카드 id> (같은 카드 강화 I~X 목록은 #/cards?mode=enhance)', load: () => import('../screens/train') },
   { key: 'gacha', path: '/gacha', title: '카드구매', menu: '카드구매', owner: '뽑기 화면 개발자', desc: '스카우트(카드 뽑기) · 확률 공개 · 천장 · 레전드 이펙트', load: () => import('../screens/gacha') },
   { key: 'shop', path: '/shop', title: '스카우터', menu: '스카우터', owner: '상점 화면 개발자', desc: 'AI 스카우트가 매일 진열 · 하루 살 수 있는 인원 제한', load: () => import('../screens/shop') },
   { key: 'pvp', path: '/pvp', title: '대전', menu: '대전', owner: '대전 화면 개발자', desc: '다른 감독 구단과 혼자 대결(상대 접속 필요 없음) · AI 구단 연습 · 레이팅 · 내 기록', load: () => import('../screens/pvp') },
@@ -49,7 +49,7 @@ export interface MenuGroup { key: string; label: string; items: { route: string;
 export const GROUPS: MenuGroup[] = [
   { key: 'home', label: '홈', items: [{ route: 'home', label: '홈' }] },
   { key: 'team', label: '팀관리', items: [
-    { route: 'lineup', label: '라인업' }, { route: 'cards', label: '선수보관' }, { route: 'sets', label: '세트덱' }, { route: 'enhance', label: '강화' },
+    { route: 'lineup', label: '라인업' }, { route: 'cards', label: '선수보관' }, { route: 'sets', label: '세트덱' }, { route: 'enhance', label: '훈련' },
   ] },
   { key: 'play', label: '경기', items: [{ route: 'season', label: '시즌' }, { route: 'match', label: '경기' }] },
   { key: 'scout', label: '상점', items: [{ route: 'gacha', label: '카드구매' }, { route: 'shop', label: '스카우터' }] },

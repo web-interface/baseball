@@ -32,7 +32,12 @@
 .miniText { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
 .miniText b { font-size: 13px; font-weight: 800; letter-spacing: -.03em; overflow: hidden; text-overflow: ellipsis; }
 .miniText span { font-size: 11px; color: var(--fg-3); }
-.tabs { flex: 1; min-width: 0; border-bottom: 0 !important; }
+.tabs { flex: 1; min-width: 0; border-bottom: 0 !important; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+/* 탭 글자 — 칸마다 같은 여백 · 글자 사이 고르게, 켜진 탭은 강조색 글자 + 굵은 밑줄 + 옅은 바탕 */
+.tabs [role='tab'] { flex: 1 0 auto; padding: 0 11px; font-size: 14px; letter-spacing: 0; font-weight: 600; transition: color var(--dur-2), background-color var(--dur-2); }
+.tabs [aria-selected='true'] { color: var(--accent); font-weight: 800; background: linear-gradient(to top, color-mix(in srgb, var(--accent) 16%, transparent), transparent 85%); }
+.tabs [aria-selected='true']::after { height: 3px !important; bottom: 0 !important; background: var(--accent) !important; border-radius: 2px 2px 0 0; box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 60%, transparent); }
 .stuck .tabsBar { box-shadow: 0 10px 20px -18px rgba(0, 0, 0, .55); }
 
 /* 아래 버튼 줄 — 앱식 탭바가 아니라 이 화면의 행동 버튼 */

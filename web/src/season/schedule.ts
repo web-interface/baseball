@@ -1,4 +1,4 @@
-// 2027 정규 시즌 일정 — 개막(3월 27일 토)부터 구단마다 135경기. 상대 9구단과 15경기씩(세계관 · 기획서 14.1 '정규 135경기, 상대마다 15경기').
+// 정규 시즌 일정 — 개막(3월 넷째 주 토요일, 2027년은 3월 27일)부터 구단마다 135경기. 시즌 연도는 setScheduleYear 로(2027 → 2028 …). 상대 9구단과 15경기씩(세계관 · 기획서 14.1 '정규 135경기, 상대마다 15경기').
 // 3연전 45번 = 9판 × 5바퀴, 바퀴마다 홈/원정을 뒤집는다. 월요일과 7월 중순 별빛 올스타 휴식(목~일)은 쉰다 → 9월 초에 끝.
 // 첫 3연전은 목업 '다음 경기'(NEXT_GAME)와 같은 상대·홈/원정. 비로 취소된 경기는 시즌 끝 뒤 빈 날로 다시 잡는다(store 가 들고 있음).
 // KBO 식 144경기로 바꾸려면 PER_OPP 를 16 으로 (마지막 바퀴는 남는 경기 수만큼 짧은 시리즈) — 세계관·구단 선택 화면의 '135경기' 글도 같이.
@@ -10,11 +10,34 @@ export const PER_OPP = 15;
 export const SEASON_GAMES = PER_OPP * (TEAMS.length - 1);
 /** 0부터 센 첫 경기일 (개막전) */
 export const FIRST_DAY = 0;
-/** 개막일 — 2027년 3월 27일 토요일 */
+/** 일정을 짤 시즌 연도 — season/store 가 시즌을 불러올 때 맞춘다 */
+let YEAR = 2027;
+let cache: DayGames[] | null = null;
+export function setScheduleYear(y: number) {
+  if (y === YEAR) return;
+  YEAR = y;
+  cache = null;
+  breakCache = null;
+}
+export const scheduleYear = () => YEAR;
+/** 그 해 개막일 — 3월 22~28일 사이 토요일 (2027년 3월 27일) */
+export function openingDate(y = YEAR) {
+  const t = Date.UTC(y, 2, 22);
+  const dow = new Date(t).getUTCDay();
+  return toDate(t + ((6 - dow + 7) % 7) * DAY_MS);
+}
+/** 별빛 올스타 휴식 (경기 없음) — 7월 12~18일 사이 목요일부터 일요일까지 (2027년 7월 15~18일) */
+let breakCache: [string, string] | null = null;
+export function allstarBreak(y = YEAR): readonly [string, string] {
+  if (y === YEAR && breakCache) return breakCache;
+  const t = Date.UTC(y, 6, 12);
+  const thu = t + ((4 - new Date(t).getUTCDay() + 7) % 7) * DAY_MS;
+  const out: [string, string] = [toDate(thu), toDate(thu + 3 * DAY_MS)];
+  if (y === YEAR) breakCache = out;
+  return out;
+}
+/** 예전 이름 — 2027 개막일 (화면 기본값) */
 export const OPENING_DATE = '2027-03-27';
-export const FIRST_DATE = OPENING_DATE;
-/** 별빛 올스타 휴식 (경기 없음) */
-export const ALLSTAR_BREAK: readonly [string, string] = ['2027-07-15', '2027-07-18'];
 
 export interface DayGames { day: number; date: string; games: [string, string][] }
 
@@ -23,7 +46,11 @@ const toDate = (t: number) => { const d = new Date(t); return `${d.getUTCFullYea
 const parse = (s: string) => Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10)));
 const DAY_MS = 86400000;
 /** 경기 없는 날 — 월요일 · 올스타 휴식 */
-const offDay = (t: number) => new Date(t).getUTCDay() === 1 || (toDate(t) >= ALLSTAR_BREAK[0] && toDate(t) <= ALLSTAR_BREAK[1]);
+const offDay = (t: number) => {
+  if (new Date(t).getUTCDay() === 1) return true;
+  const d = toDate(t), br = allstarBreak(Number(d.slice(0, 4)));
+  return d >= br[0] && d <= br[1];
+};
 
 /** 그 날짜 다음 경기일 (월요일 · 올스타 휴식 건너뜀) */
 export function nextGameDate(date: string): string {
@@ -46,7 +73,6 @@ export function startTime(date: string) {
   return dow === 6 ? '17:00' : dow === 0 ? '14:00' : '18:30';
 }
 
-let cache: DayGames[] | null = null;
 /** 정규 시즌 전체 (개막전부터 135번째 경기일까지) */
 export function regularDays(): DayGames[] {
   if (cache) return cache;
@@ -74,7 +100,7 @@ export function regularDays(): DayGames[] {
     rot.splice(1, 0, rot.pop()!);
   }
   const out: DayGames[] = [];
-  let date = OPENING_DATE;
+  let date = openingDate();
   let day = FIRST_DAY;
   // 한 바퀴 = 9판 × 3연전 (마지막 바퀴는 남은 경기 수만큼). 바퀴마다 홈/원정 뒤집기
   const laps = Math.ceil(PER_OPP / 3);

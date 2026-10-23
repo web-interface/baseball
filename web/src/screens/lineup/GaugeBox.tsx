@@ -6,7 +6,7 @@ import { useDelta, useTween } from './hooks';
 import s from './GaugeBox.module.css';
 
 const MIN = 60;
-const MAX = 100;
+const MAX = 115;
 const pos = (v: number) => Math.max(0, Math.min(1, (v - MIN) / (MAX - MIN)));
 
 export function GaugeBox({ ev, boom }: { ev: Eval; boom: number | null }) {

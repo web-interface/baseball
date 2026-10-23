@@ -3,6 +3,7 @@
 // 주소로 장면 열기(스크린샷·공유): #/match?mode=detail&at=a21&beat=bip&ms=1800&pause=1 · state=pre|play|done · delay=ms
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { ScreenProps } from '../../app/screen';
+import { navigate } from '../../app/router';
 import { Button, CalloutAnnouncer, CalloutStage, useCalloutQueue, type CalloutData } from '../../ui';
 import { ME, teamById } from '../../game/mock';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -59,7 +60,10 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
   const { theme } = useTheme();
   const classic = theme === 'classic';
   const q0 = useRef(query).current;
+  // 포스트시즌 우리 경기 — 이닝별로 끝까지 봐야 넘어간다(보기 방식 · 건너뛰기 · 장면 옮기기 막음)
+  const postLock = ctx.kind === 'post';
   const [mode, setMode] = useState<Mode>(() => {
+    if (postLock) return 'inning';
     const m = q0.get('mode');
     if (isMode(m)) return m;
     // 설정 화면의 '경기 보기 방식' (app/prefs · bb.prefs) — 예전 키 bb.matchView 도 읽어 준다
@@ -129,6 +133,13 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
   const live = useMemo(() => liveOf(cursor), [cursor]);
   const beat = player.beats[idx];
 
+  // 이닝별 — 이닝 요약을 잠깐 보여 주고 저절로 다음 이닝으로 ('다음 이닝'을 누르면 바로 · 멈춤 중엔 기다림)
+  useEffect(() => {
+    if (blocked !== 'halfsum' || !playing || phase !== 'play') return;
+    const t = window.setTimeout(() => player.release(true), 2400 / Math.max(1, speed));
+    return () => window.clearTimeout(t);
+  }, [blocked, idx, playing, phase, speed, player]);
+
   // 끝까지 보면 요약
   useEffect(() => {
     if (ended && phase === 'play') {
@@ -194,10 +205,11 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
   useEffect(() => {
     if (phase === 'pre' || startOnce.current) return;
     startOnce.current = true;
-    if (ctx.kind === 'season') ctx.onStart?.();
+    if (ctx.kind === 'season' || ctx.kind === 'post') ctx.onStart?.();
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const switchMode = useCallback((m: Mode) => {
+    if (postLock && phase !== 'done' && !ended) return;
     queue.clear();
     resetFx();
     const beats = beatsFor(m);
@@ -214,6 +226,7 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
 
   const start = () => { resetFx(); setPhase('play'); player.seekBeat(0); player.play(); };
   const seekPlay = (play: number) => {
+    if (postLock && phase !== 'done') return;
     queue.clear();
     resetFx();
     if (phase !== 'play') setPhase('play');
@@ -236,6 +249,7 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
     stopFx(true);
     const bs = player.beats;
     if (blocked === 'halfsum') { player.release(true); return; }
+    if (postLock) return;
     if (mode === 'quick') { player.seekBeat(bs.length - 1); return; }
     const want = mode === 'detail' ? 'pitch-next-play' : mode === 'key' ? 'scene' : 'half';
     for (let k = idx + 1; k < bs.length; k++) {
@@ -278,6 +292,7 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
         onMode={switchMode}
         disabled={pre}
         quickLeft={mode === 'quick' && !pre && !done ? quickLeft : undefined}
+        locked={postLock && !done ? ' · 포스트시즌은 끝까지 봐야 넘어가요' : undefined}
       />
       {blocked === 'halfsum' && !done && (
         <div className={s.next}>
@@ -321,7 +336,14 @@ export default function MatchRoute(props: ScreenProps) {
     setErr(null);
     (async () => {
       try {
-        if (g === 'season') {
+        if (g === 'post') {
+          const { preparePostGame } = await import('./post-game');
+          const r = await preparePostGame();
+          if (!alive) return;
+          if (!r) { navigate('/season', { replace: true }); return; }
+          activate(r.game);
+          setView({ key: r.game.match.id, ctx: r.ctx });
+        } else if (g === 'season') {
           const { prepareSeasonGame } = await import('./season-game');
           const r = await prepareSeasonGame();
           if (!alive) return;
@@ -344,7 +366,7 @@ export default function MatchRoute(props: ScreenProps) {
     return () => { alive = false; };
   }, [g, pvp, n]);
   if (err) return <MatchLoading text={err} failed />;
-  if (!view) return <MatchLoading text={g === 'season' ? '경기 준비 중 — 선수단 · 날씨 · 구장을 맞추고 있어요' : '경기 기록을 불러오는 중이에요'} />;
+  if (!view) return <MatchLoading text={g === 'season' || g === 'post' ? '경기 준비 중 — 선수단 · 날씨 · 구장을 맞추고 있어요' : '경기 기록을 불러오는 중이에요'} />;
   if (view.ctx.kind === 'over') return <EndBar ctx={view.ctx} standalone />;
   return <MatchView key={view.key} {...props} ctx={view.ctx} endBar={view.ctx.kind === 'last' ? undefined : <EndBar ctx={view.ctx} />} />;
 }

@@ -12,7 +12,7 @@ import { POS_KO, handKo } from '../game/labels';
 import { playerOfCard, teamById } from '../game/mock';
 import { PlayerArt } from '../art/PlayerArt';
 import { Emblem } from '../ui/Emblem';
-import { avg as fmtAvg, era as fmtEra, ip as fmtIp, level as fmtLevel, roman, yearTag } from '../ui/format';
+import { avg as fmtAvg, era as fmtEra, ip as fmtIp, level as fmtLevel, levelColor, roman, yearTag } from '../ui/format';
 import { awardPos, bandOf, cardCode, enName, enhanceTier, isRookie, mockSerial, uniformOf, type Serial } from './meta';
 import { gearSet, mockGear, slotsOf, type GearPiece } from './gear';
 import { attachMotion } from './motion';
@@ -67,7 +67,17 @@ export interface CardProps {
   still?: boolean;
   /** 화면 밖이어도 그림을 바로 만든다 (곧 보일 때) */
   eager?: boolean;
+  /** 훈련 단계 0~10 — 5단계부터 카드에 불빛, 10단계(최종)가 가장 화려 */
+  train?: number;
 }
+
+/** 카드의 훈련 단계 (보유 카드 저장의 train.lv — 없으면 0) */
+export const trainLvOf = (c: unknown) => {
+  const v = (c as { train?: { lv?: number } } | null | undefined)?.train?.lv ?? 0;
+  return Math.max(0, Math.min(10, Math.floor(Number(v) || 0)));
+};
+/** 훈련 불빛 색 — 5 하늘 · 6 초록 · 7 금 · 8 주황 · 9 빨강 · 10 흰 빛(무지개 고리) */
+const TRAIN_GLOW = ['', '', '', '', '', '#4fd8ff', '#4cf0a0', '#ffd84a', '#ff9a3c', '#ff4f6b', '#ffffff'];
 
 /** CardInst → Card props (CardMini · CardBack 에도 그대로 펼쳐 넣을 수 있다) */
 const ovrCache = new Map<string, Player>();
@@ -96,6 +106,7 @@ export function cardProps(c: CardInst) {
     serial: extra.serial !== undefined ? extra.serial : mockSerial(c.grade, c.id, player.number),
     gear: extra.gear ?? mockGear(c, player),
     set: uniformOf(c),
+    train: trainLvOf(c),
   } satisfies Partial<CardProps>;
 }
 
@@ -136,7 +147,7 @@ function nameFit(text: string, base: number, room: number) {
 function CardImpl(props: CardProps) {
   const {
     player, grade, year, level, enhance = 0, signaturePitch, award, team, size = 'm', width, fluid, showStats, selected, dimmed, isNew,
-    onClick, className, style, cardId, serial, set, live, still, eager,
+    onClick, className, style, cardId, serial, set, live, still, eager, train = 0,
   } = props;
   const t = team ?? teamById(player.teamId);
   const g = GRADES[grade];
@@ -153,6 +164,7 @@ function CardImpl(props: CardProps) {
   const yy = year != null && g.yearTagged ? String(year).slice(-2) : '';
   const rookie = isRookie(player, grade);
   const glow = GLOW.has(grade);
+  const tl = Math.max(0, Math.min(10, train));
 
   useEffect(() => {
     if (!live || !ref.current) return;
@@ -164,10 +176,12 @@ function CardImpl(props: CardProps) {
       ref={ref}
       className={[
         c.card, c['g-' + grade], glow && c.glow, PULSE.has(grade) && c.pulse, fluid && c.fluid, live && c.live, still && c.still,
-        stats && c.hasStats, selected && c.selected, dimmed && c.dimmed, onClick && c.clickable, className,
+        stats && c.hasStats, selected && c.selected, dimmed && c.dimmed, onClick && c.clickable,
+        tl >= 5 && c.trained, tl >= 8 && c.trainHi, tl >= 10 && c.trainMax, className,
       ].filter(Boolean).join(' ')}
       style={vars({
         width: fluid ? undefined : w,
+        '--tglow': tl >= 5 ? TRAIN_GLOW[tl] : undefined,
         '--tc1': t.colors.primary,
         '--tc2': t.colors.secondary,
         '--nm': nameFit(`${yy} ${player.name}`, 7.8, 60),
@@ -177,6 +191,8 @@ function CardImpl(props: CardProps) {
       aria-label={labelOf(player, grade, year, enhance, level)}
       {...clickable(onClick)}
     >
+      {(glow || tl >= 5) && <i className={c.aura} aria-hidden />}
+      {tl >= 8 && <i className={c.embers} aria-hidden />}
       <div className={c.frame}>
         <div className={c.panel} />
         <div className={c.art} style={{ backgroundImage: `url(${CARD_BG[type]})` }} title={TYPE_KO[type]}>
@@ -184,12 +200,16 @@ function CardImpl(props: CardProps) {
             <PlayerArt player={player} team={t} variant="portrait" set={uni} eager={eager || live} />
           </div>
           <b className={[c.chip, c.ovr].join(' ')}>{player.ovr}</b>
-          {(tier || rookie) && (
+          {(tier || rookie || tl > 0) && (
             <div className={c.left}>
               {tier && <span className={[c.enh, c['enh-' + tier]].join(' ')} title={`강화 ${roman(enhance)}`}>{roman(enhance)}</span>}
+              {tl > 0 && <span className={[c.tr, tl >= 5 && c.trLit, tl >= 10 && c.trMax].filter(Boolean).join(' ')} title={`훈련 ${tl}단계`}>{tl >= 10 ? '훈련 MAX' : `훈련 ${tl}`}</span>}
               {rookie && <span className={c.rc}>RC</span>}
             </div>
           )}
+          {(glow || tl >= 5) && <i className={c.holo} aria-hidden />}
+          {(glow || tl >= 5) && <i className={c.sparks} aria-hidden />}
+          {grade === 'black' && <i className={c.zap} aria-hidden />}
           {crestKind && (
             <div className={c.crest}>
               <Crest kind={crestKind} year={year ?? 26} pos={awardPos(award, pos)} title={award} />
@@ -203,7 +223,7 @@ function CardImpl(props: CardProps) {
           {signaturePitch && (
             <span className={[c.chip, c.pt].join(' ')} style={vars({ '--sig': signaturePitch.color })}><i />{signaturePitch.name}</span>
           )}
-          {level != null && <span className={[c.chip, c.lv].join(' ')}>Lv {Math.floor(level)}</span>}
+          {level != null && <span className={[c.chip, c.lv, level >= 8 && c.lvHi].filter(Boolean).join(' ')} style={vars({ '--lvc': levelColor(level) })}>Lv {Math.floor(level)}</span>}
           <span className={[c.chip, c.pos].join(' ')}>{pos}</span>
           {stats && (
             <div className={c.stats}>
@@ -226,7 +246,12 @@ function CardImpl(props: CardProps) {
           </span>
         )}
         {grade === 'franchise' && <span className={c.fr}>FR</span>}
+        {grade === 'black' && <span className={c.blk}>BLACK</span>}
+        {grade === 'legend' && <span className={c.lgd}>LEGEND</span>}
         {glow && <i className={c.shine} aria-hidden />}
+        {(grade === 'black' || tl >= 10) && <i className={c.bolt} aria-hidden />}
+        {(grade === 'black' || tl >= 10) && <i className={[c.bolt, c.bolt2].join(' ')} aria-hidden />}
+        {(glow || tl >= 5) && <i className={c.glint} aria-hidden />}
       </div>
       {isNew && <span className={c.newTag}>NEW</span>}
     </div>
@@ -246,7 +271,7 @@ export interface CardMiniProps extends Partial<Omit<CardProps, 'player' | 'grade
 }
 
 function CardMiniImpl({
-  player, grade, enhance = 0, team, size = 's', width, fluid, badge, label = true, selected, dimmed, onClick, className, style, cardId, set, eager, isNew, year, level, still,
+  player, grade, enhance = 0, team, size = 's', width, fluid, badge, label = true, selected, dimmed, onClick, className, style, cardId, set, eager, isNew, year, level, still, train = 0,
 }: CardMiniProps) {
   const t = team ?? teamById(player.teamId);
   const w = width ?? WIDTH[size];
@@ -255,24 +280,29 @@ function CardMiniImpl({
   const type = cardTypeOf(player);
   const wx = weatherOf(player);
   const glow = GLOW.has(grade);
+  const tl = Math.max(0, Math.min(10, train));
+  const yy = year != null ? String(year).slice(-2) : '';
   return (
     <div
       className={[
         c.card, c.mini, c['g-' + grade], glow && c.glow, PULSE.has(grade) && c.pulse, !label && c.noBar, fluid && c.fluid, still && c.still,
-        selected && c.selected, dimmed && c.dimmed, onClick && c.clickable, className,
+        selected && c.selected, dimmed && c.dimmed, onClick && c.clickable,
+        tl >= 5 && c.trained, tl >= 8 && c.trainHi, tl >= 10 && c.trainMax, className,
       ].filter(Boolean).join(' ')}
       style={vars({
         width: fluid ? undefined : w,
+        '--tglow': tl >= 5 ? TRAIN_GLOW[tl] : undefined,
         '--tc1': t.colors.primary,
         '--tc2': t.colors.secondary,
-        '--nm': nameFit(player.name, 7.8, 70),
-        '--nmS': nameFit(player.name, 11, 82),
+        '--nm': nameFit(`${yy} ${player.name}`, 7.8, 70),
+        '--nmS': nameFit(`${yy} ${player.name}`, 11, 84),
         ...(style as Record<string, string | number | undefined>),
       })}
       role={onClick ? undefined : 'img'}
       aria-label={labelOf(player, grade, year, enhance, level)}
       {...clickable(onClick)}
     >
+      {(glow || tl >= 5) && <i className={c.aura} aria-hidden />}
       <div className={c.frame}>
         <div className={c.panel} />
         <div className={c.art} style={{ backgroundImage: `url(${CARD_BG[type]})` }}>
@@ -280,16 +310,21 @@ function CardMiniImpl({
             <PlayerArt player={player} team={t} variant="portrait" set={uni} eager={eager} />
           </div>
           <b className={[c.chip, c.ovr].join(' ')}>{player.ovr}</b>
-          {tier && (
+          {(tier || tl > 0) && (
             <div className={c.left}>
-              <span className={[c.enh, c['enh-' + tier]].join(' ')} title={`강화 ${roman(enhance)}`}>{roman(enhance)}</span>
+              {tier && <span className={[c.enh, c['enh-' + tier]].join(' ')} title={`강화 ${roman(enhance)}`}>{roman(enhance)}</span>}
+              {tl > 0 && <span className={[c.tr, tl >= 5 && c.trLit, tl >= 10 && c.trMax].filter(Boolean).join(' ')} title={`훈련 ${tl}단계`}>{tl >= 10 ? 'MAX' : `T${tl}`}</span>}
             </div>
           )}
+          {(glow || tl >= 5) && <i className={c.holo} aria-hidden />}
+          {grade === 'black' && <i className={c.zap} aria-hidden />}
           <span className={[c.chip, c.pos].join(' ')}>{posOf(player)}</span>
         </div>
-        {label && <div className={c.bar}><b>{player.name}</b></div>}
+        {label && <div className={c.bar}><b>{yy && <small>{yy}</small>}{player.name}</b></div>}
         <span className={c.wx} title={wx ? WEATHER_KO[wx] : '날씨 체질 모름'}><i><WxIcon k={wx} /></i></span>
         {glow && <i className={c.shine} aria-hidden />}
+        {(grade === 'black' || tl >= 10) && <i className={c.bolt} aria-hidden />}
+        {(glow || tl >= 5) && <i className={c.glint} aria-hidden />}
       </div>
       {badge != null && <span className={[c.badge, 'num'].join(' ')}>{badge}</span>}
       {isNew && <span className={c.newTag}>NEW</span>}

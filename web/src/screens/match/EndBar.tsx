@@ -3,7 +3,9 @@ import { navigate } from '../../app/router';
 import { Button, Emblem, Icon, fmt } from '../../ui';
 import { ME, teamById } from '../../game/mock';
 import { longDate, shortDate } from '../../season/schedule';
-import { allDays, isOver, pctLabel, rankLabel, resetSeason, standingsOf, teamLine, useSeason } from '../../season/store';
+import { allDays, isOver, pctLabel, rankLabel, standingsOf, teamLine, useSeason, yearOf } from '../../season/store';
+import { SERIES_KO, nextPostGame } from '../../season/post';
+import { LeaguePanel } from '../season/LeaguePanel';
 import { nextMyGame } from '../../season/run';
 import s from './EndBar.module.css';
 
@@ -24,6 +26,7 @@ export type MatchCtx =
   | { kind: 'last'; onDone?: () => void }
   | { kind: 'over'; onDone?: () => void }
   | { kind: 'season'; idx: number; date: string; onDone?: () => void; onStart?: () => void }
+  | { kind: 'post'; label: string; onDone?: () => void; onStart?: () => void }
   | { kind: 'pvp'; end: PvpEnd; onDone?: () => void };
 
 const RES_KO = { W: '승', D: '무', L: '패' } as const;
@@ -32,7 +35,36 @@ export function EndBar({ ctx, standalone }: { ctx: MatchCtx; standalone?: boolea
   if (ctx.kind === 'pvp') return <PvpBar end={ctx.end} />;
   if (ctx.kind === 'over') return <SeasonOver standalone={standalone} />;
   if (ctx.kind === 'season') return <SeasonBar idx={ctx.idx} />;
+  if (ctx.kind === 'post') return <PostBar label={ctx.label} />;
   return null;
+}
+
+/** 포스트시즌 경기 끝 — 시리즈 상황 · 다음 우리 경기 / 포스트시즌 판으로 */
+function PostBar({ label }: { label: string }) {
+  const st = useSeason();
+  const p = st.post;
+  const nx = nextPostGame(p);
+  const sr = p?.series.slice().reverse().find((x) => x.hi === ME.teamId || x.lo === ME.teamId);
+  const short = (id: string) => teamById(id).short;
+  return (
+    <section className={s.end} aria-label="포스트시즌 다음">
+      <p className={s.kicker}><span className="num">{yearOf(st)}</span> 포스트시즌 · {label}</p>
+      {sr && (
+        <div className={s.rec}>
+          <Emblem team={teamById(ME.teamId)} size={30} />
+          <p className={s.recMain}>
+            <b>{SERIES_KO[sr.id]} {short(sr.hi)} <span className="num">{sr.wins[0]}</span> : <span className="num">{sr.wins[1]}</span> {short(sr.lo)}</b>
+            <small>{p?.champion ? (p.champion === ME.teamId ? '한국시리즈 우승!' : `${short(p.champion)} 우승`) : sr.winner ? (sr.winner === ME.teamId ? '시리즈 승리 — 다음 단계로' : '시리즈 탈락') : '시리즈 진행 중'}</small>
+          </p>
+        </div>
+      )}
+      <div className={s.btns}>
+        {nx?.mine
+          ? <Button size="l" block icon="play" onClick={() => navigate(`/match?g=post&n=${p?.n ?? 0}`)}>다음 우리 경기 · {SERIES_KO[nx.series.id]} {nx.no}차전</Button>
+          : <Button size="l" block icon="play" onClick={() => navigate('/season')}>포스트시즌 판으로</Button>}
+      </div>
+    </section>
+  );
 }
 
 function SeasonBar({ idx }: { idx: number }) {
@@ -50,7 +82,7 @@ function SeasonBar({ idx }: { idx: number }) {
   const gb = rec.gb;
   return (
     <section className={s.end} aria-label="시즌 다음">
-      <p className={s.kicker}>2027 정규 시즌 · <span className="num">{ln.played}</span>경기째 · {day ? longDate(day.date) : ''}</p>
+      <p className={s.kicker}><span className="num">{yearOf(st)}</span> 정규 시즌 · <span className="num">{ln.played}</span>경기째 · {day ? longDate(day.date) : ''}</p>
       <div className={s.rec}>
         <Emblem team={me} size={30} />
         <p className={s.recMain}>
@@ -99,7 +131,7 @@ function SeasonOver({ standalone }: { standalone?: boolean }) {
   const rows = standingsOf(st).slice(0, 5);
   return (
     <section className={[s.end, standalone && s.standalone].filter(Boolean).join(' ')} aria-label="시즌 끝">
-      <p className={s.kicker}>2027 정규 시즌</p>
+      <p className={s.kicker}><span className="num">{yearOf(st)}</span> 정규 시즌</p>
       <h2 className={['head', s.overH].join(' ')}>정규 시즌이 끝났어요</h2>
       <ol className={s.final}>
         {rows.map((r) => (
@@ -113,9 +145,10 @@ function SeasonOver({ standalone }: { standalone?: boolean }) {
         ))}
       </ol>
       <div className={s.btns}>
-        <Button size="l" block icon="arrow-right" onClick={() => navigate('/season')}>시즌 결과 · 개인 기록</Button>
-        <Button variant="secondary" onClick={() => { resetSeason(); navigate('/home'); }}>개막부터 다시</Button>
+        <Button size="l" block icon="play" onClick={() => navigate('/season')}>{st.post?.champion ? '시즌 결과 · 다음 시즌' : '포스트시즌 · 시즌 결과'}</Button>
       </div>
+      {/* 다음 해로 — 리그 단계가 성적대로 오르내린다 */}
+      <LeaguePanel endOnly />
     </section>
   );
 }

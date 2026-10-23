@@ -34,8 +34,8 @@ function Masthead({ manager }: { manager: string }) {
         <span className={['halftone', s.waterWrap].join(' ')}><ClubEmblem team={team} size={240} detail="l" className={s.water} decorative /></span>
       </div>
       <p className={s.kicker}>
-        <span>{leagueName} <span className="num">2027</span></span>
-        <span>구단 <b className="num">{ME.seasonNo}</b>년차 · {next}</span>
+        <span>{leagueName} <span className="num">{season.year ?? 2027}</span></span>
+        <span>구단 <b className="num">{(season.year ?? 2027) - 2026}</b>년차 · {next}</span>
       </p>
       <div className={s.club}>
         <ClubEmblem team={team} size={60} className={s.em} />
@@ -124,7 +124,9 @@ export default function HomeScreen({ query }: ScreenProps) {
   const { user } = useAuth();
   // 미리보기: #/home?season=8 이면 8시즌 화면 (자금 정리 예고)
   const qs = Number(query.get('season'));
-  const seasonNo = Number.isFinite(qs) && qs > 0 ? qs : ME.seasonNo;
+  const season = useSeason();
+  // 몇 번째 시즌 — 2027 이 1시즌째, 시즌이 끝나 다음 해로 넘어갈 때마다 하나씩
+  const seasonNo = Number.isFinite(qs) && qs > 0 ? qs : Math.max(ME.seasonNo, (season.year ?? 2027) - 2026);
   return (
     <div className={s.home}>
       <StartGuide />

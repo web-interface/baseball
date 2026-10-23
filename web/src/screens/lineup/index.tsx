@@ -17,13 +17,14 @@ import { isOwned } from '../../game/inventory';
 import { POS_KO } from '../../game/labels';
 import { Board, LinkLegend } from './Board';
 import { GaugeBox } from './GaugeBox';
+import { LeagueLine } from '../season/LeaguePanel';
 import { TeamColorPanel } from './TeamColor';
 import { OrderTab } from './OrderTab';
 import { PitchTab } from './PitchTab';
 import { BenchSheet, SwapSheet } from './SwapSheet';
 import { PlayerSheet } from './PlayerSheet';
 import {
-  BAT_SLOTS, STAFF_SLOTS, SLOT_KO, autoLineup, autoOrder, evaluate, getSlot, initialLineup, isBat, place, store, swapOrder, unit,
+  BAT_SLOTS, LEGEND_MAX, STAFF_SLOTS, SLOT_KO, autoLineup, autoOrder, evaluate, getSlot, initialLineup, isBat, place, store, swapOrder, unit,
   type LineupState, type Slot, type StaffSlot,
 } from './calc';
 import s from './Lineup.module.css';
@@ -175,6 +176,13 @@ export default function LineupScreen({ query }: ScreenProps) {
       </div>
 
       <GaugeBox ev={ev} boom={boom} />
+      <LeagueLine st={st} />
+      <p className={s.legendCap}>
+        <span className={s.legendTag}>레전드급</span>
+        <span>타자 <b className={['num', ev.legend.bat >= LEGEND_MAX.bat && s.capFull].filter(Boolean).join(' ')}>{ev.legend.bat}</b>/{LEGEND_MAX.bat}</span>
+        <span>투수 <b className={['num', ev.legend.pit >= LEGEND_MAX.pit && s.capFull].filter(Boolean).join(' ')}>{ev.legend.pit}</b>/{LEGEND_MAX.pit}</span>
+        <small>레전드 · 프랜차이즈 · 블랙 · 시그니처 카드는 한 팀에 타자 {LEGEND_MAX.bat}명 · 투수 {LEGEND_MAX.pit}명까지</small>
+      </p>
 
       {tab === 'field' && (
         <div className={s.field}>
@@ -195,7 +203,7 @@ export default function LineupScreen({ query }: ScreenProps) {
                 return (
                   <li key={id}>
                     <button type="button" className={s.benchCard} onClick={() => setBenchCard(id)} aria-label={`${u.player.name} 넣을 자리 고르기`}>
-                      <CardMini player={u.player} grade={u.card.grade} enhance={u.card.enhance} width={60} />
+                      <CardMini player={u.player} grade={u.card.grade} enhance={u.card.enhance} year={u.card.year} width={60} />
                       <small>{POS_KO[u.player.pos]} · {u.team.short}</small>
                     </button>
                   </li>

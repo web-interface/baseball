@@ -5,12 +5,15 @@
 //  4. 라인업 보호 · 라인업 저장 정리
 //  5. 저장 → 다시 읽기 왕복이 같음
 //  6. 옛 형식 · 깨진 저장 → 처음 선수단으로 + 안내 (앱이 깨지지 않음)
+//  7. 훈련 — 단계별 확률 · 연속 실패 보정 · 장소 제한 · 특수구질 · ownedCard().train · 저장 왕복 · crypto 난수 평균
 import './shim-storage';
 import { PACKS, CARDS, playerById } from '../src/game/mock';
 import {
   ENH_STEPS, INV_KEY, addCards, autoMatTotal, checkInventory, entryOf, inLineup, lineupIds, needFor, ownedCard, ownedIds,
   reloadInventory, snapshot, spareOf, stats, takeInvNotice, tryEnhance, useForRoulette, resetInventory,
+  trainChance, trainOf, tryTrain,
 } from '../src/game/inventory';
+import { SIG, TRAIN_BASE, gainAt, gainTotal, sumGains, trainFx, trainRandom } from '../src/game/training';
 import { pullPack, rollCombo, type Pick } from '../src/screens/gacha/draw';
 import { initialLineup, store as lineupStore, place, BAT_SLOTS } from '../src/screens/lineup/calc';
 import { CURRENT_SEASON } from '../src/game/world';
@@ -221,6 +224,87 @@ let threw2 = false;
 try { addCards([target('normal', 'p09')]); } catch { threw2 = true; }
 ok(!threw2, '저장 공간이 차도 앱은 계속');
 (localStorage as any).setItem = realSet;
+
+/* ───── 7. 훈련 ───── */
+sec('7. 훈련 — 확률 · 연속 실패 보정 · 장소 · 특수구질 · 저장');
+localStorage.removeItem(INV_KEY);
+reloadInventory();
+takeInvNotice();
+const ids7 = ownedIds();
+const posOf7 = (id: string) => playerById(ownedCard(id)!.playerId)!.pos;
+const bat7 = ids7.find((id) => !['P', 'C', 'DH'].includes(posOf7(id)))!;
+const pit7 = ids7.find((id) => posOf7(id) === 'P')!;
+const paid = () => true;
+const never = () => 0.999999;
+const always = () => 0;
+ok(trainOf(bat7).lv === 0 && !ownedCard(bat7)!.train, '처음엔 0단계 · 카드에 train 없음');
+ok(trainChance(bat7, 'CON', 'club')?.total === 80, '0→1 기본 80%', trainChance(bat7, 'CON', 'club'));
+ok(trainChance(bat7, 'CON', 'cage')?.total === 84, '배팅 케이지 컨택 +4%p');
+ok(trainChance(bat7, 'POW', 'cage')?.total === 80, '배팅 케이지 파워는 보너스 없음');
+ok(trainChance(pit7, 'VEL', 'cage') === null && !tryTrain(pit7, 'VEL', 'cage', paid).ok, '투수는 배팅 케이지(타자 전용) 못 씀');
+ok(trainChance(bat7, 'VEL', 'club') === null, '타자에게 없는 능력치는 못 함');
+ok(trainChance(bat7, SIG, 'club') === null, '타자는 특수구질 없음');
+ok(trainChance(bat7, 'CON', 'video') === null, '전력분석실은 1단계부터');
+// 실패 → 단계 그대로 · 보정 +2%p 씩, 최대 +10%p
+let r7 = tryTrain(bat7, 'CON', 'club', paid, never);
+ok(r7.ok && !r7.success && trainOf(bat7).lv === 0 && trainOf(bat7).streak === 1, '실패: 단계 그대로 · 연속 실패 1', r7);
+ok(trainChance(bat7, 'CON', 'club')?.total === 82, '실패 한 번 → 82%');
+for (let i = 0; i < 8; i++) tryTrain(bat7, 'CON', 'club', paid, never);
+ok(trainChance(bat7, 'CON', 'club')?.pity === 10 && trainChance(bat7, 'CON', 'club')?.total === 90, '보정은 +10%p 까지', trainChance(bat7, 'CON', 'club'));
+const before7 = JSON.stringify(trainOf(bat7));
+ok(!tryTrain(bat7, 'CON', 'club', () => false).ok && JSON.stringify(trainOf(bat7)) === before7, '비용을 못 내면 아무것도 안 바뀜');
+// 성공
+r7 = tryTrain(bat7, 'CON', 'club', paid, always);
+ok(r7.ok && r7.success && r7.to === 1 && r7.gain === 1, '성공: 1단계 · 컨택 +1', r7);
+ok(trainOf(bat7).streak === 0 && trainOf(bat7).gains.CON === 1 && trainOf(bat7).tries === 10, '성공하면 보정 처음부터 · 시도 10번(실패 9 + 성공 1)', trainOf(bat7));
+ok(ownedCard(bat7)!.train?.lv === 1 && ownedCard(bat7)!.train?.gains.CON === 1, 'ownedCard().train = { lv, gains }');
+for (let i = 1; i < 10; i++) {
+  const g = tryTrain(bat7, i % 2 ? 'POW' : 'EYE', 'club', paid, always);
+  ok(g.ok && g.success && g.gain === gainAt(i), `${i}→${i + 1}단계 +${gainAt(i)}`, g);
+}
+ok(trainOf(bat7).lv === 10 && sumGains(trainOf(bat7).gains) === gainTotal(10), `10단계 · 오른 값 합 ${gainTotal(10)}`, trainOf(bat7));
+ok(!tryTrain(bat7, 'CON', 'club', paid, always).ok && trainChance(bat7, 'CON', 'club') === null, '최종 단계에서 더는 안 됨');
+// 훈련한 카드는 조합 재료로 마지막 1장을 못 씀
+ok(spareOf(bat7, new Set()) === (entryOf(bat7)!.n - 1), '훈련한 카드는 마지막 1장 보호');
+// 특수구질 — 고유 구종 투수 카드를 하나 받아서
+const sigDef = CARDS.find((c) => !!c.signaturePitch && playerById(c.playerId)?.pos === 'P');
+if (sigDef) {
+  const sid = addCards([{ ...sigDef, id: 'x' }])[0].id;
+  ok(trainChance(sid, SIG, 'club')?.total === 44, '특수구질 0→1 = 80 × 0.55 = 44%', trainChance(sid, SIG, 'club'));
+  ok(trainChance(sid, SIG, 'bullpen')?.total === 46, '불펜 피칭장 특수구질 +2%p');
+  ok(trainChance(sid, SIG, 'academy') === null, '레전드 아카데미는 5단계부터');
+  const s1 = tryTrain(sid, SIG, 'club', paid, always);
+  ok(s1.ok && s1.success && s1.gain === 2 && trainOf(sid).sig === 1 && trainOf(sid).gains[SIG] === 2, '특수구질 성공: +2 · 특수구질 1단계', trainOf(sid));
+  for (let i = 1; i < 5; i++) tryTrain(sid, 'STF', 'bullpen', paid, always);
+  ok(trainChance(sid, 'STF', 'academy') === null, '아카데미는 특수구질만');
+  ok(trainChance(sid, SIG, 'academy')?.total === 19.8, '5→6 특수구질 아카데미 = 25 × 0.55 + 6 = 19.8%', trainChance(sid, SIG, 'academy'));
+  const fx = trainFx(ownedCard(sid)!.train, true);
+  ok(fx.some((x) => x.k === 'stf') && fx.every((x) => ['vel', 'stf', 'brk', 'ctl', 'sta', 'rec', 'mnt'].includes(x.k)), '엔진 보너스는 투수 칸만', fx);
+} else ok(false, '고유 구종 투수 카드가 목업에 없음');
+ok(trainFx(ownedCard(bat7)!.train, false).every((x) => ['con', 'pow', 'gap', 'eye', 'spd', 'stl', 'def', 'arm'].includes(x.k)), '타자 엔진 보너스는 타자 칸만');
+ok(checkInventory().length === 0, '훈련 뒤 검사 통과', checkInventory().slice(0, 3));
+// 저장 왕복 · 틀린 훈련 기록은 그 카드 훈련만 버림
+const snap7 = snapshot();
+reloadInventory();
+ok(JSON.stringify(snapshot()) === JSON.stringify(snap7) && trainOf(bat7).lv === 10, '다시 읽어도 훈련 그대로');
+const broken7 = JSON.parse(JSON.stringify(snap7));
+broken7.cards[bat7].tr = { lv: 99, g: { CON: 'x' } };
+localStorage.setItem(INV_KEY, JSON.stringify(broken7));
+reloadInventory();
+ok(takeInvNotice() === null && ownedIds().length === Object.values(snap7.cards).filter((e) => e.n > 0).length, '틀린 훈련 기록 — 보관함은 그대로');
+ok(trainOf(bat7).lv === 0 && !ownedCard(bat7)!.train && checkInventory().length === 0, '그 카드 훈련만 0단계로');
+// 진짜 난수(crypto) — 미리 정해진 결과가 아님 · 기대 시도 수와 비교
+let real = 0;
+for (let i = 0; i < 5; i++) { const x = tryTrain(pit7, 'CTL', 'club', paid); if (x.ok) real++; }
+ok(real === 5, '기본 난수(crypto)로 시도');
+const expect = (b: number) => { let e = 0, surv = 1; for (let k = 0; k < 400; k++) { e += surv; surv *= 1 - Math.min(95, b + Math.min(10, 2 * k)) / 100; } return e; };
+const expAll = TRAIN_BASE.reduce((a, b) => a + expect(b), 0);
+let sim = 0;
+const RUNS = 400;
+for (let n = 0; n < RUNS; n++) for (const b of TRAIN_BASE) { let k = 0; while (trainRandom() * 100 >= Math.min(95, b + Math.min(10, 2 * k))) k++; sim += k + 1; }
+ok(Math.abs(sim / RUNS - expAll) < expAll * 0.08, '난수 평균 시도 수 ≈ 기대값', { sim: sim / RUNS, expAll });
+console.log(`  0→10단계 기대 시도 ${expAll.toFixed(1)}번 (구단 실내 연습장 · 장소 보너스 없이) · 난수 ${RUNS}번 평균 ${(sim / RUNS).toFixed(1)}번`);
+console.log(`  단계별 기대 시도 ${TRAIN_BASE.map((b) => expect(b).toFixed(1)).join(' · ')}`);
 
 console.log(`\n결과: 통과 ${passed} · 실패 ${failed}`);
 if (failed) process.exitCode = 1;

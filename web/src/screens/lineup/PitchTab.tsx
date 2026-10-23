@@ -2,11 +2,15 @@
 // 손잡이를 누르고 같은 묶음의 다른 줄을 누르면 순서(보직)가 바뀐다. 줄을 누르면 투수 정보(교체는 그 안에서).
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { PlayerArt } from '../../art/PlayerArt';
+import { NameYear } from '../../cards';
 import { Button, Icon, fmt } from '../../ui';
 import { GRADES } from '../../game/grades';
 import { LEVEL_KO, PEN_SLOTS, ROT_SLOTS, SLOT_KO, getSlot, unit, type Eval, type Link, type LineupState, type StaffSlot } from './calc';
 import { useFlip } from './hooks';
 import s from './Lists.module.css';
+
+/** 빛이 지나가는 줄 — 엘리트 이상 */
+const GLOW_ROW = new Set(['elite', 'legend', 'franchise', 'black', 'signature', 'mvp', 'gg', 'th', 'unique']);
 
 const ARMS = ['오버핸드', '스리쿼터', '사이드암', '언더핸드'];
 const armOf = (form?: string) => (form ? ARMS.find((a) => form.includes(a)) ?? form : '');
@@ -57,7 +61,9 @@ export function PitchTab({ st, ev, onOpen, onSwap }: PitchTabProps) {
     const blocked = pick != null && !sameGroup(pick, slot);
     const arm = armOf(u?.player.form.pitch);
     return (
-      <li key={slot} data-flip={id ?? slot} className={[s.row, s.pRow, pick === slot && s.picked, blocked && s.blocked, ue?.injured && s.hurt].filter(Boolean).join(' ')}>
+      <li key={slot} data-flip={id ?? slot}
+        className={[s.row, s.pRow, u && s.graded, u && s['g-' + u.card.grade], u && GLOW_ROW.has(u.card.grade) && s.shine, pick === slot && s.picked, blocked && s.blocked, ue?.injured && s.hurt].filter(Boolean).join(' ')}
+        style={u ? ({ ['--gr' as string]: `var(--gr-${u.card.grade})` } as CSSProperties) : undefined}>
         <button type="button" className={s.body} onClick={() => tap(slot)} disabled={blocked}
           aria-label={u ? `${SLOT_KO[slot]} ${u.player.name} — 정보 보기` : `${SLOT_KO[slot]} 비어 있음 — 채우기`}>
           <span className={s.role}>{SLOT_KO[slot]}</span>
@@ -65,7 +71,7 @@ export function PitchTab({ st, ev, onOpen, onSwap }: PitchTabProps) {
             <>
               <span className={s.face}><PlayerArt player={u.player} variant="mini" /></span>
               <span className={s.who}>
-                <b className={s.name}>{u.player.name}</b>
+                <b className={s.name}><NameYear name={u.player.name} year={u.card.year} /></b>
                 <small className={s.meta}>
                   <span style={{ color: `var(--gr-${u.card.grade})` }}>{GRADES[u.card.grade].ko}</span>
                   <span>{u.player.throws === 'L' ? '좌투' : '우투'}</span>

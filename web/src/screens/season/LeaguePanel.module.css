@@ -1,0 +1,50 @@
+/* 리그 단계 판 — 사다리 · 규칙 · 다음 단계 조건 체크 · 지난 시즌 */
+.panel { margin: 14px var(--gutter) 0; padding: 12px 14px 14px; background: var(--inv); color: var(--inv-fg); border-radius: var(--r-3); }
+.kicker { font-size: 11px; font-weight: 700; color: var(--inv-fg-2); letter-spacing: .02em; }
+.ladder { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 3px; margin: 8px 0 0; padding: 0; list-style: none; }
+.rung { padding: 6px 0 5px; text-align: center; font-size: 11px; font-weight: 700; color: var(--inv-fg-3); background: var(--inv-2); border-bottom: 3px solid transparent; white-space: nowrap; }
+.past { color: var(--inv-fg-2); }
+.on { color: var(--inv-fg); background: color-mix(in srgb, var(--accent) 22%, var(--inv-2)); border-bottom-color: var(--accent); }
+.now { margin-top: 10px; font-size: 13px; line-height: 1.45; }
+.now b { font-size: 16px; font-weight: 800; margin-right: 4px; }
+.now span { color: var(--inv-fg-2); }
+.now small { font-size: 11px; color: var(--inv-fg-3); }
+.rule { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 4px; margin-top: 6px; font-size: 11.5px; color: var(--inv-fg-2); line-height: 1.5; }
+.rule b { color: var(--inv-fg); }
+.arrUp, .arrDown { font-style: normal; font-size: 9px; }
+.arrUp { color: var(--good); }
+.arrDown { color: var(--bad); }
+
+.fc { margin-top: 12px; padding: 12px; display: grid; gap: 8px; background: var(--inv-2); border-left: 4px solid var(--inv-fg-3); }
+.fc p b { font-size: 15px; font-weight: 800; }
+.fc small { font-size: 11px; color: var(--inv-fg-3); }
+.up { border-left-color: var(--good); }
+.down { border-left-color: var(--bad); }
+.stay { border-left-color: var(--accent); }
+
+.next { margin-top: 12px; }
+.nextH { display: flex; align-items: baseline; gap: 6px; font-size: 13.5px; font-weight: 800; }
+.nextH small { font-size: 11px; font-weight: 600; color: var(--inv-fg-3); }
+.items { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.items li { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: baseline; gap: 6px; font-size: 12.5px; padding: 5px 8px; background: var(--inv-2); }
+.items li i { font-style: normal; font-weight: 900; text-align: center; }
+.items li small { font-size: 11px; color: var(--inv-fg-3); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46vw; }
+.ok i { color: var(--good); }
+.ok span { color: var(--inv-fg); }
+.no i { color: var(--inv-fg-3); }
+.no span { color: var(--inv-fg-2); }
+.tip { margin-top: 6px; font-size: 11px; line-height: 1.5; color: var(--inv-fg-3); }
+.top { margin-top: 10px; font-size: 12.5px; color: var(--inv-fg-2); }
+
+.hist { margin: 12px 0 0; padding: 8px 0 0; list-style: none; border-top: 1px solid var(--inv-line); display: grid; gap: 3px; }
+.hist li { display: grid; grid-template-columns: 42px 52px minmax(0, 1fr) auto; gap: 6px; font-size: 11.5px; color: var(--inv-fg-2); }
+.hist b { font-weight: 800; color: var(--inv-fg); }
+.upT { color: var(--good) !important; }
+.downT { color: var(--bad) !important; }
+
+/* 한 줄 요약 (라인업 게이지 아래) */
+.line { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 7px 10px; font-size: 12px; color: var(--fg-2); background: color-mix(in srgb, var(--fg) 5%, transparent); text-decoration: none; min-width: 0; }
+.lineLv { flex: none; padding: 2px 7px; font-size: 11px; font-weight: 800; color: var(--accent-ink); background: var(--accent); }
+.lineTxt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lineTxt small { color: var(--fg-3); }
+.lineTxt b { color: var(--fg); }

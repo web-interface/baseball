@@ -2,6 +2,7 @@
 // 오른쪽 손잡이를 누르고 다른 줄을 누르면 두 타자의 순서가 바뀐다. 줄을 누르면 선수 정보(교체는 그 안에서).
 import { useRef, useState, type CSSProperties } from 'react';
 import { PlayerArt } from '../../art/PlayerArt';
+import { NameYear } from '../../cards';
 import { Button, Icon, fmt } from '../../ui';
 import { GRADES } from '../../game/grades';
 import {
@@ -10,6 +11,9 @@ import {
 } from './calc';
 import { useFlip } from './hooks';
 import s from './Lists.module.css';
+
+/** 빛이 지나가는 줄 — 엘리트 이상 */
+const GLOW_ROW = new Set(['elite', 'legend', 'franchise', 'black', 'signature', 'mvp', 'gg', 'th', 'unique']);
 
 const GROUPS: Record<number, { ko: string; sub: string; links: number[] }> = {
   0: { ko: '테이블세터', sub: '1·2번', links: [0] },
@@ -82,8 +86,8 @@ export function OrderTab({ st, ev, onOpen, onSwap, onAuto, initialPick = null }:
             <li
               key={slot}
               data-flip={slot}
-              className={[s.row, pick === i && s.picked].filter(Boolean).join(' ')}
-              style={{ height: ROW_H, ['--link-h' as string]: `${ROW_H + nextHead}px` } as CSSProperties}
+              className={[s.row, s.graded, s['g-' + u.card.grade], GLOW_ROW.has(u.card.grade) && s.shine, pick === i && s.picked].filter(Boolean).join(' ')}
+              style={{ height: ROW_H, ['--link-h' as string]: `${ROW_H + nextHead}px`, ['--gr' as string]: `var(--gr-${u.card.grade})` } as CSSProperties}
             >
               <span className={s.rail} aria-hidden>
                 <i className={s.node} />
@@ -94,7 +98,7 @@ export function OrderTab({ st, ev, onOpen, onSwap, onAuto, initialPick = null }:
                 <span className={['num-display', s.no].join(' ')}>{i + 1}</span>
                 <span className={s.face}><PlayerArt player={u.player} variant="mini" /></span>
                 <span className={s.who}>
-                  <b className={s.name}>{u.player.name}</b>
+                  <b className={s.name}><NameYear name={u.player.name} year={u.card.year} /></b>
                   <small className={s.meta}>
                     <span className="num" title={SLOT_KO[slot]}>{slot}</span>
                     <span>{u.player.bats === 'L' ? '좌타' : u.player.bats === 'S' ? '양타' : '우타'}</span>

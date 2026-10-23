@@ -1,7 +1,8 @@
 // 카드 보관함 — 담당: 카드 디자이너 (이 폴더 + src/cards)
 //   #/cards            내 선수 카드 — 등급·포지션·구단 거르기, 정렬, 격자(3열·2열), 같은 카드 겹침, 누르면 크게(앞·뒤)
 //   #/cards?gallery=1  등급 갤러리 — 11등급 + 특별 선수 한 화면 (실제 카드 / 같은 선수로 패럴렐 비교)
-//   #/enhance          강화 — 같은 목록을 강화 단계순으로 + 카드마다 '다음 단계까지 n장' 진행 · 단계별 필요 수량 표
+//   #/cards?mode=enhance  강화 — 같은 목록을 강화 단계순으로 + 카드마다 '다음 단계까지 n장' 진행 · 단계별 필요 수량 표
+//                         (메뉴 '훈련' #/enhance 는 screens/train — 능력치 훈련 0~10단계, 강화와 따로)
 //   보유 카드는 모두 보유 카드 저장소(game/inventory)에서 — 카드구매 · 조합 · 스카우터로 얻은 카드가 바로 보이고,
 //   같은 카드가 필요 수량만큼 모이면 자동으로 강화된다(최근 강화 줄에 'II → III').
 import { useCallback, useMemo, useState } from 'react';
@@ -10,7 +11,7 @@ import { Link, navigate } from '../../app/router';
 import { Card, CardBack, CardMini, cardProps } from '../../cards';
 import { GEAR_GRADE_KO, SLOT_KO, gearSet, slotsOf } from '../../cards';
 import { Button, Emblem, Icon, Sheet, Tabs } from '../../ui';
-import { avg as fmtAvg, level as fmtLevel, roman, yearTag } from '../../ui/format';
+import { avg as fmtAvg, level as fmtLevel, levelColor, roman, yearTag } from '../../ui/format';
 import { GRADES } from '../../game/grades';
 import { POS_KO, ROLE_KO } from '../../game/labels';
 import { CARDS, ME, TEAMS, cardById, playerById, playerOfCard, teamById } from '../../game/mock';
@@ -370,7 +371,7 @@ function CardSheet({ card, onClose, startBack = false }: { card: CardInst | null
             <dt>레벨</dt>
             <dd>
               <span className={s.lvTrack} aria-hidden><i style={{ width: `${Math.min(100, (c.level / g.levelMax) * 100)}%` }} /></span>
-              <b className="num">{fmtLevel(c.level)}</b>
+              <b className="num" style={{ color: levelColor(c.level) }}>{fmtLevel(c.level)}</b>
               <small className="num">/ {g.levelMax} · {c.level >= g.levelMax ? '최고 레벨' : `다음 레벨까지 ${100 - lvPct}%`}</small>
             </dd>
           </div>
@@ -382,6 +383,16 @@ function CardSheet({ card, onClose, startBack = false }: { card: CardInst | null
             <div className={s.fact}>
               <dt>기록</dt>
               <dd><small>받은 <span className="num">{entry.got}</span>장 · 강화에 <span className="num">{entry.mat}</span>장 · 조합에 <span className="num">{entry.rl}</span>장{inLineup(c.id) ? ' · 라인업 카드(마지막 1장 보호)' : ''}</small></dd>
+            </div>
+          )}
+          {mineHere && (
+            <div className={s.fact}>
+              <dt>훈련</dt>
+              {/* 능력치 훈련 0~10 (game/training · 강화와 따로) — 훈련 화면으로 */}
+              <dd>
+                <b className="num">{c.train?.lv ?? 0}</b><small className="num"> / 10{(c.train?.lv ?? 0) >= 10 ? ' · 최종 단계' : (c.train?.lv ?? 0) >= 5 ? ' · 불빛 단계' : ''}</small>
+                <Link to={`/enhance?card=${encodeURIComponent(c.id)}`} className={s.trainLink}>{(c.train?.lv ?? 0) >= 10 ? '훈련 보기' : '훈련하기'}<Icon name="chevron" size={14} /></Link>
+              </dd>
             </div>
           )}
           {c.signaturePitch && (

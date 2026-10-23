@@ -11,6 +11,7 @@ import { Button, CalloutStage, Field, Icon, Sheet, useToast, type CalloutData } 
 import { ClubEmblem } from '../../art/emblems';
 import { LAST_MATCH, myTeam, teamById } from '../../game/mock';
 import { resetSeason, teamLine, useSeason } from '../../season/store';
+import { resetLeague } from '../../season/league';
 import { record } from '../../ui/format';
 import { WATCH_MODES, paceOf, setPrefs, usePrefs, type SoundPrefs } from './prefs';
 import s from './settings.module.css';
@@ -206,7 +207,7 @@ function NewStart() {
           : <>구단 · 지명 · 특별 선수를 다시 골라 2027 개막전부터 시작해요.</>}
         footer={<>
           <Button variant="secondary" onClick={() => setAsk(false)}>그만두기</Button>
-          <Button onClick={() => { setAsk(false); resetSeason(); toast({ text: '시즌 진행을 지웠어요 — 구단부터 다시 골라 주세요', tone: 'info' }); navigate('/club-select?step=club'); }}>새로 시작</Button>
+          <Button onClick={() => { setAsk(false); resetSeason(); resetLeague(); toast({ text: '시즌 진행을 지웠어요 — 구단부터 다시 골라 주세요', tone: 'info' }); navigate('/club-select?step=club'); }}>새로 시작</Button>
         </>}
       />
     </>

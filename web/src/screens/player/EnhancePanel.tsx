@@ -166,7 +166,7 @@ export function EnhancePanel({ p, card, enh, fails, level, playstyle, mats, pick
 
       <Sec title="레벨" meta={<>최대 <span className="num">{lvMax}</span> · {g.ko}</>}>
         <div className={s.level}>
-          <b className="num-display">{fmt.level(level)}</b>
+          <b className="num-display" style={{ color: fmt.levelColor(level) }}>{fmt.level(level)}</b>
           <div className={s.lvRight}>
             <span className={s.lvBar} aria-hidden><i style={{ width: lv.lv >= lvMax ? '100%' : `${lv.progress}%` }} /></span>
             <span className={s.lvSub}>{lv.lv >= lvMax ? '최대 레벨 · 각인 완료' : <>레벨 <span className="num">{lv.lv + 1}</span>까지 <span className="num">{100 - lv.progress}%</span> · 경기·훈련으로 올라요</>}</span>

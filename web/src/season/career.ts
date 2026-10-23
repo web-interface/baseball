@@ -10,6 +10,8 @@ export type PitSum = { G: number; GS: number; outs: number; H: number; R: number
 export interface CareerSeason {
   /** 몇 번째로 치른 시즌 (1부터) */
   no: number;
+  /** 시즌 연도 (예전 기록엔 없음) */
+  year?: number;
   seed: string;
   /** 그때 내 구단 */
   club: string;
@@ -58,7 +60,7 @@ export function archiveSeason(s: SeasonState | null) {
   const save = read();
   if (save.seasons.some((x) => x.seed === s.seed)) return;
   const no = (save.seasons[save.seasons.length - 1]?.no ?? 0) + 1;
-  save.seasons.push({ no, seed: s.seed, club: s.club, at: Date.now(), days: s.next, bat: groupBat(s.bat), pit: groupPit(s.pit) });
+  save.seasons.push({ no, year: s.year ?? 2027, seed: s.seed, club: s.club, at: Date.now(), days: s.next, bat: groupBat(s.bat), pit: groupPit(s.pit) });
   if (save.seasons.length > MAX) save.seasons.splice(0, save.seasons.length - MAX);
   try { localStorage.setItem(KEY, JSON.stringify(save)); } catch { /* 저장 공간이 차면 이번만 */ }
 }
@@ -69,7 +71,7 @@ export function careerOf(key: string, live: SeasonState | null): CareerRow[] {
   const rows: CareerRow[] = [];
   for (const x of read().seasons) {
     const b = x.bat[key], p = x.pit[key];
-    if (b || p) rows.push({ label: `${x.no}번째 시즌`, no: x.no, live: false, club: b?.team ?? p?.team ?? x.club, bat: b, pit: p });
+    if (b || p) rows.push({ label: x.year ? `${x.year} 시즌` : `${x.no}번째 시즌`, no: x.no, live: false, club: b?.team ?? p?.team ?? x.club, bat: b, pit: p });
   }
   if (live) {
     const b = groupBat(Object.fromEntries(Object.entries(live.bat).filter(([id]) => careerKey(id) === key)))[key];

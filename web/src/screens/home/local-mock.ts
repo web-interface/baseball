@@ -9,7 +9,7 @@ import {
   type MyGameRec, type NewsRec, type SeasonState, type TeamLine,
 } from '../../season/store';
 import { nextMyGame } from '../../season/run';
-import { clubRoster, myRoster, LEVEL_OVR, aiLevel } from '../../season/rosters';
+import { aiTargetOf, clubRoster, myRoster } from '../../season/rosters';
 import { weatherOf } from '../../season/weather';
 import { SEASON_GAMES, daysBetween, longDate, shortDate, startTime } from '../../season/schedule';
 
@@ -43,7 +43,7 @@ export function nextGameView() {
     const mineR = myRoster();
     const oppR = clubRoster(opp.id);
     const pickSp = (rot: Player[], id: string) => (rot.length ? rot[((nx.day.day + ti(id)) % rot.length + rot.length) % rot.length] : undefined);
-    const myOvr = mineR.ovr, oppOvr = LEVEL_OVR[aiLevel()] + (opp.tier === '강' ? 2 : opp.tier === '약' ? -2 : 0);
+    const myOvr = mineR.ovr, oppOvr = aiTargetOf(opp.id);
     const wp = 1 / (1 + Math.exp(-((myOvr - oppOvr) / 7 + (isHome ? 0.08 : -0.08))));
     return {
       me, opp, venue: home.stadium, isHome, time, weather, wp,

@@ -11,6 +11,8 @@
 //  · 형식 v2 (실제 선수 카탈로그): 카드 id 는 카탈로그 id(`{선수 ID}-{연도}{등급}` 등 — game/kbo). 카드 → 선수 본체는 ID 로 찾는다.
 //    v1(가상 선수 시절) 저장은 지우지 않고 v2 로 옮긴다 — 모든 카드 · 수량 · 강화 · 라인업을 그대로 두고, 그때의 시작 설정을
 //    legacy.start 에 적어 레거시 카드('k-'·'kd-'·'x-'·'d-'·'g-')를 같은 시드로 다시 만든다(옮긴 뒤 보유 수량 합이 같다 — 시험 scripts/kbo.test.ts).
+//  · 훈련(game/training): 카드마다 tr = { 단계 0~10 · 능력치별 오른 값 · 특수구질 단계 · 연속 실패 · 시도 수 } — 강화와 따로. 없으면 훈련 전.
+//    tryTrain() 이 확률(crypto 난수)로 그 자리에서 정하고 저장한다. 보유 카드 보기 ownedCard().train 으로 카드 그림·라인업·엔진이 읽는다.
 import { useSyncExternalStore } from 'react';
 import { CARDS, cardById, playerById, registerPlayers } from './mock';
 import { isKboCardId } from './kbo';
@@ -18,6 +20,10 @@ import { readStart, registerLegacyStarter, resetStarter, setStarterKind, starter
 import { legacyDraftPool } from './legacy/starter';
 import { legacyRoster } from './legacy/history';
 import { spend } from './wallet';
+import {
+  SIG, TRAIN_MAX, canTrainKey, costOf, gainAt, gainTotal, keyAtPlace, oddsOf, placeById, placeLock, sumGains, trainRandom,
+  type TrainCost, type TrainOdds,
+} from './training';
 import type { CardInst, ClubCode, GradeId, SignaturePitch } from './types';
 import type { LineupState } from '../screens/lineup/calc';
 
@@ -89,7 +95,11 @@ export interface InvEntry {
   /** +5 플레이스타일 */
   ps?: string | null;
   def?: CardDefLite;
+  /** 훈련 (없으면 훈련 전) */
+  tr?: TrainSave;
 }
+/** 훈련 저장 — lv 단계 0~10 · g 능력치 코드별 오른 값('SIG' = 특수구질) · sig 특수구질 단계 · streak 지금 연속 실패 · n 시도 수 */
+export interface TrainSave { lv: number; g: Record<string, number>; sig?: number; streak?: number; n?: number }
 export interface EnhEvent { id: string; from: number; to: number; at: number; src: 'auto' | 'manual' }
 export interface InvStats { got: number; enhUsed: number; rouletteUsed: number }
 export interface InvSave {
@@ -137,6 +147,16 @@ function validEntry(e: unknown): e is InvEntry {
     && isNum(x.at) && isInt(x.got, 0, 1e7) && isInt(x.mat, 0, 1e7) && isInt(x.rl, 0, 1e7)
     && (x.def == null || (typeof x.def === 'object' && typeof x.def.p === 'string' && typeof x.def.g === 'string'));
 }
+/** 훈련 기록이 틀린 모양이면 그 카드의 훈련만 버린다 (보관함 전체를 처음으로 돌리지 않게) — 훈련 전 저장은 tr 이 없다 */
+function cleanTrain(e: InvEntry) {
+  const t = e.tr as unknown;
+  if (t == null) return;
+  const x = t as TrainSave;
+  const ok = typeof t === 'object' && isInt(x.lv, 0, TRAIN_MAX) && !!x.g && typeof x.g === 'object' && !Array.isArray(x.g)
+    && Object.values(x.g).every((g) => isNum(g) && g >= 0 && g <= 1000)
+    && (x.sig == null || isInt(x.sig, 0, TRAIN_MAX)) && (x.streak == null || isInt(x.streak, 0, 1e7)) && (x.n == null || isInt(x.n, 0, 1e9));
+  if (!ok) delete e.tr;
+}
 /** 저장 형식 검사 — 틀리면 null */
 export function parseSave(raw: string | null): InvSave | null {
   if (!raw) return null;
@@ -144,6 +164,7 @@ export function parseSave(raw: string | null): InvSave | null {
   try { v = JSON.parse(raw) as InvSave; } catch { return null; }
   if (!v || typeof v !== 'object' || (v.v !== INV_VERSION && (v.v as number) !== 1) || typeof v.club !== 'string' || !v.cards || typeof v.cards !== 'object') return null;
   if (!Object.values(v.cards).every(validEntry)) return null;
+  Object.values(v.cards).forEach(cleanTrain);
   const s = v.stats;
   if (!s || !isInt(s.got, 0, 1e9) || !isInt(s.enhUsed, 0, 1e9) || !isInt(s.rouletteUsed, 0, 1e9)) return null;
   if (v.lineup != null && typeof v.lineup !== 'object') return null;
@@ -255,7 +276,7 @@ export function ownedIds(): string[] {
   const s = S();
   return Object.keys(s.cards).filter((id) => s.cards[id].n > 0 && !!cardById(id));
 }
-/** 보유 카드 보기 — 카드 정의 + 내 강화 · 레벨 · 같은 카드 장수(dup = n − 1) */
+/** 보유 카드 보기 — 카드 정의 + 내 강화 · 레벨 · 같은 카드 장수(dup = n − 1) · 훈련(1단계 이상일 때 train) */
 export function ownedCard(id: string): CardInst | undefined {
   const hit = viewCache.get(id);
   if (hit) return hit;
@@ -263,6 +284,7 @@ export function ownedCard(id: string): CardInst | undefined {
   const c = cardById(id);
   if (!e || !c || e.n <= 0) return undefined;
   const v: CardInst = { ...c, enhance: e.enh, level: e.lv, dup: Math.max(0, e.n - 1), isNew: false };
+  if (e.tr && e.tr.lv > 0) v.train = { lv: e.tr.lv, gains: { ...e.tr.g }, ...(e.tr.sig ? { sig: e.tr.sig } : {}) };
   viewCache.set(id, v);
   return v;
 }
@@ -307,13 +329,13 @@ export const loadLineup = (): LineupState | null => S().lineup;
 
 /**
  * 조합(룰렛) 재료로 쓸 수 있는 장수.
- * 라인업 카드 · 강화한 카드 · 특별 선수는 마지막 1장을 남긴다(0장이 되어 라인업 자리가 비거나 강화가 사라지지 않게).
+ * 라인업 카드 · 강화한 카드 · 훈련한 카드 · 특별 선수는 마지막 1장을 남긴다(0장이 되어 라인업 자리가 비거나 강화 · 훈련이 사라지지 않게).
  */
 export function spareOf(id: string, guard = lineupIds()): number {
   const e = S().cards[id];
   const c = cardById(id);
   if (!e || !c || e.n <= 0 || c.grade === 'unique') return 0;
-  const keep = guard.has(id) || e.enh > 0 ? 1 : 0;
+  const keep = guard.has(id) || e.enh > 0 || (e.tr?.lv ?? 0) > 0 ? 1 : 0;
   return Math.max(0, e.n - keep);
 }
 
@@ -439,6 +461,85 @@ export function setPlaystyle(id: string, ps: string | null) {
   commit();
 }
 
+/* ───────── 훈련 (규칙 · 표는 game/training) ───────── */
+/** 지금 훈련 상태 — 저장이 없으면 0단계 */
+export interface TrainState {
+  lv: number;
+  /** 능력치 코드별 오른 값 ('SIG' = 특수구질) */
+  gains: Record<string, number>;
+  /** 특수구질 단계 */
+  sig: number;
+  /** 지금 연속 실패 */
+  streak: number;
+  /** 시도 수 */
+  tries: number;
+}
+export function trainOf(id: string): TrainState {
+  const t = S().cards[id]?.tr;
+  return { lv: t?.lv ?? 0, gains: { ...(t?.g ?? {}) }, sig: t?.sig ?? 0, streak: t?.streak ?? 0, tries: t?.n ?? 0 };
+}
+
+/** 훈련할 수 없는 까닭 — 내 카드 아님 · 최종 단계 · 이 카드에 없는 능력치 · 이 장소에서 못 하는 능력치 · 잠긴 장소 · 비용 모자람 */
+export type TrainWhy = 'missing' | 'max' | 'key' | 'place' | 'locked' | 'pay';
+type Quote =
+  | { ok: true; e: InvEntry; lv: number; odds: TrainOdds; cost: TrainCost; gain: number }
+  | { ok: false; why: TrainWhy; text?: string };
+function quote(id: string, key: string, placeId: string): Quote {
+  const e = S().cards[id];
+  const c = cardById(id);
+  const p = c ? playerById(c.playerId) : undefined;
+  if (!e || !c || !p || e.n <= 0) return { ok: false, why: 'missing' };
+  const lv = e.tr?.lv ?? 0;
+  if (lv >= TRAIN_MAX) return { ok: false, why: 'max' };
+  if (!canTrainKey(p, c, key)) return { ok: false, why: 'key' };
+  const place = placeById(placeId);
+  if (!place || !keyAtPlace(place, key)) return { ok: false, why: 'place' };
+  const lock = placeLock(place, p, c, lv);
+  if (lock) return { ok: false, why: 'locked', text: lock };
+  return { ok: true, e, lv, odds: oddsOf(lv, key, place, e.tr?.streak ?? 0)!, cost: costOf(lv, key, place), gain: gainAt(lv, key === SIG) };
+}
+/** 이 카드 · 능력치 · 장소의 이번 성공 확률 (훈련할 수 없으면 null) */
+export function trainChance(id: string, key: string, placeId: string): TrainOdds | null {
+  const q = quote(id, key, placeId);
+  return q.ok ? q.odds : null;
+}
+/** 이번 한 번 비용 · 성공하면 오르는 값 (훈련할 수 없으면 null) */
+export function trainQuote(id: string, key: string, placeId: string): { odds: TrainOdds; cost: TrainCost; gain: number; lv: number } | { why: TrainWhy; text?: string } {
+  const q = quote(id, key, placeId);
+  return q.ok ? { odds: q.odds, cost: q.cost, gain: q.gain, lv: q.lv } : { why: q.why, text: q.text };
+}
+
+export type TrainTry =
+  | { ok: true; success: boolean; key: string; place: string; from: number; to: number; gain: number; chance: number; roll: number; cost: TrainCost; streak: number }
+  | { ok: false; why: TrainWhy; text?: string };
+/**
+ * 훈련 한 번 — 비용을 내고 그 자리에서 난수(crypto)로 정한다.
+ * 성공: 단계 +1 · 고른 능력치 +(1 + ⌊단계/3⌋) (특수구질은 +(2 + ⌊단계/3⌋) · 특수구질 단계 +1) · 연속 실패 0.
+ * 실패: 비용만 쓰고 연속 실패 +1 (다음 확률 +2%p, 최대 +10%p) — 단계 · 오른 값은 그대로.
+ * pay: 비용을 내면 true (모자라면 false — 아무것도 안 바뀜) · rng: 시험용 난수.
+ */
+export function tryTrain(id: string, key: string, placeId: string, pay: (c: TrainCost) => boolean = (c) => spend(c), rng: () => number = trainRandom): TrainTry {
+  const q = quote(id, key, placeId);
+  if (!q.ok) return q;
+  if (!pay(q.cost)) return { ok: false, why: 'pay' };
+  const e = q.e;
+  const t: TrainSave = e.tr ?? { lv: 0, g: {} };
+  const roll = rng();
+  const success = roll * 100 < q.odds.total;
+  t.n = (t.n ?? 0) + 1;
+  if (success) {
+    t.lv = q.lv + 1;
+    t.g[key] = (t.g[key] ?? 0) + q.gain;
+    if (key === SIG) t.sig = (t.sig ?? 0) + 1;
+    t.streak = 0;
+  } else {
+    t.streak = (t.streak ?? 0) + 1;
+  }
+  e.tr = t;
+  commit();
+  return { ok: true, success, key, place: placeId, from: q.lv, to: t.lv, gain: success ? q.gain : 0, chance: q.odds.total, roll, cost: q.cost, streak: t.streak };
+}
+
 /* ───────── 스카우터 구매 기록 (하루 = 05:00 기준) ───────── */
 export function gameDay(d = new Date()) {
   const x = new Date(d.getTime() - 5 * 3600 * 1000);
@@ -501,6 +602,12 @@ export function checkInventory(s: InvSave = S()): string[] {
     n += e.n; mat += e.mat; rl += e.rl;
     if (e.got !== e.n + e.mat + e.rl) bad.push(`${id}: 받은 ${e.got} ≠ 보유 ${e.n} + 강화 ${e.mat} + 조합 ${e.rl}`);
     if (e.enh < 0 || e.enh > ENH_MAX) bad.push(`${id}: 강화 ${e.enh}`);
+    if (e.tr) {
+      // 훈련: 오른 값 합 = 단계마다 오르는 값의 합 (특수구질 단계는 1씩 더)
+      const sig = e.tr.sig ?? 0, sum = sumGains(e.tr.g), want = gainTotal(e.tr.lv, sig);
+      if (sum !== want) bad.push(`${id}: 훈련 ${e.tr.lv}단계인데 오른 값 합 ${sum} (표 ${want})`);
+      if (sig > e.tr.lv || ((e.tr.g[SIG] ?? 0) > 0) !== sig > 0) bad.push(`${id}: 특수구질 단계 ${sig} · 오른 값 ${e.tr.g[SIG] ?? 0} 이 훈련 ${e.tr.lv}단계와 안 맞음`);
+    }
     const c = cardById(id);
     if (!c) continue;
     if (!autoable(c.grade)) continue;

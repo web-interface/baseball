@@ -212,7 +212,7 @@ export function Roulette() {
             const m = chosen[i];
             return m ? (
               <div key={m.id} className={[s.mat, spinning && s.matGo].filter(Boolean).join(' ')} style={{ '--i': i } as CSSProperties}>
-                <CardMini player={m.player} grade={m.card.grade} style={{ width: '100%' }} />
+                <CardMini player={m.player} grade={m.card.grade} year={m.card.year} style={{ width: '100%' }} />
                 {m.spare && <em className={['num', s.matDup].join(' ')}>+1</em>}
               </div>
             ) : <div key={'e' + i} className={s.matEmpty} aria-hidden />;

@@ -163,3 +163,7 @@
 :global([data-theme='classic']) .head { }
 :global([data-theme='classic']) .head::after { display: none; }
 .hintIco { margin-right: 5px; }
+
+/* 포스트시즌 — 보기 방식 고정 표시 */
+.locked { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 0 10px; height: 36px; font-size: 12px; color: var(--fg-2); background: color-mix(in srgb, var(--fg) 6%, transparent); }
+.locked b { flex: none; padding: 2px 8px; font-size: 12px; color: var(--accent-ink); background: var(--accent); }

@@ -7,8 +7,10 @@ import type { ScreenProps } from '../../app/screen';
 import { navigate } from '../../app/router';
 import { Button, Emblem, Icon, Tabs, useToast } from '../../ui';
 import { ME, playerById, teamById } from '../../game/mock';
-import { OPENING_DATE, longDate, shortDate } from '../../season/schedule';
-import { allDays, gbLabel, isOver, leaders, pctLabel, rankLabel, resetSeason, standingsOf, teamLine, useSeason, type DayHighlight, type NewsRec } from '../../season/store';
+import { longDate, openingDate, shortDate } from '../../season/schedule';
+import { allDays, gbLabel, isOver, leaders, pctLabel, rankLabel, standingsOf, teamLine, useSeason, yearOf, type DayHighlight, type NewsRec } from '../../season/store';
+import { LeaguePanel, useStartNextSeason } from './LeaguePanel';
+import { PostPanel } from './PostPanel';
 import { playNextDay } from '../../season/run';
 import { LEVEL_KO, aiLevel, ensureClubRosters } from '../../season/rosters';
 import type { GameOut } from '../../season/sim';
@@ -22,6 +24,7 @@ const reduced = () => typeof window !== 'undefined' && !!window.matchMedia?.('(p
 
 export default function SeasonScreen({ query }: ScreenProps) {
   const toast = useToast();
+  const startNext = useStartNextSeason();
   const st = useSeason();
   const days = allDays(st);
   const over = isOver(st);
@@ -83,7 +86,7 @@ export default function SeasonScreen({ query }: ScreenProps) {
   return (
     <div className={s.screen}>
       <header className={s.top}>
-        <p className={s.kicker}>2027 정규 시즌 · AI 상대 {LEVEL_KO[aiLevel()]}</p>
+        <p className={s.kicker}><span className="num">{yearOf(st)}</span> 정규 시즌 · AI 상대 {LEVEL_KO[aiLevel()]}</p>
         <h2 className={['head', s.title].join(' ')}>{over ? '정규 시즌 끝' : '남은 시즌 빨리 감기'}</h2>
         <div className={s.meRow}>
           <Emblem team={me} size={34} />
@@ -104,8 +107,13 @@ export default function SeasonScreen({ query }: ScreenProps) {
         <div className={s.bar} role="progressbar" aria-valuemin={0} aria-valuemax={totalN} aria-valuenow={doneN} aria-label="시즌 진행">
           <i style={{ width: `${(doneN / Math.max(1, totalN)) * 100}%` }} />
         </div>
-        <div className={s.progEnds}><span>{shortDate(days[0]?.date ?? OPENING_DATE)} 개막</span><span>{shortDate(days[days.length - 1]?.date ?? OPENING_DATE)}</span></div>
+        <div className={s.progEnds}><span>{shortDate(days[0]?.date ?? openingDate())} 개막</span><span>{shortDate(days[days.length - 1]?.date ?? openingDate())}</span></div>
       </section>
+
+      {/* 포스트시즌 (정규 시즌이 끝나면 — KBO 방식) */}
+      <PostPanel />
+      {/* 리그 단계 (AI 상대 난이도 — 자동) · 포스트시즌까지 끝났으면 다음 해 시작 */}
+      <LeaguePanel />
 
       {/* 조작 */}
       {!over && (
@@ -136,7 +144,7 @@ export default function SeasonScreen({ query }: ScreenProps) {
 
       {/* 순위 경쟁 */}
       <section className={s.sec} aria-label="순위 경쟁">
-        <p className={s.secH}>순위 경쟁 <small>{shortDate(days[0]?.date ?? OPENING_DATE)} 개막부터</small></p>
+        <p className={s.secH}>순위 경쟁 <small>{shortDate(days[0]?.date ?? openingDate())} 개막부터</small></p>
         <RankChart hist={st.rankHist} dates={dates} total={totalN} />
       </section>
 
@@ -147,8 +155,10 @@ export default function SeasonScreen({ query }: ScreenProps) {
       {over && (
         <section className={s.sec}>
           <div className={s.endBtns}>
-            <Button size="l" block onClick={() => navigate('/home')}>홈으로</Button>
-            <Button variant="secondary" onClick={() => { resetSeason(); toast({ text: '2027 개막일로 돌아왔어요 — 모든 구단 0승 0무 0패', tone: 'info' }); }}>개막부터 다시</Button>
+            {st.post?.champion
+              ? <Button size="l" block icon="play" onClick={startNext}><span className="num">{yearOf(st) + 1}</span> 시즌 시작</Button>
+              : <Button size="l" block variant="secondary" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>위로 — 포스트시즌</Button>}
+            <Button variant="ghost" onClick={() => navigate('/home')}>홈으로</Button>
           </div>
         </section>
       )}

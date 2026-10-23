@@ -78,6 +78,9 @@
 .spotOdd:not(.spotOn) { color: var(--fg-3); }
 
 .hands { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; }
+/* 타격 폼 — 스탠스 · 타이밍 (세 칸씩이라 좁은 화면에선 한 줄에 하나) */
+.rows { display: grid; gap: 8px; }
+@media (min-width: 440px) { .rows { grid-template-columns: 1fr 1fr; gap: 10px; } }
 .nameStyle { margin-top: 8px; }
 .looks { display: flex; flex-direction: column; gap: 8px; }
 .lookLabel { margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--fg-3); }
@@ -96,3 +99,66 @@
 :global([data-theme='classic']) .pot b { color: var(--fg); }
 .plateFill { background: var(--bg); background-image: var(--texture); background-size: var(--texture-size); }
 :global([data-theme='broadcast']) .plateFill { background: var(--surface); }
+
+/* 미리보기 — 구종표 한 줄 · 나머지 특기 */
+.more { margin-top: 6px; font-size: 11.5px; color: var(--fg-3); line-height: 1.45; letter-spacing: -.02em; }
+.nowrap { white-space: nowrap; }
+
+/* 이름 직접 입력 */
+.nameInput { margin-top: 12px; }
+
+/* 결정구 — 계열별 판 */
+.fam + .fam { margin-top: 12px; }
+.famLabel { margin-bottom: 6px; font-size: 12px; font-weight: 600; color: var(--fg-3); letter-spacing: -.02em; }
+.pdot { display: inline-block; flex: none; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--sig, var(--accent)); vertical-align: 1px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .25); }
+
+/* 결정구 특징 — 셋 중 하나 */
+.traitBox { margin-top: 16px; }
+.traitHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin-bottom: 8px; }
+.traitHead b { font-size: 13.5px; font-weight: 700; letter-spacing: -.03em; }
+.traitHead span { font-size: 12px; color: var(--fg-3); letter-spacing: -.02em; }
+.traits { display: grid; gap: 1px; background: var(--line); box-shadow: 0 0 0 1px var(--line); }
+.trait {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px 11px;
+  background: var(--bg);
+  background-image: var(--texture);
+  background-size: var(--texture-size);
+  text-align: left;
+  color: var(--fg-2);
+  transition: background-color var(--dur-1), color var(--dur-1);
+}
+.radio { flex: none; width: 16px; height: 16px; margin-top: 1px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; opacity: .55; }
+.plateOn .radio { opacity: 1; background: radial-gradient(circle, currentColor 0 3.5px, transparent 4px); }
+.traitBody { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.traitBody b { font-size: 14px; font-weight: 700; letter-spacing: -.03em; color: var(--fg); }
+.plateOn .traitBody b { color: inherit; }
+.traitBody small { font-size: 12px; line-height: 1.4; letter-spacing: -.02em; }
+
+/* 효과 숫자 칩 */
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.chips em { font-style: normal; font-size: 11px; font-weight: 600; line-height: 1; padding: 3px 5px; border-radius: var(--r-1); box-shadow: inset 0 0 0 1px var(--line-2); letter-spacing: -.02em; white-space: nowrap; }
+.chips .up { color: var(--fg); }
+.chips .tend { color: var(--fg-2); }
+.chips .down { color: var(--fg-3); }
+.plateOn .chips em { color: inherit; box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 35%, transparent); }
+.plateOn .chips .down { opacity: .72; }
+
+/* 타격 특기 — 여러 개 */
+.plateOff > * { opacity: .4; }
+.skillList { display: grid; gap: 1px; margin-top: 12px; background: var(--line); box-shadow: 0 0 0 1px var(--line); }
+.skillList li { padding: 10px 12px 11px; background: var(--bg); background-image: var(--texture); background-size: var(--texture-size); }
+.skillHead { display: flex; align-items: center; gap: 8px; min-height: 22px; }
+.skillHead b { font-size: 14px; font-weight: 700; letter-spacing: -.03em; }
+.skillHead em { font-style: normal; font-size: 10.5px; font-weight: 700; line-height: 1; padding: 3px 5px; border-radius: var(--r-1); background: var(--club); color: var(--club-ink); }
+.toMain { margin-left: auto; height: 28px; padding: 0 2px 0 8px; font-size: 12px; font-weight: 600; color: var(--fg-3); }
+.skillLines { margin-top: 3px; font-size: 12px; color: var(--fg-2); line-height: 1.45; letter-spacing: -.02em; }
+
+:global([data-theme='broadcast']) .traits, :global([data-theme='broadcast']) .skillList { background: var(--fg); box-shadow: 0 0 0 1.5px var(--fg); gap: 1.5px; }
+:global([data-theme='broadcast']) .trait, :global([data-theme='broadcast']) .skillList li { background: var(--surface); }
+:global([data-theme='broadcast']) .plateOn small { color: color-mix(in srgb, var(--inv-fg) 72%, transparent); }
+:global([data-theme='broadcast']) .skillHead em { background: var(--inv); color: var(--inv-fg); }
+:global([data-theme='classic']) .traits, :global([data-theme='classic']) .skillList { background: var(--line-2); box-shadow: 0 0 0 1px var(--line-3); }

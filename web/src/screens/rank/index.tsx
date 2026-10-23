@@ -164,7 +164,7 @@ function League() {
   return (
     <section className={s.sec}>
       <header className={s.head}>
-        <h2 className={['head', s.h].join(' ')}>2027 리그 순위</h2>
+        <h2 className={['head', s.h].join(' ')}><span className="num">{season.year ?? 2027}</span> 리그 순위</h2>
         <p className={s.meta}>{started ? '정규 시즌 · 10개 구단' : '개막 전 · 10개 구단'}</p>
       </header>
       <table className={[s.table, s.league].join(' ')}>

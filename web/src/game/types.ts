@@ -260,6 +260,11 @@ export interface CardInst {
   serial?: { no: number; of: number; match: boolean } | null;
   /** 낀 장비 — 모양은 cards/gear.ts 의 GearPiece */
   gear?: { slot: string; name: string; grade: string; plus: number; set?: string }[];
+  /**
+   * 훈련 (game/training · 저장은 game/inventory) — 1단계 이상 훈련한 내 카드에만 있다.
+   * lv 0~10 (5 부터 카드에 불빛 · 10 최종) · gains 대표 능력치 코드별 오른 값 ('SIG' = 특수구질 위력·제구) · sig 특수구질 단계
+   */
+  train?: { lv: number; gains: Partial<Record<string, number>>; sig?: number };
 }
 
 /* ───────── 라인업 · 조합 ───────── */

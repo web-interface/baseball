@@ -1,0 +1,41 @@
+/* 포스트시즌 판 — 대진 · 시리즈 승수 · 차전 결과 · 다음 경기 */
+.panel { margin: 14px var(--gutter) 0; padding: 12px 14px 14px; background: var(--inv); color: var(--inv-fg); border-radius: var(--r-3); border-top: 3px solid var(--gold, #d9a21e); }
+.kicker { font-size: 11px; font-weight: 700; color: var(--inv-fg-2); }
+.title { margin-top: 4px; font-family: var(--font-head); font-size: 20px; letter-spacing: var(--head-tracking); }
+.lead { margin-top: 6px; font-size: 12.5px; line-height: 1.55; color: var(--inv-fg-2); }
+.lead b { color: var(--inv-fg); }
+.panel > button { margin-top: 12px; }
+
+.champ { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 12px; background: linear-gradient(120deg, rgba(217, 162, 30, .28), rgba(217, 162, 30, .05)); }
+.champ small { display: block; font-size: 11px; color: var(--inv-fg-2); font-weight: 700; }
+.champ b { display: block; font-family: var(--font-head); font-size: 20px; }
+.champ em { display: inline-block; margin-top: 2px; font-style: normal; font-size: 12px; font-weight: 800; color: var(--gold, #ffd84a); }
+.champMine { box-shadow: inset 0 0 0 2px var(--gold, #ffd84a); }
+
+.next { margin-top: 10px; display: grid; gap: 8px; }
+.next p { font-size: 13px; font-weight: 700; }
+.next small { font-weight: 500; color: var(--inv-fg-3); }
+.mineTag { margin-left: 6px; padding: 1px 6px; font-size: 11px; color: var(--accent-ink); background: var(--accent); }
+.btns { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+
+.bracket { margin-top: 12px; display: grid; gap: 8px; }
+.series { padding: 10px; background: var(--inv-2); border-left: 3px solid transparent; }
+.live { border-left-color: var(--accent); }
+.mine { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); }
+.sHead { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sHead b { font-size: 13.5px; font-weight: 800; }
+.sHead small { font-size: 10.5px; color: var(--inv-fg-3); }
+.vs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+.team { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 13px; }
+.team b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.w { margin-left: auto; padding-right: 6px; font-size: 20px; font-weight: 800; }
+.win b, .win .w { color: var(--gold, #ffd84a); }
+.lose { opacity: .45; }
+.games { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.games li { display: grid; grid-template-columns: 44px 36px minmax(0, 1fr) auto; gap: 6px; align-items: baseline; font-size: 11.5px; color: var(--inv-fg-2); }
+.games li span:nth-child(3) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.games b { color: var(--inv-fg); }
+.games em { font-style: normal; font-weight: 700; color: var(--inv-fg); }
+.gMine { color: var(--inv-fg) !important; }
+.note { margin-top: 6px; font-size: 11px; color: var(--inv-fg-3); line-height: 1.5; }
+.seeds { margin-top: 10px; font-size: 11px; color: var(--inv-fg-3); line-height: 1.5; }
