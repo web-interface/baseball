@@ -316,8 +316,8 @@ function RealSheet({ opp, onClose, onStart, busy }: { opp: PvpClub | null; onClo
             <li key={i}>
               <span className="num">{b.pos === 'SP' || b.pos === 'CP' || b.pos === 'RP' || b.pos === 'P' ? '' : i + 1}</span>
               <span className={s.peekPos}>{b.pos === 'SP' ? '선발' : b.pos === 'CP' ? '마무리' : b.pos === 'RP' ? '불펜' : POS_KO[b.pos as keyof typeof POS_KO] ?? b.pos}</span>
-              <b className="num">{b.id.toUpperCase()}</b>
-              <span className={s.peekTeam} />
+              <b>{b.name ?? b.id.toUpperCase()}</b>
+              <span className={s.peekTeam}>{b.y != null ? <span className="num">’{String(b.y).padStart(2, '0')}</span> : null}</span>
               <span className={['num', s.peekOvr].join(' ')}>{b.ovr}</span>
             </li>
           ))}

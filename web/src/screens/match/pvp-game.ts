@@ -1,6 +1,7 @@
 // 대전 경기 기록 — 서버가 정한 이닝별 점수(line)와 최종 점수를 절대 바꾸지 않고, 그 점수에 꼭 맞는 경기를 대전 id 시드로 만든다.
 // 같은 대전을 다시 보면 같은 장면. 두 팀 선수는 각자 라인업 스냅샷(나는 내 스냅샷, 상대는 서버에 올라간 라인업) 기준.
 import { ME, playerById, registerPlayers, teamById } from '../../game/mock';
+import { fromWireId } from '../../api';
 import { synthPlayer } from '../../game/starter';
 import { fenceAt, polarToField } from '../../game/field';
 import type { Cause, LineScore, MatchRecord, PitcherRole, Player, Pos, Weather } from '../../game/types';
@@ -23,7 +24,7 @@ function sideOf(snap: BattleSnap, key: string): Side {
   const toPlayer = (it: BattleItem, k: number): Player => {
     const pos: Pos = it.pos === 'SP' || it.pos === 'RP' || it.pos === 'CP' || it.pos === 'P' ? 'P' : (it.pos as Pos);
     const role: PitcherRole | undefined = it.pos === 'SP' ? 'SP' : it.pos === 'CP' ? 'CL' : pos === 'P' ? 'RP' : undefined;
-    const known = playerById(it.id);
+    const known = playerById(fromWireId(it.id));
     let p: Player;
     if (known && (!it.name || known.name === it.name)) p = known;
     else {

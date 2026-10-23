@@ -71,6 +71,9 @@ export const api = {
 export type PvpResult = 'W' | 'D' | 'L';
 /** 라인업 한 칸 — 이름 · 카드 연도(2자리) · 선수 구단은 다시 보기 이름표용 */
 export interface PvpLineupItem { id: string; pos: string; ovr: number; name?: string; y?: number; c?: string }
+/** 서버는 선수 번호에 영문 · 숫자 · _ · - 만 받는다(worker/src/pvp.ts ID_RE) — 실제 선수 번호의 '~'(k559b15~2024)는 '_' 로 바꿔 보내고, 받을 때 되돌린다 */
+export const toWireId = (id: string) => id.replace(/~/g, '_').slice(0, 24);
+export const fromWireId = (id: string) => id.replace(/_(\d{4})$/, '~$1');
 /** PUT /pvp/me — 대전 상대로 보일 내 구단 스냅샷 */
 export interface PvpSnapshot { club: string; teamName: string; power: number; ovr: number; lineup: PvpLineupItem[] }
 export interface PvpClub {

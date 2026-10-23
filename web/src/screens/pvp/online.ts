@@ -1,7 +1,7 @@
 // 실제 유저 대전 — 서버(Worker) 연결. 화면에 들어오면 내 구단 스냅샷을 올리고, 실제 감독 목록을 받는다.
 // 결과는 서버가 정한다(POST /pvp/battle). 연결이 끊기면 같은 요청 번호로 한 번 더 — 서버가 같은 결과를 돌려준다.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ApiError, api, newRequestId, type PvpBattleRes, type PvpClub, type PvpSnapshot, type PvpToday } from '../../api';
+import { ApiError, api, newRequestId, toWireId, type PvpBattleRes, type PvpClub, type PvpSnapshot, type PvpToday } from '../../api';
 import { useAuth } from '../../app/auth';
 import { isTeamId, serverClubId, teamById } from '../../game/mock';
 import { mySide } from './local-mock';
@@ -11,6 +11,8 @@ import { getSlot, initialLineup, store as lineupStore, unit } from '../lineup/ca
 export const clubTeam = (code: string) => (isTeamId(code) ? teamById(code) : teamById('dj'));
 
 /** 내 구단 · 라인업 스냅샷 — 구단은 앱 전체의 내 구단(ME.teamId = 구단 선택에서 고른 구단, 옛 구단이면 부활 구단) */
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(v)));
+
 export function mySnapshot(): PvpSnapshot {
   const side = mySide();
   const club = side.team.id;
@@ -19,7 +21,7 @@ export function mySnapshot(): PvpSnapshot {
   const item = (id: string | null, pos: string) => {
     if (!id) return null;
     const u = unit(id);
-    return { id: u.player.id, pos, ovr: u.card.ovr ?? u.player.ovr, name: u.player.name.slice(0, 16), ...(u.card.year != null ? { y: u.card.year % 100 } : {}), c: u.player.teamId };
+    return { id: toWireId(u.player.id), pos, ovr: clamp(u.card.ovr ?? u.player.ovr, 1, 120), name: u.player.name.slice(0, 16), ...(u.card.year != null ? { y: u.card.year % 100 } : {}), c: u.player.teamId };
   };
   const lineup = [
     ...st.order.map((slot) => item(st.field[slot], slot)),
@@ -30,8 +32,9 @@ export function mySnapshot(): PvpSnapshot {
   return {
     club: serverClubId(club), // 부활 구단(옛 구단)은 서버가 아는 자리 코드로 — 이름은 부활 구단 그대로
     teamName: clubTeam(club).name,
-    power: side.power,
-    ovr: side.ovr,
+    // 서버 범위(전력 0~6000 · 팀 종합 1~120) 안으로 — 보너스가 많이 붙은 팀은 120 을 넘을 수 있다
+    power: clamp(side.power, 0, 6000),
+    ovr: clamp(side.ovr, 1, 120),
     lineup,
   };
 }
