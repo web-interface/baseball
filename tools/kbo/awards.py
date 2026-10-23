@@ -113,9 +113,11 @@ def boxes_of_file(f):
     return out
 
 
-def collect(raw_dir, path_to_pid, log=print, cache_file=None):
+def collect(raw_dir, path_to_pid, log=print, cache_file=None, only=None):
     """→ {(kind, sub, year): [pid…]}  (sub = GG 포지션 / TH 부문 / None)
-    cache_file: 문서마다 뽑은 틀을 (파일 이름·크기) 열쇠로 적어 두는 로컬 파일 — 다시 돌릴 때 빠르게 (주소만 들어 있음)"""
+    cache_file: 문서마다 뽑은 틀을 (파일 이름·크기) 열쇠로 적어 두는 로컬 파일 — 다시 돌릴 때 빠르게 (주소만 들어 있음)
+    only: 이 pid 들의 문서만 읽는다 (수상 분류가 붙은 선수 — 수상자 문서에는 그 상의 역대 수상자 틀이 들어 있음).
+          입력(players.csv 분류)으로 정해지는 묶음이라 같은 입력 → 같은 결과."""
     import json
     cache = {}
     if cache_file and pathlib.Path(cache_file).exists():
@@ -125,6 +127,8 @@ def collect(raw_dir, path_to_pid, log=print, cache_file=None):
             cache = {}
     found = {}
     files = sorted(p for p in pathlib.Path(raw_dir).glob("*.html") if "__선수경력" not in p.name)
+    if only is not None:
+        files = [p for p in files if p.name.rsplit("__", 1)[-1][:-5] in only]
     fresh = 0
     for n, f in enumerate(files):
         key = f"{f.name}|{f.stat().st_size}"

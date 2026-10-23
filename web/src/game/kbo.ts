@@ -367,6 +367,25 @@ export function kboRoster(code: string, year: number): Player[] {
   rosterCache.set(key, out);
   return out;
 }
+const currentCache = new Map<string, Player[]>();
+/**
+ * 그 구단 '지금' 선수단 — 최근 세 시즌(upTo−2 ~ upTo) 안에 뛴 선수 중 마지막 시즌을 그 구단에서 보낸 사람, 그 마지막 시즌 보기로.
+ * (가장 최근 해 기록은 문서마다 덜 들어 있어서 한 해만 보면 구단마다 선수 수가 들쭉날쭉하다)
+ */
+export function currentRoster(code: string, upTo = 2026): Player[] {
+  const key = `${code}:${upTo}`;
+  const hit = currentCache.get(key);
+  if (hit) return hit;
+  const out: Player[] = [];
+  for (const p of persons.values()) {
+    let last: KSeason | undefined;
+    for (const s of p.seasons) if (s.year <= upTo && (!last || s.year > last.year)) last = s;
+    if (last && last.year >= upTo - 2 && last.code === code) { const v = viewPlayer(p.id, last.year); if (v) out.push(v); }
+  }
+  out.sort((a, b) => b.ovr - a.ovr || a.id.localeCompare(b.id));
+  currentCache.set(key, out);
+  return out;
+}
 /** 그 구단 기록이 있는 마지막 해 (≤ 기준 해) */
 export function lastYearOf(code: string, upTo = 2026): number | null {
   let best: number | null = null;

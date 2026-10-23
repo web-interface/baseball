@@ -527,7 +527,10 @@ def main():
     # ── 수상 (MVP · GG · TH)
     awards = {}
     if not args.no_awards:
-        awards = AW.collect(kbo / "raw", path_to_pid, log=log, cache_file=kbo.parent / "kbo_build" / "awards_cache.local.json")
+        # 수상 분류(MVP · 골든글러브 · 타이틀)가 붙은 선수 문서만 읽는다 — 그 문서들에 역대 수상자 틀이 모두 들어 있음
+        award_pids = {pid for pid, P in players.items() if re.search(r"(^|\|)(MVP|골든글러브|타이틀:)", P.get("tags") or "")}
+        awards = AW.collect(kbo / "raw", path_to_pid, log=log, cache_file=kbo.parent / "kbo_build" / "awards_cache.local.json", only=award_pids)
+        log(f"수상 틀: 수상 분류 선수 문서 {len(award_pids)}개에서 {len(awards)}개 (부문·연도)")
     award_rows = []   # (pid, year, kind, sub)
     seen_kind = set()
     for (kind, sub, y), pids in sorted(awards.items(), key=lambda kv: (kv[0][0], str(kv[0][1]), kv[0][2])):

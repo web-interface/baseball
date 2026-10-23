@@ -9,7 +9,7 @@
 import { CARDS, LINEUP, MY_CARD_IDS, PLAYERS, leagueIdsFor, teamById } from './mock';
 import { clubTitles } from './clubSeasons';
 import { ALL_CLUBS, eraOfCode } from './world';
-import { cardInst, kboRoster, lastYearOf, seasonCardOf } from './kbo';
+import { cardInst, currentRoster, kboRoster, seasonCardOf } from './kbo';
 import { LAST_REAL_SEASON, seasonRoster } from './history';
 import {
   BASE, BASE_YEARS, BAT_ORDER, PICKED, STARTER_TARGET, assembleLineup, hashStr, legacyBuildStarter, legacyDraftPool, legacyDraftYearOf,
@@ -98,9 +98,9 @@ function kboDraft(teamId: string): Player[] {
       }
     });
   } else {
-    const last = lastYearOf(code, LAST_REAL_SEASON) ?? LAST_REAL_SEASON;
-    // 유망주 — 종합 64~78 (엘리트·레어급 스타는 지명 후보에 넣지 않음)
-    const all = [last, last - 1, last - 2].flatMap((y) => kboRoster(code, y));
+    const last = LAST_REAL_SEASON;
+    // 지금 그 구단 선수(최근 세 시즌 중 마지막 시즌을 그 구단에서 보낸 사람) 중 유망주 — 종합 64~78 (엘리트·레어급 스타는 지명 후보에 넣지 않음)
+    const all = currentRoster(code, last);
     const cands = all.filter((p) => p.ovr >= 64 && p.ovr <= 78);
     DRAFT_TEMPLATE.forEach((t) => {
       const sc = (x: Player) => -Math.abs(x.ovr - t.ovr) - Math.max(0, x.age - 27) * 2 + (x.real!.year === last ? 1 : 0);
