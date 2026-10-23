@@ -179,7 +179,7 @@ export function SwapSheet({ slot, st, ev, onClose, onApply }: SwapSheetProps) {
             </li>
           );
         })}
-        {!list.length && <li className={s.emptyList}>넣을 수 있는 선수가 없어요. 영입에서 데려와요.</li>}
+        {!list.length && <li className={s.emptyList}>넣을 수 있는 선수가 없어요. 카드구매 · 스카우터에서 데려오면 보관함에 들어와 여기 후보로 나와요.</li>}
       </ul>
       {list.some((c) => c.ev.exploded && !ev.exploded) && (
         <p className={s.note}>왕조 — 엔트리 20명이 모두 한 구단·한 연도면 전원 능력치 폭발 (단계 가치 +{BOOM})</p>

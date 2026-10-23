@@ -3,7 +3,8 @@
 // 중복 카드는 당연히 나온다(강화·각성 재료). 막는 건 '한 번 산 팩을 두 번 처리하는 것' — requestId 로 한 번만.
 
 import { useSyncExternalStore } from 'react';
-import { CARDS, ME, MY_CARD_IDS, PACKS, PLAYERS, teamByCode } from '../../game/mock';
+import { CARDS, PACKS, PLAYERS, teamByCode } from '../../game/mock';
+import { addCards, useForRoulette, useInventory } from '../../game/inventory';
 import { GRADES } from '../../game/grades';
 import { spend, useWallet } from '../../game/wallet';
 import { PITCH_KO, POS_KO } from '../../game/labels';
@@ -84,29 +85,21 @@ export function oddsFor(pack: Pack, pick?: Pick | null): OddsView {
 /** 30장 중 1장 이상 나올 확률 */
 export const atLeastOne = (pct: number, n = 30) => 1 - Math.pow(1 - pct / 100, n);
 
-/* ───────── 내 상태 (목업 서버) — 천장 · 보관함 · 쓴 재화 ───────── */
-const cardKey = (playerId: string, grade: GradeId, year?: number) => `${playerId}|${grade}|${year ?? ''}`;
-
+/* ───────── 내 상태 (목업 서버) — 천장 · 쓴 재화. 받은 카드는 보유 카드 저장소(game/inventory)로 바로 들어간다 ───────── */
 const state = {
   pity: Object.fromEntries(PACKS.map((p) => [p.id, p.pity.count])) as Record<string, number>,
-  owned: new Map<string, number>(),
   spent: { gp: 0, ball: 0 },
   pulls: 0,
   version: 0,
   lastResult: null as PullResult | null,
-  /** 이번에 받은 카드 — 조합(룰렛) 재료 후보 */
-  pulled: [] as PulledCard[],
 };
-for (const id of MY_CARD_IDS) {
-  const c = CARDS.find((x) => x.id === id);
-  if (c) state.owned.set(cardKey(c.playerId, c.grade, c.year), 1 + c.dup);
-}
 
 const listeners = new Set<() => void>();
 const bump = () => { state.version++; listeners.forEach((l) => l()); };
 
 export function useGacha() {
   useSyncExternalStore((l) => { listeners.add(l); return () => { listeners.delete(l); }; }, () => state.version);
+  useInventory();
   const wallet = useWallet();
   return {
     pityOf: (packId: string) => state.pity[packId] ?? 0,
@@ -114,9 +107,6 @@ export function useGacha() {
     lastResult: state.lastResult,
   };
 }
-
-/** 보관함에 몇 장 있나 (중복 포함) */
-export const ownedCount = (playerId: string, grade: GradeId, year?: number) => state.owned.get(cardKey(playerId, grade, year)) ?? 0;
 
 /* ───────── 결과 ───────── */
 export interface PulledCard {
@@ -128,6 +118,8 @@ export interface PulledCard {
   /** 이 카드를 받기 전 이미 가진 장수 (중복이면 1 이상) */
   had: number;
   tier: 0 | 1 | 2 | 3;
+  /** 이 장으로 같은 카드 수량이 차서 자동 강화됐으면 (VI → VII) */
+  up?: { from: number; to: number } | null;
 }
 
 export interface PullResult {
@@ -142,6 +134,8 @@ export interface PullResult {
   counts: { grade: GradeId; n: number }[];
   fresh: number;
   dups: number;
+  /** 이번 팩으로 자동 강화된 카드 */
+  ups: { card: CardInst; player: Player; from: number; to: number }[];
   price: { gp?: number; ball?: number };
 }
 
@@ -271,14 +265,17 @@ function makePulled(requestId: string, slot: number, g: GradeId, p: Player, year
   return { card, player: p, slot, isNew: true, had: 0, tier: tierOf(g) };
 }
 
-/** 보관함에 넣기 — 이미 있으면 중복 */
-function receive(c: PulledCard) {
-  const k = cardKey(c.card.playerId, c.card.grade, c.card.year);
-  const had = state.owned.get(k) ?? 0;
-  c.had = had;
-  c.isNew = had === 0;
-  c.card.isNew = c.isNew;
-  state.owned.set(k, had + 1);
+/** 보관함에 넣기 (한 번에 저장) — 같은 카드면 중복 → 수량이 차면 자동 강화. 카드 id 는 보관함 id 로 바뀐다 */
+function receive(list: PulledCard[]) {
+  const res = addCards(list.map((c) => c.card));
+  list.forEach((c, i) => {
+    const r = res[i];
+    if (!r) return;
+    c.card = { ...c.card, id: r.id, isNew: r.isNew };
+    c.had = r.had;
+    c.isNew = r.isNew;
+    c.up = r.up;
+  });
 }
 
 /** 가장 좋은 카드 순서 — 귀함 → 종합 */
@@ -323,7 +320,7 @@ export function pullPack(pack: Pack, pick: Pick | null, opt: { seed?: string; fo
   state.pity[pack.id] = after;
 
   // 중복 — 보관함과 이 팩 안에서 앞서 나온 카드 기준
-  for (const c of cards) receive(c);
+  receive(cards);
 
   const best = forced >= 0 ? forced : [...cards].sort(better).pop()!.slot;
   const countMap = new Map<GradeId, number>();
@@ -340,10 +337,10 @@ export function pullPack(pack: Pack, pick: Pick | null, opt: { seed?: string; fo
     counts,
     fresh: cards.filter((c) => c.isNew).length,
     dups: cards.filter((c) => !c.isNew).length,
+    ups: cards.filter((c) => c.up).map((c) => ({ card: c.card, player: c.player, from: c.up!.from, to: c.up!.to })),
     price: pack.price,
   };
   state.lastResult = res;
-  state.pulled = [...state.pulled, ...cards];
   bump();
   return res;
 }
@@ -351,11 +348,12 @@ export function pullPack(pack: Pack, pick: Pick | null, opt: { seed?: string; fo
 /* ───────── 카드 조합(룰렛) — 안 쓰는 카드 n장 → 새 카드 1장. 칸 크기 = 확률 (요구 39) ───────── */
 export interface ComboSlot { grade: GradeId; pct: number; label: string }
 
-/** 이번에 받은 카드 (조합 재료 후보) */
-export const sessionCards = () => state.pulled;
-
-/** 조합 돌리기 (목업 서버) — 재료를 쓰고 결과 칸·카드를 정한다. 바늘은 이 결과를 따라갈 뿐 */
-export function rollCombo(slots: ComboSlot[], used: string[], seed?: string): { slot: number; result: PulledCard } {
+/**
+ * 조합 돌리기 (목업 서버) — 재료(보관함 카드 id → 장수)를 빼고 결과 칸·카드를 정해 보관함에 넣는다. 바늘은 이 결과를 따라갈 뿐.
+ * 재료가 모자라거나 보호 카드(라인업 마지막 1장 · 강화한 카드 마지막 1장 · 특별 선수)면 null.
+ */
+export function rollCombo(slots: ComboSlot[], use: Record<string, number>, seed?: string): { slot: number; result: PulledCard } | null {
+  if (!useForRoulette(use)) return null;
   state.pulls += 1;
   const requestId = `combo-${Date.now().toString(36)}-${state.pulls}`;
   const r = rng(seed ?? requestId);
@@ -364,8 +362,7 @@ export function rollCombo(slots: ComboSlot[], used: string[], seed?: string): { 
   const g = hitSlot.grade;
   const p = choosePlayer(poolFor(null, g), g, r);
   const res = makePulled(requestId, 0, g, p, yearFor(g, null, r), r);
-  receive(res);
-  state.pulled = state.pulled.filter((c) => !used.includes(c.card.id));
+  receive([res]);
   bump();
   return { slot: k, result: res };
 }

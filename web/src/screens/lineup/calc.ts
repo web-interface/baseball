@@ -13,7 +13,8 @@ import { ME, teamByCode, teamById } from '../../game/mock';
 import { DYNASTY_V, computeSets, faceBonus, sideLine, type EntryMember, type SetProgress } from '../../game/sets';
 import { fullYear } from '../../game/clubSeasons';
 import { yearTag } from '../../ui/format';
-import { OWNED, getCard, getPlayer, startLayout } from './local-mock';
+import { getCard, getPlayer, owned, startLayout } from './local-mock';
+import { invVersion, loadLineup, saveLineup } from '../../game/inventory';
 
 /* ───────── 자리 ───────── */
 export type BatSlot = 'C' | '1B' | '2B' | '3B' | 'SS' | 'LF' | 'CF' | 'RF' | 'DH';
@@ -50,7 +51,12 @@ export interface LineupState {
   bench: string[];
 }
 
+/** 처음 라인업 — 기본 선수단 배치를 지금 보유 카드에 맞춰서 */
 export function initialLineup(): LineupState {
+  return sanitize(startState()) ?? startState();
+}
+
+function startState(): LineupState {
   const field = Object.fromEntries(BAT_SLOTS.map((s) => [s, null])) as Record<BatSlot, string | null>;
   const START = startLayout();
   START.batting.forEach((b) => { field[b.pos as BatSlot] = b.cardId; });
@@ -92,7 +98,7 @@ export function boxOf(st: LineupState) {
   const used = new Set<string>(st.bench);
   BAT_SLOTS.forEach((s) => st.field[s] && used.add(st.field[s]!));
   STAFF_SLOTS.forEach((s) => { const id = getSlot(st, s); if (id) used.add(id); });
-  return OWNED.filter((id) => !used.has(id));
+  return owned().filter((id) => !used.has(id));
 }
 
 /**
@@ -127,7 +133,11 @@ export function swapOrder(st: LineupState, i: number, j: number): LineupState {
 /* ───────── 카드 · 선수 묶음 ───────── */
 export interface Unit { id: string; card: CardInst; player: Player; team: Team }
 const unitCache = new Map<string, Unit>();
+let unitVer = -1;
 export function unit(id: string): Unit {
+  // 보유 카드가 바뀌면(강화 · 레벨) 다시 만든다
+  const v = invVersion();
+  if (v !== unitVer) { unitCache.clear(); unitVer = v; }
   let u = unitCache.get(id);
   if (!u) {
     const card = getCard(id)!;
@@ -523,6 +533,50 @@ export function autoLineup(st: LineupState): LineupState {
   return cur;
 }
 
-/** 저장 (이 탭이 열려 있는 동안 — 서버 저장은 다음 단계) */
-let saved: LineupState | null = null;
-export const store = { get: () => saved, set: (s: LineupState) => { saved = s; }, clear: () => { saved = null; } };
+/* ───────── 저장 — 보유 카드 저장소(game/inventory)에 같이 둔다: 새로고침해도 유지 ───────── */
+const isStr = (x: unknown): x is string => typeof x === 'string';
+/**
+ * 라인업을 지금 보유 카드에 맞춘다 — 형식이 틀리면 null(처음 라인업으로).
+ * 없는 카드 · 같은 카드가 두 자리에 있으면 빼고, 빈 타자 자리는 벤치 타자로만 채운다(보관함 카드는 자동으로 넣지 않는다).
+ * 새로 얻은 카드(카드구매 · 조합 · 스카우터)는 보관함으로만 가고, 라인업은 감독이 바꿀 때(교체 시트 · 자동 편성 버튼)만 바뀐다.
+ * (라인업 카드는 조합 재료로 마지막 1장을 쓸 수 없게 막혀 있어 보통은 그대로 지나간다)
+ */
+export function sanitize(raw: LineupState | null | undefined): LineupState | null {
+  if (!raw || typeof raw !== 'object' || !raw.field || typeof raw.field !== 'object' || !Array.isArray(raw.order)) return null;
+  const have = new Set(owned());
+  const seen = new Set<string>();
+  const ok = (id: unknown): string | null => {
+    if (!isStr(id) || !have.has(id) || seen.has(id)) return null;
+    seen.add(id);
+    return id;
+  };
+  const field = Object.fromEntries(BAT_SLOTS.map((s) => [s, ok(raw.field[s])])) as Record<BatSlot, string | null>;
+  const order = raw.order.length === 9 && BAT_SLOTS.every((s) => raw.order.includes(s)) ? [...raw.order] : [...BAT_SLOTS];
+  const five = (xs: unknown) => Array.from({ length: 5 }, (_, i) => ok(Array.isArray(xs) ? xs[i] : null));
+  const rotation = five(raw.rotation);
+  const bullpen = five(raw.bullpen);
+  const closer = ok(raw.closer);
+  const bench = (Array.isArray(raw.bench) ? raw.bench : []).map(ok).filter(isStr);
+  let st: LineupState = { field, order, rotation, bullpen, closer, bench };
+  for (const s of BAT_SLOTS) {
+    if (st.field[s]) continue;
+    const cur = st;
+    const pick = cur.bench.find((id) => unit(id).player.pos !== 'P' && !playerBusy(cur, s, unit(id).player.id));
+    if (pick) st = place(st, s, pick);
+  }
+  return st;
+}
+let cache: { v: number; raw: LineupState | null; st: LineupState | null } | null = null;
+export const store = {
+  /** 저장된 라인업 (보유 카드에 맞춘 것) — 없으면 null */
+  get: (): LineupState | null => {
+    const v = invVersion();
+    const raw = loadLineup();
+    if (cache && cache.v === v && cache.raw === raw) return cache.st;
+    const st = sanitize(raw);
+    cache = { v, raw, st };
+    return st;
+  },
+  set: (s: LineupState) => { saveLineup(s); },
+  clear: () => { saveLineup(null); },
+};

@@ -13,6 +13,7 @@ import type { Player } from '../../game/types';
 import { AI_LEVELS, DRAFT_GRADE, RECOMMENDED, buildSpecial, draftPool, draftYearOf, revivalSlot, specialSignature } from './local-mock';
 import { resetStarter } from '../../game/starter';
 import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
+import { mergeStarter, resetInventory } from '../../game/inventory';
 import { clearSeason, getSeason, setNextNotice } from '../../season/store';
 import type { StepProps } from './index';
 import s from './cs.module.css';
@@ -31,7 +32,7 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
   const ovr = useMemo(() => {
     try { localStorage.setItem('bb.special', JSON.stringify(special)); } catch { /* 이번 방문만 */ }
     resetStarter();
-    lineupStore.clear();
+    // 미리 계산만 — 저장된 라인업 · 보유 카드는 '개막'을 눌러야 바뀐다
     return evaluate(initialLineup()).overall;
   }, [special, st.picks, st.club]);
 
@@ -43,6 +44,8 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
     try { localStorage.setItem('bb.special', JSON.stringify(special)); } catch { /* 이번 방문만 */ }
     resetStarter();
     lineupStore.clear();
+    // 보유 카드 — 구단이 바뀌면 이 구단의 처음 선수단으로, 같은 구단이면 모은 카드는 두고 새 지명 · 특별 선수 카드만 더한다
+    if (switching) resetInventory(); else mergeStarter();
     if (switching) {
       // 고른 구단이 앱 전체의 내 구단(ME.teamId)이 되게 — 시즌 진행을 지우고 화면을 다시 불러
       // 내 구단 · 순위표 · 일정 · 라인업 · 구단 색을 새 구단(부활 구단이면 바뀐 리그 구성)으로 맞춘다

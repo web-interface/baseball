@@ -10,6 +10,8 @@ import { PlayerArt } from '../../art/PlayerArt';
 import { GRADES } from '../../game/grades';
 import { POS_KO, ROLE_KO } from '../../game/labels';
 import { ME, SCOUT_SHOP, cardById, myTeam, playerOfCard, teamById } from '../../game/mock';
+import { needFor, ownedCount, entryOf, ENH_STEPS } from '../../game/inventory';
+import { roman } from '../../ui/format';
 import type { CardInst, Player } from '../../game/types';
 import { Button, CoinGP, GoldenBall, Icon, Sheet, fmt, useToast } from '../../ui';
 import { avg as fAvg, era as fEra, yearTag } from '../../ui/format';
@@ -65,11 +67,14 @@ export default function ShopScreen(_: ScreenProps) {
     const c = cardById(confirm.cardId);
     const p = c ? playerOfCard(c) : null;
     const cost = { gp: confirm.price.gp, ball: confirm.price.ball };
-    if (readWallet().gp >= (cost.gp ?? 0) && readWallet().ball >= (cost.ball ?? 0) && buy(confirm.id) && p) {
+    const enough = readWallet().gp >= (cost.gp ?? 0) && readWallet().ball >= (cost.ball ?? 0);
+    const got = enough && p ? buy(confirm.id) : null;
+    if (got && p) {
       spend(cost);
-      toast({ text: `${p.name}${hasJong(p.name) ? '을' : '를'} 데려왔어요. 보관함에 넣었어요.`, tone: 'good', action: { label: '라인업', onClick: () => navigate('/lineup') } });
+      const what = got.up ? `같은 카드가 모여 강화 +1 (${got.up.from > 0 ? roman(got.up.from) : '0'} → ${roman(got.up.to)})` : got.isNew ? '보관함에 넣었어요' : `같은 카드 ${got.had + 1}장째예요`;
+      toast({ text: `${p.name}${hasJong(p.name) ? '을' : '를'} 데려왔어요. ${what}.`, tone: 'good', action: { label: '라인업에 넣기', onClick: () => navigate(`/lineup?bench=${got.id}`) } });
     } else {
-      toast({ text: '오늘은 더 데려올 수 없어요.', tone: 'bad' });
+      toast({ text: enough ? '오늘은 더 데려올 수 없어요.' : '재화가 모자라요.', tone: 'bad' });
     }
     setConfirm(null);
   };
@@ -113,13 +118,14 @@ export default function ShopScreen(_: ScreenProps) {
           const p = playerOfCard(c);
           const t = teamById(p.teamId);
           const mine = shop.isMine(it.id);
-          const blocked = !mine && shop.left === 0;
+          const taken = shop.isTaken(it.id);
+          const blocked = !mine && (taken || shop.left === 0);
           const stats = statLine(p);
           return (
             <li key={it.id} className={[s.item, mine && s.mine, blocked && s.blocked].filter(Boolean).join(' ')}>
               <span className={['num', s.no].join(' ')}>{String(n + 1).padStart(2, '0')}</span>
               <button type="button" className={s.cardBtn} onClick={() => navigate(`/player/${p.id}`)} aria-label={`${p.name} 선수 정보`}>
-                <CardMini player={p} grade={c.grade} enhance={c.enhance} style={{ width: '100%' }} />
+                <CardMini player={p} grade={c.grade} enhance={0} style={{ width: '100%' }} />
               </button>
               <div className={s.body}>
                 <div className={s.top}>
@@ -144,7 +150,7 @@ export default function ShopScreen(_: ScreenProps) {
                     <span className={s.mineTag}>오늘 데려옴</span>
                   ) : (
                     <Button size="s" variant={blocked ? 'secondary' : 'primary'} disabled={blocked} onClick={() => setConfirm(it)}>
-                      {blocked ? '내일 다시' : '데려오기'}
+                      {taken ? '먼저 데려감' : blocked ? '내일 다시' : '데려오기'}
                     </Button>
                   )}
                 </div>
@@ -177,6 +183,17 @@ export default function ShopScreen(_: ScreenProps) {
   );
 }
 
+/** 이미 가진 같은 카드 — 데려오면 몇 장이 되고, 수량이 차면 자동 강화 */
+function dupLine(cardId: string) {
+  const n = ownedCount(cardId);
+  if (n <= 0) return '처음 데려와요';
+  const e = entryOf(cardId)!;
+  const c = cardById(cardId)!;
+  const st = ENH_STEPS[e.enh];
+  if (st?.auto && n >= needFor(c.grade, st.stage)) return <>{n}장 → 강화 <b className="num">{roman(st.stage)}</b> 자동</>;
+  return <><span className="num">{n}</span>장 → <span className="num">{n + 1}</span>장</>;
+}
+
 function ConfirmBody({ item, wallet }: { item: ShelfItem; wallet: { gp: number; ball: number } }) {
   const c = cardById(item.cardId)!;
   const p = playerOfCard(c);
@@ -185,12 +202,13 @@ function ConfirmBody({ item, wallet }: { item: ShelfItem; wallet: { gp: number; 
   const cost = item.price.ball ?? item.price.gp ?? 0;
   return (
     <div className={s.confirm}>
-      <Card {...{ player: p, grade: c.grade, year: c.year, level: c.level, enhance: c.enhance, signaturePitch: c.signaturePitch ?? null, award: c.award }} size="m" />
+      <Card {...{ player: p, grade: c.grade, year: c.year, level: c.level, enhance: 0, signaturePitch: c.signaturePitch ?? null, award: c.award }} size="m" />
       <dl className={s.confirmDl}>
         <div><dt>가격</dt><dd><Price price={item.price} big /></dd></div>
         {item.market && <div><dt>시세</dt><dd className="num">{fmt.int(item.market)}</dd></div>}
         <div><dt>보유</dt><dd className="num">{fmt.int(have)}</dd></div>
         <div><dt>산 뒤</dt><dd className="num">{fmt.int(have - cost)}</dd></div>
+        <div><dt>같은 카드</dt><dd>{dupLine(c.id)}</dd></div>
       </dl>
     </div>
   );

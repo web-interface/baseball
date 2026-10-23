@@ -18,8 +18,9 @@ import { RecordPanel } from './RecordPanel';
 import { GearPanel, type GearState } from './GearPanel';
 import { EnhancePanel, EnhanceResultSheet, type EnhanceResult, type MatPick } from './EnhancePanel';
 import {
-  chanceAfter, defaultPlaystyle, enhTable, gearBonus, gearOf, initialFails, isMine, materialsFor, resolvePlayer, rollEnhance, slotsFor,
+  chanceAfter, defaultPlaystyle, enhTable, gearBonus, gearOf, isMine, materialsFor, resolvePlayer, slotsFor,
 } from './local-mock';
+import { entryOf, inLineup, setPlaystyle, tryEnhance, useInventory } from '../../game/inventory';
 import s from './player.module.css';
 
 type Tab = 'attr' | 'record' | 'gear' | 'enhance';
@@ -28,13 +29,14 @@ const TAB_IDS: Tab[] = ['attr', 'record', 'gear', 'enhance'];
 
 export default function PlayerScreen({ params, query }: ScreenProps) {
   const cardQ = query.get('card');
-  const res = useMemo(() => resolvePlayer(params.id, cardQ), [params.id, cardQ]);
+  const ver = useInventory();
+  const res = useMemo(() => resolvePlayer(params.id, cardQ), [params.id, cardQ, ver]); // eslint-disable-line react-hooks/exhaustive-deps
   const t = query.get('tab');
   const initTab: Tab = TAB_IDS.includes(t as Tab) ? (t as Tab) : 'attr';
   return <PlayerView key={res.player.id} {...res} initTab={initTab} />;
 }
 
-interface Prog { enh: number; fails: number; tries: number; ps: string | null; level: number }
+interface Prog { enh: number; fails: number; ps: string | null; level: number }
 
 function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: Player; cards: CardInst[]; mine: CardInst[]; card: CardInst; owned: boolean; initTab: Tab }) {
   const team = teamById(p.teamId);
@@ -42,31 +44,28 @@ function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: 
   useScreenTitle(p.name, `${team.name} · No.${p.number}`);
   const [tab, setTabState] = useState<Tab>(owned ? initTab : initTab === 'record' ? 'record' : 'attr');
   const [scale, setScale] = useState<Scale>('fm');
-  const [prog, setProg] = useState<Record<string, Prog>>({});
   const [gears, setGears] = useState<Record<string, GearState>>({});
   const [picks, setPicks] = useState<Record<string, MatPick | null>>({});
-  const [used, setUsed] = useState<Record<string, number>>({});
   const [spent, setSpent] = useState(0);
   const [result, setResult] = useState<EnhanceResult | null>(null);
   const [stuck, setStuck] = useState(false);
   const sentinel = useRef<HTMLDivElement>(null);
 
-  const cur: Prog = prog[card.id] ?? { enh: card.enhance, fails: initialFails(card), tries: 0, ps: card.enhance >= 5 ? defaultPlaystyle(p) : null, level: card.level };
+  // 강화 · 실패 보정 · 플레이스타일 · 레벨은 보유 카드 저장소에서 (새로고침해도 그대로)
+  const ent = entryOf(card.id);
+  const cur: Prog = { enh: ent?.enh ?? card.enhance, fails: ent?.fail ?? 0, ps: ent?.ps ?? ((ent?.enh ?? card.enhance) >= 5 ? defaultPlaystyle(p) : null), level: ent?.lv ?? card.level };
   const gear: GearState = gears[card.id] ?? gearOf(card, p);
   const gb = useMemo(() => gearBonus(p, gear.equipped), [p, gear]);
   const slots = slotsFor(p);
   const worn = slots.filter((d) => gear.equipped[d.slot]).length;
 
-  // 재료 — 쓴 만큼 뺀다
+  // 재료 — 같은 카드의 남는 장 (보유 카드 저장소)
   const mats = useMemo(() => {
     const m = materialsFor(card);
-    return {
-      cards: m.cards.map((x) => ({ ...x, count: Math.max(0, x.count - (used[x.card.id] ?? 0)) })),
-      ticket: { id: m.ticket.id, ko: m.ticket.ko, have: Math.max(0, m.ticket.have - (used['t:' + m.ticket.id] ?? 0)) },
-    };
-  }, [card, used]);
+    return { cards: m.cards, ticket: { id: m.ticket.id, ko: m.ticket.ko, have: m.ticket.have } };
+  }, [card, ent?.n]); // eslint-disable-line react-hooks/exhaustive-deps
   const step = enhTable(card.grade)[cur.enh];
-  const need = step ? parseInt(step.mat, 10) : 0;
+  const need = step ? step.need : 0;
   const autoPick: MatPick | null = (() => {
     const c = mats.cards.find((x) => x.count >= need);
     if (c) return { kind: 'card', id: c.card.id };
@@ -107,20 +106,23 @@ function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: 
     navigate(`/player/${p.id}?card=${id}${tabQ}`, { replace: true });
   };
 
-  const patchProg = (patch: Partial<Prog>) => setProg((x) => ({ ...x, [card.id]: { ...cur, ...patch } }));
+  const patchProg = (patch: Partial<Prog>) => { if ('ps' in patch) setPlaystyle(card.id, patch.ps ?? null); };
+  const have = mats.cards[0]?.count ?? 0;
 
+  /** 강화 — I~V 는 같은 카드가 모이면 자동(여기서는 남은 장수 안내), VI~X 는 같은 카드 1장 + GP 로 도전 */
   const attempt = () => {
     if (!step) return;
-    const pk = pickNow;
-    if (!pk) { toast({ text: '재료가 모자라요. 같은 선수 카드나 강화권이 필요해요', tone: 'bad' }); return; }
-    const ok = rollEnhance(card.id, step.stage, cur.tries, chance);
-    const key = pk.kind === 'card' ? pk.id : 't:' + pk.id;
-    setUsed((u) => ({ ...u, [key]: (u[key] ?? 0) + need }));
-    setSpent((x) => x + step.gp);
-    const matLabel = pk.kind === 'ticket' ? `${mats.ticket.ko} ${need}장` : `같은 선수 카드 ${need}장`;
-    if (ok) patchProg({ enh: cur.enh + 1, fails: 0, tries: cur.tries + 1, ps: cur.ps });
-    else patchProg({ fails: cur.fails + 1, tries: cur.tries + 1 });
-    setResult({ ok, stage: step.stage, chance, nextChance: ok ? null : chanceAfter(step.base, cur.fails + 1), gain: step.gain, gp: step.gp, mat: matLabel });
+    if (step.auto) {
+      toast({ text: `같은 카드가 ${need}장 모이면 ${fmt.roman(step.stage)} 로 자동으로 올라요 · 지금 ${have}/${need}장`, tone: 'info', action: { label: '카드구매', onClick: () => navigate('/gacha') } });
+      return;
+    }
+    const r = tryEnhance(card.id);
+    if (!r.ok) {
+      toast({ text: r.why === 'gp' ? 'GP 가 모자라요' : r.why === 'material' ? `같은 카드가 ${r.need}장 더 필요해요 · 지금 ${r.have}장` : '강화할 수 없는 카드예요', tone: 'bad' });
+      return;
+    }
+    setSpent((x) => x + r.gp);
+    setResult({ ok: r.success, stage: r.stage, chance: r.chance, nextChance: r.nextChance, gain: r.gain, gp: r.gp, mat: `같은 카드 ${need}장` });
   };
 
   const onKpi = (k: 'level' | 'enhance' | 'potential') => {
@@ -140,6 +142,12 @@ function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: 
         enh={cur.enh} fails={cur.fails} level={cur.level}
         onPickCard={pickCard} onKpi={onKpi}
       />
+      {owned && !inLineup(card.id) && (
+        <p className={s.fogNote}>
+          <b>보관함에 있는 카드예요.</b> 라인업 선수와 바꾸려면{' '}
+          <Button variant="ghost" size="s" onClick={() => navigate(`/lineup?bench=${card.id}`)}>라인업에 넣기</Button>
+        </p>
+      )}
       {!owned && (
         <p className={s.fogNote}>
           <b>내 카드가 아니에요.</b> 능력치는 스카우트가 본 범위로 보여요. 상점·영입에서 데려오면 강화·장비를 쓸 수 있어요.
@@ -184,7 +192,11 @@ function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: 
           {tab === 'gear'
             ? <Button variant="secondary" className={s.ctaSide} onClick={() => setTab('attr')}>능력치</Button>
             : <Button variant="secondary" className={s.ctaSide} icon="glove" onClick={() => setTab('gear')} trailing={<span>{worn}/{slots.length}</span>}>장비</Button>}
-          {step ? (
+          {step && step.auto ? (
+            <Button variant={tab === 'enhance' ? 'secondary' : 'primary'} className={s.ctaMain} onClick={() => (tab === 'enhance' ? attempt() : setTab('enhance'))} trailing={<span className="num">{have}/{need}</span>}>
+              {fmt.roman(step.stage)} 자동 강화까지
+            </Button>
+          ) : step ? (
             <Button className={s.ctaMain} onClick={() => (tab === 'enhance' ? attempt() : setTab('enhance'))} trailing={<span>{chance}%</span>}>
               {fmt.roman(step.stage)} 강화{tab === 'enhance' ? ' 도전' : ''}
             </Button>

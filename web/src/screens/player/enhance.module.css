@@ -122,3 +122,11 @@
 :global([data-theme='classic']) .stampOk { background: var(--club); color: var(--club-ink); box-shadow: 0 0 0 1px var(--line-3), 0 0 0 5px var(--bg), 0 0 0 6px var(--line-2); }
 :global([data-theme='classic']) .lvBar i { background: var(--club); }
 :global([data-theme='classic']) .ticket { border-radius: 0; }
+
+/* I~V — 같은 카드가 모이면 자동 */
+.autoBox { display: grid; gap: 8px; margin-top: 12px; }
+.autoHead { font-size: 14px; color: var(--fg-2); }
+.autoHead b { font-size: 22px; color: var(--fg); }
+.autoBar { position: relative; height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+.autoBar i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
+:global([data-theme='classic']) .autoBar i { background: var(--club); }

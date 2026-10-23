@@ -12,7 +12,7 @@ import { teamById } from '../../game/mock';
 import type { GradeId, Player, Team } from '../../game/types';
 import { PlayerArt } from '../../art/PlayerArt';
 import { Button, Emblem, Icon } from '../../ui';
-import { avg as fAvg, era as fEra, yearTag } from '../../ui/format';
+import { avg as fAvg, era as fEra, roman, yearTag } from '../../ui/format';
 import { PAPER, eraOf } from './local-mock';
 import type { Pick, PulledCard } from './draw';
 import { Swatch } from './bits';
@@ -191,7 +191,7 @@ export function Reveal({ pc, pick, onDone }: { pc: PulledCard; pick: Pick | null
             {posOf(p)} · {team.name}
             {pc.card.signaturePitch && <> · <span className={s.sig} style={{ ['--sig' as string]: pc.card.signaturePitch.color }}>{pc.card.signaturePitch.name}</span></>}
           </p>
-          <p className={pc.isNew ? s.isNew : s.isDup}>{pc.isNew ? '새 카드 · 보관함에 넣었어요' : '중복 +1 · 강화 재료'}</p>
+          <p className={pc.isNew ? s.isNew : s.isDup}>{pc.isNew ? '새 카드 · 보관함에 넣었어요' : pc.up ? `같은 카드가 모여 강화 +1 (${pc.up.from > 0 ? roman(pc.up.from) : '0'} → ${roman(pc.up.to)})` : '중복 +1 · 강화 재료'}</p>
           <Button variant="primary" size="l" block onClick={onDone} className={s.next} autoFocus>계속</Button>
         </div>
       )}

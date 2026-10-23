@@ -3,6 +3,7 @@ import { Component, Suspense, useEffect, useLayoutEffect, useRef, useState, type
 import { IconButton, TopBar, Emblem, useToast } from '../ui';
 import { myTeam } from '../game/mock';
 import { takeNotice, teamLine, useSeason } from '../season/store';
+import { takeInvNotice } from '../game/inventory';
 import { useWallet } from '../game/wallet';
 import { useTitleOverride } from './title';
 import { record } from '../ui/format';
@@ -24,6 +25,9 @@ export function Shell({ route, preview, children }: { route: RouteDef | null; pr
   useEffect(() => {
     const n = takeNotice();
     if (n) toast({ text: n, tone: 'info', duration: 7000 });
+    // 보유 카드 저장이 깨져 처음 선수단으로 다시 시작했으면
+    const inv = takeInvNotice();
+    if (inv) window.setTimeout(() => toast({ text: inv, tone: 'info', duration: 7000 }), n ? 7200 : 0);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const lead = (

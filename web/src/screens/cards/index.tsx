@@ -1,6 +1,9 @@
 // 카드 보관함 — 담당: 카드 디자이너 (이 폴더 + src/cards)
 //   #/cards            내 선수 카드 — 등급·포지션·구단 거르기, 정렬, 격자(3열·2열), 같은 카드 겹침, 누르면 크게(앞·뒤)
 //   #/cards?gallery=1  등급 갤러리 — 11등급 + 특별 선수 한 화면 (실제 카드 / 같은 선수로 패럴렐 비교)
+//   #/enhance          강화 — 같은 목록을 강화 단계순으로 + 카드마다 '다음 단계까지 n장' 진행 · 단계별 필요 수량 표
+//   보유 카드는 모두 보유 카드 저장소(game/inventory)에서 — 카드구매 · 조합 · 스카우터로 얻은 카드가 바로 보이고,
+//   같은 카드가 필요 수량만큼 모이면 자동으로 강화된다(최근 강화 줄에 'II → III').
 import { useCallback, useMemo, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { Link, navigate } from '../../app/router';
@@ -10,7 +13,10 @@ import { Button, Emblem, Icon, Sheet, Tabs } from '../../ui';
 import { avg as fmtAvg, level as fmtLevel, roman, yearTag } from '../../ui/format';
 import { GRADES } from '../../game/grades';
 import { POS_KO, ROLE_KO } from '../../game/labels';
-import { CARDS, ME, MY_CARD_IDS, TEAMS, playerById, playerOfCard, teamById } from '../../game/mock';
+import { CARDS, ME, TEAMS, cardById, playerById, playerOfCard, teamById } from '../../game/mock';
+import {
+  ENH_AUTO_MAX, ENH_STEPS, MAT_CLASS_KO, entryOf, inLineup, isOwned, nextStep, ownedCard, ownedIds, recentEnh, stats as invStats, useInventory, type MatClass,
+} from '../../game/inventory';
 import type { CardInst, GradeId, Player } from '../../game/types';
 import s from './Cards.module.css';
 
@@ -60,17 +66,22 @@ function saveCols(n: 2 | 3) {
 //   주소로 바로: ?open=c01 (그 카드 크게) · &back=1 (뒷면부터) · ?cols=2 (한 줄 2장) · ?gallery=1&same=1
 export default function CardsScreen({ query }: ScreenProps) {
   if (query.get('gallery') === '1') return <Gallery same={query.get('same') === '1'} />;
-  return <Collection openId={query.get('open')} openBack={query.get('back') === '1'} colsParam={query.get('cols')} sortParam={query.get('sort')} />;
+  const enhance = query.get('mode') === 'enhance';
+  return <Collection openId={query.get('open')} openBack={query.get('back') === '1'} colsParam={query.get('cols')} sortParam={query.get('sort') ?? (enhance ? 'enh' : null)} enhance={enhance} />;
 }
 
-function Collection({ openId, openBack, colsParam, sortParam }: { openId: string | null; openBack: boolean; colsParam: string | null; sortParam: string | null }) {
-  const mine = useMemo(() => MY_CARD_IDS.map((id) => CARDS.find((c) => c.id === id)).filter(Boolean) as CardInst[], []);
+function Collection({ openId, openBack, colsParam, sortParam, enhance = false }: { openId: string | null; openBack: boolean; colsParam: string | null; sortParam: string | null; enhance?: boolean }) {
+  const ver = useInventory();
+  const mine = useMemo(() => ownedIds().map((id) => ownedCard(id)).filter(Boolean) as CardInst[], [ver]); // eslint-disable-line react-hooks/exhaustive-deps
   const [grade, setGrade] = useState<GradeId | 'all'>('all');
   const [pos, setPos] = useState<PosGroup>('all');
   const [team, setTeam] = useState<string>('all');
   const [sort, setSort] = useState<SortKey>(() => (['ovr', 'grade', 'level', 'enh'] as const).find((k) => k === sortParam) ?? 'ovr');
   const [cols, setCols] = useState<2 | 3>(() => (colsParam === '2' ? 2 : colsParam === '3' ? 3 : readCols()));
-  const [open, setOpen] = useState<CardInst | null>(() => (openId ? CARDS.find((c) => c.id === openId) ?? null : null));
+  const [openKey, setOpenKey] = useState<string | null>(() => openId);
+  // 열린 카드는 보관함에서 매번 다시 읽는다 (강화하면 바로 바뀜) — 내 카드가 아니면 카드 정의
+  const open = openKey ? ownedCard(openKey) ?? cardById(openKey) ?? null : null;
+  const setOpen = (c: CardInst | null) => setOpenKey(c ? c.id : null);
 
   const counts = useMemo(() => {
     const m = new Map<GradeId, number>();
@@ -98,22 +109,30 @@ function Collection({ openId, openBack, colsParam, sortParam }: { openId: string
   }, [mine, grade, pos, team, sort]);
 
   const dupTotal = mine.reduce((n, c) => n + c.dup, 0);
+  const copies = mine.length + dupTotal;
+  const recent = useMemo(() => recentEnh().filter((e) => isOwned(e.id)).slice(0, enhance ? 6 : 3), [ver, enhance]); // eslint-disable-line react-hooks/exhaustive-deps
+  const st = useMemo(() => invStats(), [ver]); // eslint-disable-line react-hooks/exhaustive-deps
   const filtered = grade !== 'all' || pos !== 'all' || team !== 'all';
   const reset = () => { setGrade('all'); setPos('all'); setTeam('all'); };
   const pickCols = (n: 2 | 3) => { setCols(n); saveCols(n); };
-  const close = useCallback(() => setOpen(null), []);
+  const close = useCallback(() => setOpenKey(null), []);
   const pct = Math.round((ME.collection.have / ME.collection.total) * 100);
 
   return (
     <div className={s.page}>
       <header className={s.head}>
         <div className={s.titleRow}>
-          <h1 className={['head', s.h1].join(' ')}>카드</h1>
-          <Link to="/cards?gallery=1" className={s.galleryLink}>등급 갤러리<Icon name="chevron" size={16} /></Link>
+          <h1 className={['head', s.h1].join(' ')}>{enhance ? '강화' : '카드'}</h1>
+          {enhance
+            ? <Link to="/cards" className={s.galleryLink}>선수보관<Icon name="chevron" size={16} /></Link>
+            : <Link to="/cards?gallery=1" className={s.galleryLink}>등급 갤러리<Icon name="chevron" size={16} /></Link>}
         </div>
+        {enhance && (
+          <p className={s.lead}>같은 카드가 표의 장수만큼 모이면 <b>I~V</b> 는 바로 올라가요(재료로 쓴 장수만큼 줄어요). <b>VI~X</b> 는 같은 카드 1장 + GP 로 도전해요 — 실패해도 단계는 그대로예요.</p>
+        )}
         <dl className={s.tally}>
-          <div><dt>보유</dt><dd className="num">{mine.length}</dd></div>
-          <div><dt>같은 카드</dt><dd className="num">{dupTotal}</dd></div>
+          <div><dt>보유</dt><dd className="num">{mine.length}<small>종</small></dd></div>
+          <div><dt>{enhance ? '강화에 쓴 카드' : '같은 카드'}</dt><dd className="num">{enhance ? st.enhUsed : dupTotal}<small>{enhance ? '장' : `/${copies}장`}</small></dd></div>
           <div className={s.album}>
             <dt>도감</dt>
             <dd><span className="num">{ME.collection.have.toLocaleString('en-US')}</span><small className="num">/{ME.collection.total.toLocaleString('en-US')}</small></dd>
@@ -121,6 +140,31 @@ function Collection({ openId, openBack, colsParam, sortParam }: { openId: string
           </div>
         </dl>
       </header>
+
+      {recent.length > 0 && (
+        <section className={s.recent} aria-label="최근 강화">
+          <h2 className={s.recentH}>최근 강화</h2>
+          <ul>
+            {recent.map((e) => {
+              const c = ownedCard(e.id);
+              if (!c) return null;
+              const p = playerOfCard(c);
+              return (
+                <li key={e.id + e.at + e.to}>
+                  <button type="button" onClick={() => setOpenKey(e.id)}>
+                    <b>{p.name}</b>
+                    <span className={s.recentGr} style={{ color: `var(--gr-${c.grade})` }}>{SHORT[c.grade]}{c.year != null && GRADES[c.grade].yearTagged ? ' ' + yearTag(c.year) : ''}</span>
+                    <span className={['num', s.recentStep].join(' ')}>{e.from > 0 ? roman(e.from) : '0'} → {roman(e.to)}</span>
+                    <small>{e.src === 'auto' ? '같은 카드 모음' : '도전 성공'}</small>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {enhance && <EnhRules />}
 
       <section className={s.filters} aria-label="거르기">
         <div className={s.fRow}>
@@ -188,7 +232,7 @@ function Collection({ openId, openBack, colsParam, sortParam }: { openId: string
               <div className={[s.stack, c.dup > 0 && s.stacked, c.dup > 1 && s.stacked2].filter(Boolean).join(' ')}>
                 <Card {...cardProps(c)} fluid onClick={() => setOpen(c)} />
               </div>
-              {c.dup > 0 && (
+              {enhance ? <EnhProg card={c} /> : c.dup > 0 && (
                 <span className={s.dup} title={`같은 카드 ${c.dup + 1}장 — ${c.dup}장은 강화 재료`}>
                   같은 카드 <b className="num">×{c.dup + 1}</b>
                 </span>
@@ -200,6 +244,45 @@ function Collection({ openId, openBack, colsParam, sortParam }: { openId: string
 
       <CardSheet card={open} onClose={close} startBack={openBack} />
     </div>
+  );
+}
+
+/** 강화 칸 아래 — 다음 단계까지 같은 카드 have/need (자동 단계) · 도전 단계는 재료 유무 */
+function EnhProg({ card }: { card: CardInst }) {
+  const nx = nextStep(card.id);
+  if (card.grade === 'unique') return <span className={s.prog}><em>강화권 전용</em></span>;
+  if (!nx) return <span className={[s.prog, s.progMax].join(' ')}><em className="num">X</em> 완성{card.dup > 0 && <> · 남는 <b className="num">{card.dup}</b></>}</span>;
+  const pct = Math.min(100, Math.round((nx.have / nx.need) * 100));
+  return (
+    <span className={[s.prog, !nx.auto && s.progTry].filter(Boolean).join(' ')} title={nx.auto ? `${roman(nx.stage)} 까지 같은 카드 ${nx.need}장 — 모이면 자동` : `${roman(nx.stage)} 도전 — 같은 카드 1장 + GP`}>
+      <i style={{ ['--p' as string]: pct + '%' }} aria-hidden />
+      <em className="num">{roman(nx.stage)}</em>
+      {nx.auto ? <><b className="num">{nx.have}</b>/<span className="num">{nx.need}</span></> : nx.have > 0 ? <>도전 가능</> : <>재료 0</>}
+    </span>
+  );
+}
+
+/** 단계별 필요 수량 표 (기획서 7.1 — game/inventory 의 ENH_STEPS 한 곳에서) */
+function EnhRules() {
+  const cls: MatClass[] = ['C', 'B', 'A'];
+  return (
+    <section className={s.rules} aria-label="강화 단계별 필요 수량">
+      <table>
+        <thead>
+          <tr><th>같은 카드</th>{ENH_STEPS.slice(0, ENH_AUTO_MAX).map((x) => <th key={x.stage} className="num">{roman(x.stage)}</th>)}<th>VI~X</th></tr>
+        </thead>
+        <tbody>
+          {cls.map((k) => (
+            <tr key={k}>
+              <th>{MAT_CLASS_KO[k]}</th>
+              {ENH_STEPS.slice(0, ENH_AUTO_MAX).map((x) => <td key={x.stage} className="num">{x.mat[k]}</td>)}
+              <td>1장 + GP</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p>I~V 는 모이면 자동 · VI <span className="num">100</span> · VII <span className="num">75</span> · VIII <span className="num">60</span> · IX <span className="num">45</span> · X <span className="num">35%</span>, 실패마다 <span className="num">+15%p</span>, 세 번 실패하면 다음은 확정.</p>
+    </section>
   );
 }
 
@@ -229,6 +312,13 @@ function CardSheet({ card, onClose, startBack = false }: { card: CardInst | null
   const slots = slotsOf(p);
   const posKo = p.pos === 'P' ? `${ROLE_KO[p.role ?? 'SP']} 투수` : POS_KO[p.pos];
   const lvInt = Math.floor(c.level), lvPct = Math.round((c.level - lvInt) * 100);
+  const mineHere = isOwned(c.id);
+  const entry = entryOf(c.id);
+  const nx = mineHere ? nextStep(c.id) : null;
+  const nextLine = c.grade === 'unique' ? '— 특별 선수는 강화권으로 강화해요'
+    : !nx ? (c.dup > 0 ? `— X 완성 · 남는 ${c.dup}장은 조합 재료` : '— X 완성')
+    : nx.auto ? `— ${roman(nx.stage)} 까지 ${nx.need}장 중 ${nx.have}장 (모이면 자동 강화)`
+    : `— ${roman(nx.stage)} 도전에 1장 + ${nx.gp.toLocaleString('en-US')} GP · 지금 ${nx.chance}%`;
   const line = p.season.bat
     ? `타율 ${fmtAvg(p.season.bat.avg)} · 홈런 ${p.season.bat.hr} · OPS ${fmtAvg(p.season.bat.ops)}`
     : p.season.pit ? `평균자책 ${p.season.pit.era.toFixed(2)} · ${p.role === 'CL' ? `${p.season.pit.sv}세이브` : p.role === 'RP' ? `${p.season.pit.hld}홀드` : `${p.season.pit.w}승 ${p.season.pit.l}패`}` : '';
@@ -241,8 +331,12 @@ function CardSheet({ card, onClose, startBack = false }: { card: CardInst | null
       title={<>{p.name} <span className={s.sheetGrade} style={{ color: `var(--gr-${c.grade})` }}>{g.ko}{c.year != null && g.yearTagged ? ' ' + yearTag(c.year) : ''}</span></>}
       sub={`${t.name} · ${posKo} · ${line}`}
       footer={<>
-        <Button variant="secondary" onClick={() => setBack((v) => !v)} icon="swap">{back ? '앞면 보기' : '뒷면 보기'}</Button>
-        <Button onClick={() => { onClose(); navigate('/player/' + p.id); }}>선수 정보</Button>
+        {mineHere && !inLineup(c.id)
+          ? <Button variant="secondary" onClick={() => { onClose(); navigate(`/lineup?bench=${c.id}`); }}>라인업에 넣기</Button>
+          : <Button variant="secondary" onClick={() => setBack((v) => !v)} icon="swap">{back ? '앞면 보기' : '뒷면 보기'}</Button>}
+        {mineHere && nx && !nx.auto
+          ? <Button onClick={() => { onClose(); navigate(`/player/${p.id}?card=${c.id}&tab=enhance`); }}>{roman(nx.stage)} 강화 도전</Button>
+          : <Button onClick={() => { onClose(); navigate(`/player/${p.id}?card=${c.id}`); }}>선수 정보</Button>}
       </>}
     >
       <div className={s.detail}>
@@ -271,8 +365,14 @@ function CardSheet({ card, onClose, startBack = false }: { card: CardInst | null
           </div>
           <div className={s.fact}>
             <dt>같은 카드</dt>
-            <dd>{c.dup > 0 ? <><b className="num">{c.dup + 1}</b>장 <small>— {c.dup}장은 강화·각성 재료</small></> : <small>한 장뿐이에요</small>}</dd>
+            <dd>{mineHere ? <><b className="num">{c.dup + 1}</b>장 <small>{nextLine}</small></> : <small>내 카드가 아니에요</small>}</dd>
           </div>
+          {mineHere && entry && (
+            <div className={s.fact}>
+              <dt>기록</dt>
+              <dd><small>받은 <span className="num">{entry.got}</span>장 · 강화에 <span className="num">{entry.mat}</span>장 · 조합에 <span className="num">{entry.rl}</span>장{inLineup(c.id) ? ' · 라인업 카드(마지막 1장 보호)' : ''}</small></dd>
+            </div>
+          )}
           {c.signaturePitch && (
             <div className={s.fact}>
               <dt>고유 구종</dt>
@@ -325,7 +425,7 @@ function Gallery({ same }: { same: boolean }) {
       };
       return { g, card: fake };
     }
-    const mineFirst = CARDS.filter((c) => c.grade === g).sort((a, b) => Number(MY_CARD_IDS.includes(b.id)) - Number(MY_CARD_IDS.includes(a.id)));
+    const mineFirst = CARDS.filter((c) => c.grade === g).sort((a, b) => Number(isOwned(b.id)) - Number(isOwned(a.id))).map((c) => ownedCard(c.id) ?? c);
     return { g, card: mineFirst[0] };
   }).filter((x) => x.card);
 

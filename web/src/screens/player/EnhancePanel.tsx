@@ -38,7 +38,8 @@ export function EnhancePanel({ p, card, enh, fails, level, playstyle, mats, pick
   const lvMax = g.levelMax;
   const lv = fmt.levelParts(level);
   const styles = playstylesFor(p);
-  const needN = next ? parseInt(next.mat, 10) : 0;
+  const needN = next ? next.need : 0;
+  const haveN = mats.cards[0]?.count ?? 0;
 
   return (
     <div className={s.panel}>
@@ -55,6 +56,13 @@ export function EnhancePanel({ p, card, enh, fails, level, playstyle, mats, pick
             </p>
           </div>
 
+          {next.auto ? (
+            <div className={s.autoBox}>
+              <p className={s.autoHead}>같은 카드 <b className="num">{haveN}</b> / <span className="num">{needN}</span>장</p>
+              <span className={s.autoBar} aria-hidden><i style={{ width: `${Math.min(100, (haveN / needN) * 100)}%` }} /></span>
+              <p className={s.rule}>I~V 는 같은 카드가 {needN}장 모이면 그 자리에서 자동으로 올라요(쓴 장수만큼 보유 수량이 줄어요). 카드구매 · 카드 조합 · 스카우터로 같은 카드를 모아요.</p>
+            </div>
+          ) : (<>
           <div className={s.odds}>
             <div className={s.big}>
               <span className={s.oddsLab}>이번 성공 확률</span>
@@ -74,7 +82,8 @@ export function EnhancePanel({ p, card, enh, fails, level, playstyle, mats, pick
               })}
             </ol>
           </div>
-          <p className={s.rule}>실패해도 단계는 그대로, 카드도 사라지지 않아요. 실패할 때마다 다음 확률이 <b>+{PITY_STEP}%p</b> 오르고, 세 번 실패하면 네 번째는 확정이에요. 확률은 서버가 정하고 기록에 남아요.</p>
+          <p className={s.rule}>실패해도 단계는 그대로, 카드도 사라지지 않아요(재료 1장 · GP 만 써요). 실패할 때마다 다음 확률이 <b>+{PITY_STEP}%p</b> 오르고, 세 번 실패하면 네 번째는 확정이에요. 확률은 서버가 정하고 기록에 남아요.</p>
+          </>)}
         </Sec>
       ) : (
         <Sec title="강화 완성" meta="X">
@@ -95,7 +104,7 @@ export function EnhancePanel({ p, card, enh, fails, level, playstyle, mats, pick
                     <CardMini player={p} grade={m.card.grade} enhance={m.card.enhance} width={40} />
                     <span className={s.matBody}>
                       <b>{p.name} {GRADES[m.card.grade].ko}{m.card.year != null && GRADES[m.card.grade].yearTagged ? ` ${fmt.yearTag(m.card.year)}` : ''}</b>
-                      <span>{m.card.id === card.id ? '같은 카드 중복' : '같은 선수 다른 카드'} · 등급·출처 상관없이 같은 확률</span>
+                      <span>같은 카드 중복 · 출처(뽑기·조합·스카우터) 상관없이 같은 확률</span>
                     </span>
                     <span className={s.count}><b className="num">{m.count}</b>장</span>
                   </button>
@@ -108,7 +117,7 @@ export function EnhancePanel({ p, card, enh, fails, level, playstyle, mats, pick
                 <span className={s.ticket} aria-hidden><LIcon name="plus" size={16} stroke={2} /></span>
                 <span className={s.matBody}>
                   <b>{mats.ticket.ko}</b>
-                  <span>재료 1장 몫 · 교환소 고정가</span>
+                  <span>재료 1장 몫 · 상점 준비 중</span>
                 </span>
                 <span className={s.count}><b className="num">{mats.ticket.have}</b>장</span>
               </button>
@@ -145,14 +154,14 @@ export function EnhancePanel({ p, card, enh, fails, level, playstyle, mats, pick
             {table.map((t) => (
               <tr key={t.stage} className={[t.stage <= enh && s.got, t.stage === enh + 1 && s.nextRow].filter(Boolean).join(' ')}>
                 <td className={['num', s.rn].join(' ')}>{fmt.roman(t.stage)}</td>
-                <td>{t.mat}{t.gp > 0 && <span className="num"> + {fmt.man(t.gp)}</span>}</td>
+                <td>{t.mat}{t.gp > 0 ? <span className="num"> + {fmt.man(t.gp)}</span> : <small> 자동</small>}</td>
                 <td className={['num', s.r].join(' ')}>{t.base}%</td>
                 <td className={['num', s.r].join(' ')}>+{t.gain}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <p className={s.tNote}>VII 부터 실패 보정이 붙어요. 합계 <span className="num">+15</span> · V 에서 플레이스타일, X 에서 완성 각인.</p>
+        <p className={s.tNote}>I~V 는 같은 카드가 모이면 자동, VI 부터 도전 · VII 부터 실패 보정이 붙어요. 합계 <span className="num">+{enhGainTotal(card.grade, 10)}</span> · V 에서 플레이스타일, X 에서 완성 각인.</p>
       </Sec>
 
       <Sec title="레벨" meta={<>최대 <span className="num">{lvMax}</span> · {g.ko}</>}>

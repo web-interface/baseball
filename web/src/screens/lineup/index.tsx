@@ -4,13 +4,16 @@
 //
 // 선수를 누르면 먼저 선수 정보 시트(능력치·성적), 거기서 '교체'로 바꾸기 시트. 빈 자리는 바로 바꾸기 시트.
 //
-// 주소 (미리보기·스크린샷용): ?tab=order|pitch · ?slot=LF (그 자리 바꾸기 시트) · ?info=CF · ?info=S1 (그 자리 선수 정보 시트, S1~S5 = 1~5선발) · ?bench=lc1 (벤치 카드 시트)
+// 주소 (미리보기·스크린샷용): ?tab=order|pitch · ?slot=LF (그 자리 바꾸기 시트) · ?info=CF · ?info=S1 (그 자리 선수 정보 시트, S1~S5 = 1~5선발)
+//   ?bench=<카드 id> — 그 카드를 넣을 자리 고르기(누구와 바꿀지). 벤치 카드뿐 아니라 보관함 카드도 — 선수보관 · 선수 정보의 '라인업에 넣기'가 여기로 온다.
+// 새로 얻은 카드는 보관함으로만 들어온다. 라인업은 여기서 감독이 바꿀 때만(교체 · 자동 편성 버튼) 바뀌고 바로 저장된다.
 //   ?demo=set (’27 독수리스 5명 — 세트 +2) · ?demo=set9 (9명 — +4) · ?demo=boom (5명 → 잠시 뒤 9명, 단계가 오르는 순간) · ?pick=2 (타순 고르는 중)
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { CardMini } from '../../cards';
 import { Button, Tabs, fmt, useToast } from '../../ui';
 import { myTeam } from '../../game/mock';
+import { isOwned } from '../../game/inventory';
 import { POS_KO } from '../../game/labels';
 import { Board, LinkLegend } from './Board';
 import { GaugeBox } from './GaugeBox';
@@ -74,7 +77,7 @@ export default function LineupScreen({ query }: ScreenProps) {
     window.clearTimeout(swapTimer.current);
     swapTimer.current = window.setTimeout(() => { setPending(null); setSlot(x); }, 240);
   };
-  const [benchCard, setBenchCard] = useState<string | null>(() => q.get('bench'));
+  const [benchCard, setBenchCard] = useState<string | null>(() => { const b = q.get('bench'); return b && isOwned(b) ? b : null; });
   const [boom, setBoom] = useState<number | null>(null);
 
   /* 되돌리기 */

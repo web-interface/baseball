@@ -5,12 +5,14 @@ import { createPortal } from 'react-dom';
 import { navigate } from '../../app/router';
 import { CardMini, Card } from '../../cards';
 import { GRADES } from '../../game/grades';
-import { CARDS, LINEUP, MY_CARD_IDS, PLAYERS, ROULETTE_EXAMPLE, playerById } from '../../game/mock';
+import { ROULETTE_EXAMPLE, playerById } from '../../game/mock';
+import { entryOf, lineupIds, ownedCard, ownedIds, spareOf, useInventory } from '../../game/inventory';
 import type { CardInst, GradeId, Player } from '../../game/types';
-import { Button, Icon, Tabs } from '../../ui';
-import { rarity, rollCombo, sessionCards, useGacha, type ComboSlot, type PulledCard } from './draw';
+import { Button, Icon, Tabs, useToast } from '../../ui';
+import { rarity, rollCombo, useGacha, type ComboSlot, type PulledCard } from './draw';
 import { Reveal } from './Reveal';
 import { Swatch, gradeFill } from './bits';
+import { roman } from '../../ui/format';
 import s from './Roulette.module.css';
 import o from './Opening.module.css';
 
@@ -31,29 +33,26 @@ function slotsFor(g: InGrade, n: number): ComboSlot[] {
   return LADDER[g].map((grade, i) => ({ grade, pct: SPLIT[n][i], label: GRADES[grade].ko }));
 }
 
-interface Material { id: string; card: CardInst; player: Player; spare: boolean; session?: boolean }
+/** 재료 한 장 — 보관함 카드 id 의 k 번째 사본. spare = 같은 카드가 더 남는 장(중복) */
+interface Material { id: string; cardId: string; card: CardInst; player: Player; spare: boolean }
 
-const IN_LINEUP = new Set([...LINEUP.batting.map((b) => b.cardId), LINEUP.sp, ...LINEUP.rotation, ...LINEUP.bullpen, LINEUP.closer, ...LINEUP.bench]);
-
-/** 재료 후보 — 이번에 받은 카드 · 보관함의 남는 장(라인업 카드는 중복만) · 지난 영입에서 남은 카드 */
-function materialsFor(g: InGrade, session: PulledCard[]): Material[] {
+/**
+ * 재료 후보 — 보관함(game/inventory)에서 쓸 수 있는 장만.
+ * 라인업 카드 · 강화한 카드는 마지막 1장을 남기고, 특별 선수 · 잠근 카드는 넣지 않는다. 중복(남는 장) 먼저, 그다음 종합 낮은 순.
+ */
+function materialsFor(g: InGrade): Material[] {
   const out: Material[] = [];
-  for (const c of session) if (c.card.grade === g) out.push({ id: c.card.id, card: c.card, player: c.player, spare: !c.isNew, session: true });
-  for (const id of MY_CARD_IDS) {
-    const c = CARDS.find((x) => x.id === id);
+  const guard = lineupIds();
+  for (const id of ownedIds()) {
+    const c = ownedCard(id);
     if (!c || c.grade !== g || c.locked) continue;
     const p = playerById(c.playerId);
     if (!p) continue;
-    const copies = IN_LINEUP.has(c.id) ? c.dup : 1 + c.dup;
-    for (let k = 0; k < copies; k++) out.push({ id: `${c.id}#${k}`, card: c, player: p, spare: k < c.dup });
+    const n = entryOf(id)?.n ?? 0;
+    const k = spareOf(id, guard);
+    // 쓸 수 있는 k 장 — 마지막 1장(카드 자체)은 맨 뒤로
+    for (let i = 0; i < k; i++) out.push({ id: `${id}#${i}`, cardId: id, card: c, player: p, spare: n - i > 1 });
   }
-  const band: Record<InGrade, [number, number]> = { normal: [0, 72], special: [70, 80], rare: [77, 86] };
-  const [lo, hi] = band[g];
-  for (const p of PLAYERS) {
-    if (p.id === 'p41' || p.ovr < lo || p.ovr > hi || out.some((m) => m.player.id === p.id)) continue;
-    out.push({ id: `spare-${p.id}-${g}`, card: { id: `spare-${p.id}-${g}`, playerId: p.id, grade: g, year: 27, level: 1, enhance: 0, dup: 0 }, player: p, spare: false });
-  }
-  // 중복(남는 장) 먼저, 그다음 종합 낮은 순
   return out.sort((a, b) => Number(b.spare) - Number(a.spare) || a.player.ovr - b.player.ovr);
 }
 
@@ -71,6 +70,8 @@ function slice(a0: number, a1: number, R: number, r: number) {
 
 export function Roulette() {
   useGacha(); // 받은 카드가 바뀌면 다시 그림
+  useInventory();
+  const toast = useToast();
   const [grade, setGrade] = useState<InGrade>('rare');
   const [count, setCount] = useState<number>(5);
   const [rot, setRot] = useState(0);
@@ -78,12 +79,11 @@ export function Roulette() {
   const [tick, setTick] = useState(0);
   const [result, setResult] = useState<{ slot: number; card: PulledCard } | null>(null);
   const [cine, setCine] = useState<PulledCard | null>(null);
-  const [used, setUsed] = useState<Set<string>>(new Set());
   const raf = useRef(0);
   useEffect(() => () => cancelAnimationFrame(raf.current), []);
 
   const slots = useMemo(() => slotsFor(grade, count), [grade, count]);
-  const all = materialsFor(grade, sessionCards()).filter((m) => !used.has(m.id));
+  const all = materialsFor(grade);
   const chosen = all.slice(0, count);
   const enough = chosen.length >= count;
 
@@ -95,9 +95,11 @@ export function Roulette() {
 
   const spin = () => {
     if (spinning || !enough) return;
-    const ids = chosen.map((m) => m.id);
-    const { slot, result: res } = rollCombo(slots, ids.filter((x) => !x.includes('#') && !x.startsWith('spare-')));
-    setUsed((u) => new Set([...u, ...ids]));
+    const use: Record<string, number> = {};
+    for (const m of chosen) use[m.cardId] = (use[m.cardId] ?? 0) + 1;
+    const rolled = rollCombo(slots, use);
+    if (!rolled) { toast({ text: '재료 카드가 바뀌었어요. 다시 골라 주세요', tone: 'bad' }); return; }
+    const { slot, result: res } = rolled;
     setResult(null);
     const arc = arcs[slot];
     const t = arc.a0 + (arc.a1 - arc.a0) * (0.18 + Math.random() * 0.64);
@@ -216,7 +218,7 @@ export function Roulette() {
             ) : <div key={'e' + i} className={s.matEmpty} aria-hidden />;
           })}
         </div>
-        {!enough && <p className={s.short}>{GRADES[grade].ko} 카드가 모자라요. 팩을 열면 채워져요.</p>}
+        {!enough && <p className={s.short}>{GRADES[grade].ko} 카드가 모자라요(쓸 수 있는 <span className="num">{all.length}</span>장). 라인업 카드 · 강화한 카드는 마지막 1장을 남겨요. 팩을 열면 채워져요.</p>}
       </section>
 
       <div className={s.cta}>
@@ -233,7 +235,9 @@ export function Roulette() {
               {STEP_KO[result.slot]} · {GRADES[result.card.card.grade].ko}
             </p>
             <b className="head">{result.card.player.name}</b>
-            <p>{result.card.isNew ? '새 카드 — 보관함에 넣었어요' : '중복 +1 · 강화 재료'}</p>
+            <p>{result.card.isNew ? '새 카드 — 보관함에 넣었어요'
+              : result.card.up ? <>같은 카드가 모여 강화 <b className="num">+1</b> ({result.card.up.from > 0 ? roman(result.card.up.from) : '0'} → {roman(result.card.up.to)})</>
+              : '중복 +1 · 강화 재료'}</p>
           </div>
         </section>
       )}

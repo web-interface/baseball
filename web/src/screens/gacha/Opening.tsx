@@ -8,7 +8,7 @@ import { POS_KO, ROLE_KO } from '../../game/labels';
 import { teamById } from '../../game/mock';
 import { navigate } from '../../app/router';
 import { Button, IconButton, Sheet, StatBar, fmt } from '../../ui';
-import { yearTag } from '../../ui/format';
+import { roman, yearTag } from '../../ui/format';
 import { lockScroll } from '../../ui/scrollLock';
 import { PackArt } from './PackArt';
 import { PACK_LOOK, isSynthetic } from './local-mock';
@@ -272,7 +272,9 @@ export function Opening({ result, step, onClose, onAgain, onCombo }: OpeningProp
                       <CardMini player={c.player} grade={c.card.grade} style={{ width: '100%' }} />
                     </span>
                   </span>
-                  {on && (c.isNew ? <em className={s.newMark}>NEW</em> : <em className={['num', s.dupMark].join(' ')}>+1</em>)}
+                  {on && (c.isNew ? <em className={s.newMark}>NEW</em>
+                    : c.up ? <em className={['num', s.dupMark, s.upMark].join(' ')} title={`강화 ${upText(c.up)}`}>{roman(c.up.to)}</em>
+                    : <em className={['num', s.dupMark].join(' ')}>+1</em>)}
                 </button>
               );
             })}
@@ -327,8 +329,10 @@ export function Opening({ result, step, onClose, onAgain, onCombo }: OpeningProp
               <p className={s.detailGrade} style={{ color: `var(--gr-${detail.card.grade})` }}>
                 {GRADES[detail.card.grade].ko}{detail.card.year && GRADES[detail.card.grade].yearTagged ? ` ${yearTag(detail.card.year)}` : ''}
               </p>
-              <p className={detail.isNew ? s.isNew : s.isDup}>{detail.isNew ? '새 카드' : '중복 +1 · 강화 재료'}</p>
-              {!detail.isNew && <p className={s.detailNote}>이미 <b className="num">{detail.had}</b>장 있어요. 같은 카드는 강화·각성 재료로 써요.</p>}
+              <p className={detail.isNew ? s.isNew : s.isDup}>{detail.isNew ? '새 카드' : detail.up ? <>강화 +1 <span className="num">({upText(detail.up)})</span></> : '중복 +1 · 강화 재료'}</p>
+              {!detail.isNew && (detail.up
+                ? <p className={s.detailNote}>같은 카드가 <b className="num">{detail.had + 1}</b>장 모여 재료로 쓰고 한 단계 올랐어요.</p>
+                : <p className={s.detailNote}>이미 <b className="num">{detail.had}</b>장 있어요. 같은 카드가 모이면 자동으로 강화돼요.</p>)}
               {detail.card.signaturePitch && <p className={s.detailNote}>고유 구종 <b>{detail.card.signaturePitch.name}</b></p>}
             </div>
           </div>
@@ -378,6 +382,9 @@ const cardLine = (c: PulledCard) => {
   return `${pos} · ${t.name}${c.card.award ? ' · ' + c.card.award : ''}`;
 };
 
+/** 'VI → VII' · '0 → I' */
+const upText = (u: { from: number; to: number }) => `${u.from > 0 ? roman(u.from) : '0'} → ${roman(u.to)}`;
+
 function Summary({ result, onAgain, onClose, onCombo, onBest }: {
   result: PullResult; onAgain?: () => void; onClose: () => void; onCombo: () => void; onBest: () => void;
 }) {
@@ -389,7 +396,7 @@ function Summary({ result, onAgain, onClose, onCombo, onBest }: {
         <Swatch grade={b.card.grade} size={9} />
         <b>{GRADES[b.card.grade].ko}</b>
         <span className={s.sumBestName}>{b.player.name}</span>
-        <span className={b.isNew ? s.isNew : s.isDup}>{b.isNew ? '새 카드' : '중복 +1'}</span>
+        <span className={b.isNew ? s.isNew : s.isDup}>{b.isNew ? '새 카드' : b.up ? `강화 ${upText(b.up)}` : '중복 +1'}</span>
       </button>
       <ul className={s.counts} aria-label="등급별 장수">
         {result.counts.map((c) => (
@@ -398,8 +405,19 @@ function Summary({ result, onAgain, onClose, onCombo, onBest }: {
       </ul>
       <p className={s.sumLine}>
         새 카드 <b className="num">{result.fresh}</b> · 중복 <b className="num">{result.dups}</b>
-        <span> — 중복은 강화 재료로 써요</span>
+        <span> — 같은 카드가 모이면 자동 강화</span>
       </p>
+      {result.ups.length > 0 && (
+        <p className={[s.sumLine, s.sumUps].join(' ')}>
+          강화 <b className="num">{result.ups.length}</b>
+          <span className={s.sumUpList}>
+            {result.ups.slice(0, 3).map((u) => (
+              <span key={u.card.id}>{u.player.name} <b className="num">+1</b> <span className="num">({upText(u)})</span></span>
+            ))}
+            {result.ups.length > 3 && <span>외 <span className="num">{result.ups.length - 3}</span>장</span>}
+          </span>
+        </p>
+      )}
       <p className={s.sumLine}>
         {result.pity.hit
           ? <>천장 도달 — <b>{result.pity.reward}</b> 받았어요</>

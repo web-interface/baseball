@@ -2,9 +2,10 @@
 // 결과는 서버 엔진이 정한다. 여기 sim 은 화면을 위한 흉내(시드 고정 — 같은 상대·같은 회차 = 같은 경기).
 // 강조 문구는 '엔진 값'(승리 확률 변화 · 잡을 확률)으로 고르고 한 경기 4번까지 (요구 28).
 
-import { CARDS, LINEUP, ME, PLAYERS, PVP_OPPONENTS, USER_RANKING, cardById, playerOfCard, teamById } from '../../game/mock';
+import { CARDS, ME, PLAYERS, PVP_OPPONENTS, USER_RANKING, cardById, playerOfCard, teamById } from '../../game/mock';
 import { FIELD_SPOTS, fenceAt, polarToField } from '../../game/field';
 import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
+import { ownedCard } from '../../game/inventory';
 import type { CardInst, Cause, HighlightKind, Player, Pos, PvpOpponent, Team } from '../../game/types';
 
 /* ───────── 시드 난수 ───────── */
@@ -47,7 +48,7 @@ export interface Side {
   style?: string;
 }
 
-const pc = (id: string) => { const c = cardById(id)!; return { card: c, player: playerOfCard(c) }; };
+const pc = (id: string) => { const c = ownedCard(id) ?? cardById(id)!; return { card: c, player: playerOfCard(c) }; };
 
 /** 내 팀 종합 · 전력(엔트리 선수 점수 합) — 라인업 화면과 같은 계산 */
 export function myStrength() {
@@ -58,10 +59,15 @@ export function myStrength() {
 
 export function mySide(): Side {
   const { ovr, power } = myStrength();
+  // 내 라인업 — 저장된 라인업(보유 카드 저장소)에서
+  const st = lineupStore.get() ?? initialLineup();
+  const batting = st.order.map((pos, i) => ({ pos, id: st.field[pos] })).filter((x): x is { pos: typeof x.pos; id: string } => !!x.id)
+    .map((x, i) => ({ order: i + 1, pos: x.pos, ...pc(x.id) }));
+  const sp = st.rotation[0] ?? st.rotation.find(Boolean) ?? null;
+  const cl = st.closer ?? st.bullpen.find(Boolean) ?? sp;
   return {
     key: 'me', user: ME.user, team: teamById(ME.teamId), rating: ME.rating, ovr, power,
-    batting: LINEUP.batting.map((b) => ({ order: b.order, pos: b.pos, ...pc(b.cardId) })),
-    sp: pc(LINEUP.sp), closer: pc(LINEUP.closer), lineupName: LINEUP.name,
+    batting, sp: pc(sp!), closer: pc(cl!), lineupName: '내 라인업',
   };
 }
 

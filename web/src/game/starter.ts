@@ -358,6 +358,7 @@ export function synthPlayer(o: { id: string; teamId: string; pos: Pos; role?: Pi
 let current: Starter | null = null;
 /**
  * 기본 선수단을 (다시) 만든다 — 시작 설정이 바뀌었으면 새로. 공용 목업 MY_CARD_IDS · LINEUP 도 이 선수단으로 바꾼다.
+ * 실제 내 카드 · 라인업은 game/inventory 가 처음 한 번 이 선수단으로 채운 뒤 저장해 둔 것을 쓴다.
  * 앱이 처음 뜰 때(App) 한 번, 구단 선택 '개막' 뒤에 한 번 부른다.
  */
 export function ensureStarter(): Starter {

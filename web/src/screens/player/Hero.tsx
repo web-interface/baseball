@@ -5,7 +5,7 @@ import { Emblem, fmt } from '../../ui';
 import { GRADES } from '../../game/grades';
 import { POS_KO, ROLE_KO, handKo } from '../../game/labels';
 import type { CardInst, Player, Team } from '../../game/types';
-import { LINEUP } from '../../game/mock';
+import { initialLineup, store as lineupStore } from '../lineup/calc';
 import { CondArrow } from './icons';
 import { Pips, Stars } from './common';
 import { chanceAfter, enhTable } from './local-mock';
@@ -35,11 +35,14 @@ export function potentialMax(p: Player) {
 
 export function Hero({ p, team, card, cards, owned, isMineCard, enh, fails, level, onPickCard, onKpi }: HeroProps) {
   const g = GRADES[card.grade];
-  const order = LINEUP.batting.find((b) => b.cardId === card.id)?.order;
+  // 지금 라인업(저장된 것)에서 이 카드 자리
+  const lu = lineupStore.get() ?? initialLineup();
+  const fieldPos = (Object.keys(lu.field) as (keyof typeof lu.field)[]).find((k) => lu.field[k] === card.id);
+  const order = fieldPos ? lu.order.indexOf(fieldPos) + 1 || undefined : undefined;
   const role = p.pos === 'P' ? (p.role ? ROLE_KO[p.role] : '투수') : null;
-  const isSp = LINEUP.sp === card.id;
+  const isSp = lu.rotation[0] === card.id;
   const posLine = p.pos === 'P'
-    ? [`${role} 투수`, isSp ? '오늘 선발' : LINEUP.closer === card.id ? '마무리' : null].filter(Boolean).join(' · ')
+    ? [`${role} 투수`, isSp ? '오늘 선발' : lu.closer === card.id ? '마무리' : null].filter(Boolean).join(' · ')
     : [POS_KO[p.pos], p.subPos?.length ? `${p.subPos.map((x) => POS_KO[x]).join('·')} 가능` : null, order ? `${order}번 타자` : null].filter(Boolean).join(' · ');
   const lv = fmt.levelParts(level);
   const lvMax = g.levelMax;

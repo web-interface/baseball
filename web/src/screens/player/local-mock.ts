@@ -3,7 +3,8 @@
 // 최근 10경기 · 부상 이력(15 §7) · 장비(05 원작충실 §13.3) · 강화(05 원작충실 §7.1~7.3).
 // 값은 시드 난수라 매번 같다. 실제 선수·구단·브랜드 이름은 쓰지 않는다.
 
-import { CARDS, LAST_MATCH, MY_CARD_IDS, NEWS, PLAYERS, TEAMS, TODAY, WEATHER_TODAY, cardById, playerById, teamById } from '../../game/mock';
+import { CARDS, LAST_MATCH, NEWS, PLAYERS, TEAMS, TODAY, WEATHER_TODAY, cardById, playerById, teamById } from '../../game/mock';
+import { ENH_STEPS, PITY_STEP as INV_PITY_STEP, chanceAfter as invChanceAfter, enhGainTotal as invGainTotal, entryOf, isOwned, matClass, needFor, ownedCard } from '../../game/inventory';
 import { GRADES } from '../../game/grades';
 import type { AttrKey, CardInst, GradeId, Pitch, Player, WeatherKey } from '../../game/types';
 import { makeBatForm, makePitchForm, pitchFormName, batFormName, batFormTags, pitchFormTags } from '../../art/character/forms';
@@ -42,7 +43,8 @@ export function rng(seed: string) {
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /* ───────── 카드 · 소유 ───────── */
-export const isMine = (cardId: string) => MY_CARD_IDS.includes(cardId);
+/** 내 카드인가 — 보유 카드 저장소(game/inventory) */
+export const isMine = (cardId: string) => isOwned(cardId);
 const gradeRank = (g: GradeId) => GRADES[g].rank;
 
 export interface Resolved {
@@ -60,7 +62,8 @@ export interface Resolved {
 export function resolvePlayer(id: string | undefined, cardQ: string | null): Resolved {
   const byCard = id ? cardById(id) : undefined;
   const player = (byCard ? playerById(byCard.playerId) : id ? playerById(id) : undefined) ?? playerById('p03') ?? PLAYERS[0];
-  const cards = CARDS.filter((c) => c.playerId === player.id).sort((a, b) => gradeRank(b.grade) - gradeRank(a.grade) || b.enhance - a.enhance);
+  // 내 카드는 내 강화 · 레벨이 들어간 것으로
+  const cards = CARDS.filter((c) => c.playerId === player.id).map((c) => ownedCard(c.id) ?? c).sort((a, b) => gradeRank(b.grade) - gradeRank(a.grade) || b.enhance - a.enhance);
   const mine = cards.filter((c) => isMine(c.id));
   const want = cardQ ? cards.find((c) => c.id === cardQ) : byCard;
   const card = want ?? mine[0] ?? cards[0] ?? CARDS[0];
@@ -686,43 +689,37 @@ export function setsOf(p: Player, equipped: Partial<Record<GearSlot, GearItem>>)
     });
 }
 
-/* ───────── 강화 (05 원작충실 §7.1 — 실패해도 단계·카드 그대로, 실패마다 +15%p) ───────── */
-export interface EnhStep { stage: number; base: number; gain: number; gp: number; mat: string }
+/* ───────── 강화 — 표 · 확률 · 보정은 game/inventory 의 ENH_STEPS 한 곳에서 (기획서 7.1) ───────── */
+export interface EnhStep { stage: number; base: number; gain: number; gp: number; mat: string; need: number; auto: boolean }
 export function enhTable(grade: GradeId): EnhStep[] {
-  const max8 = GRADES[grade].levelMax <= 8; // 노멀·스페셜은 재료가 많이 든다
-  const lowMat = grade === 'normal' ? [3, 5, 6, 8, 9] : max8 ? [2, 3, 4, 5, 7] : [1, 2, 3, 4, 5];
-  return [
-    ...lowMat.map((n, i) => ({ stage: i + 1, base: 100, gain: i < 3 ? 1 : 2, gp: 0, mat: `${n}장` })),
-    { stage: 6, base: 100, gain: 1, gp: 50_000, mat: '1장' },
-    { stage: 7, base: 75, gain: 1, gp: 100_000, mat: '1장' },
-    { stage: 8, base: 55, gain: 1, gp: 200_000, mat: '1장' },
-    { stage: 9, base: 45, gain: 2, gp: 400_000, mat: '1장' },
-    { stage: 10, base: 35, gain: 3, gp: 800_000, mat: '1장' },
-  ];
+  return ENH_STEPS.map((x) => ({ stage: x.stage, base: x.base, gain: x.gain, gp: x.gp, need: x.mat[matClass(grade)], mat: `${x.mat[matClass(grade)]}장`, auto: x.auto }));
 }
-export const PITY_STEP = 15;
+export const PITY_STEP = INV_PITY_STEP;
 /** 실패 n 번 뒤 확률 — 3번 실패하면 4번째는 확정 */
-export const chanceAfter = (base: number, fails: number) => (fails >= 3 ? 100 : Math.min(100, base + PITY_STEP * fails));
-export const enhGainTotal = (grade: GradeId, enh: number) => enhTable(grade).slice(0, enh).reduce((s, x) => s + x.gain, 0);
+export const chanceAfter = invChanceAfter;
+export const enhGainTotal = (_grade: GradeId, enh: number) => invGainTotal(enh);
 
-/** 이 카드의 지난 실패 수 (목업 — 강화 화면에 '실패 보정'이 보이게) */
-export const initialFails = (card: CardInst) => (card.id === 'c03' ? 1 : card.enhance >= 6 ? hashStr(card.id) % 2 : 0);
+/** 이 카드의 지금 단계 연속 실패 수 (보유 카드 저장소) */
+export const initialFails = (card: CardInst) => entryOf(card.id)?.fail ?? 0;
 
-/** 강화권 — 시험 단계 지급량 (05 원작충실 §15.2) */
+/** 강화권 — 아직 보관·지급이 없다(상점 준비 중). 이름만 보여 주고 0장 */
 export const TICKETS: { id: string; ko: string; have: number; covers: GradeId[] }[] = [
-  { id: 'n', ko: '노멀 강화권', have: 100, covers: ['normal'] },
-  { id: 's', ko: '스페셜 강화권', have: 50, covers: ['normal', 'special'] },
-  { id: 'r', ko: '레어 강화권', have: 30, covers: ['normal', 'special', 'rare', 'elite', 'mvp', 'gg', 'th'] },
-  { id: 'l', ko: '레전드 강화권', have: 10, covers: ['legend', 'franchise', 'black', 'signature', 'unique', 'elite', 'rare', 'mvp', 'gg', 'th'] },
+  { id: 'n', ko: '노멀 강화권', have: 0, covers: ['normal'] },
+  { id: 's', ko: '스페셜 강화권', have: 0, covers: ['normal', 'special'] },
+  { id: 'r', ko: '레어 강화권', have: 0, covers: ['normal', 'special', 'rare', 'elite', 'mvp', 'gg', 'th'] },
+  { id: 'l', ko: '레전드 강화권', have: 0, covers: ['legend', 'franchise', 'black', 'signature', 'unique', 'elite', 'rare', 'mvp', 'gg', 'th'] },
 ];
 export const ticketFor = (g: GradeId) => TICKETS.find((t) => t.covers.includes(g)) ?? TICKETS[3];
 
-/** 재료 후보 — 같은 선수의 다른 카드(중복 포함) + 강화권 */
+/** 재료 — 같은 카드의 남는 장(보유 수량 − 1). 다른 카드는 재료로 쓰지 않는다(같은 카드 중복만 강화로). 강화권은 아직 0장 */
 export function materialsFor(card: CardInst) {
-  const same = CARDS.filter((c) => c.playerId === card.playerId && isMine(c.id));
-  const cards = same.map((c) => ({ card: c, count: c.id === card.id ? c.dup : c.dup + 1 })).filter((m) => m.count > 0);
+  const n = entryOf(card.id)?.n ?? 0;
+  const mine = ownedCard(card.id) ?? card;
+  const cards = n > 1 ? [{ card: mine, count: n - 1 }] : [];
   return { cards, ticket: ticketFor(card.grade) };
 }
+/** 다음 단계에 드는 같은 카드 장수 */
+export const needOf = (card: CardInst, stage: number) => needFor(card.grade, stage);
 
 /** 서버가 정하는 결과 — 목업은 시드로 (같은 카드·같은 시도 = 같은 결과) */
 export function rollEnhance(cardId: string, stage: number, tryNo: number, chance: number) {

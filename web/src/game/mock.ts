@@ -433,7 +433,7 @@ export const CARDS: CardInst[] = [...baseCards, ...extraCards];
 /** 등급별 종합 보정 — 같은 선수라도 윗 등급 카드가 더 세다 */
 const GRADE_OVR: Record<GradeId, number> = { normal: -3, special: -1, rare: 0, legend: 1, elite: 2, mvp: 2, gg: 2, th: 2, franchise: 3, unique: 3, black: 4, signature: 5 };
 
-/** 내가 가진 카드 */
+/** 처음 목업 보유 목록 — 화면은 쓰지 않는다. 내 카드(수량 · 강화 · 라인업)는 game/inventory (보유 카드 저장소) */
 export const MY_CARD_IDS: string[] = [
   'c01', 'c02', 'c03', 'c04', 'c05', 'c06', 'c07', 'c08', 'c09', 'c10', 'c11', 'c12', 'c13', 'c14',
   'c20', 'c21', 'c22', 'c25', 'c27', 'c29', 'c30', 'c33', 'c34', 'c36', 'c37', 'c40',

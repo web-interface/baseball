@@ -168,6 +168,9 @@
   animation: pop 220ms var(--ease-snap) 360ms both;
 }
 .newMark { display: none; }
+/* 같은 카드가 모여 자동 강화 — 강화 단계 로마 숫자 */
+.upMark { background: var(--accent); color: var(--accent-ink, #fff); font-family: var(--font-num); letter-spacing: .02em; }
+:global([data-theme='classic']) .upMark { background: var(--club); color: #fff; }
 @keyframes pop { from { transform: scale(.4); opacity: 0; } }
 :global([data-theme='classic']) .dupMark { background: #F2EFE6; color: #1D1E21; }
 :global([data-theme='broadcast']) .dupMark { background: var(--accent); color: #fff; }
@@ -194,6 +197,9 @@
 .sumLine { font-size: 12.5px; color: var(--fg-2); letter-spacing: -.03em; }
 .sumLine b { color: var(--fg); font-size: 13.5px; }
 .sumLine > span { color: var(--fg-3); }
+.sumUps { display: flex; gap: 8px; align-items: baseline; }
+.sumUps .sumUpList { display: flex; flex-wrap: wrap; gap: 2px 12px; color: var(--fg-2); }
+.sumUps .sumUpList b { font-size: 12.5px; color: var(--accent-2); }
 .actions { display: grid; gap: 8px; margin-top: 6px; }
 .actions2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 :global([data-theme='night']) .again { background: linear-gradient(180deg, #FFE7A3 0%, #E9B44C 48%, #C8902F 52%, #E6B24A 100%); color: #2A1A04; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), inset 0 -1px 0 rgba(0, 0, 0, .25); }

@@ -122,7 +122,12 @@ q.push({ kind: 'walkoff', title: '끝내기!', sub: '연이준 · 9회말 우중
 - 구단 10 (`TEAMS`, id = 코드 소문자 `dj` `gj` `dg` `bs` `sb` `st` `sh` `ic` `cw` `sw`) — 세계관 확정 이름(요구 34): 대전 독수리스 · 광주 호랑이즈 · 대구 사자즈 · 부산 거인츠 · 서울 곰스 · 서울 쌍둥이스 · 서울 영웅즈 · 인천 상륙스 · 창원 공룡스 · 수원 마법사즈. 화면은 `team.name`, 좁은 곳은 `team.short`.
 - 옛 구단 10 (`OLD_TEAMS`, 코드 `DDG` `MDH` `HBE` `SCR` `ISB` `IJR` `IDR` `SUC` `JDR` `IBY`) — 동대문 곰스 · 무등 호랑이즈 · 한밭 독수리스 · 서울 청룡스 · 인천 슈퍼별즈 · 인천 조랑말스 · 인천 돌고래스 · 수원 일각수스 · 전주 돌격대스 · 인천 비룡스. `team.era`(뛴 해) · `team.revives`(부활 자리). 현재 구단은 지금 이름이 된 뒤 해만 맡는다(예 곰스 1999~).
   `TEAMS` 는 2027 리그 10개 — 옛 구단을 시작 구단으로 고르면 같은 계보 자리를 그 구단이 '부활 구단'으로 대신한다(순위표·다음 경기 id 도 옮김). 카드·구단팩·세트덱처럼 20개 모두 필요하면 `ALL_TEAMS` · `CURRENT_TEAMS`, 찾기는 `teamById`/`teamByCode`(20개 모두). 좁은 곳에서 옛 구단과 별명이 겹치면 `shortLabel(code)`('동대문 곰스').
-- `PLAYERS`(40 + 특별 선수 예시 `p41` 이동규) · `CARDS`(46, 등급 11종 + `unique`) · `MY_CARD_IDS` · `LINEUP` · `LINEUP_EVAL`(팀컬러 = 같은 구단·권역·연도·라이벌, 케미, 폭발)
+- `PLAYERS`(40 + 특별 선수 예시 `p41` 이동규) · `CARDS`(46, 등급 11종 + `unique`) · `LINEUP_EVAL`(팀컬러 = 같은 구단·권역·연도·라이벌, 케미, 폭발)
+- **내 카드 · 라인업은 목업이 아니라 `game/inventory`(보유 카드 저장소, 이 기기 `bb.inv`)** — 카드 id 마다 보유 수량 · 강화 0~10 · 레벨 · 얻은 시각.
+  처음엔 구단 선택의 기본 선수단 · 지명 · 특별 선수 카드. 카드구매 · 카드 조합 · 스카우터로 얻은 카드는 `addCards` 로 바로 들어오고, 같은 카드가
+  `ENH_STEPS` 수량(노멀 3·5·6·8·9 / 스페셜 2·3·4·5·7 / 레어 이상 1~5)만큼 모이면 I~V 는 자동 강화, VI~X 는 `tryEnhance`(같은 카드 1장 + GP, 확률 · 실패 보정).
+  읽기는 `ownedIds` · `ownedCard(id)`(강화 · 레벨 반영) · `useInventory()`, 라인업은 `screens/lineup/calc` 의 `store`(같은 저장소). `MY_CARD_IDS` · `LINEUP` 은 쓰지 않는다.
+  시험: `npm test` (뽑기 1,000번 · 저장 왕복 · 깨진 저장).
 - `WEATHER_TODAY` · `NEXT_GAME` · `LAST_MATCH`(거인츠 4:5 독수리스 끝내기 — 이닝 점수·플레이·좌표·원인·강조 장면·수비 범위·승리 확률) · `STANDINGS` · `USER_RANKING` · `PVP_OPPONENTS`
   **시즌 성적·순위·선수 시즌 기록은 목업이 아니라 `season/store`(이 기기의 시즌 진행)** — 2027 개막일(3월 27일 토) 모든 구단 0승 0무 0패에서 시작, `teamLine(id)`(순위·공동·전적·남은 경기) · `standingsOf()` · `batLine/pitLine(id)` 를 쓴다(헤더·홈·순위·시즌·경기 화면이 같은 값). `STANDINGS` 는 쓰지 않는다.
 - 내 구단 = `ME.teamId`(`myTeam()`) — 구단 선택(#/club-select)에서 고른 구단(옛 구단이면 부활 구단). 'dj' 를 직접 쓰지 말 것.
