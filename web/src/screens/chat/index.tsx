@@ -1,7 +1,7 @@
 // 로비 채팅 #/chat — 전체 화면. ?demo=1 이면 예시 대화(서버 연결 없음)
 //  · 화면 아래 입력칸은 휴대폰 자판이 올라와도 가려지지 않게 visualViewport 에 맞춘 고정 칸(포털)에 둔다.
 //  · 새 메시지가 오면 맨 아래로 따라가고, 위를 보고 있으면 '새 메시지 n개' 단추.
-//  · 대화는 5분 뒤 흐려지며 사라진다. 메시지를 누르면 신고 · 이 감독 숨기기 (내 메시지는 지우기).
+//  · 대화는 하루 뒤 흐려지며 사라진다(보관 시간은 서버가 알려 준다). 메시지를 누르면 신고 · 이 감독 숨기기 (내 메시지는 지우기).
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ScreenProps } from '../../app/screen';

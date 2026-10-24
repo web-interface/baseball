@@ -1,6 +1,6 @@
 // 로비 채팅 — Durable Object(SQLite 저장소, 무료 플랜 가능) + WebSocket 하이버네이션 API.
-//  · 방은 하나('lobby'). 대화는 보낸 지 5분이 지나면 지운다 — 저장소에서도(알람으로 정리), 화면에서도(브라우저 타이머).
-//    새로 들어온 사람에게는 최근 5분 안의 메시지(최대 50개)만 보낸다. 저장은 최근 100개까지.
+//  · 방은 하나('lobby'). 대화는 보낸 지 하루(24시간)가 지나면 지운다 — 저장소에서도(알람으로 정리), 화면에서도(브라우저 타이머).
+//    새로 들어온 사람에게는 최근 하루 안의 메시지(최대 100개)만 보낸다. 저장은 최근 500개까지.
 //  · 아무도 말하지 않으면 DO 는 잠든다 — 잠든 동안은 시간 요금이 없다. 연결 유지용 'ping' 은 DO 를 깨우지 않고 런타임이 'pong' 으로 답한다.
 //    DO 안에서 setTimeout·setInterval 을 쓰지 않는다(쓰면 잠들지 못한다). 메모리 값도 잠들면 사라지니 상태는 SQLite·소켓 꼬리표(attachment)에만.
 //  · 로그인은 연결 뒤 첫 메시지 {t:'hello', token} 로 확인한다(주소에 토큰을 넣지 않는다). 로그인 안 했으면 읽기만.
@@ -10,14 +10,14 @@ import { DurableObject } from 'cloudflare:workers';
 
 export interface ChatEnv {
   DB: D1Database;
-  /** 시험용 — 대화 보관 시간(ms). 운영에는 넣지 않는다(기본 5분) */
+  /** 시험용 — 대화 보관 시간(ms). 운영에는 넣지 않는다(기본 하루) */
   CHAT_TTL_MS?: string;
 }
 
-const TTL_MS = 5 * 60_000; // 대화는 5분 뒤 사라진다
+const TTL_MS = 24 * 3600_000; // 대화는 하루 뒤 사라진다 (사용자 지시 — 예전 5분)
 const SWEEP_GAP_MS = 10_000; // 정리 알람은 10초에 한 번까지 (알람 1번 = 요청 1건)
-const KEEP = 100; // 저장하는 최근 메시지 수 (5분 안이라도)
-const ON_JOIN = 50; // 접속하면 보내는 수
+const KEEP = 500; // 저장하는 최근 메시지 수 (하루 안이라도)
+const ON_JOIN = 100; // 접속하면 보내는 수
 const MAX_LEN = 200; // 글자 수 (코드 포인트)
 const GAP_MS = 3000; // 사람당 3초에 1개
 const PER_MIN = 15; // 사람당 1분에 15개
@@ -118,7 +118,7 @@ export class LobbyChat extends DurableObject<ChatEnv> {
     super(ctx, env);
     this.sql = ctx.storage.sql;
     const t = Number(env.CHAT_TTL_MS);
-    this.ttl = Number.isFinite(t) && t >= 5_000 && t <= 3600_000 ? t : TTL_MS;
+    this.ttl = Number.isFinite(t) && t >= 5_000 && t <= 86_400_000 ? t : TTL_MS;
     // 첫 판(msgs 표, 7일 보관)에서 넘어올 때 한 번만 — 옛 표와 시험 때 남은 막힘을 지운다
     let old = false;
     try { this.sql.exec('SELECT 1 FROM msgs LIMIT 1').toArray(); old = true; } catch { /* 없음 — 이미 넘어옴 */ }
@@ -258,7 +258,7 @@ export class LobbyChat extends DurableObject<ChatEnv> {
       'INSERT INTO lines (ts, uid, name, club, body) VALUES (?, ?, ?, ?, ?) RETURNING id',
       now, me.uid, me.name, me.club, body,
     ).one();
-    this.sql.exec('DELETE FROM lines WHERE id <= ?', row.id - KEEP); // 최근 100개만
+    this.sql.exec('DELETE FROM lines WHERE id <= ?', row.id - KEEP); // 최근 500개만
     const m: WireMsg = { id: row.id, ts: now, uid: me.uid, name: me.name, club: me.club, text: body };
     this.broadcast({ t: 'msg', m }, ws, { t: 'msg', m, cid });
     await this.scheduleSweep();

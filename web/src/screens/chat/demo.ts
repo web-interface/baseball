@@ -30,7 +30,7 @@ function sample(): ChatMsg[] {
 let state: ChatState = {
   status: 'open', loaded: true, msgs: sample(), fading: [], pending: [], online: 23,
   me: { uid: ME_UID, name: ME.user, club: 'dj' }, meChecked: true, retryAt: null, notice: null, restore: null,
-  ttl: 5 * 60_000, maxLen: 200, skew: 0,
+  ttl: 24 * 3600_000, maxLen: 200, skew: 0,
 };
 const ls = new Set<() => void>();
 const set = (p: Partial<ChatState>) => { state = { ...state, ...p }; ls.forEach((l) => l()); };

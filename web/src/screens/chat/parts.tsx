@@ -212,6 +212,7 @@ export function MsgSheet({ src, msg, me, onClose }: { src: ChatSource; msg: Chat
   const auth = useAuth();
   const [last, setLast] = useState<ChatMsg | null>(msg);
   const [busy, setBusy] = useState<'report' | 'del' | null>(null);
+  const chatTtl = useChatState(src).ttl;
   useEffect(() => { if (msg) setLast(msg); }, [msg]);
   const m = msg ?? last;
   const mine = !!m && !!me && m.uid === me.uid;
@@ -261,7 +262,7 @@ export function MsgSheet({ src, msg, me, onClose }: { src: ChatSource; msg: Chat
           <blockquote className={s.quote}>{m.text}</blockquote>
           <p className={s.help}>
             {mine
-              ? '지우면 모든 사람의 화면에서 바로 사라져요. 지우지 않아도 대화는 5분 뒤 사라져요.'
+              ? `지우면 모든 사람의 화면에서 바로 사라져요. 지우지 않아도 대화는 ${ttlText(chatTtl)} 뒤 사라져요.`
               : <>신고는 운영 기록에 누가·누구를·언제만 남아요(본문은 남기지 않아요). {canReport ? '' : '신고는 로그인하면 할 수 있어요. '}숨기기는 이 기기에서만 적용되고, 채팅 화면의 ‘숨긴 감독’에서 되돌릴 수 있어요.</>}
           </p>
         </>
@@ -292,13 +293,15 @@ export function HiddenSheet({ open, onClose }: { open: boolean; onClose: () => v
   );
 }
 
-/** 작은 안내 줄 — '대화는 5분 뒤 사라져요' */
+/** 보관 시간 글 — 서버가 알려 준 값으로 ('하루' · '3시간' · '5분') */
+export const ttlText = (ms: number) => (ms >= 20 * 3600_000 ? '하루' : ms >= 3600_000 ? `${Math.round(ms / 3600_000)}시간` : `${Math.max(1, Math.round(ms / 60_000))}분`);
+
+/** 작은 안내 줄 — '대화는 하루 뒤 사라져요' */
 export function TtlNote({ st, children, className }: { st: ChatState; children?: ReactNode; className?: string }) {
-  const min = Math.round(st.ttl / 60_000);
   return (
     <p className={[s.ttl, className].filter(Boolean).join(' ')}>
       <Icon name="clock" size={14} />
-      <span>대화는 <b className="num">{min}</b>분 뒤 사라져요{children}</span>
+      <span>대화는 <b>{ttlText(st.ttl)}</b> 뒤 사라져요{children}</span>
     </p>
   );
 }
