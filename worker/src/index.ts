@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { PvpError, battle, opponents, putMe, rankings } from './pvp';
 import { LobbyChat, chatConnect } from './chat';
 import { PressError, interviewSpec, newsSpec, type Spec } from './press';
+import { adviceSpec } from './advice';
 
 export { LobbyChat }; // 로비 채팅 방 (Durable Object, SQLite 저장소)
 
@@ -338,6 +339,11 @@ export default {
         case 'POST /ai/interview': {
           if (tooMany('ai:' + ip, 10)) throw new HttpError(429, '요청이 너무 빨라요. 잠시 뒤 다시 해 주세요', 'quota');
           return json(route === 'POST /ai/news' ? await aiPress(req, env, newsSpec) : await aiPress(req, env, interviewSpec), 200, cors);
+        }
+        // 팀 분석 · 전술 추천 (Claude 는 글과 정해진 선택지만, 적용은 감독이)
+        case 'POST /ai/advice': {
+          if (tooMany('ai:' + ip, 10)) throw new HttpError(429, '요청이 너무 빨라요. 잠시 뒤 다시 해 주세요', 'quota');
+          return json(await aiPress(req, env, adviceSpec), 200, cors);
         }
         // 비동기 대전 · 순위
         case 'PUT /pvp/me': return json(await putMe(req, env.DB, await currentUser(req, env)), 200, cors);

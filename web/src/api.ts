@@ -58,6 +58,8 @@ export const api = {
     call<Auth>('POST', '/auth/reset', { username, recoveryCode, key: await passwordKey(username, password) }),
   logout: () => call<{ ok: boolean }>('POST', '/auth/logout', {}),
   aiPing: () => call<Ping>('POST', '/ai/ping', {}),
+  /** 팀 분석 · 추천 (Claude — game/advice). 결과는 game/advice cleanAdvice 가 다시 거른다 */
+  aiAdvice: (input: unknown) => call<unknown>('POST', '/ai/advice', input),
 
   /* 비동기 대전 · 순위 (로그인 필요) */
   pvpPutMe: (snap: PvpSnapshot) => call<{ me: PvpClub }>('PUT', '/pvp/me', snap),

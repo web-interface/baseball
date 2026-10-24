@@ -1,7 +1,7 @@
 // 시즌 진행 — 하루 치기 · 다음 내 경기 준비/마무리 · 지난 내 경기 다시 계산. 경기 엔진(sim.ts)은 처음 쓸 때 불러온다(import()).
 import { ME } from '../game/mock';
 import { initialLineup, store as lineupStore, type LineupState } from '../screens/lineup/calc';
-import { myRoster } from './rosters';
+import { myRoster, withTac } from './rosters';
 import { freezeAiRef } from './league';
 import { startTime, type DayGames } from './schedule';
 import { allDays, applyDay, getSeason, isOver, myGameOf, regularCount, setPending, type DayHighlight, type DayOutcome } from './store';
@@ -40,7 +40,7 @@ export async function computeDay(idx: number, opts: { myRun?: GameRun; snap?: Li
   const s = getSeason();
   const d = allDays(s)[idx];
   const regular = idx < regularCount();
-  const snap = opts.snap ?? (s.pending && s.pending.idx === idx ? s.pending.snap : undefined) ?? lineupStore.get() ?? initialLineup();
+  const snap = opts.snap ?? (s.pending && s.pending.idx === idx ? s.pending.snap : undefined) ?? withTac(lineupStore.get() ?? initialLineup());
   let mine = false;
   const games: DayOutcome['games'] = d.games.map(([a, h]) => {
     if (regular && rainedOut(d.date, h, s.seed)) return { cancelled: true as const, away: a, home: h };
@@ -79,7 +79,7 @@ export async function prepareMyGame(): Promise<{ idx: number; day: DayGames; run
   const s = getSeason();
   // 이미 시작한 경기면 얼린 라인업 그대로, 경기 전 화면만 봤으면 지금 라인업으로 다시 얼린다
   const keep = s.pending && s.pending.idx === target.idx && s.pending.started;
-  const snap = keep ? s.pending!.snap : (lineupStore.get() ?? initialLineup());
+  const snap = keep ? s.pending!.snap : withTac(lineupStore.get() ?? initialLineup());
   if (!keep) setPending(target.idx, JSON.parse(JSON.stringify(snap)) as LineupState);
   const sim = await loadSim();
   const roster = myRoster(snap);

@@ -2,8 +2,9 @@
 // 같은 시즌 시드 · 같은 날 · 같은 선수단이면 늘 같은 경기(엔진은 결정적). 피로·부상은 날을 넘겨 이어 가지 않는다(하루하루 새로).
 import {
   ATTR_KEYS, ENGINE_VER, POS_KEYS, CITY_IDS, neutralTimeline, seedFromString, simulateGame,
-  type GameInput, type GameResult, type Park, type PitRole, type PlayerIn, type TeamIn,
+  type GameInput, type GameResult, type Park, type PitRole, type PlayerIn, type TeamIn, type Tactics,
 } from '../../../shared/engine/index.ts';
+import { personKey, teamVal, type TeamKey } from '../game/tactics';
 import { TEAMS, teamById } from '../game/mock';
 import type { AttrKey, Player, Pos, WeatherKey } from '../game/types';
 import { condsOf, weatherFx } from '../game/weatherFit';
@@ -135,7 +136,67 @@ export function teamIn(r: ClubRoster, day: number, idBase: number, conds: Weathe
     mgr: { style: 0, level: 3 },
     mood: 55, streak: 0, chemTier: r.mine ? Math.min(3, r.setFx.size ? 2 : 0) : 1,
   };
+  if (r.tac) applyTac(team, r, list, idBase);
   return { team, webOf, idOf, roster: r };
+}
+
+/**
+ * 내 전술(game/tactics) → 엔진 — 팀 판단은 TeamIn.tac(엔진 Tactics, 범위는 엔진이 한 번 더 막는다), 선수별은 tac.bat · tac.pit(엔진 숫자 id).
+ * 타자 적극성 · 타구 방향은 엔진에 선수별 칸이 없어서 성향 능력치(swingTend · pullTend)로 — 팀 '적극/신중'은 ±10, 선수별은 ±18.
+ */
+function applyTac(team: TeamIn, r: ClubRoster, list: Player[], idBase: number) {
+  const t = r.tac!;
+  const v = (k: TeamKey) => teamVal(t, k);
+  const lv = (k: TeamKey) => (v(k) === 'more' ? 2 : v(k) === 'less' ? -2 : 0);
+  const bat: NonNullable<Tactics['bat']> = {};
+  const pit: NonNullable<Tactics['pit']> = {};
+  const tac: Partial<Tactics> = {
+    firstPitch: v('bat') === 'aggr' ? 2 : v('bat') === 'pat' ? -2 : 0,
+    twoStrike: v('two') === 'short' ? 'shorten' : v('two') === 'full' ? 'full' : 'normal',
+    extraBase: v('run') === 'aggr' ? 2 : v('run') === 'safe' ? -2 : 0,
+    aggression: v('run') === 'aggr' ? 2 : 0,
+    stealFreq: lv('steal'), buntFreq: lv('bunt'), hitRunFreq: lv('hitrun'), pickoffFreq: lv('pick'),
+    ph: v('ph') === 'late' ? 'lateOnly' : v('ph') === 'never' ? 'never' : 'auto',
+    infieldIn: v('inf') === 'in' ? 'always' : v('inf') === 'back' ? 'never' : 'auto',
+    ofDepth: v('of') === 'shallow' ? 'shallow' : v('of') === 'deep' ? 'deep' : 'auto',
+    ibb: v('ibb') === 'more' ? 'aggressive' : v('ibb') === 'never' ? 'never' : 'auto',
+    calling: v('call') === 'attack' ? 'attack' : v('call') === 'nibble' ? 'nibble' : 'balanced',
+    hookPitches: v('hook') === 'quick' ? -15 : v('hook') === 'long' ? 15 : 0,
+    hookRuns: v('hook') === 'quick' ? 3 : v('hook') === 'long' ? 7 : 0,
+    tto3Hook: v('hook') === 'quick',
+    closer: v('closer') === 'tie' ? 'tieHome' : v('closer') === 'multi' ? 'multiInning' : 'saveOnly',
+    matchup: v('match') !== 'off',
+    bat, pit,
+  };
+  const teamSwing = v('bat') === 'aggr' ? 10 : v('bat') === 'pat' ? -10 : 0;
+  const SW = AIDX.get('swingTend')!, PU = AIDX.get('pullTend')!;
+  list.forEach((p, i) => {
+    const eid = idBase + i;
+    const pin = team.players[i];
+    if (!pin || pin.id !== eid) return;
+    const pk = personKey(p.id);
+    if (p.pos !== 'P') {
+      const o = t.bat[pk] ?? {};
+      const a = pin.attrs as number[]; // toPlayerIn 이 만든 배열 — 성향 칸만 고친다
+      const sw = o.bat === 'aggr' ? 18 : o.bat === 'pat' ? -18 : teamSwing;
+      if (sw) a[SW] = clamp(a[SW] + sw);
+      if (o.spray === 'pull') a[PU] = clamp(a[PU] + 18);
+      else if (o.spray === 'oppo') a[PU] = clamp(a[PU] - 18);
+      const b: NonNullable<Tactics['bat']>[number] = {};
+      if (o.steal === 'green' || o.steal === 'never') b.steal = o.steal;
+      if (o.bunt === 'sac' || o.bunt === 'none') b.bunt = o.bunt;
+      if (Object.keys(b).length) bat[eid] = b;
+    } else {
+      const o = t.pit[pk] ?? {};
+      const x: NonNullable<Tactics['pit']>[number] = {};
+      if (o.call === 'attack') { x.chase = -2; x.jam = 'challenge'; } else if (o.call === 'nibble') { x.chase = 2; x.jam = 'pitchAround'; }
+      if (o.limit === 'short') x.limit = 85; else if (o.limit === 'long') x.limit = 115;
+      if (o.mix === 'fast') x.mix = 2; else if (o.mix === 'break') x.mix = -2;
+      if (o.inside === 'in') x.inside = 2; else if (o.inside === 'out') x.inside = -2;
+      if (Object.keys(x).length) pit[eid] = x;
+    }
+  });
+  team.tac = tac;
 }
 
 /* ───────── 한 경기 ───────── */

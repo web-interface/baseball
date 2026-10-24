@@ -10,6 +10,7 @@ import type { BatKey, PitKey, SetEffect } from '../game/sets';
 import { cardBonusOf, engineFxOf } from '../game/cardBonus';
 import { LEGEND_MAX, isLegendGrade, potEngineFx, potFaceOf, teamPotential } from '../game/potential';
 import { interviewFx } from '../game/press';
+import { loadTactics, type TacState } from '../game/tactics';
 import { PEN_SLOTS, ROT_SLOTS, STAFF_FIT_PENALTY, evaluate, fitOf, getSlot, initialLineup, store as lineupStore, unit, type LineupState, type StaffSlot } from '../screens/lineup/calc';
 
 import { LEVEL_KO, aiLevel, aiTargetOf, type AiLevel } from './league';
@@ -36,7 +37,12 @@ export interface ClubRoster {
   train?: Map<string, { k: BatKey | PitKey; v: number }[]>;
   /** 팀 종합 (표시용) */
   ovr: number;
+  /** 경기 전 전술 (내 구단 — game/tactics). 없으면 엔진 기본 */
+  tac?: TacState;
 }
+
+/** 지금 라인업 + 지금 전술 — 경기에 쓸 때 같이 얼린다(다시 보기 · 경기 기록이 같은 경기가 되게) */
+export const withTac = (st: LineupState): LineupState => ({ ...st, tac: loadTactics() });
 
 const BAT_POS: Exclude<Pos, 'P'>[] = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'];
 
@@ -94,7 +100,7 @@ export function clubRoster(teamId: string, target: number = aiTargetOf(teamId)):
 }
 
 /** 내 구단 — 라인업 화면의 1군 엔트리 (세트덱 효과 · 강화 포함) */
-export function myRoster(st: LineupState = lineupStore.get() ?? initialLineup()): ClubRoster {
+export function myRoster(st: LineupState = withTac(lineupStore.get() ?? initialLineup())): ClubRoster {
   const ev = evaluate(st);
   const setFx = new Map<string, SetEffect>();
   const enh = new Map<string, number>();
@@ -159,7 +165,8 @@ export function myRoster(st: LineupState = lineupStore.get() ?? initialLineup())
   for (const [pid, fx] of interviewFx(st, [...batting.map((b) => b.player), ...bench, ...rotation, ...bullpen, ...(closer ? [closer] : [])])) {
     train.set(pid, [...(train.get(pid) ?? []), ...fx]);
   }
-  return { teamId: ME.teamId, mine: true, batting, rotation, bullpen, closer, bench, delta: new Map(), setFx, enh, train, ovr: Math.round(ev.raw) };
+  // 전술은 스냅샷에 얼린 것만(예전 기록의 스냅샷엔 없다 → 엔진 기본, 그때와 같은 경기)
+  return { teamId: ME.teamId, mine: true, batting, rotation, bullpen, closer, bench, delta: new Map(), setFx, enh, train, ovr: Math.round(ev.raw), tac: st.tac };
 }
 
 /** 그 구단 선수단 (내 구단이면 내 엔트리) */

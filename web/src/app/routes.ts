@@ -31,6 +31,7 @@ export const ROUTES: RouteDef[] = [
   { key: 'sets', path: '/sets', title: '세트덱', menu: '세트덱', owner: '라인업 화면 개발자', desc: '세트 종류별 조건 · 단계별 효과 표 · 내 엔트리 진행 · 모을 카드 · 구단·연도 조합별 효과', load: () => import('../screens/sets') },
   { key: 'schedule', path: '/schedule', title: '시즌 일정', menu: '시즌 일정', owner: '경기 운영 개발자', desc: '월별 달력(우리 경기 · 결과 · 시작 시각 · 날씨 · 휴식 · 취소) · 전체 일정(날짜별 · 우리 경기/모든 경기) · ?view=list · ?m=6 · ?all=1', load: () => import('../screens/schedule') },
   { key: 'season', path: '/season', title: '경기 준비·진행', menu: '경기 준비·진행', owner: '경기 화면 개발자', desc: '경기 운영의 가운데 — 다음 경기 · AI 뉴스 · 감독 인터뷰 · 라인업 점검 · 경기 시작 · 결과 · 남은 시즌 빨리 감기 · 포스트시즌 판', load: () => import('../screens/season') },
+  { key: 'tactics', path: '/tactics', title: '전술', menu: '전술', owner: '경기 운영 개발자', desc: '경기 전 기본 전술 — 팀 전체(공격 · 수비 · 투수 운용) · 타자별 · 투수별 + 수석코치 팀 분석(Claude, 안 되면 기본 분석) · ?tab=team|bat|pit', load: () => import('../screens/tactics') },
   { key: 'league', path: '/league', title: '순위·리그 기록', menu: '순위·리그 기록', owner: '경기 운영 개발자', desc: '팀 순위(경기 · 승무패 · 승률 · 게임차 · 연속 · 최근10 · 득실) · 순위 경쟁 그래프 · 포스트시즌 요약 · 개인 기록 TOP 10(타자 · 투수, 규정타석 · 규정이닝) · ?tab=pit&cat=era', load: () => import('../screens/league') },
   { key: 'games', path: '/games', title: '경기 기록', menu: '경기 기록', owner: '경기 운영 개발자', desc: '지난 경기 목록(우리 경기/모든 경기 · 달별 · 포스트시즌) · ?g=<경기 키> 박스스코어(이닝 점수 · 타자 · 투수 · 홈런 · 결승타)', load: () => import('../screens/games') },
   { key: 'match', path: '/match', title: '경기', owner: '경기 화면 개발자', desc: '빨리 보기(10초) · 주요 장면 · 이닝별 · 자세히(2D) · 강조 문구 · 원인 표시 · ?g=season 지금 바로 경기(엔진) · ?pvp=<id> 대전 다시 보기', load: () => import('../screens/match') },
@@ -64,7 +65,7 @@ export const GROUPS: MenuGroup[] = [
     { route: 'lineup', label: '라인업' }, { route: 'cards', label: '선수보관' }, { route: 'combine', label: '선수조합' }, { route: 'sets', label: '세트덱' }, { route: 'enhance', label: '훈련' },
   ] },
   { key: 'play', label: '경기 운영', landing: 'season', items: [
-    { route: 'schedule', label: '시즌 일정' }, { route: 'season', label: '경기 준비·진행' }, { route: 'league', label: '순위·리그 기록' }, { route: 'games', label: '경기 기록' },
+    { route: 'schedule', label: '시즌 일정' }, { route: 'season', label: '경기 준비·진행' }, { route: 'tactics', label: '전술' }, { route: 'league', label: '순위·리그 기록' }, { route: 'games', label: '경기 기록' },
   ], members: { match: 'season' } },
   { key: 'scout', label: '상점', items: [{ route: 'gacha', label: '카드구매' }, { route: 'shop', label: '스카우터' }] },
   { key: 'versus', label: '대전·순위', items: [{ route: 'pvp', label: '대전' }, { route: 'rank', label: '순위' }] },

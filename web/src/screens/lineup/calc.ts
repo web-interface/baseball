@@ -10,6 +10,7 @@
 //  · 팀 종합: 선발 10명(타자 9 + 1선발)의 '기본(종합 + 강화 + 훈련 + 잠재력) + 세트덱 + 케미' 평균.
 //  · 레전드급(레전드 · 프랜차이즈 · 블랙 · 시그니처) 카드는 1군 엔트리에 타자 2명 · 투수 2명까지 (game/potential LEGEND_MAX).
 import type { CardInst, Player, Team } from '../../game/types';
+import type { TacState } from '../../game/tactics';
 import { ME, teamByCode, teamById } from '../../game/mock';
 import { DYNASTY_V, computeSets, faceBonus, sideLine, type EntryMember, type SetProgress } from '../../game/sets';
 import { fullYear } from '../../game/clubSeasons';
@@ -54,6 +55,8 @@ export interface LineupState {
   bullpen: (string | null)[];
   closer: string | null;
   bench: string[];
+  /** 경기에 쓸 때 같이 얼린 전술 (스냅샷에만 — 저장된 라인업엔 없다, game/tactics) */
+  tac?: TacState;
 }
 
 /** 처음 라인업 — 기본 선수단 배치를 지금 보유 카드에 맞춰서 */

@@ -1,0 +1,87 @@
+/* 전술 — 경기 운영 › 전술. 세 칸 고르기(Seg) · 묶음(공격 · 수비 · 투수 운용) · 선수별 목록 · 수석코치 분석 카드 */
+.screen { padding-bottom: 40px; }
+.top { padding: 18px var(--gutter) 6px; }
+.title { font-size: 24px; text-shadow: var(--misreg); }
+.lead { margin-top: 8px; font-size: 13.5px; line-height: 1.6; color: var(--fg-2); }
+.lead b { color: var(--fg); }
+.tabs { margin-top: 14px; padding: 0 var(--gutter); }
+.sec { padding: 6px var(--gutter) 4px; }
+.foot { padding: 18px var(--gutter) 0; font-size: 11.5px; line-height: 1.5; color: var(--fg-4); }
+.hint { padding: 10px 0 4px; font-size: 12.5px; line-height: 1.5; color: var(--fg-3); }
+
+/* 묶음 */
+.group { padding-top: 14px; }
+.gh { display: flex; align-items: center; gap: 8px; padding-bottom: 6px; font-size: 13px; font-weight: 800; letter-spacing: -.02em; color: var(--accent-2); }
+.gh::after { content: ''; flex: 1; height: 1px; background: var(--line-2); }
+
+/* 한 줄 */
+.opt { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.optHead { display: flex; flex-direction: column; min-width: 0; }
+.optHead b { font-size: 14px; font-weight: 750; letter-spacing: -.03em; }
+.optHead small { margin-top: 2px; font-size: 11px; color: var(--fg-3); letter-spacing: -.02em; }
+.optSet .optHead b { color: var(--accent-2); }
+.fx { grid-column: 1 / -1; margin-top: -1px; font-size: 11.5px; line-height: 1.45; color: var(--fg-2); letter-spacing: -.02em; }
+
+/* 세 칸 고르기 */
+.seg { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); width: min(228px, 56vw); border-radius: var(--r-2); box-shadow: inset 0 0 0 1px var(--line-3); overflow: hidden; }
+.seg button {
+  min-height: 36px; padding: 0 6px; font-size: 12px; font-weight: 650; letter-spacing: -.04em; line-height: 1.15;
+  color: var(--fg-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: background-color var(--dur-2), color var(--dur-2);
+}
+.seg button + button { box-shadow: inset 1px 0 0 var(--line-2); }
+.seg .segOn { color: var(--accent-ink, #fff); background: var(--accent); box-shadow: none; }
+.seg .segOn + button { box-shadow: none; }
+.seg button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+@media (max-width: 380px) { .opt { grid-template-columns: 1fr; } .seg { width: 100%; } }
+
+.resetRow { display: flex; justify-content: flex-end; padding-top: 10px; }
+
+/* 선수별 목록 */
+.list { display: grid; }
+.row { display: grid; grid-template-columns: 40px 40px minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; padding: 8px 0; border-bottom: 1px solid var(--line); text-align: left; }
+.rowSet { box-shadow: inset 3px 0 0 var(--accent); padding-left: 8px; }
+.rowSlot { font-size: 12px; font-weight: 700; color: var(--fg-2); letter-spacing: -.03em; }
+.rowCard { display: block; width: 40px; }
+.rowWho { display: flex; flex-direction: column; min-width: 0; }
+.rowWho b { font-size: 14px; font-weight: 750; letter-spacing: -.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rowWho small { font-size: 11px; color: var(--fg-3); }
+.rowTac { max-width: 46vw; font-size: 12px; font-weight: 700; color: var(--accent-2); text-align: right; letter-spacing: -.03em; }
+.rowTac i { font-style: normal; font-weight: 500; color: var(--fg-4); }
+.empty { padding: 18px 0; font-size: 13px; color: var(--fg-3); }
+.pSheet { display: grid; padding-bottom: 6px; }
+
+/* 수석코치 분석 카드 */
+.coach {
+  margin: 14px var(--gutter) 4px; padding: 14px 14px 12px; border-radius: var(--r-3, 10px);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 12%, var(--surface, var(--bg))), var(--surface, var(--bg)) 60%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, var(--line-2));
+}
+.coachHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.coachK { font-size: 12px; font-weight: 800; letter-spacing: .02em; color: var(--accent-2); }
+.srcAi, .srcRule { padding: 2px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 800; letter-spacing: -.02em; }
+.srcAi { color: #fff; background: linear-gradient(90deg, #8a5cff, #d97757); }
+.srcRule { color: var(--fg-2); box-shadow: inset 0 0 0 1px var(--line-3); }
+.coachLead { margin-top: 6px; font-size: 13px; line-height: 1.55; color: var(--fg-2); }
+.headline { margin-top: 6px; font-size: 16.5px; font-weight: 800; line-height: 1.4; letter-spacing: -.04em; color: var(--fg); }
+.note { margin-top: 4px; font-size: 11.5px; color: var(--fg-3); }
+.sw { display: grid; gap: 4px; margin-top: 10px; }
+.sw p { display: flex; gap: 7px; font-size: 12.5px; line-height: 1.45; color: var(--fg-2); letter-spacing: -.03em; }
+.sw i { flex: none; width: 16px; height: 16px; display: grid; place-items: center; border-radius: 50%; font-style: normal; font-size: 12px; font-weight: 900; line-height: 1; margin-top: 1px; }
+.plus i { color: #0b2a17; background: #4cd38a; }
+.minus i { color: #fff; background: #e0565b; }
+.recs { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-2); display: grid; gap: 2px; }
+.recH { font-size: 12px; font-weight: 800; color: var(--fg); margin-bottom: 4px; }
+.rec { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; }
+.rec p { min-width: 0; font-size: 13px; line-height: 1.4; color: var(--fg); letter-spacing: -.03em; }
+.rec p b { font-weight: 800; }
+.rec p small { display: block; font-size: 11.5px; color: var(--fg-3); }
+.recBtn, .recDone { flex: none; min-height: 32px; padding: 0 12px; border-radius: var(--r-2); font-size: 12px; font-weight: 800; }
+.recBtn { color: var(--accent-ink, #fff); background: var(--accent); }
+.recDone { color: var(--fg-3); box-shadow: inset 0 0 0 1px var(--line-2); }
+.lineupTips { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-2); display: grid; gap: 4px; }
+.lineupTips p { font-size: 12.5px; line-height: 1.5; color: var(--fg-2); letter-spacing: -.03em; }
+.link { justify-self: start; font-size: 12.5px; font-weight: 750; color: var(--accent-2); }
+.coachActions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.left { margin-left: auto; font-size: 11.5px; color: var(--fg-3); }
+.left b { color: var(--fg-2); }
