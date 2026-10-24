@@ -1,7 +1,7 @@
 // 팀 종합 게이지 — 공용 Gauge 위에 손맛을 얹는다: 숫자 세기 · 바뀐 만큼(+2) · 폭발 때 빛이 훑고 끝에서 터짐 · 폭발 중 충전된 막대.
 import { useLayoutEffect, useRef, useState } from 'react';
 import { Gauge, fmt } from '../../ui';
-import type { Eval } from './calc';
+import { potentialLead, type Eval } from './calc';
 import { useDelta, useTween } from './hooks';
 import s from './GaugeBox.module.css';
 
@@ -38,7 +38,7 @@ export function GaugeBox({ ev, boom }: { ev: Eval; boom: number | null }) {
         value={shown}
         base={ev.base}
         potential={ev.exploded ? undefined : ev.potential}
-        potentialLabel={<>왕조 시 <b className="num">{ev.potential}</b></>}
+        potentialLabel={<>{potentialLead(ev)} <b className="num">{ev.potential}</b></>}
         parts={ev.parts.slice(0, 3).map((p) => ({ ko: p.ko, v: p.v }))}
         label={(
           <span className={s.label}>

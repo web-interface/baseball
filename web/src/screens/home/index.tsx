@@ -1,6 +1,7 @@
 // 홈 · 클럽하우스 — 담당: 홈·시작·설정 개발자
 // 구단 머리(엠블럼·이름·감독·시즌 성적) → 다음 경기 → 오늘 할 일 → 구단 소식 → 팀 종합 → 지난 경기(명장면 다시 보기) → 구단 금고
 // 시즌 성적 · 순위 · 선수 기록 · 지난 경기 · 소식은 모두 저장된 시즌 진행(season/store) — 개막일엔 0승 0무 0패, 지난 경기 칸은 없음
+import { useMemo } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { useAuth } from '../../app/auth';
 import { ClubEmblem } from '../../art/emblems';
@@ -14,6 +15,9 @@ import { NextGame } from './NextGame';
 import { Todo } from './Todo';
 import { Feed } from './Feed';
 import { TeamPower } from './TeamPower';
+import { DeckBadge } from '../../ui/DeckBadge';
+import { deckOf } from '../../game/deck';
+import { entryMembers, initialLineup, store as lineupStore } from '../lineup/calc';
 import { LastGame } from './LastGame';
 import { LobbyChat } from '../chat/LobbyChat';
 import { LEVEL_KO, nextLevel, useLeague } from '../../season/league';
@@ -29,6 +33,7 @@ function Masthead({ manager }: { manager: string }) {
   const next = isOver(season) ? '정규 시즌 끝' : ln.played === 0 ? (ln.started ? '첫 경기 앞' : '개막전 앞') : <><span className="num">{ln.nextNo}</span>번째 경기 앞</>;
   const L = useLeague();
   const up = nextLevel(L.level);
+  const deck = useMemo(() => deckOf(entryMembers(lineupStore.get() ?? initialLineup())), []);
   return (
     <section className={s.mast} aria-label="구단">
       <div className={s.mastArt} aria-hidden>
@@ -53,6 +58,11 @@ function Masthead({ manager }: { manager: string }) {
           <small className={s.lvS}>{up ? <>다음 {LEVEL_KO[up]}</> : '최고 단계'}{L.stay > 0 && <> · <span className="num">{L.stay + 1}</span>시즌째</>}</small>
         </button>
       </div>
+      {/* 내 덱 — 1군 엔트리의 세트덱으로 '무슨 덱'인지 (누르면 세트덱) */}
+      <button type="button" className={s.deckRow} onClick={() => navigate('/sets')} aria-label={`내 덱 ${deck.label} — 세트덱 보기`}>
+        <span className={s.deckK}>내 덱</span>
+        <DeckBadge deck={deck} size="l" />
+      </button>
       <dl className={s.stats}>
         <div>
           <dt>순위</dt>

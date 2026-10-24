@@ -469,6 +469,18 @@ export function evaluate(st: LineupState): Eval {
   };
 }
 
+/**
+ * 게이지의 '완성하면' 글 — 엔트리 전원이 구단+연도 세트(20명)를 받으면 오를 팀 종합(ev.potential) 앞에 붙는 말.
+ * 같은 구단 · 연도 카드를 5명 이상 모으는 중이면 그 세트로('’27 독수리스 6명 더 모으면'), 아니면 '세트덱 완성 시'.
+ */
+export function potentialLead(ev: Eval): string {
+  const ty = ev.sets.filter((x) => x.kind === 'teamYear' && x.code && x.year != null).sort((a, b) => b.have - a.have)[0];
+  if (ty && ty.have >= 5 && ty.have < ENTRY_FULL) return `${yearTag(ty.year! % 100)} ${shortLabelOf(ty.code!)} ${ENTRY_FULL - ty.have}명 더 모으면`;
+  return '세트덱 완성 시';
+}
+const ENTRY_FULL = 20;
+const shortLabelOf = (code: string) => teamByCode(code as Team['code']).short;
+
 /* ───────── 레전드급 — 1군 엔트리에 타자 2명 · 투수 2명까지 ───────── */
 export { LEGEND_MAX } from '../../game/potential';
 const isLeg = (id: string | null | undefined) => !!id && isLegendGrade(unit(id).card.grade);

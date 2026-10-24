@@ -1,0 +1,49 @@
+/* 덱 배지 — 구단 주색 · 보조색 금속 띠, 왕조덱은 금 테 + 지나가는 빛 */
+.deck {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 6px;
+  color: #fff;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .28), rgba(255, 255, 255, 0) 46%, rgba(0, 0, 0, .18)),
+    linear-gradient(100deg, var(--dc1), color-mix(in srgb, var(--dc1) 55%, var(--dc2)) 62%, var(--dc2));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .28), 0 2px 8px -3px color-mix(in srgb, var(--dc1) 70%, transparent);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .35);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.mark { flex: none; font-style: normal; line-height: 1; opacity: .95; }
+.name { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 850; letter-spacing: -.03em; }
+.sub { flex: none; font-weight: 600; opacity: .85; letter-spacing: -.02em; }
+
+.s { height: 20px; padding: 0 7px 0 6px; gap: 4px; }
+.s .mark { font-size: 9px; }
+.s .name { font-size: 11px; }
+.m { height: 26px; padding: 0 9px 0 8px; }
+.m .mark { font-size: 11px; }
+.m .name { font-size: 12.5px; }
+.m .sub { font-size: 10.5px; }
+.l { height: 36px; padding: 0 14px 0 11px; gap: 8px; border-radius: 8px; }
+.l .mark { font-size: 15px; }
+.l .name { font-size: 16px; }
+.l .sub { font-size: 11.5px; }
+
+/* 연도덱 · 혼합덱 */
+.year { --dc1: #6b5cff; --dc2: #1f6fb2; }
+.mixed { color: var(--fg); text-shadow: none; background: color-mix(in srgb, var(--fg) 8%, transparent); box-shadow: inset 0 0 0 1px var(--line-3); }
+
+/* 왕조덱 — 금 테 + 빛 */
+.dynasty { box-shadow: inset 0 0 0 1.5px #f2c94c, 0 0 0 1px rgba(0, 0, 0, .25), 0 0 14px -2px rgba(242, 201, 76, .75); }
+.dynasty .mark { color: #ffe08a; text-shadow: 0 0 6px rgba(255, 224, 138, .9); }
+.shine {
+  position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 244, 200, .55) 45%, transparent 60%) 0 0 / 260% 100% no-repeat;
+  animation: dshine 3.2s linear infinite;
+}
+@keyframes dshine { from { background-position: 130% 0; } to { background-position: -130% 0; } }
+@media (prefers-reduced-motion: reduce) { .shine { animation: none; } }

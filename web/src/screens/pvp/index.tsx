@@ -2,6 +2,8 @@
 //   다른 감독이 저장해 둔 구단과 혼자 붙는다(상대 접속 필요 없음). 실제 감독은 서버가 결과를 정하고,
 //   아래 'AI 구단'은 이 기기에서만 도는 연습 상대(목업)다. 순위는 위 메뉴 '순위' 탭(#/rank).
 //   ?tab=opp|log · ?vs=<AI 상대 id> AI 경기(경기 전 → 빨리 보기 → 결과)
+import { DeckBadge } from '../../ui/DeckBadge';
+import { deckOfSnapshot } from '../../game/deck';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { navigate, setQueryQuiet } from '../../app/router';
@@ -270,6 +272,7 @@ function RealList({ on, onPeek, onStart }: { on: ReturnType<typeof usePvpOnline>
                     <b className={s.mgr}>{o.username}</b> 감독 · {n ? <><span className="num">{o.w}</span>승 <span className="num">{o.d}</span>무 <span className="num">{o.l}</span>패 <span className="num">{pctOf(o.w, o.l)}</span></> : '첫 대전 전'}
                   </span>
                   <span className={s.oppForm}>
+                    {(() => { const d = deckOfSnapshot(o.lineup); return d ? <DeckBadge deck={d} size="s" /> : null; })()}
                     <span className={[s.oppRt, s.oppRt0].join(' ')}>레이팅 <span className="num">{fmt.int(o.rating)}</span></span>
                     <span className={s.oppRt}>{ago(o.updatedAt)} 저장</span>
                   </span>

@@ -67,3 +67,4 @@
 .whoBtn { width: 100%; text-align: left; border-radius: 6px; }
 .whoBtn:hover b { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-3); }
 .peekNote { padding: 18px 2px; font-size: 13px; color: var(--fg-3); }
+.deck { margin-top: 3px; align-self: flex-start; }

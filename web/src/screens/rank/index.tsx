@@ -1,7 +1,7 @@
 // 순위 #/rank — 감독 순위(서버: 레이팅 · 승률 · 구단 전력). 구단 10개 리그 순위는 경기 운영 > 순위·리그 기록(#/league)으로 옮겼다.
 //   ?by=winrate|power  (예전 주소 ?tab=league 는 #/league 로 넘긴다)
 //   감독 순위는 실제 가입한 감독만 나온다(AI 구단은 순위에 없다). 로그인해야 내 순위가 보인다.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { Link, navigate, setQueryQuiet } from '../../app/router';
 import { useAuth } from '../../app/auth';
@@ -11,6 +11,9 @@ import { rankLabel, teamLine, useSeason } from '../../season/store';
 import { ApiError, api, type PvpLineupItem, type RankingBy, type RankingsRes, type RankingRow } from '../../api';
 import { TeamLineup, cardsFromRoster, cardsFromSnapshot, type LineupCards } from '../pvp/TeamLineup';
 import { myRoster } from '../../season/rosters';
+import { DeckBadge } from '../../ui/DeckBadge';
+import { deckOf, deckOfSnapshot } from '../../game/deck';
+import { entryMembers, initialLineup, store as lineupStore } from '../lineup/calc';
 import { demoRankings } from './demo';
 import s from './rank.module.css';
 
@@ -69,6 +72,16 @@ function Managers({ by, setBy, demo }: { by: RankingBy; setBy: (v: RankingBy) =>
       .then((r) => { fetchedAt.current = Date.now(); setLineups(new Map(r.opponents.map((o) => [o.userId, o.lineup ?? []]))); })
       .catch(() => setLineups('error'));
   };
+  // 덱 배지 — 순위 응답엔 라인업이 없어서, 들어오면 대전 상대 목록(레이팅이 가까운 20명)을 한 번 받아 그 감독들 덱을 붙인다. 나는 내 라인업
+  useEffect(() => {
+    if (demo || status !== 'in' || lineups !== null) return;
+    setLineups('loading');
+    api.pvpOpponents()
+      .then((r) => { fetchedAt.current = Date.now(); setLineups(new Map(r.opponents.map((o) => [o.userId, o.lineup ?? []]))); })
+      .catch(() => setLineups('error'));
+  }, [demo, status]); // eslint-disable-line react-hooks/exhaustive-deps
+  const myDeck = useMemo(() => deckOf(entryMembers(lineupStore.get() ?? initialLineup())), []);
+  const deckFor = (row: { userId: number; me?: boolean }) => (row.me ? myDeck : lineups instanceof Map ? deckOfSnapshot(lineups.get(row.userId)) : null);
   // 나는 내 카드 그대로(등급 · 강화 · 특별 선수), 다른 감독은 올려 둔 라인업에서 되살린 카드
   const peekCards: LineupCards | null = (() => {
     if (!peek) return null;
@@ -138,6 +151,7 @@ function Managers({ by, setBy, demo }: { by: RankingBy; setBy: (v: RankingBy) =>
                       <span className={s.whoTxt}>
                         <b>{x.teamName}</b>
                         <small>{x.username}{x.me ? ' · 나' : ''}</small>
+                        {(() => { const d = deckFor(x); return d ? <DeckBadge deck={d} size="s" className={s.deck} /> : null; })()}
                       </span>
                     </button>
                   </td>
@@ -154,7 +168,7 @@ function Managers({ by, setBy, demo }: { by: RankingBy; setBy: (v: RankingBy) =>
                   <td>
                     <button type="button" className={[s.who, s.whoBtn].join(' ')} onClick={() => openPeek({ ...me, me: true })} aria-label="내 라인업 보기">
                       <Emblem team={clubTeam(me.club)} size={26} />
-                      <span className={s.whoTxt}><b>{me.teamName}</b><small>{me.username} · 나</small></span>
+                      <span className={s.whoTxt}><b>{me.teamName}</b><small>{me.username} · 나</small><DeckBadge deck={myDeck} size="s" className={s.deck} /></span>
                     </button>
                   </td>
                   <td className={['num', s.cR, s.wdl].join(' ')}>{me.w}-{me.d}-{me.l}</td>

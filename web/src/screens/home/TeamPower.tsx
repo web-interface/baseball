@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { Gauge, Icon } from '../../ui';
 import { Link } from '../../app/router';
 import { ENTRY_SIZE, SET_KIND_KO, statLine } from '../../game/sets';
-import { evaluate, initialLineup, store } from '../lineup/calc';
+import { evaluate, initialLineup, potentialLead, store } from '../lineup/calc';
 import s from './TeamPower.module.css';
 
 export function TeamPower() {
@@ -17,7 +17,7 @@ export function TeamPower() {
         <Link to="/lineup" className={s.link}>라인업에서 맞추기 <Icon name="chevron" size={14} /></Link>
       </header>
       <Gauge value={ev.overall} base={ev.base} potential={ev.exploded ? undefined : ev.potential}
-        potentialLabel={<>왕조 시 <b className="num">{ev.potential}</b></>} parts={ev.parts.map((p) => ({ ko: p.ko, v: p.v }))} label="지금" />
+        potentialLabel={<>{potentialLead(ev)} <b className="num">{ev.potential}</b></>} parts={ev.parts.map((p) => ({ ko: p.ko, v: p.v }))} label="지금" />
       <div className={s.boom}>
         <p className={s.boomHead}>
           <Icon name="bolt" size={16} />
