@@ -8,7 +8,7 @@ import { eraOfCode } from '../game/world';
 import type { Player, PitcherRole, Pos } from '../game/types';
 import type { BatKey, PitKey, SetEffect } from '../game/sets';
 import { cardBonusOf, engineFxOf } from '../game/cardBonus';
-import { LEGEND_MAX, isLegendGrade, potEngineFx, potFaceOf, teamPotential } from '../game/potential';
+import { LEGEND_MAX, MVP_MAX, isLegendGrade, isMvpGrade, potEngineFx, potFaceOf, teamPotential } from '../game/potential';
 import { interviewFx } from '../game/press';
 import { loadTactics, type TacState } from '../game/tactics';
 import { PEN_SLOTS, ROT_SLOTS, STAFF_FIT_PENALTY, evaluate, fitOf, getSlot, initialLineup, store as lineupStore, unit, type LineupState, type StaffSlot } from '../screens/lineup/calc';
@@ -146,17 +146,22 @@ export function myRoster(st: LineupState = withTac(lineupStore.get() ?? initialL
     const pen = STAFF_FIT_PENALTY[fitOf(u.player, slot)];
     if (pen > 0) train.set(u.player.id, [...(train.get(u.player.id) ?? []), ...(['vel', 'stf', 'brk', 'ctl'] as const).map((k) => ({ k, v: -pen }))]);
   }
-  // 레전드급 — 경기에 나서는 선수단 전체(벤치 포함)에서 타자 2명 · 투수 2명까지. 엔트리가 먼저, 남는 몫만큼 벤치
+  // 레전드급 — 경기에 나서는 선수단 전체(벤치 포함)에서 타자 2명 · 투수 2명까지, MVP 는 합쳐 4명까지. 엔트리가 먼저, 남는 몫만큼 벤치
   const legLeft = { ...LEGEND_MAX };
-  entryIds.forEach((id) => { const u = unit(id); if (isLegendGrade(u.card.grade)) legLeft[u.player.pos === 'P' ? 'pit' : 'bat']--; });
+  let mvpLeft = MVP_MAX;
+  entryIds.forEach((id) => {
+    const u = unit(id);
+    if (isLegendGrade(u.card.grade)) legLeft[u.player.pos === 'P' ? 'pit' : 'bat']--;
+    if (isMvpGrade(u.card.grade)) mvpLeft--;
+  });
   const benchIds = st.bench.filter((id) => {
     const u = pl(id);
     if (!u || inUse.has(person(u.player.id))) return false;
+    if (isMvpGrade(u.card.grade) && mvpLeft <= 0) return false;
+    if (isLegendGrade(u.card.grade) && legLeft[u.player.pos === 'P' ? 'pit' : 'bat'] <= 0) return false;
     inUse.add(person(u.player.id));
-    if (!isLegendGrade(u.card.grade)) return true;
-    const k = u.player.pos === 'P' ? 'pit' : 'bat';
-    if (legLeft[k] <= 0) return false;
-    legLeft[k]--;
+    if (isMvpGrade(u.card.grade)) mvpLeft--;
+    if (isLegendGrade(u.card.grade)) legLeft[u.player.pos === 'P' ? 'pit' : 'bat']--;
     return true;
   });
   const bench = benchIds.map((id) => pl(id)!.player);

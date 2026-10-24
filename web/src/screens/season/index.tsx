@@ -18,7 +18,7 @@ import { LEVEL_KO, aiLevel } from '../../season/rosters';
 import type { GameOut } from '../../season/sim';
 import { NextGame } from '../home/NextGame';
 import { LastGame } from '../home/LastGame';
-import { LEGEND_MAX, evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
+import { LEGEND_MAX, MVP_MAX, evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
 import { useInventory } from '../../game/inventory';
 import { InterviewCard, NewsFeed } from '../press';
 import { boxKeyOfMyGame } from '../../season/box';
@@ -217,7 +217,7 @@ function Prep() {
       </div>
       <ul className={s.prepList}>
         <li>타격 <b className="num">{ev.parts.find((p) => p.k === 'bat')?.v}</b> · 수비 <b className="num">{ev.parts.find((p) => p.k === 'def')?.v}</b> · 투수 <b className="num">{ev.parts.find((p) => p.k === 'pit')?.v}</b></li>
-        <li>레전드급 타자 <b className="num">{ev.legend.bat}</b>/{LEGEND_MAX.bat} · 투수 <b className="num">{ev.legend.pit}</b>/{LEGEND_MAX.pit}{ev.active.length > 0 && <> · 세트 <b className="num">{ev.active.length}</b>개 켜짐</>}</li>
+        <li>레전드급 타자 <b className="num">{ev.legend.bat}</b>/{LEGEND_MAX.bat} · 투수 <b className="num">{ev.legend.pit}</b>/{LEGEND_MAX.pit} · MVP <b className="num">{ev.legend.mvp}</b>/{MVP_MAX}{ev.active.length > 0 && <> · 세트 <b className="num">{ev.active.length}</b>개 켜짐</>}</li>
         {empty > 0 && <li className={s.prepBad}>비어 있는 자리 <b className="num">{empty}</b>곳</li>}
         {hurt > 0 && <li className={s.prepBad}>부상 선수 <b className="num">{hurt}</b>명이 엔트리에 있어요</li>}
       </ul>

@@ -25,7 +25,7 @@ import { PitchTab } from './PitchTab';
 import { BenchSheet, SwapSheet } from './SwapSheet';
 import { PlayerSheet } from './PlayerSheet';
 import {
-  BAT_SLOTS, LEGEND_MAX, STAFF_SLOTS, SLOT_KO, autoLineup, autoOrder, evaluate, getSlot, initialLineup, isBat, place, store, swapOrder, unit,
+  BAT_SLOTS, LEGEND_MAX, MVP_MAX, STAFF_SLOTS, SLOT_KO, autoLineup, autoOrder, evaluate, getSlot, initialLineup, isBat, place, store, swapOrder, unit,
   type LineupState, type Slot, type StaffSlot,
 } from './calc';
 import s from './Lineup.module.css';
@@ -193,7 +193,9 @@ export default function LineupScreen({ query }: ScreenProps) {
         <span className={s.legendTag}>레전드급</span>
         <span>타자 <b className={['num', ev.legend.bat >= LEGEND_MAX.bat && s.capFull].filter(Boolean).join(' ')}>{ev.legend.bat}</b>/{LEGEND_MAX.bat}</span>
         <span>투수 <b className={['num', ev.legend.pit >= LEGEND_MAX.pit && s.capFull].filter(Boolean).join(' ')}>{ev.legend.pit}</b>/{LEGEND_MAX.pit}</span>
-        <small>레전드 · 프랜차이즈 · 블랙 · 시그니처 카드는 한 팀에 타자 {LEGEND_MAX.bat}명 · 투수 {LEGEND_MAX.pit}명까지</small>
+        <span className={[s.legendTag, s.mvpTag].join(' ')}>MVP</span>
+        <span><b className={['num', ev.legend.mvp >= MVP_MAX && s.capFull].filter(Boolean).join(' ')}>{ev.legend.mvp}</b>/{MVP_MAX}</span>
+        <small>레전드 · 프랜차이즈 · 블랙 · 시그니처 카드는 한 팀에 타자 {LEGEND_MAX.bat}명 · 투수 {LEGEND_MAX.pit}명까지, MVP 카드는 타자 · 투수 합쳐 {MVP_MAX}명까지</small>
       </p>
 
       {tab === 'field' && (

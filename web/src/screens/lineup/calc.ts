@@ -9,6 +9,7 @@
 //            동시에 2개까지, 한 선수는 가장 센 세트 하나. 오르는 능력치는 조합마다 다르다.
 //  · 팀 종합: 선발 10명(타자 9 + 1선발)의 '기본(종합 + 강화 + 훈련 + 잠재력) + 세트덱 + 케미' 평균.
 //  · 레전드급(레전드 · 프랜차이즈 · 블랙 · 시그니처) 카드는 1군 엔트리에 타자 2명 · 투수 2명까지 (game/potential LEGEND_MAX).
+//  · MVP 카드는 1군 엔트리에 타자 · 투수 합쳐 4명까지 (MVP_MAX).
 import type { CardInst, Player, Team } from '../../game/types';
 import type { TacState } from '../../game/tactics';
 import { ME, teamByCode, teamById } from '../../game/mock';
@@ -18,7 +19,7 @@ import { yearTag } from '../../ui/format';
 import { getCard, getPlayer, owned, startLayout } from './local-mock';
 import { enhGainTotal, invVersion, loadLineup, saveLineup } from '../../game/inventory';
 import { cardLite } from '../../game/kbo';
-import { LEGEND_MAX, isLegendGrade, potFaceOf, teamPotential, type FaceFx, type TeamPot } from '../../game/potential';
+import { LEGEND_MAX, MVP_MAX, isLegendGrade, isMvpGrade, potFaceOf, teamPotential, type FaceFx, type TeamPot } from '../../game/potential';
 import { cardBonusOf, ovrBonusOf, type CardBonus } from '../../game/cardBonus';
 
 /* ───────── 자리 ───────── */
@@ -331,8 +332,8 @@ export interface Eval {
   club: Team;
   /** 왕조 — 엔트리 전원이 한 구단·한 연도 */
   exploded: boolean;
-  /** 레전드급 인원 (1군 엔트리) — 타자 · 투수 각 LEGEND_MAX 까지 */
-  legend: { bat: number; pit: number };
+  /** 레전드급 인원 (1군 엔트리) — 타자 · 투수 각 LEGEND_MAX 까지 · MVP 는 합쳐 MVP_MAX 까지 */
+  legend: { bat: number; pit: number; mvp: number };
 }
 
 const clamp99 = (v: number) => Math.max(1, Math.min(99, Math.round(v)));
@@ -481,34 +482,42 @@ export function potentialLead(ev: Eval): string {
 const ENTRY_FULL = 20;
 const shortLabelOf = (code: string) => teamByCode(code as Team['code']).short;
 
-/* ───────── 레전드급 — 1군 엔트리에 타자 2명 · 투수 2명까지 ───────── */
-export { LEGEND_MAX } from '../../game/potential';
+/* ───────── 레전드급 — 1군 엔트리에 타자 2명 · 투수 2명까지 · MVP 는 합쳐 4명까지 ───────── */
+export { LEGEND_MAX, MVP_MAX } from '../../game/potential';
 const isLeg = (id: string | null | undefined) => !!id && isLegendGrade(unit(id).card.grade);
-/** 1군 엔트리의 레전드급 인원 (타자 = 수비 9자리, 투수 = 선발 · 불펜 · 마무리) */
+const isMvp = (id: string | null | undefined) => !!id && isMvpGrade(unit(id).card.grade);
+/** 1군 엔트리의 레전드급 · MVP 인원 (타자 = 수비 9자리, 투수 = 선발 · 불펜 · 마무리) */
 export function legendCount(st: LineupState) {
-  return { bat: BAT_SLOTS.filter((s) => isLeg(st.field[s])).length, pit: STAFF_SLOTS.filter((s) => isLeg(getSlot(st, s))).length };
+  const all: Slot[] = [...BAT_SLOTS, ...STAFF_SLOTS];
+  return {
+    bat: BAT_SLOTS.filter((s) => isLeg(st.field[s])).length,
+    pit: STAFF_SLOTS.filter((s) => isLeg(getSlot(st, s))).length,
+    mvp: all.filter((s) => isMvp(getSlot(st, s))).length,
+  };
 }
-/** 바꾸면 레전드급 제한을 새로 넘기나 — 넘기면 이유 글 (이미 넘친 라인업은 줄이는 쪽만 허락) */
+/** 바꾸면 레전드급 · MVP 제한을 새로 넘기나 — 넘기면 이유 글 (이미 넘친 라인업은 줄이는 쪽만 허락) */
 export function legendBlock(st: LineupState, next: LineupState): string | null {
   const a = legendCount(st);
   const b = legendCount(next);
   if (b.bat > LEGEND_MAX.bat && b.bat > a.bat) return `레전드급 타자는 ${LEGEND_MAX.bat}명까지`;
   if (b.pit > LEGEND_MAX.pit && b.pit > a.pit) return `레전드급 투수는 ${LEGEND_MAX.pit}명까지`;
+  if (b.mvp > MVP_MAX && b.mvp > a.mvp) return `MVP 카드는 ${MVP_MAX}명까지`;
   return null;
 }
-/** 넘친 라인업 맞추기 — 약한 레전드급부터 벤치로 (빈 타자 자리는 sanitize 가 벤치 타자로 채운다) */
+/** 넘친 라인업 맞추기 — 약한 레전드급 · MVP 부터 벤치로 (빈 타자 자리는 sanitize 가 벤치 타자로 채운다) */
 function legendFit(st: LineupState): LineupState {
   const n = legendCount(st);
-  if (n.bat <= LEGEND_MAX.bat && n.pit <= LEGEND_MAX.pit) return st;
+  if (n.bat <= LEGEND_MAX.bat && n.pit <= LEGEND_MAX.pit && n.mvp <= MVP_MAX) return st;
   const nx = clone(st);
   const out: string[] = [];
-  const trim = (slots: Slot[], max: number) => {
-    const leg = slots.map((s) => ({ s, id: getSlot(nx, s) })).filter((x): x is { s: Slot; id: string } => isLeg(x.id))
+  const trim = (slots: Slot[], max: number, is: (id: string | null | undefined) => boolean) => {
+    const leg = slots.map((s) => ({ s, id: getSlot(nx, s) })).filter((x): x is { s: Slot; id: string } => is(x.id))
       .sort((a, b) => cardOvr(unit(b.id)) - cardOvr(unit(a.id)));
     for (const x of leg.slice(max)) { setSlot(nx, x.s, null); out.push(x.id); }
   };
-  trim(BAT_SLOTS, LEGEND_MAX.bat);
-  trim(STAFF_SLOTS, LEGEND_MAX.pit);
+  trim(BAT_SLOTS, LEGEND_MAX.bat, isLeg);
+  trim(STAFF_SLOTS, LEGEND_MAX.pit, isLeg);
+  trim([...BAT_SLOTS, ...STAFF_SLOTS], MVP_MAX, isMvp);
   nx.bench = [...out, ...nx.bench.filter((b) => !out.includes(b))].slice(0, 9);
   return nx;
 }
@@ -671,7 +680,7 @@ function placeStaff(st: LineupState, slot: StaffSlot, id: string): LineupState {
 /**
  * 투수진 짜기 — 선발 5(가장 센 선발이 1선발) → 마무리 → 불펜 10 순서로, 보직 적성 + 카드 세기로 고른다.
  * 켜진 세트덱(같은 구단 · 연도)에 드는 카드는 그 단계 가치만큼 더 쳐서 세트가 쉽게 깨지지 않게.
- * 레전드급 투수는 LEGEND_MAX.pit 명까지 · 같은 사람은 한 번 · 다친 투수는 −10. 결과는 '이렇게 두면 좋다'는 목표 배치.
+ * 레전드급 투수는 LEGEND_MAX.pit 명까지 · MVP 는 타자와 합쳐 MVP_MAX 명까지 · 같은 사람은 한 번 · 다친 투수는 −10. 결과는 '이렇게 두면 좋다'는 목표 배치.
  */
 export function staffPlan(st: LineupState, cur: Eval = evaluate(st)): Partial<Record<StaffSlot, string>> {
   const pool = new Set<string>();
@@ -708,16 +717,17 @@ export function staffPlan(st: LineupState, cur: Eval = evaluate(st)): Partial<Re
     if (k < (quota[r] ?? 20)) { taken0.set(r, k + 1); return true; }
     return lineupNow.has(l.id);
   });
-  const cands = shortlist.map((l) => { const u = unit(l.id); return { u, power: cardPower(u) + setV(l) * 1.5, leg: isLegendGrade(u.card.grade) }; });
+  const cands = shortlist.map((l) => { const u = unit(l.id); return { u, power: cardPower(u) + setV(l) * 1.5, leg: isLegendGrade(u.card.grade), mvp: isMvpGrade(u.card.grade) }; });
   const plan: Partial<Record<StaffSlot, string>> = {};
   const taken = new Set<string>();
   const people = new Set<string>();
   let legLeft = LEGEND_MAX.pit;
+  let mvpLeft = MVP_MAX - BAT_SLOTS.filter((s) => isMvp(st.field[s])).length;
   const fill = (slot: StaffSlot) => {
     let best: (typeof cands)[number] | null = null;
     let bv = -Infinity;
     for (const c of cands) {
-      if (taken.has(c.u.id) || people.has(personOfId(c.u.player.id)) || (c.leg && legLeft <= 0)) continue;
+      if (taken.has(c.u.id) || people.has(personOfId(c.u.player.id)) || (c.leg && legLeft <= 0) || (c.mvp && mvpLeft <= 0)) continue;
       const v = c.power - STAFF_FIT_PENALTY[fitOf(c.u.player, slot)] * 1.5;
       if (v > bv) { bv = v; best = c; }
     }
@@ -726,6 +736,7 @@ export function staffPlan(st: LineupState, cur: Eval = evaluate(st)): Partial<Re
     taken.add(best.u.id);
     people.add(personOfId(best.u.player.id));
     if (best.leg) legLeft -= 1;
+    if (best.mvp) mvpLeft -= 1;
   };
   ROT_SLOTS.forEach(fill);
   fill('CL');
@@ -835,8 +846,10 @@ export function sanitize(raw: LineupState | null | undefined): LineupState | nul
   for (const s of BAT_SLOTS) {
     if (st.field[s]) continue;
     const cur = st;
-    const full = legendCount(cur).bat >= LEGEND_MAX.bat;
-    const pick = cur.bench.find((id) => unit(id).player.pos !== 'P' && !playerBusy(cur, s, unit(id).player.id) && !(full && isLeg(id)));
+    const n = legendCount(cur);
+    const full = n.bat >= LEGEND_MAX.bat;
+    const mvpFull = n.mvp >= MVP_MAX;
+    const pick = cur.bench.find((id) => unit(id).player.pos !== 'P' && !playerBusy(cur, s, unit(id).player.id) && !(full && isLeg(id)) && !(mvpFull && isMvp(id)));
     if (pick) st = place(st, s, pick);
   }
   return st;

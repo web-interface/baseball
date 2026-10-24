@@ -16,6 +16,9 @@ export const TIER_KO: Record<PotTier, string> = { C: '보통', A: '상급', S: '
 export const LEGEND_GRADES = new Set<GradeId>(['legend', 'franchise', 'black', 'signature']);
 export const isLegendGrade = (g: GradeId) => LEGEND_GRADES.has(g);
 export const LEGEND_MAX = { bat: 2, pit: 2 };
+/** MVP 카드 — 한 팀에 4명까지 (타자 · 투수 합쳐서). 사용자 지시 10-24 */
+export const MVP_MAX = 4;
+export const isMvpGrade = (g: GradeId) => g === 'mvp';
 
 /** 확률(%) — 레전드급은 최고가 3%, 그 밖은 2% */
 export const oddsOf = (legend: boolean): Record<PotTier, number> => (legend ? { C: 72, A: 25, S: 3 } : { C: 74, A: 24, S: 2 });

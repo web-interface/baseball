@@ -33,6 +33,14 @@ export function OddsBar({ rows, className, height = 8 }: { rows: OddsRow[]; clas
 /** 천장 눈금 — night·broadcast 는 칸, classic 은 연필로 긋는 正 자 (5개씩) */
 export function PityTally({ count, max, className }: { count: number; max: number; className?: string }) {
   const { theme } = useTheme();
+  // 천장이 길면(40팩 넘게) 칸 · 正 대신 막대 하나 — 칸이 너무 잘아지거나 옆으로 넘치지 않게
+  if (max > 40) {
+    return (
+      <div className={[s.bar, theme === 'classic' && s.barPencil, className].filter(Boolean).join(' ')} role="img" aria-label={`천장 ${count}/${max}`}>
+        <i style={{ width: `${Math.min(100, (count / max) * 100)}%` }} />
+      </div>
+    );
+  }
   if (theme === 'classic') return <PencilTally count={count} max={max} className={className} />;
   return (
     <div className={[s.cells, className].filter(Boolean).join(' ')} style={{ '--n': max } as CSSProperties} role="img" aria-label={`천장 ${count}/${max}`}>
