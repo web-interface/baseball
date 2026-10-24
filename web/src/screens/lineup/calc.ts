@@ -137,7 +137,7 @@ export function place(st: LineupState, slot: Slot, id: string): LineupState {
 const personOfId = (id: string) => id.replace(/~\d{4}$/, '');
 const personOfCard = (id: string) => personOfId(unit(id).player.id);
 /** 벤치 정리 — 경기에 나서는 자리(수비 · 투수)에 이미 있는 사람, 벤치에 두 번 있는 사람은 뺀다 (로스터에 같은 선수는 한 번) */
-function benchFor(st: LineupState): string[] {
+export function benchFor(st: LineupState): string[] {
   const seen = new Set<string>();
   for (const s of BAT_SLOTS) { const id = st.field[s]; if (id) seen.add(personOfCard(id)); }
   for (const s of STAFF_SLOTS) { const id = getSlot(st, s); if (id) seen.add(personOfCard(id)); }

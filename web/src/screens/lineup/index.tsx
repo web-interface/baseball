@@ -24,6 +24,8 @@ import { OrderTab } from './OrderTab';
 import { PitchTab } from './PitchTab';
 import { BenchSheet, SwapSheet } from './SwapSheet';
 import { PlayerSheet } from './PlayerSheet';
+import { AutoSheet } from './AutoSheet';
+import { autoLineupFor, type DeckOption, type DeckTarget } from './deckPlan';
 import {
   BAT_SLOTS, LEGEND_MAX, MVP_MAX, STAFF_SLOTS, SLOT_KO, autoLineup, autoOrder, evaluate, getSlot, initialLineup, isBat, place, store, swapOrder, unit,
   type LineupState, type Slot, type StaffSlot,
@@ -150,7 +152,25 @@ export default function LineupScreen({ query }: ScreenProps) {
     report(`${SLOT_KO[a]} ${who ? unit(who).player.name : '비움'}`, next, a !== 'R0' && b !== 'R0');
     commit(next);
   };
+  // 자동 편성 — 먼저 '어떤 덱으로'를 고르는 시트 (가장 센 팀 · 세트덱)
+  const [autoOpen, setAutoOpen] = useState(q.get('auto') === '1');
+  const runDeck = (t: DeckTarget, o: DeckOption) => {
+    setAutoOpen(false);
+    const next = autoLineupFor(st, t);
+    const ne = evaluate(next);
+    const set = ne.sets.find((x) => x.id === o.id);
+    if (!(ne.exploded && !ev.exploded)) {
+      const d1 = ne.overall - ev.overall;
+      toast({
+        text: <>{o.name} 덱으로 · 엔트리 <b className="num">{set?.have ?? 0}</b>명{set?.cur && <> (+{set.cur.v})</>} · 팀 종합 <b className="num">{ne.overall}</b>{d1 !== 0 && <> ({fmt.signed(d1)})</>}</>,
+        tone: (set?.have ?? 0) > o.now ? 'good' : 'info',
+        action: { label: '되돌리기', onClick: undo },
+      });
+    }
+    commit(next);
+  };
   const runAuto = () => {
+    setAutoOpen(false);
     const next = autoLineup(st);
     if (JSON.stringify(next) === JSON.stringify(st)) {
       toast({ text: '지금이 가장 좋은 라인업이에요', tone: 'info' });
@@ -182,7 +202,7 @@ export default function LineupScreen({ query }: ScreenProps) {
         <Tabs items={TABS} value={tab} onChange={setTab} aria-label="라인업 보기" className={s.tabs} />
         <div className={s.actions}>
           {canUndo && <Button variant="ghost" size="s" onClick={undo}>되돌리기</Button>}
-          <Button variant="ghost" size="s" onClick={runAuto}>자동 편성</Button>
+          <Button variant="ghost" size="s" onClick={() => setAutoOpen(true)}>자동 편성</Button>
         </div>
       </div>
 
@@ -235,6 +255,7 @@ export default function LineupScreen({ query }: ScreenProps) {
 
       <p className={s.foot}>바꾸는 즉시 저장돼요 · 수치는 아직 목업이에요</p>
 
+      <AutoSheet open={autoOpen} onClose={() => setAutoOpen(false)} st={st} onBest={runAuto} onDeck={runDeck} />
       <PlayerSheet slot={info} st={st} ev={ev} onClose={() => setInfo(null)} onSwap={swapFromInfo} />
       <SwapSheet slot={slot} st={st} ev={ev} onClose={() => setSlot(null)} onApply={applyFromSheet} />
       <BenchSheet cardId={benchCard} st={st} ev={ev} onClose={() => setBenchCard(null)} onApply={applyFromSheet} />
