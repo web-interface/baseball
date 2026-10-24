@@ -11,9 +11,10 @@ import { SET_KIND_KO, statLine } from '../../game/sets';
 import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
 import { GRADES } from '../../game/grades';
 import type { ClubCode, GradeId, Pack } from '../../game/types';
-import { Button, CoinGP, Emblem, GoldenBall, Icon, Tabs, YearPicker, fmt, type YearCell } from '../../ui';
+import { Button, CoinGP, Emblem, GoldenBall, Icon, Tabs, YearPicker, fmt, useToast, type YearCell } from '../../ui';
 import { AUTO_MAX, affordCount, atLeastOne, oddsFor, pctStr, pullMany, pullPack, useGacha, type Pick, type PullResult } from './draw';
 import { readWallet } from '../../game/wallet';
+import { CARD_CAP, totalCards } from '../../game/inventory';
 import { PACK_LOOK, YEAR_OPTIONS, clubShort, eraText, yearOption } from './local-mock';
 import { PackArt } from './PackArt';
 import { OddsBar, PityTally, Price, Swatch, gradeShort } from './bits';
@@ -56,6 +57,7 @@ export default function GachaScreen({ query }: ScreenProps) {
 
 function Store({ query }: { query: URLSearchParams }) {
   const g = useGacha();
+  const toast = useToast();
   const qp = query.get('pack');
   const [packId, setPackId] = useState(() => (qp && PACKS.some((p) => p.id === qp) ? qp : 'premium'));
   const [year, setYear] = useState(() => { const y = Number(query.get('year')); return y >= FIRST_SEASON && y <= LAST_REAL_SEASON ? y : LAST_REAL_SEASON; });
@@ -92,10 +94,18 @@ function Store({ query }: { query: URLSearchParams }) {
   const second = view.rows.find((r) => r.grade === 'legend' && r !== top) ?? view.rows[1];
   const affordable = pack.price.ball != null ? g.wallet.ball >= pack.price.ball : g.wallet.gp >= (pack.price.gp ?? 0);
 
-  const open = () => { setDemoStep(undefined); setResult(pullPack(pack, pick)); };
+  // 보관함이 1만 장을 넘으면 카드구매를 막는다 — 선수조합 › 자동 정리로 줄이고 오게 (사용자 지시)
+  const total = totalCards();
+  const full = total > CARD_CAP;
+  const goClean = () => { setResult(null); setAuto(null); navigate('/combine?auto=1'); };
+  const open = () => {
+    if (totalCards() > CARD_CAP) { toast({ text: `카드가 ${CARD_CAP.toLocaleString()}장을 넘었어요 — 자동 정리로 줄이고 와 주세요`, tone: 'bad' }); goClean(); return; }
+    setDemoStep(undefined); setResult(pullPack(pack, pick));
+  };
   // 자동 열기 — 살 수 있는 만큼(최대 고른 수) 한 번에 열고 요약으로
   const nAuto = Math.min(autoN, affordCount(pack, g.wallet));
   const autoOpen = () => {
+    if (totalCards() > CARD_CAP) { toast({ text: `카드가 ${CARD_CAP.toLocaleString()}장을 넘었어요 — 자동 정리로 줄이고 와 주세요`, tone: 'bad' }); goClean(); return; }
     const want = Math.min(autoN, affordCount(pack, readWallet()));
     const runs = pullMany(pack, pick, want);
     if (runs.length) { setResult(null); setAuto({ runs, asked: want }); }
@@ -111,6 +121,12 @@ function Store({ query }: { query: URLSearchParams }) {
         items={PACKS.map((p) => ({ value: p.id, label: TAB_LABEL[p.id] ?? p.name }))}
       />
 
+      {full && (
+        <div className={s.capBar} role="alert">
+          <p><b>카드가 <span className="num">{total.toLocaleString()}</span>장이에요</b> · <span className="num">{CARD_CAP.toLocaleString()}</span>장을 넘으면 카드를 살 수 없어요. 선수조합 › 자동 정리로 줄이고 와 주세요.</p>
+          <Button size="s" onClick={goClean}>자동 정리하러 가기</Button>
+        </div>
+      )}
       {/* ───── 무대: 고른 팩 ───── */}
       <section className={s.stage} aria-label={`${pack.name} 고름`}>
         <div className={s.stageBg} aria-hidden>
@@ -162,7 +178,7 @@ function Store({ query }: { query: URLSearchParams }) {
             block
             className={s.buy}
             onClick={open}
-            disabled={!affordable}
+            disabled={!affordable || full}
             trailing={<Price price={pack.price} className={s.buyPrice} />}
           >
             30장 열기
@@ -182,7 +198,7 @@ function Store({ query }: { query: URLSearchParams }) {
               block
               className={s.autoBtn}
               onClick={autoOpen}
-              disabled={nAuto < 1}
+              disabled={nAuto < 1 || full}
               trailing={<Price price={times(pack.price, Math.max(1, nAuto))} className={s.buyPrice} />}
             >
               {nAuto > 0 && nAuto < autoN ? <><span className="num">{nAuto}</span>팩만 자동</> : <><span className="num">{autoN}</span>팩 자동 열기</>}

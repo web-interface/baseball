@@ -4,7 +4,7 @@
 
 import { useSyncExternalStore } from 'react';
 import { CARDS, PACKS, PLAYERS, teamByCode } from '../../game/mock';
-import { addCards, lineupIds, ownedCard, spareOf, useForRoulette, useInventory } from '../../game/inventory';
+import { CARD_CAP, addCards, lineupIds, ownedCard, spareOf, totalCards, useForRoulette, useInventory } from '../../game/inventory';
 import { cryptoRandom, rollCombine, type CombineRoll, type CombineView } from '../../game/combine';
 import { GRADES } from '../../game/grades';
 import { readWallet, spend, useWallet } from '../../game/wallet';
@@ -416,6 +416,7 @@ export function pullMany(pack: Pack, pick: Pick | null, n: number): PullResult[]
   const want = Math.max(0, Math.min(AUTO_MAX, Math.floor(n)));
   for (let i = 0; i < want; i++) {
     if (affordCount(pack, readWallet(), 1) < 1) break;
+    if (totalCards() > CARD_CAP) break; // 1만 장을 넘으면 거기서 멈춘다 (자동 정리 먼저)
     out.push(pullPack(pack, pick));
   }
   return out;

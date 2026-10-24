@@ -11,7 +11,7 @@ import { navigate } from '../../app/router';
 import { CardMini, cardProps } from '../../cards';
 import { GRADES } from '../../game/grades';
 import { cardInst, playerOfKCard } from '../../game/kbo';
-import { useInventory } from '../../game/inventory';
+import { CARD_CAP, totalCards, useInventory } from '../../game/inventory';
 import { spend, useWallet } from '../../game/wallet';
 import { shortLabel } from '../../game/world';
 import { MAX_MATS, MIN_MATS, analyze, reelOf, type CombineView, type Side } from '../../game/combine';
@@ -23,6 +23,7 @@ import { Swatch, gradeFill, gradeShort } from '../gacha/bits';
 import { Recipe, pctText } from './Recipe';
 import { Spin, type SpinRun } from './Spin';
 import { SORTS, gradeOrder, readMaterials, refill, sortMats, type Mat, type SortKey } from './materials';
+import { CleanSheet } from './CleanSheet';
 import s from './Combine.module.css';
 
 const REQUIRED = MIN_MATS;
@@ -40,6 +41,8 @@ export default function CombineScreen({ query }: ScreenProps) {
   const [sort, setSort] = useState<SortKey>('grade');
   const [run, setRun] = useState<SpinRun | null>(null);
   const last = useRef<{ view: CombineView; grades: GradeId[]; resultId: string } | null>(null);
+  const [cleanOpen, setCleanOpen] = useState(() => query.get('auto') === '1');
+  const total = useMemo(() => totalCards(), [ver]); // eslint-disable-line react-hooks/exhaustive-deps
   const top = useRef<HTMLElement>(null);
 
   // 보관함이 바뀌면(다른 화면 · 조합) 남는 장보다 많이 넣은 칸을 뺀다
@@ -127,6 +130,18 @@ export default function CombineScreen({ query }: ScreenProps) {
         <h1 className={['head', s.h1].join(' ')}>선수조합</h1>
         <p className={s.lead}>안 쓰는 카드 3~5장을 넣으면 새 카드 1장이 나와요. 공식이 맞을수록 위 등급이 잘 떠요.</p>
       </header>
+
+      {/* ───── 자동 정리 — 카드가 많이 쌓였을 때 (1만 장을 넘으면 카드구매가 막힌다) ───── */}
+      <button type="button" className={[s.autoEntry, total > CARD_CAP && s.autoOver].filter(Boolean).join(' ')} onClick={() => setCleanOpen(true)}>
+        <span className={s.autoText}>
+          <b>자동 정리</b>
+          <small>
+            보유 <span className="num">{fmt.int(total)}</span>장{total > CARD_CAP ? ' · 1만 장을 넘어 카드구매가 막혔어요' : ''} — 남길 등급 · 구단만 고르면 나머지를 5장씩 빠르게 조합해요
+          </small>
+        </span>
+        <Icon name="chevron" size={18} />
+      </button>
+      <CleanSheet open={cleanOpen} onClose={() => setCleanOpen(false)} />
 
       {/* ───── 조합 대기 ───── */}
       <section className={s.wait} aria-labelledby="combine-wait">

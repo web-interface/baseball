@@ -212,7 +212,18 @@ function bump() {
   viewCache.clear();
   listeners.forEach((l) => l());
 }
-const commit = () => { persist(); bump(); };
+/* 묶어 쓰기 — 자동 정리처럼 수천 번 바꾸는 동안엔 저장 · 알림을 미뤘다가 끝에 한 번 (batchInventory) */
+let batching = 0;
+let dirty = false;
+const commit = () => { if (batching) { dirty = true; return; } persist(); bump(); };
+/** fn 안에서 바뀐 것을 끝에 한 번만 저장하고 알린다 (화면 다시 그리기도 한 번) */
+export function batchInventory<T>(fn: () => T): T {
+  batching++;
+  try { return fn(); } finally {
+    batching--;
+    if (!batching && dirty) { dirty = false; persist(); bump(); }
+  }
+}
 
 /* ───────── 카드 · 선수 다시 만들기 (뽑기로 생긴 카드) ───────── */
 /** 선수 다시 만들기 — 실제 선수 보기 '{선수 ID}~{연도}' 는 카탈로그에서, 레거시 연도팩·구단팩 'x-{구단}-{연도2}-…' · 지명 'd-{구단}-{n}' 은 시드로 */
@@ -271,6 +282,14 @@ export const invVersion = () => { S(); return version; };
 export const entryOf = (id: string): InvEntry | undefined => S().cards[id];
 export const ownedCount = (id: string) => S().cards[id]?.n ?? 0;
 export const isOwned = (id: string) => ownedCount(id) > 0;
+/** 보관함 카드 수 상한 — 넘으면 카드구매를 막고 선수조합 › 자동 정리로 줄이게 한다 (사용자 지시) */
+export const CARD_CAP = 10_000;
+/** 가진 카드 장수 합 (같은 카드 여러 장 포함) */
+export function totalCards(): number {
+  let n = 0;
+  for (const e of Object.values(S().cards)) if (e.n > 0) n += e.n;
+  return n;
+}
 /** 지금 가진 카드 id (화면에 보일 수 있는 것만) */
 export function ownedIds(): string[] {
   const s = S();
