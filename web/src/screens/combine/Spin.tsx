@@ -35,7 +35,7 @@ const isReduced = () => typeof window !== 'undefined' && !!window.matchMedia?.('
 const SPIN_MS = 3000;
 const INTRO_MS = 320;
 
-export function Spin({ run, onAgain, onClose }: { run: SpinRun; onAgain: () => void; onClose: () => void }) {
+export function Spin({ run, onAgain, onClose, againLabel }: { run: SpinRun; onAgain?: () => void; onClose: () => void; againLabel?: string }) {
   const reduced = useMemo(isReduced, []);
   const [phase, setPhase] = useState<Phase>(reduced ? 'done' : 'spin');
   const [frame, setFrame] = useState(0);
@@ -132,14 +132,14 @@ export function Spin({ run, onAgain, onClose }: { run: SpinRun; onAgain: () => v
         </div>
       )}
 
-      {phase === 'done' && <Result run={run} onAgain={onAgain} onClose={onClose} reduced={reduced} />}
+      {phase === 'done' && <Result run={run} onAgain={onAgain} onClose={onClose} reduced={reduced} againLabel={againLabel} />}
     </div>,
     document.body,
   );
 }
 
 /* ───────── 결과 ───────── */
-function Result({ run, onAgain, onClose, reduced }: { run: SpinRun; onAgain: () => void; onClose: () => void; reduced: boolean }) {
+function Result({ run, onAgain, onClose, reduced, againLabel }: { run: SpinRun; onAgain?: () => void; onClose: () => void; reduced: boolean; againLabel?: string }) {
   const pc = run.result;
   const g = pc.card.grade;
   const card = ownedCard(pc.card.id) ?? pc.card; // 같은 카드가 모여 자동 강화됐으면 반영
@@ -174,7 +174,7 @@ function Result({ run, onAgain, onClose, reduced }: { run: SpinRun; onAgain: () 
         {run.roll.relaxed.length > 0 && <p className={s.resNote}>{row.byMats ? '넣은 카드 말고는 맞는 카드가 없어' : '맞는 카드가 없어'} {relaxText(run.roll.relaxed)}</p>}
       </div>
       <div className={s.actions}>
-        <Button variant="secondary" size="l" block onClick={onAgain}>한 번 더</Button>
+        {onAgain && <Button variant="secondary" size="l" block onClick={onAgain}>{againLabel ?? '한 번 더'}</Button>}
         <Button variant="primary" size="l" block onClick={onClose} autoFocus>확인</Button>
       </div>
     </section>

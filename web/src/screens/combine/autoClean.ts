@@ -6,7 +6,7 @@
 //  · 결과가 다시 정리할 등급이면 재료로(끝까지) — 그 등급이 3장 미만이 될 때까지. GP 가 모자라거나 한 번에 3,000번이면 멈춘다.
 //  · 보관함 저장은 끝에 한 번(batchInventory) — 수천 번 조합해도 빠르게.
 import { GRADES } from '../../game/grades';
-import { analyze, feeOf, ladderOf, matInfoOf, MAX_MATS, MIN_MATS, type MatInfo } from '../../game/combine';
+import { analyze, feeOf, ladderOf, matInfoOf, MAX_MATS, MIN_MATS, type CombineRoll, type CombineView, type MatInfo } from '../../game/combine';
 import { batchInventory, entryOf, lineupIds, spareOf, totalCards } from '../../game/inventory';
 import { readWallet, spend } from '../../game/wallet';
 import { rarity, rollComboWith, type PulledCard } from '../gacha/draw';
@@ -88,7 +88,13 @@ export interface CleanResult {
   before: number;
   after: number;
   stopped: 'done' | 'gp' | 'cap';
+  /** TH 이상이 나온 조합 — 정리가 끝나면 룰렛(Spin)으로 한 장씩 화려하게 (귀한 순 · 최대 12) */
+  spins: { result: PulledCard; roll: CombineRoll; view: CombineView }[];
 }
+
+/** 룰렛으로 보여 줄 결과 — TH 이상(사용자 지시) + 레전드. 조합 사다리는 레전드까지 · 히든은 프랜차이즈라
+ *  조합에선 TH · GG · MVP 가 나오지 않는다 — 그래서 실제로는 레전드 · 프랜차이즈가 룰렛으로 나온다 */
+export const spinWorthy = (g: GradeId) => g === 'legend' || rarity(g) >= rarity('th');
 
 /** 정리하기 — 바로 끝까지 (저장 · 화면 알림은 끝에 한 번) */
 export function runClean(o: CleanOpts): CleanResult {
@@ -99,6 +105,7 @@ export function runClean(o: CleanOpts): CleanResult {
   let stopped: CleanResult['stopped'] = 'done';
   const made = new Map<GradeId, number>();
   const best: PulledCard[] = [];
+  const spins: CleanResult['spins'] = [];
   batchInventory(() => {
     let pool = unitsOf(o);
     const guard = lineupIds();
@@ -134,6 +141,7 @@ export function runClean(o: CleanOpts): CleanResult {
         const c = r.result.card;
         made.set(c.grade, (made.get(c.grade) ?? 0) + 1);
         if (rarity(c.grade) >= rarity('legend')) best.push(r.result);
+        if (spinWorthy(c.grade)) spins.push({ result: r.result, roll: r.roll, view });
         // 끝까지 — 결과가 정리할 등급이고 남길 구단이 아니면 다음 바퀴 재료로
         if (o.cascade && targets.has(c.grade)) {
           const info = matInfoOf(c, r.result.player);
@@ -153,6 +161,7 @@ export function runClean(o: CleanOpts): CleanResult {
     combos, used, gp, before, after: totalCards(), stopped,
     made: [...made].map(([grade, n]) => ({ grade, n })).sort((a, b) => rarity(b.grade) - rarity(a.grade)),
     best: best.sort((a, b) => rarity(b.card.grade) - rarity(a.card.grade) || b.player.ovr - a.player.ovr).slice(0, 24),
+    spins: spins.sort((a, b) => rarity(b.result.card.grade) - rarity(a.result.card.grade) || b.result.player.ovr - a.result.player.ovr).slice(0, 12),
   };
 }
 

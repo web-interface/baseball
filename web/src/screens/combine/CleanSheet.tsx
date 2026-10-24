@@ -11,6 +11,9 @@ import { Button, CoinGP, Emblem, Sheet, fmt, useToast } from '../../ui';
 import { Swatch, gradeShort } from '../gacha/bits';
 import { readMaterials, gradeOrder } from './materials';
 import { CLEAN_CAP, previewClean, runClean, type CleanOpts, type CleanResult } from './autoClean';
+import { Spin, type SpinRun } from './Spin';
+import { reelOf } from '../../game/combine';
+import { cardInst, playerOfKCard } from '../../game/kbo';
 import s from './CleanSheet.module.css';
 
 const DEF_GRADES: GradeId[] = ['normal', 'special'];
@@ -24,6 +27,8 @@ export function CleanSheet({ open, onClose }: { open: boolean; onClose: () => vo
   const [keepOne, setKeepOne] = useState(false);
   const [cascade, setCascade] = useState(true);
   const [done, setDone] = useState<CleanResult | null>(null);
+  // TH 이상이 나왔으면 정리가 끝난 뒤 룰렛으로 한 장씩 (시트는 잠깐 내렸다가 결과와 함께 다시)
+  const [spinIdx, setSpinIdx] = useState<number | null>(null);
   const opts: CleanOpts = { grades, keepClubs, keepOne, cascade };
 
   // 고를 수 있는 등급 · 구단 — 재료로 쓸 수 있는 카드에서 (장수와 함께)
@@ -49,11 +54,34 @@ export function CleanSheet({ open, onClose }: { open: boolean; onClose: () => vo
     if (wallet.gp < 30_000) { toast({ text: 'GP가 모자라요 — 5장 조합 한 번에 3만 GP', tone: 'bad' }); return; }
     const r = runClean(opts);
     setDone(r);
+    if (r.spins.length) setSpinIdx(0);
   };
-  const close = () => { setDone(null); onClose(); };
+  const close = () => { setDone(null); setSpinIdx(null); onClose(); };
+  const spinRun = (i: number): SpinRun | null => {
+    const x = done?.spins[i];
+    if (!x) return null;
+    const reel = reelOf(x.view, x.roll.card, 24).flatMap((kc, k, arr) => {
+      if (k === arr.length - 1) return [{ card: x.result.card, player: x.result.player }];
+      const player = playerOfKCard(kc);
+      return player ? [{ card: cardInst(kc), player }] : [];
+    });
+    return { key: `clean-${i}-${x.result.card.id}`, result: x.result, roll: x.roll, view: x.view, reel };
+  };
+  const run = spinIdx != null ? spinRun(spinIdx) : null;
+  const nSpins = done?.spins.length ?? 0;
 
   return (
-    <Sheet open={open} onClose={close} height="tall" title="자동 정리"
+    <>
+    {run && spinIdx != null && (
+      <Spin
+        key={run.key}
+        run={run}
+        onAgain={spinIdx + 1 < nSpins ? () => setSpinIdx(spinIdx + 1) : undefined}
+        againLabel={`다음 카드 (${spinIdx + 2}/${nSpins})`}
+        onClose={() => setSpinIdx(null)}
+      />
+    )}
+    <Sheet open={open && spinIdx == null} onClose={close} height="tall" title="자동 정리"
       sub={done ? '정리를 마쳤어요' : `남길 등급 · 구단을 빼고, 나머지를 5장씩 빠르게 조합해요`}
       footer={done ? (
         <>
@@ -108,6 +136,7 @@ export function CleanSheet({ open, onClose }: { open: boolean; onClose: () => vo
         </div>
       )}
     </Sheet>
+    </>
   );
 }
 
