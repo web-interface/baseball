@@ -21,6 +21,8 @@ import { OddsBar, PityTally, Price, Swatch, gradeShort } from './bits';
 import { OddsSheet } from './OddsSheet';
 import { Opening, type OpeningStep } from './Opening';
 import { AutoOpen, BulkOpen } from './AutoOpen';
+import { coolText, nextQuota, quotaKo, quotaPacks, quotaView, spendQuota, useAutoQuota } from './autoQuota';
+import { LEVEL_KO } from '../../season/league';
 import s from './Gacha.module.css';
 
 const TAB_LABEL: Record<string, string> = { basic: '일반', premium: '프리미엄', special: '스페셜', legend: '레전드', year: '연도', club: '구단' };
@@ -70,6 +72,8 @@ function Store({ query }: { query: URLSearchParams }) {
   const [auto, setAuto] = useState<{ runs: PullResult[]; asked: number } | null>(null);
   // 가득 찰 때까지 (휴대폰용 — 한 번 눌러 두면 상한까지)
   const [bulk, setBulk] = useState(0);
+  // 자동 열기 한도 — 리그 단계마다 (연습생 600장 … 레전드 한도 없음), 다 쓰면 1분 쉬기
+  const aq = useAutoQuota();
 
   const pack = PACKS.find((p) => p.id === packId) ?? PACKS[1];
   const pick: Pick | null = pack.pick?.kind === 'year' ? { kind: 'year', year } : pack.pick?.kind === 'club' ? { kind: 'club', club } : null;
@@ -104,14 +108,24 @@ function Store({ query }: { query: URLSearchParams }) {
     if (totalCards() > CARD_CAP) { toast({ text: `카드가 ${CARD_CAP.toLocaleString()}장을 넘었어요 — 자동 정리로 줄이고 와 주세요`, tone: 'bad' }); goClean(); return; }
     setDemoStep(undefined); setResult(pullPack(pack, pick));
   };
-  // 자동 열기 — 살 수 있는 만큼(최대 고른 수) 한 번에 열고 요약으로
-  const nAuto = Math.min(autoN, affordCount(pack, g.wallet));
+  // 자동 열기 — 살 수 있는 만큼(최대 고른 수 · 남은 한도) 한 번에 열고 요약으로
+  const qPacks = quotaPacks(pack.size, aq);
+  const nAuto = Math.min(autoN, affordCount(pack, g.wallet), qPacks);
+  const coolMsg = () => `자동 열기 한도(${LEVEL_KO[aq.level]} ${quotaKo(aq.quota)})를 다 썼어요 — ${coolText(aq)} 뒤 다시 열 수 있어요`;
   const autoOpen = () => {
     if (totalCards() > CARD_CAP) { toast({ text: `카드가 ${CARD_CAP.toLocaleString()}장을 넘었어요 — 자동 정리로 줄이고 와 주세요`, tone: 'bad' }); goClean(); return; }
-    const want = Math.min(autoN, affordCount(pack, readWallet()));
+    const v = quotaView();
+    if (v.cooling) { toast({ text: coolMsg(), tone: 'bad' }); return; }
+    const want = Math.min(autoN, affordCount(pack, readWallet()), quotaPacks(pack.size, v));
     const runs = pullMany(pack, pick, want);
-    if (runs.length) { setResult(null); setAuto({ runs, asked: want }); }
+    if (runs.length) { spendQuota(runs.length * pack.size, pack.size); setResult(null); setAuto({ runs, asked: want }); }
   };
+  const startBulk = () => {
+    if (totalCards() > CARD_CAP) { goClean(); return; }
+    if (quotaView().cooling) { toast({ text: coolMsg(), tone: 'bad' }); return; }
+    setBulk(Date.now());
+  };
+  const nextQ = nextQuota(aq.level);
 
   return (
     <div className={s.screen}>
@@ -201,13 +215,34 @@ function Store({ query }: { query: URLSearchParams }) {
               className={s.autoBtn}
               onClick={autoOpen}
               disabled={nAuto < 1 || full}
-              trailing={<Price price={times(pack.price, Math.max(1, nAuto))} className={s.buyPrice} />}
+              trailing={aq.cooling ? undefined : <Price price={times(pack.price, Math.max(1, nAuto))} className={s.buyPrice} />}
             >
-              {nAuto > 0 && nAuto < autoN ? <><span className="num">{nAuto}</span>팩만 자동</> : <><span className="num">{autoN}</span>팩 자동 열기</>}
+              {aq.cooling
+                ? <><span className="num">{coolText(aq)}</span> 뒤 다시 자동</>
+                : nAuto > 0 && nAuto < autoN ? <><span className="num">{nAuto}</span>팩만 자동</> : <><span className="num">{autoN}</span>팩 자동 열기</>}
             </Button>
-            <button type="button" className={s.bulkBtn} onClick={() => { if (totalCards() > CARD_CAP) { goClean(); return; } setBulk(Date.now()); }} disabled={nAuto < 1 || full}>
-              가득 찰 때까지 계속 열기 <small>보관함 <span className="num">{CARD_CAP.toLocaleString()}</span>장까지 · 멈추기 가능</small>
+            <button type="button" className={s.bulkBtn} onClick={startBulk} disabled={nAuto < 1 || full}>
+              {aq.unlimited
+                ? <>가득 찰 때까지 계속 열기 <small>보관함 <span className="num">{CARD_CAP.toLocaleString()}</span>장까지 · 멈추기 가능</small></>
+                : <>한도까지 계속 열기 <small>{aq.cooling ? <>쉬는 중 · <span className="num">{coolText(aq)}</span> 뒤 다시 <span className="num">{quotaKo(aq.quota)}</span></> : <>남은 <span className="num">{aq.left.toLocaleString()}</span>장(<span className="num">{qPacks}</span>팩) · 멈추기 가능</>}</small></>}
             </button>
+            {/* 자동 열기 한도 — 리그 단계마다. 다 쓰면 1분 쉬기 */}
+            <div className={[s.quota, aq.cooling && s.quotaCool].filter(Boolean).join(' ')} aria-live="polite">
+              <p className={s.quotaTop}>
+                <span className={s.quotaLv}>{LEVEL_KO[aq.level]}</span>
+                {aq.unlimited
+                  ? <span>자동 열기 <b>한도 없음</b> · 보관함이 찰 때까지</span>
+                  : aq.cooling
+                    ? <span>쉬는 중 · <b className="num">{coolText(aq)}</b> 뒤 다시 <b className="num">{aq.quota.toLocaleString()}</b>장</span>
+                    : <span>자동 열기 한도 <b className="num">{aq.left.toLocaleString()}</b><i>/{aq.quota.toLocaleString()}장</i></span>}
+              </p>
+              {!aq.unlimited && (
+                <div className={s.quotaBar} aria-hidden>
+                  <i style={{ width: `${aq.cooling ? Math.max(0, Math.min(100, 100 - ((aq.until - Date.now()) / 600))) : Math.round((aq.left / aq.quota) * 100)}%` }} />
+                </div>
+              )}
+              {nextQ && <small className={s.quotaNext}>리그 단계가 오르면 늘어나요 · 다음 {nextQ.ko} {quotaKo(nextQ.quota)}{nextQ.level !== 'legend' ? ' · 레전드는 한도 없음' : ''} · 다 쓰면 1분 쉬기</small>}
+            </div>
           </div>
           <p className={s.wallet}>
             보유 {pack.price.ball != null
@@ -339,6 +374,7 @@ function Store({ query }: { query: URLSearchParams }) {
           onClose={() => setAuto(null)}
           onAgain={nAuto > 0 ? autoOpen : undefined}
           againN={nAuto}
+          note={aq.cooling ? coolMsg() : undefined}
           onCombo={() => { setAuto(null); navigate('/combine'); }}
         />
       )}

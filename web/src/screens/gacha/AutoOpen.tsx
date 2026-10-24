@@ -16,6 +16,8 @@ import { readWallet } from '../../game/wallet';
 import type { Pack } from '../../game/types';
 import { PulledSheet, SpaceKey, isSpace, spaceGuard, typingIn, upText } from './Opening';
 import { Price, Swatch, gradeFill, gradeShort } from './bits';
+import { quotaKo, quotaPacks, quotaView, spendQuota } from './autoQuota';
+import { LEVEL_KO } from '../../season/league';
 import o from './Opening.module.css';
 import s from './AutoOpen.module.css';
 
@@ -30,6 +32,8 @@ export interface AutoOpenProps {
   onAgain?: () => void;
   /** 한 번 더 누르면 열 팩 수 */
   againN?: number;
+  /** 한 번 더를 못 하는 까닭 (자동 열기 한도를 다 써 쉬는 중) */
+  note?: string;
   onCombo: () => void;
 }
 
@@ -60,7 +64,7 @@ function FlipCard({ pc, on, onOpen, label }: { pc: PulledCard; on: boolean; onOp
   );
 }
 
-export function AutoOpen({ runs, asked, onClose, onAgain, againN = 0, onCombo }: AutoOpenProps) {
+export function AutoOpen({ runs, asked, onClose, onAgain, againN = 0, note, onCombo }: AutoOpenProps) {
   const n = runs.length;
   const sum = useMemo(() => summarize(runs), [runs]);
   const bests = useMemo(() => runs.map((r) => r.cards[r.best]), [runs]);
@@ -159,6 +163,7 @@ export function AutoOpen({ runs, asked, onClose, onAgain, againN = 0, onCombo }:
                 <span className="num">{againN}</span>팩 더 자동 열기<SpaceKey />
               </Button>
             )}
+            {note && !(onAgain && againN > 0) && <p className={s.quotaNote}>{note}</p>}
             <div className={o.actions2}>
               <Button variant="secondary" onClick={onCombo}>조합으로 보내기</Button>
               <Button variant="secondary" onClick={onClose}>닫기</Button>
@@ -235,13 +240,15 @@ function ResultBlock({ sum, n, asked, onDetail }: { sum: ReturnType<typeof summa
 
 /* ───────── 가득 찰 때까지 — 한 번 눌러 두면 보관함 상한(CARD_CAP, 3만 장) 또는 재화까지 같은 팩을 계속 연다 (휴대폰용, 멈추기 가능) ───────── */
 const BULK_MAX = 2000;
-type BulkEnd = 'cap' | 'gp' | 'stop' | 'max';
-const BULK_END_KO: Record<BulkEnd, string> = {
+type BulkEnd = 'cap' | 'gp' | 'stop' | 'max' | 'quota';
+const BULK_END_KO: Record<Exclude<BulkEnd, 'quota'>, string> = {
   cap: `보관함이 ${CARD_CAP_KO} 장을 넘었어요 — 자동 정리로 줄이면 다시 살 수 있어요`,
   gp: '재화가 다 됐어요',
   stop: '멈췄어요',
   max: `한 번에 ${BULK_MAX.toLocaleString()}팩까지예요 — 다시 누르면 이어서 열어요`,
 };
+/** 리그 단계 한도로 멈췄을 때 */
+const quotaEndText = () => { const v = quotaView(); return `이번 자동 열기 한도(${LEVEL_KO[v.level]} ${quotaKo(v.quota)})를 다 썼어요 — 1분 뒤 다시 열 수 있어요 · 리그 단계가 오르면 한도가 늘어요`; };
 
 export function BulkOpen({ pack, pick, onClose, onClean, onCombo }: { pack: Pack; pick: Pick | null; onClose: () => void; onClean: () => void; onCombo: () => void }) {
   const [runs, setRuns] = useState<PullResult[]>([]);
@@ -252,6 +259,9 @@ export function BulkOpen({ pack, pick, onClose, onClean, onCombo }: { pack: Pack
   const root = useRef<HTMLDivElement>(null);
   const done = end != null;
   const start0 = useRef(totalCards());
+  // 리그 단계 한도 — 시작할 때 남은 만큼만 (레전드는 끝없이)
+  const budget = useRef(quotaPacks(pack.size));
+  const limited = Number.isFinite(budget.current);
 
   // 조금씩 나눠 연다 — 한 번에 팩 4개(저장은 한 번), 그 사이 화면이 숨 쉰다
   useEffect(() => {
@@ -260,14 +270,19 @@ export function BulkOpen({ pack, pick, onClose, onClean, onCombo }: { pack: Pack
     const tick = () => {
       if (!alive) return;
       let why: BulkEnd | null = stop.current ? 'stop' : null;
+      let got = 0;
       if (!why) batchInventory(() => {
         for (let k = 0; k < 4; k++) {
           if (totalCards() > CARD_CAP) { why = 'cap'; break; }
           if (affordCount(pack, readWallet(), 1) < 1) { why = 'gp'; break; }
+          if (acc.current.length >= budget.current) { why = 'quota'; break; }
           if (acc.current.length >= BULK_MAX) { why = 'max'; break; }
           acc.current.push(pullPack(pack, pick));
+          got++;
         }
       });
+      if (got) spendQuota(got * pack.size, pack.size);
+      if (!why && acc.current.length >= budget.current) why = 'quota';
       setRuns(acc.current.slice());
       if (why) setEnd(why); else timer = window.setTimeout(tick, 24);
     };
@@ -324,6 +339,12 @@ export function BulkOpen({ pack, pick, onClose, onClean, onCombo }: { pack: Pack
               보관함 <b className="num">{total.toLocaleString()}</b> / <span className="num">{CARD_CAP.toLocaleString()}</span>장
               <span> · 이번에 +<span className="num">{Math.max(0, total - start0.current).toLocaleString()}</span></span>
             </p>
+            {limited && (
+              <p className={s.bulkLine}>
+                이번 한도 <b className="num">{cards.toLocaleString()}</b> / <span className="num">{(budget.current * pack.size).toLocaleString()}</span>장
+                <span> · 리그 단계 한도</span>
+              </p>
+            )}
             <p className={s.bulkLine}>빛나는 카드(엘리트 이상) <b className="num">{glow.toLocaleString()}</b>장</p>
             {!done && lastBest && (
               <div className={s.bulkNow}>
@@ -331,7 +352,7 @@ export function BulkOpen({ pack, pick, onClose, onClean, onCombo }: { pack: Pack
                 <small>방금 팩 최고 · {GRADES[lastBest.card.grade].ko} {lastBest.player.name}</small>
               </div>
             )}
-            {done && end && <p className={[s.bulkEnd, end === 'cap' && s.bulkCap].filter(Boolean).join(' ')}>{BULK_END_KO[end]}</p>}
+            {done && end && <p className={[s.bulkEnd, end === 'cap' && s.bulkCap].filter(Boolean).join(' ')}>{end === 'quota' ? quotaEndText() : BULK_END_KO[end]}</p>}
           </section>
           {sum && <ResultBlock sum={sum} n={runs.length} asked={runs.length} onDetail={setDetail} />}
         </div>
@@ -347,7 +368,7 @@ export function BulkOpen({ pack, pick, onClose, onClean, onCombo }: { pack: Pack
           </div>
         ) : (
           <div className={s.runFoot}>
-            <p className={s.running}><span className={s.spinner} aria-hidden /><span>여는 중 · {CARD_CAP_KO} 장이 되면 멈춰요</span></p>
+            <p className={s.running}><span className={s.spinner} aria-hidden /><span>여는 중 · {limited ? <>한도 <span className="num">{(budget.current * pack.size).toLocaleString()}</span>장이 차면 멈춰요</> : <>{CARD_CAP_KO} 장이 되면 멈춰요</>}</span></p>
             <Button variant="primary" size="l" onClick={() => { stop.current = true; }}>멈추기<SpaceKey /></Button>
           </div>
         )}

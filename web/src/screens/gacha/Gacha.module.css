@@ -230,3 +230,17 @@
 .bulkBtn { display: flex; flex-direction: column; align-items: center; gap: 1px; width: 100%; min-height: 40px; padding: 6px 8px; border-radius: var(--r-2); font-size: 12.5px; font-weight: 750; letter-spacing: -.03em; color: var(--inv-fg); box-shadow: inset 0 0 0 1px var(--inv-line); }
 .bulkBtn small { font-size: 10.5px; font-weight: 500; color: var(--inv-fg-3); }
 .bulkBtn:disabled { opacity: .4; }
+
+/* 자동 열기 한도 — 리그 단계 배지 + 남은 장수 막대 (쉬는 중이면 다시 차오르는 막대) */
+.quota { display: grid; gap: 5px; margin-top: 2px; padding: 8px 10px 9px; border-radius: var(--r-2); background: color-mix(in srgb, var(--inv-fg) 6%, transparent); box-shadow: inset 0 0 0 1px var(--inv-line); }
+.quotaTop { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 12px; letter-spacing: -.03em; color: var(--inv-fg-2); }
+.quotaTop > span:last-child { min-width: 0; line-height: 1.4; }
+.quotaTop b { font-size: 13.5px; font-weight: 800; color: var(--inv-fg); }
+.quotaTop i { font-style: normal; font-size: 11px; color: var(--inv-fg-3); }
+.quotaLv { flex: none; padding: 2px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 800; letter-spacing: -.02em; color: #1a1300; background: linear-gradient(180deg, #ffe08a, #e0a93a); }
+.quotaBar { position: relative; height: 5px; overflow: hidden; border-radius: 3px; background: color-mix(in srgb, var(--inv-fg) 14%, transparent); }
+.quotaBar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #7fd3ff, #b4f0ff); transition: width .6s ease; }
+.quotaCool .quotaBar i { background: repeating-linear-gradient(135deg, #e0565b 0 6px, #f08a6a 6px 12px); }
+.quotaCool .quotaLv { color: #fff; background: linear-gradient(180deg, #f08a6a, #e0565b); }
+.quotaNext { font-size: 10.5px; line-height: 1.45; letter-spacing: -.02em; color: var(--inv-fg-3); }
+@media (prefers-reduced-motion: reduce) { .quotaBar i { transition: none; } }

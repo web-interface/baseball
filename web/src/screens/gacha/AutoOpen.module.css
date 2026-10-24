@@ -50,3 +50,6 @@
 .spinner { width: 16px; height: 16px; margin-right: 8px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--fg) 25%, transparent); border-top-color: var(--accent); animation: spin 800ms linear infinite; align-self: center; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } .bar i { transition: none; } }
+
+/* 한 번 더를 못 할 때 — 자동 열기 한도 쉬는 중 */
+.quotaNote { padding: 10px 12px; border-radius: var(--r-2); font-size: 12.5px; line-height: 1.5; letter-spacing: -.03em; text-align: center; color: var(--fg-2); background: color-mix(in srgb, #e0565b 12%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, #e0565b 55%, transparent); }
