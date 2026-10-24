@@ -16,7 +16,8 @@ import { DYNASTY_V, computeSets, faceBonus, sideLine, type EntryMember, type Set
 import { fullYear } from '../../game/clubSeasons';
 import { yearTag } from '../../ui/format';
 import { getCard, getPlayer, owned, startLayout } from './local-mock';
-import { invVersion, loadLineup, saveLineup } from '../../game/inventory';
+import { enhGainTotal, invVersion, loadLineup, saveLineup } from '../../game/inventory';
+import { cardLite } from '../../game/kbo';
 import { LEGEND_MAX, isLegendGrade, potFaceOf, teamPotential, type FaceFx, type TeamPot } from '../../game/potential';
 import { cardBonusOf, ovrBonusOf, type CardBonus } from '../../game/cardBonus';
 
@@ -179,7 +180,7 @@ const IF = ['1B', '2B', '3B', 'SS'];
 const OF = ['LF', 'CF', 'RF'];
 const group = (p: string) => (IF.includes(p) ? 'IF' : OF.includes(p) ? 'OF' : p);
 
-export function fitOf(p: Player, s: Slot): Fit {
+export function fitOf(p: Pick<Player, 'pos' | 'subPos' | 'role' | 'throws'>, s: Slot): Fit {
   if (isBat(s)) {
     if (p.pos === 'P') return 'off';
     if (s === 'DH') return p.pos === 'DH' ? 'main' : 'any';
@@ -534,7 +535,30 @@ export function cardPower(u: Unit): number {
   return cardOvr(u) + ovrBonusOf(cardBonusOf(u.card, u.player), u.player) - (u.player.injury ? 10 : 0);
 }
 
-export interface PoolItem { id: string; src: CandSrc; from?: Slot; u: Unit }
+/**
+ * 가벼운 후보 정보 — 수천 장을 거르고 줄 세울 때(선수 능력치를 만들지 않는다). 실제 선수 카드는 카탈로그에서,
+ * 옛 목업 카드는 unit 그대로. 세기(power)는 카드 종합 + 강화 몫(대략) — 정밀 계산은 위쪽 후보만 evaluate/cardPower.
+ */
+export interface LiteU { id: string; pid: string; pos: Player['pos']; subPos?: Player['subPos']; role?: Player['role']; throws: Player['throws']; code: string; yearKey: string; grade: CardInst['grade']; power: number }
+const liteMemo = new Map<string, LiteU>();
+let liteVer = -1;
+export function liteUnit(id: string): LiteU {
+  const v = invVersion();
+  if (v !== liteVer) { liteMemo.clear(); liteVer = v; }
+  const hit = liteMemo.get(id);
+  if (hit) return hit;
+  const card = getCard(id)!;
+  const l = cardLite(id);
+  const enh = enhGainTotal(card.enhance ?? 0);
+  const yearKey = card.year != null ? String(fullYear(card.year)) : 'none';
+  const out: LiteU = l
+    ? { id, pid: l.pid, pos: l.pos, subPos: l.subPos, role: l.role, throws: l.throws, code: teamById(l.teamId).code, yearKey, grade: card.grade, power: (card.ovr ?? l.ovr) + enh }
+    : (() => { const u = unit(id); return { id, pid: u.player.id, pos: u.player.pos, subPos: u.player.subPos, role: u.player.role, throws: u.player.throws, code: u.team.code, yearKey, grade: card.grade, power: cardOvr(u) + enh - (u.player.injury ? 10 : 0) }; })();
+  liteMemo.set(id, out);
+  return out;
+}
+
+export interface PoolItem { id: string; src: CandSrc; from?: Slot; l: LiteU }
 /** 이 자리에 넣을 수 있는 카드 (벤치 · 보관함 · 맞바꿀 자리) — 계산 없이 목록만 (거르기 칩 · 장수 세기용) */
 export function candidatePool(st: LineupState, slot: Slot): PoolItem[] {
   const curId = getSlot(st, slot);
@@ -549,26 +573,23 @@ export function candidatePool(st: LineupState, slot: Slot): PoolItem[] {
   for (const c of pool) {
     if (c.id === curId || seen.has(c.id)) continue;
     seen.add(c.id);
-    const u = unit(c.id);
-    if ((u.player.pos === 'P') !== wantP) continue;
-    if (c.src !== 'swap' && playerBusy(st, slot, u.player.id)) continue;
-    out.push({ ...c, u });
+    const l = liteUnit(c.id);
+    if ((l.pos === 'P') !== wantP) continue;
+    if (c.src !== 'swap' && playerBusy(st, slot, l.pid)) continue;
+    out.push({ ...c, l });
   }
   return out;
 }
-
-/** 후보 카드 연도 키 — 4자리 연도, 연도 없는 카드(레전드 · 프랜차이즈 …)는 'none' */
-export const yearKeyOf = (u: Unit) => (u.card.year != null ? String(fullYear(u.card.year)) : 'none');
 
 /**
  * 바꿀 후보 — 넣으면 팀 종합이 얼마나 되는지 순서로.
  *  filter: 구단 · 연도 거르기 / limit: 카드가 많으면 카드 세기(cardPower − 적성) 높은 순으로 그만큼만 다시 계산 (맞바꿈은 늘 포함)
  */
-export function candidates(st: LineupState, slot: Slot, cur: Eval, opt: { filter?: (u: Unit) => boolean; limit?: number } = {}): Cand[] {
+export function candidates(st: LineupState, slot: Slot, cur: Eval, opt: { filter?: (l: LiteU) => boolean; limit?: number } = {}): Cand[] {
   let pool = candidatePool(st, slot);
-  if (opt.filter) pool = pool.filter((c) => opt.filter!(c.u));
+  if (opt.filter) pool = pool.filter((c) => opt.filter!(c.l));
   if (opt.limit != null && pool.length > opt.limit) {
-    const rank = (c: PoolItem) => cardPower(c.u) - fitPenalty(fitOf(c.u.player, slot), slot);
+    const rank = (c: PoolItem) => c.l.power - fitPenalty(fitOf(c.l, slot), slot);
     const swaps = pool.filter((c) => c.src === 'swap');
     const rest = pool.filter((c) => c.src !== 'swap').sort((a, b) => rank(b) - rank(a)).slice(0, Math.max(0, opt.limit - swaps.length));
     pool = [...swaps, ...rest];
@@ -576,8 +597,7 @@ export function candidates(st: LineupState, slot: Slot, cur: Eval, opt: { filter
   const out: Cand[] = [];
   const curPit = cur.parts.find((p) => p.k === 'pit')!.v;
   for (const c of pool) {
-    const u = c.u;
-    const fit = fitOf(u.player, slot);
+    const fit = fitOf(c.l, slot);
     const next = place(st, slot, c.id);
     const ev = evaluate(next);
     out.push({ id: c.id, src: c.src, from: c.from, next, ev, fit, delta: ev.overall - cur.overall, pitDelta: ev.parts.find((p) => p.k === 'pit')!.v - curPit, blocked: legendBlock(st, next) });
@@ -646,19 +666,37 @@ export function staffPlan(st: LineupState, cur: Eval = evaluate(st)): Partial<Re
   for (const s of STAFF_SLOTS) { const id = getSlot(st, s); if (id) pool.add(id); }
   for (const id of st.bench) pool.add(id);
   for (const id of boxOf(st)) pool.add(id);
-  const batPeople = new Set(BAT_SLOTS.map((s) => st.field[s]).filter(isStr).map((id) => personOfId(unit(id).player.id)));
-  const setV = (u: Unit) => {
-    const y = u.card.year != null ? fullYear(u.card.year) : undefined;
+  const batPeople = new Set(BAT_SLOTS.map((s) => st.field[s]).filter(isStr).map((id) => personOfId(liteUnit(id).pid)));
+  const setV = (l: LiteU) => {
+    const y = l.yearKey === 'none' ? undefined : Number(l.yearKey);
     let v = 0;
     for (const sp of cur.active) {
-      const hit = sp.kind === 'teamYear' ? sp.code === u.team.code && sp.year === y : sp.kind === 'team' ? sp.code === u.team.code : sp.year === y;
+      const hit = sp.kind === 'teamYear' ? sp.code === l.code && sp.year === y : sp.kind === 'team' ? sp.code === l.code : sp.year === y;
       if (hit) v = Math.max(v, sp.cur?.v ?? 0);
     }
     return v;
   };
-  const cands = [...pool].map((id) => unit(id))
-    .filter((u) => u.player.pos === 'P' && !batPeople.has(personOfId(u.player.id)))
-    .map((u) => ({ u, power: cardPower(u) + setV(u) * 1.5, leg: isLegendGrade(u.card.grade) }));
+  // 투수가 수천 장이어도 — 가벼운 세기로 사람마다 가장 센 카드만 남기고 위쪽 60장, 그 카드들만 정밀 세기(강화 · 훈련 · 잠재력)
+  const bestOfPerson = new Map<string, LiteU>();
+  for (const id of pool) {
+    const l = liteUnit(id);
+    if (l.pos !== 'P' || batPeople.has(personOfId(l.pid))) continue;
+    const who = personOfId(l.pid);
+    const prev = bestOfPerson.get(who);
+    if (!prev || l.power + setV(l) * 1.5 > prev.power + setV(prev) * 1.5) bestOfPerson.set(who, l);
+  }
+  const lineupNow = new Set(STAFF_SLOTS.map((s) => getSlot(st, s)).filter(isStr));
+  const pre = [...bestOfPerson.values()].sort((a, b) => (b.power + setV(b) * 1.5) - (a.power + setV(a) * 1.5));
+  // 보직마다 위쪽을 따로 남긴다 — 선발 25 · 불펜 30 · 마무리 12 (센 선발만 남아 불펜 칸을 보직 밖으로 채우지 않게) + 지금 투수진
+  const quota: Record<string, number> = { SP: 25, RP: 30, CL: 12 };
+  const taken0 = new Map<string, number>();
+  const shortlist = pre.filter((l) => {
+    const r = l.role ?? 'RP';
+    const k = taken0.get(r) ?? 0;
+    if (k < (quota[r] ?? 20)) { taken0.set(r, k + 1); return true; }
+    return lineupNow.has(l.id);
+  });
+  const cands = shortlist.map((l) => { const u = unit(l.id); return { u, power: cardPower(u) + setV(l) * 1.5, leg: isLegendGrade(u.card.grade) }; });
   const plan: Partial<Record<StaffSlot, string>> = {};
   const taken = new Set<string>();
   const people = new Set<string>();
@@ -718,16 +756,34 @@ export function autoStaff(st: LineupState): LineupState {
   return staffScore(evaluate(best)) >= staffScore(e0) - 0.01 ? best : st;
 }
 
-/** 자동 편성 — 타자는 가장 많이 오르는 한 수를 반복(자리마다 카드 세기 상위만 계산) + 추천 타순, 투수진은 보직 · 세기대로(autoStaff) */
+/** 자동 편성 — 타자는 가장 많이 오르는 한 수를 반복 + 추천 타순, 투수진은 보직 · 세기대로(autoStaff).
+ *  자리마다 보관함 후보는 처음에 한 번만 추린다(카드 세기 − 적성 상위 12장) — 1만 장이어도 한 수마다 보관함을 다시 훑지 않게.
+ *  맞바꿈(다른 수비 자리 선수)은 매번 본다. */
 export function autoLineup(st: LineupState): LineupState {
   let cur = st;
   let ce = evaluate(cur);
+  const TOP = 12;
+  const top = new Map<BatSlot, string[]>();
+  for (const slot of BAT_SLOTS) {
+    const rank = (c: PoolItem) => c.l.power - fitPenalty(fitOf(c.l, slot), slot);
+    top.set(slot, candidatePool(cur, slot).filter((c) => c.src !== 'swap').sort((a, b) => rank(b) - rank(a)).slice(0, TOP).map((c) => c.id));
+  }
   for (let it = 0; it < 14; it++) {
     let best: { st: LineupState; sc: number } | null = null;
+    const base = score(ce);
     for (const slot of BAT_SLOTS) {
-      for (const c of candidates(cur, slot, ce, { limit: 24 }).filter((x) => !x.blocked).slice(0, 6)) {
-        const sc = score(c.ev);
-        if (sc > score(ce) + 0.5 && (!best || sc > best.sc)) best = { st: c.next, sc };
+      const cur0 = cur.field[slot];
+      const swaps = BAT_SLOTS.filter((x) => x !== slot).map((x) => cur.field[x]).filter(isStr);
+      for (const id of [...top.get(slot)!, ...swaps]) {
+        if (id === cur0) continue;
+        const from = slotOf(cur, id);
+        if (from && !isBat(from)) continue;
+        if (!from && playerBusy(cur, slot, liteUnit(id).pid)) continue;
+        if (liteUnit(id).pos === 'P') continue;
+        const next = place(cur, slot, id);
+        if (legendBlock(cur, next)) continue;
+        const sc = score(evaluate(next));
+        if (sc > base + 0.5 && (!best || sc > best.sc)) best = { st: next, sc };
       }
     }
     if (!best) break;

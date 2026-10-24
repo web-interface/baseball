@@ -16,6 +16,7 @@ import { avg as fmtAvg, level as fmtLevel, levelColor, roman, yearTag } from '..
 import { GRADES } from '../../game/grades';
 import { POS_KO, ROLE_KO } from '../../game/labels';
 import { CARDS, ME, TEAMS, cardById, playerById, playerOfCard, teamById } from '../../game/mock';
+import { cardLite } from '../../game/kbo';
 import {
   ENH_AUTO_MAX, ENH_STEPS, MAT_CLASS_KO, entryOf, inLineup, isOwned, nextStep, ownedCard, ownedIds, recentEnh, stats as invStats, useInventory, type MatClass,
 } from '../../game/inventory';
@@ -54,8 +55,12 @@ const LOOK: Record<GradeId, string> = {
 };
 const LIMIT: Partial<Record<GradeId, string>> = { legend: '/99', franchise: '/50', black: '/25', signature: '/10', mvp: '/27', gg: '/27', th: '/27', unique: '1/1' };
 
-const groupOf = (p: Player): Exclude<PosGroup, 'all'> =>
+const groupOf = (p: { pos: Player['pos'] }): Exclude<PosGroup, 'all'> =>
   (Object.keys(POS_GROUP) as Exclude<PosGroup, 'all'>[]).find((k) => POS_GROUP[k].includes(p.pos)) ?? 'DH';
+/** 목록 거르기 · 정렬용 가벼운 선수 정보 — 실제 선수 카드는 능력치를 만들지 않고(수천 장이어도 빠르게), 옛 카드는 선수 그대로 */
+const liteOf = (c: CardInst): { name: string; ovr: number; teamId: string; pos: Player['pos'] } => cardLite(c.id) ?? playerOfCard(c);
+/** 한글 이름 비교 — localeCompare(…, 'ko') 를 부를 때마다 만들지 않게 */
+const KO = new Intl.Collator('ko');
 
 function readCols(): 2 | 3 {
   try { return localStorage.getItem('bb.cards.cols') === '2' ? 2 : 3; } catch { return 3; }
@@ -93,11 +98,11 @@ function Collection({ openId, openBack, colsParam, sortParam, enhance = false }:
     mine.forEach((c) => m.set(c.grade, (m.get(c.grade) ?? 0) + 1));
     return m;
   }, [mine]);
-  const teamsHere = useMemo(() => TEAMS.filter((t) => mine.some((c) => playerOfCard(c).teamId === t.id)), [mine]);
+  const teamsHere = useMemo(() => { const ids = new Set(mine.map((c) => liteOf(c).teamId)); return TEAMS.filter((t) => ids.has(t.id)); }, [mine]);
 
   const list = useMemo(() => {
     const out = mine.filter((c) => {
-      const p = playerOfCard(c);
+      const p = liteOf(c);
       if (grade !== 'all' && c.grade !== grade) return false;
       if (pos !== 'all' && groupOf(p) !== pos) return false;
       if (team !== 'all' && p.teamId !== team) return false;
@@ -105,12 +110,12 @@ function Collection({ openId, openBack, colsParam, sortParam, enhance = false }:
     });
     const rank = (c: CardInst) => GRADES[c.grade].rank;
     const by: Record<SortKey, (a: CardInst, b: CardInst) => number> = {
-      ovr: (a, b) => playerOfCard(b).ovr - playerOfCard(a).ovr || rank(b) - rank(a),
-      grade: (a, b) => rank(b) - rank(a) || playerOfCard(b).ovr - playerOfCard(a).ovr,
+      ovr: (a, b) => liteOf(b).ovr - liteOf(a).ovr || rank(b) - rank(a),
+      grade: (a, b) => rank(b) - rank(a) || liteOf(b).ovr - liteOf(a).ovr,
       level: (a, b) => b.level - a.level || rank(b) - rank(a),
       enh: (a, b) => b.enhance - a.enhance || rank(b) - rank(a),
     };
-    return out.sort((a, b) => by[sort](a, b) || playerOfCard(a).name.localeCompare(playerOfCard(b).name, 'ko'));
+    return out.sort((a, b) => by[sort](a, b) || KO.compare(liteOf(a).name, liteOf(b).name));
   }, [mine, grade, pos, team, sort]);
   // 카드가 수천 장이어도 가볍게 — 60장씩 이어 그린다 (거르기 · 정렬이 바뀌면 처음부터)
   const inc = useIncremental(list, 60, `${grade}|${pos}|${team}|${sort}|${enhance}`);

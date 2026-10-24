@@ -8,8 +8,8 @@ import { shortLabel } from '../../game/world';
 import { GRADES } from '../../game/grades';
 import { POS_KO } from '../../game/labels';
 import {
-  BOOM, FIT_KO, LEVEL_KO, SLOT_KO, STAFF_FIT_KO, candidatePool, candidates, fitPenalty, getSlot, isBat, placesFor, unit, yearKeyOf,
-  type BoardSlot, type Cand, type Eval, type Fit, type Link, type LineupState, type Slot, type Unit,
+  BOOM, FIT_KO, LEVEL_KO, SLOT_KO, STAFF_FIT_KO, candidatePool, candidates, fitPenalty, getSlot, isBat, placesFor, unit,
+  type BoardSlot, type Cand, type Eval, type Fit, type Link, type LineupState, type LiteU, type Slot,
 } from './calc';
 import s from './SwapSheet.module.css';
 
@@ -26,22 +26,22 @@ const fitText = (f: Fit, slot: Slot) => {
   return pen ? `${ko} −${pen}` : ko;
 };
 
-/** 카드가 많으면 넣었을 때 팀 종합을 다시 계산하는 후보 수 — 카드 세기 순으로 이만큼 (맞바꿈은 늘) */
-const SHOW_MAX = 120;
+/** 카드가 많으면 넣었을 때 팀 종합을 다시 계산하는 후보 수 — 카드 세기 순으로 처음 이만큼, '더 보기'로 이만큼씩 (맞바꿈은 늘) */
+const SHOW_STEP = 40;
 const ALL = 'all';
 /** 연도 칩 글 — '’27' · 연도 없는 카드는 '연도 없음' */
 const yearLabel = (k: string) => (k === 'none' ? '연도 없음' : `’${k.slice(2)}`);
 
 /** 구단 · 연도 거르기 칩 — 고른 연도(구단)에 맞는 장수를 같이 */
-function Filters({ pool, team, year, onTeam, onYear }: { pool: Unit[]; team: string; year: string; onTeam: (v: string) => void; onYear: (v: string) => void }) {
+function Filters({ pool, team, year, onTeam, onYear }: { pool: LiteU[]; team: string; year: string; onTeam: (v: string) => void; onYear: (v: string) => void }) {
   const teams = useMemo(() => {
     const m = new Map<string, number>();
-    for (const u of pool) if (year === ALL || yearKeyOf(u) === year) m.set(u.team.code, (m.get(u.team.code) ?? 0) + 1);
+    for (const u of pool) if (year === ALL || u.yearKey === year) m.set(u.code, (m.get(u.code) ?? 0) + 1);
     return [...m].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   }, [pool, year]);
   const years = useMemo(() => {
     const m = new Map<string, number>();
-    for (const u of pool) if (team === ALL || u.team.code === team) m.set(yearKeyOf(u), (m.get(yearKeyOf(u)) ?? 0) + 1);
+    for (const u of pool) if (team === ALL || u.code === team) m.set(u.yearKey, (m.get(u.yearKey) ?? 0) + 1);
     return [...m].sort((a, b) => (a[0] === 'none' ? 1 : b[0] === 'none' ? -1 : Number(b[0]) - Number(a[0])));
   }, [pool, team]);
   if (pool.length < 2) return null;
@@ -158,13 +158,15 @@ export function SwapSheet({ slot, st, ev, onClose, onApply }: SwapSheetProps) {
   const [shown, setShown] = useState<Slot | null>(slot);
   const [team, setTeam] = useState(ALL);
   const [year, setYear] = useState(ALL);
-  useEffect(() => { if (slot) { setShown(slot); setTeam(ALL); setYear(ALL); } }, [slot]);
+  const [limit, setLimit] = useState(SHOW_STEP);
+  useEffect(() => { if (slot) { setShown(slot); setTeam(ALL); setYear(ALL); setLimit(SHOW_STEP); } }, [slot]);
+  useEffect(() => { setLimit(SHOW_STEP); }, [team, year]);
   const at = slot ?? shown;
   // 넣을 수 있는 카드 전체(계산 없이) — 거르기 칩 · 장수
-  const pool = useMemo(() => (slot ? candidatePool(st, slot).map((c) => c.u) : []), [slot, st]);
-  const pass = (u: Unit) => (team === ALL || u.team.code === team) && (year === ALL || yearKeyOf(u) === year);
+  const pool = useMemo(() => (slot ? candidatePool(st, slot).map((c) => c.l) : []), [slot, st]);
+  const pass = (u: LiteU) => (team === ALL || u.code === team) && (year === ALL || u.yearKey === year);
   const total = useMemo(() => pool.filter(pass).length, [pool, team, year]); // eslint-disable-line react-hooks/exhaustive-deps
-  const list = useMemo(() => (slot ? candidates(st, slot, ev, { filter: pass, limit: SHOW_MAX }) : []), [slot, st, ev, team, year]); // eslint-disable-line react-hooks/exhaustive-deps
+  const list = useMemo(() => (slot ? candidates(st, slot, ev, { filter: pass, limit }) : []), [slot, st, ev, team, year, limit]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!at) return null;
 
   const curId = getSlot(st, at);
@@ -219,7 +221,7 @@ export function SwapSheet({ slot, st, ev, onClose, onApply }: SwapSheetProps) {
               <button type="button" className={[s.cand, boom && s.candBoom, c.blocked && s.candOff].filter(Boolean).join(' ')}
                 disabled={!!c.blocked} title={c.blocked ?? undefined}
                 onClick={() => onApply(c.next, { slot: at, id: c.id })}>
-                <span className={s.card}><CardMini {...cardProps(u.card)} ovrShown={c.ev.units[at] ? Math.round(c.ev.units[at]!.total) : undefined} width={44} /></span>
+                <span className={s.card}><CardMini {...cardProps(u.card)} ovrShown={c.ev.units[at] ? Math.round(c.ev.units[at]!.total) : undefined} width={44} still /></span>
                 <span className={s.who}>
                   <span className={s.nameRow}>
                     <b><NameYear name={u.player.name} year={u.card.year} /></b>
@@ -244,7 +246,12 @@ export function SwapSheet({ slot, st, ev, onClose, onApply }: SwapSheetProps) {
           : <li className={s.emptyList}>넣을 수 있는 선수가 없어요. 카드구매 · 스카우터에서 데려오면 보관함에 들어와 여기 후보로 나와요.</li>)}
       </ul>
       {total > list.length && (
-        <p className={s.note}>카드가 많아 세기 순으로 <b className="num">{list.length}</b>명까지 보여 줘요 — 구단 · 연도로 거르면 나머지도 볼 수 있어요</p>
+        <div className={s.moreBox}>
+          <p className={s.note}>카드가 많아 세기 순으로 <b className="num">{list.length}</b>명까지 계산했어요 · 구단 · 연도로 거르면 더 빨라요</p>
+          <button type="button" className={s.moreBtn} onClick={() => setLimit((x) => x + SHOW_STEP)}>
+            다음 <span className="num">{Math.min(SHOW_STEP, total - list.length)}</span>명 더 보기 <small>(남은 <span className="num">{total - list.length}</span>명)</small>
+          </button>
+        </div>
       )}
       {list.some((c) => c.ev.exploded && !ev.exploded) && (
         <p className={s.note}>왕조 — 엔트리에서 한 구단·한 연도 카드가 20명이 되면 능력치 폭발 (단계 가치 +{BOOM})</p>

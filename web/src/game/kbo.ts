@@ -339,6 +339,27 @@ export function cardInst(c: KCard): CardInst {
   };
 }
 /** 카드의 Player — 카드 종합(등급 보정)·상징 카드의 계보 기간을 반영한 보기 */
+/** 가벼운 카드 정보 — 목록 거르기 · 정렬용. 선수 능력치(viewPlayer)를 만들지 않아 수천 장이어도 빠르다 (playerOfKCard 와 같은 값) */
+export interface CardLite {
+  name: string; ovr: number; teamId: string; pos: Pos | 'P';
+  /** 선수 보기 id (같은 사람 · 적성 판단용) */
+  pid: string; role?: PitcherRole; throws: Hand; subPos?: Pos[];
+}
+const liteCache = new Map<string, CardLite | null>();
+export function cardLite(cardId: string): CardLite | undefined {
+  const hit = liteCache.get(cardId);
+  if (hit !== undefined) return hit ?? undefined;
+  const c = cardMap.get(cardId);
+  const p = c && persons.get(c.kid);
+  const s = p && c && seasonOfPerson(p, c.view);
+  const sub = p && s ? p.sub.filter((x) => x !== s.pos && x !== 'P') : [];
+  const out: CardLite | null = c && p && s
+    ? { name: p.name, ovr: c.ovr, teamId: (c.span ? c.code : s.code).toLowerCase(), pos: s.pos, pid: viewIdOf(c.kid, c.view), role: s.role, throws: p.throws, subPos: sub.length ? sub : undefined }
+    : null;
+  liteCache.set(cardId, out);
+  return out ?? undefined;
+}
+
 export function playerOfKCard(c: KCard): Player | undefined {
   const base = viewPlayer(c.kid, c.view);
   if (!base) return undefined;

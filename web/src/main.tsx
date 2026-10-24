@@ -8,6 +8,7 @@ import { myTeam } from './game/mock';
 import { ensureStarter } from './game/starter';
 import { repairSpecial } from './screens/club-select/local-mock';
 import App from './app/App';
+import { installWheelX } from './ui/wheelX';
 
 // 첫 그림 전에 테마 (index.html 의 작은 스크립트와 같은 규칙)
 applyTheme(initialTheme());
@@ -17,5 +18,8 @@ repairSpecial();
 ensureStarter();
 // 내 구단 색 (지금은 목업 — 서버가 붙으면 로그인한 구단으로)
 { const t = myTeam(); applyClubColors(t.colors.primary, t.colors.secondary); }
+
+// 가로로만 움직이는 줄(칩 · 탭)을 마우스 휠로도
+installWheelX();
 
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);

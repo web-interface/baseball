@@ -6,7 +6,8 @@ import { navigate, setQueryQuiet } from '../../app/router';
 import { Button, Emblem, YearPicker, fmt, type YearCell } from '../../ui';
 import { CardMini } from '../../cards';
 import { CURRENT_SEASON, FIRST_SEASON, shortLabel } from '../../game/world';
-import { CURRENT_TEAMS, OLD_TEAMS, isTeamId, myTeam, teamByCode } from '../../game/mock';
+import { CURRENT_TEAMS, OLD_TEAMS, cardById, isTeamId, myTeam, teamByCode, teamById } from '../../game/mock';
+import { cardLite } from '../../game/kbo';
 import type { ClubCode, Team } from '../../game/types';
 import { HAS_REAL_SEASONS, clubPennants, clubRunnerUps, clubSeason, clubTitles, clubYears, fullYear, leagueYear, leagueYears, postLabel, seasonLine } from '../../game/clubSeasons';
 import {
@@ -82,8 +83,13 @@ function Rules() {
 
 /* ───────── 지금 내 엔트리 ───────── */
 function Mine({ ev, st }: { ev: ReturnType<typeof evaluate>; st: ReturnType<typeof initialLineup> }) {
-  // 엔트리 밖 내 카드 (벤치 + 보관함)
-  const spare = useMemo(() => [...st.bench, ...boxOf(st)].map((id) => unit(id)), [st]);
+  // 엔트리 밖 내 카드 (벤치 + 보관함) — 구단 · 연도만 가볍게(수천 장이어도 선수 능력치를 만들지 않게), 보여 줄 다섯 장만 unit()
+  const spare = useMemo(() => [...st.bench, ...boxOf(st)].map((id): Spare => {
+    const lite = cardLite(id);
+    if (lite) { const y = cardById(id)?.year; return { id, code: teamById(lite.teamId).code, year: y != null ? fullYear(y) : null }; }
+    const u = unit(id);
+    return { id, code: u.team.code, year: u.card.year != null ? fullYear(u.card.year) : null };
+  }), [st]);
   const list = ev.sets.filter((x) => x.active || x.next).slice(0, 6);
   return (
     <section className={s.sec} aria-labelledby="mine-h">
@@ -100,10 +106,11 @@ function Mine({ ev, st }: { ev: ReturnType<typeof evaluate>; st: ReturnType<type
   );
 }
 
-function MineRow({ sp, spare }: { sp: SetProgress; spare: ReturnType<typeof unit>[] }) {
+interface Spare { id: string; code: string; year: number | null }
+function MineRow({ sp, spare }: { sp: SetProgress; spare: Spare[] }) {
   const t = sp.code ? teamByCode(sp.code) : undefined;
   const need = sp.next ? sp.next.at : ENTRY_SIZE;
-  const fits = spare.filter((u) => (sp.code ? u.team.code === sp.code : true) && (sp.year != null ? (u.card.year != null && fullYear(u.card.year) === sp.year) : true));
+  const fits = spare.filter((u) => (sp.code ? u.code === sp.code : true) && (sp.year != null ? u.year === sp.year : true));
   const more = sp.next ? sp.next.at - sp.have : 0;
   const short = sp.code ? shortLabel(sp.code) : '';
   const want = sp.kind === 'teamYear' ? `${short} ${fmt.yearTag(sp.year! % 100)} 카드` : sp.kind === 'team' ? `${short} 카드(연도 무관)` : `${fmt.yearTag(sp.year! % 100)} 카드(구단 무관)`;
@@ -132,12 +139,12 @@ function MineRow({ sp, spare }: { sp: SetProgress; spare: ReturnType<typeof unit
         <span className={s.candsH}>모을 카드 · {want}</span>
         {fits.length ? (
           <span className={s.candList}>
-            {fits.slice(0, 5).map((u) => (
+            {fits.slice(0, 5).map((x) => { const u = unit(x.id); return (
               <span key={u.id} className={s.cand}>
-                <CardMini player={u.player} grade={u.card.grade} enhance={u.card.enhance} width={34} />
+                <CardMini player={u.player} grade={u.card.grade} enhance={u.card.enhance} width={34} still />
                 <small>{u.player.name}</small>
               </span>
-            ))}
+            ); })}
             <small className={s.candNote}>내 카드 중 후보 {fits.length}장 — 라인업에 넣으면 돼요</small>
           </span>
         ) : (
