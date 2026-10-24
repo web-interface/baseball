@@ -10,7 +10,7 @@ import { teamById } from '../../game/mock';
 import type { AttrKey, Player } from '../../game/types';
 import { cardAttrBonus, cardBonusSources, gearBonus, gearOf, recentOf } from '../player/local-mock';
 import { cardProps } from '../../cards';
-import { FIT_KO, SLOT_KO, getSlot, unit, type Eval, type LineupState, type Slot } from './calc';
+import { FIT_KO, STAFF_FIT_KO, SLOT_KO, fitPenalty, getSlot, isBat, unit, type Eval, type LineupState, type Slot } from './calc';
 import s from './PlayerSheet.module.css';
 
 const BAT_KEYS: AttrKey[] = ['contactR', 'contactL', 'power', 'gap', 'eye', 'avoidK'];
@@ -109,7 +109,7 @@ export function PlayerSheet({ slot, st, ev, onClose, onSwap }: PlayerSheetProps)
   ] : [];
   const cells = pit ? pitCells : batCells;
   const order = st.order.indexOf(at as never) + 1;
-  const fitNote = ue && ue.fit !== 'main' && ue.fit !== 'any' ? FIT_KO[ue.fit] : null;
+  const fitNote = ue && ue.fit !== 'main' && ue.fit !== 'any' ? `${(isBat(at) ? FIT_KO : STAFF_FIT_KO)[ue.fit]} −${fitPenalty(ue.fit, at)}` : null;
 
   return (
     <Sheet

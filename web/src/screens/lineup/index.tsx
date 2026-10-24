@@ -152,11 +152,21 @@ export default function LineupScreen({ query }: ScreenProps) {
   };
   const runAuto = () => {
     const next = autoLineup(st);
-    if (evaluate(next).raw <= ev.raw + 0.01 && next.order.join() === st.order.join()) {
+    if (JSON.stringify(next) === JSON.stringify(st)) {
       toast({ text: '지금이 가장 좋은 라인업이에요', tone: 'info' });
       return;
     }
-    report('자동 편성', next);
+    const ne = evaluate(next);
+    if (!(ne.exploded && !ev.exploded)) { // 폭발이면 연출이 대신 알린다
+      const pit = (e: typeof ev) => e.parts.find((p) => p.k === 'pit')!.v;
+      const d1 = ne.overall - ev.overall;
+      const d2 = pit(ne) - pit(ev);
+      toast({
+        text: <>자동 편성 · 팀 종합 <b className="num">{ne.overall}</b>{d1 !== 0 && <> ({fmt.signed(d1)})</>} · 투수 <b className="num">{pit(ne)}</b>{d2 !== 0 && <> ({fmt.signed(d2)})</>}</>,
+        tone: d1 > 0 || (d1 === 0 && d2 > 0) ? 'good' : d1 < 0 ? 'bad' : 'info',
+        action: { label: '되돌리기', onClick: undo },
+      });
+    }
     commit(next);
   };
   const runAutoOrder = () => {

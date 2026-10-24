@@ -120,10 +120,11 @@ export function teamIn(r: ClubRoster, day: number, idBase: number, conds: Weathe
   });
   const rot = r.rotation.length ? r.rotation : r.bullpen.slice(0, 1);
   const sp = rot[((day % rot.length) + rot.length) % rot.length];
-  const roles: PitRole[] = ['SU', 'SU', 'MID', 'MID', 'LONG'];
+  // 불펜 보직 — 셋업맨 · 필승조 · 좌완 원포인트 · 추격조 · 롱릴리프 · 필승조 2 · 중간 계투 · 추격조 2 · 롱릴리프 2 · 패전조 (라인업 10칸)
+  const roles: PitRole[] = ['SU', 'SU', 'MID', 'MID', 'LONG', 'SU', 'MID', 'MID', 'LONG', 'MID'];
   const pen: TeamIn['pen'] = [];
   if (r.closer) pen.push({ pid: idOf.get(r.closer.id)!, role: 'CL', avail: 2 });
-  r.bullpen.forEach((p, i) => { if (p.id !== sp.id) pen.push({ pid: idOf.get(p.id)!, role: p.throws === 'L' && i === 2 ? 'LOOGY' : roles[i] ?? 'MID', avail: 2 }); });
+  r.bullpen.forEach((p, i) => { if (p.id !== sp.id) pen.push({ pid: idOf.get(p.id)!, role: p.throws === 'L' && (i === 2 || i === 6) ? 'LOOGY' : roles[i] ?? 'MID', avail: 2 }); });
   rot.forEach((p) => { if (p.id !== sp.id && !pen.some((x) => x.pid === idOf.get(p.id))) pen.push({ pid: idOf.get(p.id)!, role: 'LONG', avail: 1 }); });
   const team: TeamIn = {
     id: r.teamId, isUser: r.mine, players,

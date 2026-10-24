@@ -25,7 +25,7 @@ export function TeamPower() {
           <span>{lead ? `${SET_KIND_KO[lead.kind]} · ${lead.cur!.trait}` : '같은 구단·연도 5명부터'}</span>
         </p>
         <p className={s.hint}>
-          {lead ? <>타자 {statLine(lead.cur!.bat, 3)} · 투수 {statLine(lead.cur!.pit, 2)}</> : <>엔트리 {ENTRY_SIZE}명 중 같은 구단·같은 연도 카드를 모으면 그 선수들의 능력치가 올라요.</>}
+          {lead ? <>타자 {statLine(lead.cur!.bat, 3)} · 투수 {statLine(lead.cur!.pit, 2)}</> : <>엔트리에서 같은 구단·같은 연도 카드를 {ENTRY_SIZE}명까지 모을수록 그 선수들의 능력치가 올라요.</>}
           {' '}<Link to="/sets" className={s.link}>세트덱 보기</Link>
         </p>
       </div>

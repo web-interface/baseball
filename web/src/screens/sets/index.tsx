@@ -17,7 +17,7 @@ import { boxOf, evaluate, initialLineup, store, unit } from '../lineup/calc';
 import s from './sets.module.css';
 
 const KINDS: SetKind[] = ['teamYear', 'team', 'year'];
-const tierHead = (at: number) => (at >= ENTRY_SIZE ? '전원' : `${at}명`);
+const tierHead = (at: number) => `${at}명`;
 const yyOf = (y: number) => `’${String(y).slice(-2)}`;
 
 export default function SetsScreen({ query }: ScreenProps) {
@@ -32,7 +32,7 @@ export default function SetsScreen({ query }: ScreenProps) {
       <header className={s.top}>
         <h2 className={['head', s.title].join(' ')}>세트덱</h2>
         <p className={s.lead}>
-          1군 엔트리 <b className="num">{ENTRY_SIZE}</b>명(타자 9 · 선발 5 · 불펜 5 · 마무리 1) 안에서 같은 구단 · 같은 연도 카드를 모으면,
+          1군 엔트리(타자 9 · 선발 5 · 불펜 최대 10 · 마무리 1) 안에서 같은 구단 · 같은 연도 카드를 모으면,
           모인 인원 단계마다 <b>그 선수들의</b> 능력치가 올라요. 오르는 능력치는 구단과 연도마다 달라요.
         </p>
       </header>
@@ -73,7 +73,7 @@ function Rules() {
         <li><b>동시에 {MAX_ACTIVE}개까지</b> — 켜진 세트가 많으면 센 것부터 {MAX_ACTIVE}개만 켜져요.</li>
         <li><b>그 선수에게만</b> — 세트에 든 선수만 받고, 한 선수가 여러 세트에 들면 가장 센 것 하나만 받아요.</li>
         <li><b>공정하게</b> — 같은 종류·같은 단계면 어느 구단·연도든 총합이 같아요. 타자는 8칸 합 = 8 × 단계 가치, 투수는 7칸 합 = 7 × 단계 가치. 상황 효과(득점권 컨택 등)는 반만 쳐요 — 색깔만 다르고 손해는 없어요.</li>
-        <li><b>왕조</b> — 엔트리 {ENTRY_SIZE}명이 모두 한 구단 · 한 연도면 능력치 폭발.</li>
+        <li><b>왕조</b> — 엔트리에 한 구단 · 한 연도 카드가 {ENTRY_SIZE}명이면 능력치 폭발.</li>
         <li>케미 선(이웃한 자리의 공통점) 보너스는 세트와 따로 붙어요.</li>
       </ul>
     </section>

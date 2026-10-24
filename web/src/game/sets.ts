@@ -1,5 +1,5 @@
-// 세트덱 — 1군 엔트리(20명: 타자 9 · 선발 5 · 불펜 5 · 마무리 1) 안에서 같은 구단·같은 연도 카드를 모으면
-// 인원 단계(5 · 9 · 14 · 전원)마다 그 선수들의 능력치가 오른다.
+// 세트덱 — 1군 엔트리(타자 9 · 선발 5 · 불펜 최대 10 · 마무리 1 — 최대 25명) 안에서 같은 구단·같은 연도 카드를 모으면
+// 인원 단계(5 · 9 · 14 · 20명)마다 그 선수들의 능력치가 오른다. 구단+연도 20명이면 왕조.
 //  · 세트 3종: 구단+연도(가장 셈) · 구단(연도 무관) · 연도(구단 무관)
 //  · 오르는 능력치는 조합마다 다르다 — 구단 성향(세계관) + 그 해 성격(구단 연도 기록) / 연도 세트는 그 해 리그 특징
 //  · 공정: 같은 종류·같은 단계면 모든 조합의 '총합 가치'가 같다 — 타자 8칸 합 = 8×v, 투수 7칸 합 = 7×v
@@ -10,7 +10,10 @@ import { ALL_CLUBS, shortLabel } from './world';
 import type { ClubCode } from './types';
 import { clubSeason, clubTitles, fullYear, leagueYear, traitTag, type RankKey, type SeasonRec } from './clubSeasons';
 
+/** 마지막 단계(왕조) 인원 — 엔트리는 불펜 10명까지 최대 25명 */
 export const ENTRY_SIZE = 20;
+/** 엔트리 최대 인원 (타자 9 · 선발 5 · 불펜 10 · 마무리 1) */
+export const ENTRY_MAX = 25;
 export type SetKind = 'teamYear' | 'team' | 'year';
 export const SET_KIND_KO: Record<SetKind, string> = { teamYear: '구단+연도', team: '구단', year: '연도' };
 export const SET_KIND_DESC: Record<SetKind, string> = {
@@ -25,7 +28,7 @@ export const TIERS: Record<SetKind, Tier[]> = {
   team: [{ at: 5, v: 1 }, { at: 9, v: 2 }, { at: 14, v: 4 }, { at: ENTRY_SIZE, v: 7 }],
   year: [{ at: 9, v: 1 }, { at: 14, v: 2 }, { at: ENTRY_SIZE, v: 3 }],
 };
-/** 엔트리 전원이 구단+연도 한 세트 = 왕조 — 능력치 폭발 */
+/** 엔트리에 구단+연도 한 세트가 20명 = 왕조 — 능력치 폭발 */
 export const DYNASTY_V = 12;
 export const MAX_ACTIVE = 2;
 

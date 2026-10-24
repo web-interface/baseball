@@ -10,7 +10,7 @@ import type { BatKey, PitKey, SetEffect } from '../game/sets';
 import { cardBonusOf, engineFxOf } from '../game/cardBonus';
 import { LEGEND_MAX, isLegendGrade, potEngineFx, potFaceOf, teamPotential } from '../game/potential';
 import { interviewFx } from '../game/press';
-import { evaluate, getSlot, initialLineup, store as lineupStore, unit, type LineupState } from '../screens/lineup/calc';
+import { PEN_SLOTS, ROT_SLOTS, STAFF_FIT_PENALTY, evaluate, fitOf, getSlot, initialLineup, store as lineupStore, unit, type LineupState, type StaffSlot } from '../screens/lineup/calc';
 
 import { LEVEL_KO, aiLevel, aiTargetOf, type AiLevel } from './league';
 export { LEVEL_KO, aiLevel, aiTargetOf, type AiLevel };
@@ -129,13 +129,24 @@ export function myRoster(st: LineupState = lineupStore.get() ?? initialLineup())
   const bullpen = st.bullpen.map((id, i) => { note(`B${i}`, id); return pl(id)?.player; }).filter((p): p is Player => !!p);
   note('CL', st.closer);
   const closer = pl(st.closer)?.player ?? null;
-  const inUse = new Set([...batting.map((b) => b.player.id), ...rotation.map((p) => p.id), ...bullpen.map((p) => p.id), closer?.id]);
+  // 같은 사람은 로스터에 한 번 — 실제 선수는 시즌마다 보기 id 가 달라('…~2015' · '…~2016') 시즌 꼬리를 떼고 비교
+  const person = (id: string) => id.replace(/~\d{4}$/, '');
+  const inUse = new Set([...batting.map((b) => b.player.id), ...rotation.map((p) => p.id), ...bullpen.map((p) => p.id), ...(closer ? [closer.id] : [])].map(person));
+  // 투수 보직 감점 — 선발 ↔ 불펜이 엇갈리면(라인업 화면 '보직 밖') 투구 능력치를 그만큼 깎는다 (팀 종합의 감점과 같은 값)
+  const staffSlots: StaffSlot[] = [...ROT_SLOTS, ...PEN_SLOTS, 'CL'];
+  for (const slot of staffSlots) {
+    const u = pl(getSlot(st, slot));
+    if (!u) continue;
+    const pen = STAFF_FIT_PENALTY[fitOf(u.player, slot)];
+    if (pen > 0) train.set(u.player.id, [...(train.get(u.player.id) ?? []), ...(['vel', 'stf', 'brk', 'ctl'] as const).map((k) => ({ k, v: -pen }))]);
+  }
   // 레전드급 — 경기에 나서는 선수단 전체(벤치 포함)에서 타자 2명 · 투수 2명까지. 엔트리가 먼저, 남는 몫만큼 벤치
   const legLeft = { ...LEGEND_MAX };
   entryIds.forEach((id) => { const u = unit(id); if (isLegendGrade(u.card.grade)) legLeft[u.player.pos === 'P' ? 'pit' : 'bat']--; });
   const benchIds = st.bench.filter((id) => {
     const u = pl(id);
-    if (!u || inUse.has(u.player.id)) return false;
+    if (!u || inUse.has(person(u.player.id))) return false;
+    inUse.add(person(u.player.id));
     if (!isLegendGrade(u.card.grade)) return true;
     const k = u.player.pos === 'P' ? 'pit' : 'bat';
     if (legLeft[k] <= 0) return false;
@@ -148,7 +159,6 @@ export function myRoster(st: LineupState = lineupStore.get() ?? initialLineup())
   for (const [pid, fx] of interviewFx(st, [...batting.map((b) => b.player), ...bench, ...rotation, ...bullpen, ...(closer ? [closer] : [])])) {
     train.set(pid, [...(train.get(pid) ?? []), ...fx]);
   }
-  void getSlot;
   return { teamId: ME.teamId, mine: true, batting, rotation, bullpen, closer, bench, delta: new Map(), setFx, enh, train, ovr: Math.round(ev.raw) };
 }
 

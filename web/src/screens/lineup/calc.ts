@@ -21,14 +21,15 @@ import { cardBonusOf, ovrBonusOf, type CardBonus } from '../../game/cardBonus';
 
 /* ───────── 자리 ───────── */
 export type BatSlot = 'C' | '1B' | '2B' | '3B' | 'SS' | 'LF' | 'CF' | 'RF' | 'DH';
-export type StaffSlot = 'R0' | 'R1' | 'R2' | 'R3' | 'R4' | 'B0' | 'B1' | 'B2' | 'B3' | 'B4' | 'CL';
+export type StaffSlot = 'R0' | 'R1' | 'R2' | 'R3' | 'R4' | 'B0' | 'B1' | 'B2' | 'B3' | 'B4' | 'B5' | 'B6' | 'B7' | 'B8' | 'B9' | 'CL';
 export type Slot = BatSlot | StaffSlot;
 /** 경기장 판 위 자리 — P 는 1선발(R0) */
 export type BoardSlot = BatSlot | 'P';
 
 export const BAT_SLOTS: BatSlot[] = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'];
 export const ROT_SLOTS: StaffSlot[] = ['R0', 'R1', 'R2', 'R3', 'R4'];
-export const PEN_SLOTS: StaffSlot[] = ['B0', 'B1', 'B2', 'B3', 'B4'];
+/** 불펜 10칸 — 앞 다섯(셋업맨 · 필승조 · 좌완 원포인트 · 추격조 · 롱릴리프)이 주력, 뒤 다섯은 두 번째 줄 */
+export const PEN_SLOTS: StaffSlot[] = ['B0', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9'];
 export const STAFF_SLOTS: StaffSlot[] = [...ROT_SLOTS, ...PEN_SLOTS, 'CL'];
 export const isBat = (s: Slot): s is BatSlot => (BAT_SLOTS as string[]).includes(s);
 export const boardToSlot = (b: BoardSlot): Slot => (b === 'P' ? 'R0' : b);
@@ -36,7 +37,8 @@ export const boardToSlot = (b: BoardSlot): Slot => (b === 'P' ? 'R0' : b);
 export const SLOT_KO: Record<Slot, string> = {
   C: '포수', '1B': '1루수', '2B': '2루수', '3B': '3루수', SS: '유격수', LF: '좌익수', CF: '중견수', RF: '우익수', DH: '지명타자',
   R0: '1선발', R1: '2선발', R2: '3선발', R3: '4선발', R4: '5선발',
-  B0: '셋업맨', B1: '필승조', B2: '좌완 원포인트', B3: '추격조', B4: '롱릴리프', CL: '마무리',
+  B0: '셋업맨', B1: '필승조', B2: '좌완 원포인트', B3: '추격조', B4: '롱릴리프',
+  B5: '필승조 2', B6: '중간 계투', B7: '추격조 2', B8: '롱릴리프 2', B9: '패전조', CL: '마무리',
 };
 /** 기록지 수비 번호 (6-4-3) */
 export const SCORE_NO: Record<BoardSlot, string> = { P: '1', C: '2', '1B': '3', '2B': '4', '3B': '5', SS: '6', LF: '7', CF: '8', RF: '9', DH: 'DH' };
@@ -48,7 +50,7 @@ export interface LineupState {
   order: BatSlot[];
   /** 선발 5 — [0] 이 1선발(경기장 마운드) */
   rotation: (string | null)[];
-  /** 셋업맨 · 필승조 · 좌완 원포인트 · 추격조 · 롱릴리프 */
+  /** 셋업맨 · 필승조 · 좌완 원포인트 · 추격조 · 롱릴리프 · 필승조 2 · 중간 계투 · 추격조 2 · 롱릴리프 2 · 패전조 (10칸, 예전 저장은 5칸) */
   bullpen: (string | null)[];
   closer: string | null;
   bench: string[];
@@ -121,8 +123,20 @@ export function place(st: LineupState, slot: Slot, id: string): LineupState {
     nx.bench = nx.bench.filter((b) => b !== id);
     setSlot(nx, slot, id);
     if (cur) nx.bench = [cur, ...nx.bench].slice(0, 9);
+    nx.bench = benchFor(nx);
   }
   return nx;
+}
+
+/** 같은 사람 키 — 실제 선수는 시즌마다 보기 id 가 달라('k1a2b3c~2015' · '~2016') 시즌 꼬리를 뗀다 */
+const personOfId = (id: string) => id.replace(/~\d{4}$/, '');
+const personOfCard = (id: string) => personOfId(unit(id).player.id);
+/** 벤치 정리 — 경기에 나서는 자리(수비 · 투수)에 이미 있는 사람, 벤치에 두 번 있는 사람은 뺀다 (로스터에 같은 선수는 한 번) */
+function benchFor(st: LineupState): string[] {
+  const seen = new Set<string>();
+  for (const s of BAT_SLOTS) { const id = st.field[s]; if (id) seen.add(personOfCard(id)); }
+  for (const s of STAFF_SLOTS) { const id = getSlot(st, s); if (id) seen.add(personOfCard(id)); }
+  return st.bench.filter((id) => { const who = personOfCard(id); if (seen.has(who)) return false; seen.add(who); return true; });
 }
 
 /** 타순 두 칸 맞바꾸기 */
@@ -172,14 +186,22 @@ export function fitOf(p: Player, s: Slot): Fit {
     return group(p.pos) === group(s) ? 'near' : 'off';
   }
   if (p.pos !== 'P') return 'off';
-  if (s[0] === 'R') return p.role === 'SP' ? 'main' : 'near';
-  if (s === 'CL') return p.role === 'CL' ? 'main' : 'near';
-  if (s === 'B4') return 'main';                       // 롱릴리프 — 선발도 좋다
-  if (s === 'B2') return p.throws === 'L' && p.role !== 'SP' ? 'main' : 'near';
-  return p.role === 'SP' ? 'near' : 'main';
+  if (s[0] === 'R') return p.role === 'SP' ? 'main' : 'near';   // 불펜 투수를 선발로 — 보직 밖
+  if (s === 'B4' || s === 'B8') return 'main';                     // 롱릴리프 — 선발도 좋다
+  if (p.role === 'SP') return 'near';                              // 선발 투수를 짧은 불펜 · 마무리로 — 보직 밖
+  if (s === 'CL') return p.role === 'CL' ? 'main' : 'sub';         // 불펜 투수가 마무리 — 조금
+  if (s === 'B2') return p.throws === 'L' ? 'main' : 'sub';        // 좌완 원포인트에 우완 — 조금
+  return 'main';
 }
+/** 적성 감점 — 타자 자리 (투수 자리는 STAFF_FIT_PENALTY) */
 export const FIT_PENALTY: Record<Fit, number> = { main: 0, any: 0, sub: 1, near: 3, off: 8 };
+/** 투수 보직 감점 — 선발 ↔ 불펜이 엇갈리면(near) 크게. 팀 종합 · 카드 숫자 · 경기 엔진(season/rosters) 모두 같은 값 */
+export const STAFF_FIT_PENALTY: Record<Fit, number> = { main: 0, any: 0, sub: 2, near: 10, off: 20 };
+/** 그 자리 적성 감점 */
+export const fitPenalty = (fit: Fit, slot: Slot) => (isBat(slot) ? FIT_PENALTY : STAFF_FIT_PENALTY)[fit];
 export const FIT_KO: Record<Fit, string> = { main: '주 포지션', any: '지명', sub: '볼 수 있는 자리', near: '비슷한 자리', off: '적성 밖' };
+/** 투수 보직 적성 글 */
+export const STAFF_FIT_KO: Record<Fit, string> = { main: '제 보직', any: '제 보직', sub: '보직이 조금 달라요', near: '보직 밖', off: '투수가 아니에요' };
 
 /* ───────── 케미 ───────── */
 export type Level = 0 | 1 | 2 | 3 | 4;
@@ -216,7 +238,7 @@ export const FIELD_LINKS: [BoardSlot, BoardSlot, string?][] = [
 const ORDER_NAMES: Record<number, string> = { 0: '테이블세터', 2: '클린업', 3: '클린업' };
 
 /* ───────── 세트덱 (game/sets) ───────── */
-// 1군 엔트리 20명(타자 9 · 선발 5 · 불펜 5 · 마무리 1) 안에서 같은 구단·같은 연도 카드 수로 단계가 켜진다.
+// 1군 엔트리(타자 9 · 선발 5 · 불펜 최대 10 · 마무리 1 — 최대 25명) 안에서 같은 구단·같은 연도 카드 수로 단계가 켜진다(5 · 9 · 14 · 20명).
 // 동시에 2개까지(센 것부터), 한 선수는 받는 세트 중 가장 센 것 하나. 오르는 능력치는 조합마다 다르다.
 export { ENTRY_SIZE, DYNASTY_V, TIERS, SET_KIND_KO } from '../../game/sets';
 export type { SetProgress } from '../../game/sets';
@@ -375,7 +397,7 @@ export function evaluate(st: LineupState): Eval {
     const sp = setOf(s);
     const bonus = cardBonusOf(u.card, u.player, { potFace: pf(u), set: sp?.cur ?? null });
     const pot = ovrPotOf(bonus, u.player);
-    const base = cardOvr(u) + ovrBonusOf(bonus, u.player) - FIT_PENALTY[fit] - (injured ? 10 : 0);
+    const base = cardOvr(u) + ovrBonusOf(bonus, u.player) - STAFF_FIT_PENALTY[fit] - (injured ? 10 : 0);
     const tc = sp?.cur?.v ?? 0;
     let ch = 0;
     if (s === 'R0') ch = chemOf('P');
@@ -411,7 +433,8 @@ export function evaluate(st: LineupState): Eval {
   }));
   const runPart = mean(bat.map(({ s, u }) => face(u.player, 'SPD') + (fb(s, false).SPD ?? 0)));
   const rot = ROT_SLOTS.slice(1).map((s) => units[s]?.total).filter((v): v is number => v != null);
-  const pen = [...PEN_SLOTS, 'CL' as const].map((s) => units[s]?.total).filter((v): v is number => v != null);
+  const penTop = PEN_SLOTS.map((s) => units[s]?.total).filter((v): v is number => v != null).sort((a, b) => b - a).slice(0, 5);
+  const pen = units.CL ? [...penTop, units.CL.total] : penTop;
   const pitPart = 0.5 * (units.R0?.total ?? 60) + 0.3 * (rot.length ? mean(rot) : 60) + 0.2 * (pen.length ? mean(pen) : 60);
 
   return {
@@ -492,8 +515,6 @@ export interface Cand {
   blocked?: string | null;
 }
 
-/** 같은 사람인가 — 실제 선수는 시즌마다 보기 id 가 달라('k1a2b3c~2015' · '~2016') 선수 ID 로 비교 */
-const personOfId = (id: string) => id.replace(/~\d{4}$/, '');
 /** 같은 선수(같은 사람)가 다른 자리에 이미 있나 */
 function playerBusy(st: LineupState, slot: Slot, playerId: string) {
   const me = personOfId(playerId);
@@ -505,27 +526,58 @@ function playerBusy(st: LineupState, slot: Slot, playerId: string) {
   return false;
 }
 
-export function candidates(st: LineupState, slot: Slot, cur: Eval): Cand[] {
+/** 카드 세기 — 종합 + 강화 · 훈련 · 잠재력(자기) − 부상 (세트덱 · 케미 빼고, 후보를 먼저 추릴 때) */
+export function cardPower(u: Unit): number {
+  return cardOvr(u) + ovrBonusOf(cardBonusOf(u.card, u.player), u.player) - (u.player.injury ? 10 : 0);
+}
+
+export interface PoolItem { id: string; src: CandSrc; from?: Slot; u: Unit }
+/** 이 자리에 넣을 수 있는 카드 (벤치 · 보관함 · 맞바꿀 자리) — 계산 없이 목록만 (거르기 칩 · 장수 세기용) */
+export function candidatePool(st: LineupState, slot: Slot): PoolItem[] {
   const curId = getSlot(st, slot);
   const wantP = !isBat(slot);
   const pool: { id: string; src: CandSrc; from?: Slot }[] = [
+    ...(isBat(slot) ? BAT_SLOTS : STAFF_SLOTS).filter((s) => s !== slot && getSlot(st, s)).map((s) => ({ id: getSlot(st, s)!, src: 'swap' as const, from: s as Slot })),
     ...st.bench.map((id) => ({ id, src: 'bench' as const })),
     ...boxOf(st).map((id) => ({ id, src: 'box' as const })),
-    ...(isBat(slot) ? BAT_SLOTS : STAFF_SLOTS).filter((s) => s !== slot && getSlot(st, s)).map((s) => ({ id: getSlot(st, s)!, src: 'swap' as const, from: s as Slot })),
   ];
   const seen = new Set<string>();
-  const out: Cand[] = [];
-  const curPit = cur.parts.find((p) => p.k === 'pit')!.v;
+  const out: PoolItem[] = [];
   for (const c of pool) {
     if (c.id === curId || seen.has(c.id)) continue;
     seen.add(c.id);
     const u = unit(c.id);
     if ((u.player.pos === 'P') !== wantP) continue;
     if (c.src !== 'swap' && playerBusy(st, slot, u.player.id)) continue;
+    out.push({ ...c, u });
+  }
+  return out;
+}
+
+/** 후보 카드 연도 키 — 4자리 연도, 연도 없는 카드(레전드 · 프랜차이즈 …)는 'none' */
+export const yearKeyOf = (u: Unit) => (u.card.year != null ? String(fullYear(u.card.year)) : 'none');
+
+/**
+ * 바꿀 후보 — 넣으면 팀 종합이 얼마나 되는지 순서로.
+ *  filter: 구단 · 연도 거르기 / limit: 카드가 많으면 카드 세기(cardPower − 적성) 높은 순으로 그만큼만 다시 계산 (맞바꿈은 늘 포함)
+ */
+export function candidates(st: LineupState, slot: Slot, cur: Eval, opt: { filter?: (u: Unit) => boolean; limit?: number } = {}): Cand[] {
+  let pool = candidatePool(st, slot);
+  if (opt.filter) pool = pool.filter((c) => opt.filter!(c.u));
+  if (opt.limit != null && pool.length > opt.limit) {
+    const rank = (c: PoolItem) => cardPower(c.u) - fitPenalty(fitOf(c.u.player, slot), slot);
+    const swaps = pool.filter((c) => c.src === 'swap');
+    const rest = pool.filter((c) => c.src !== 'swap').sort((a, b) => rank(b) - rank(a)).slice(0, Math.max(0, opt.limit - swaps.length));
+    pool = [...swaps, ...rest];
+  }
+  const out: Cand[] = [];
+  const curPit = cur.parts.find((p) => p.k === 'pit')!.v;
+  for (const c of pool) {
+    const u = c.u;
     const fit = fitOf(u.player, slot);
     const next = place(st, slot, c.id);
     const ev = evaluate(next);
-    out.push({ ...c, next, ev, fit, delta: ev.overall - cur.overall, pitDelta: ev.parts.find((p) => p.k === 'pit')!.v - curPit, blocked: legendBlock(st, next) });
+    out.push({ id: c.id, src: c.src, from: c.from, next, ev, fit, delta: ev.overall - cur.overall, pitDelta: ev.parts.find((p) => p.k === 'pit')!.v - curPit, blocked: legendBlock(st, next) });
   }
   return out.sort((a, b) => (Number(!!a.blocked) - Number(!!b.blocked)) || (b.ev.raw - a.ev.raw) || (b.pitDelta - a.pitDelta) || (unit(b.id).player.ovr - unit(a.id).player.ovr));
 }
@@ -566,14 +618,111 @@ export function autoOrder(st: LineupState): LineupState {
   return nx;
 }
 
-/** 자동 편성 — 가장 많이 오르는 한 수를 반복 + 추천 타순 + 빈 투수 칸 채우기 */
+/** 투수진 비교 점수 — 팀 종합(타자 9 + 1선발, 세트덱 포함)을 먼저, 그다음 투수 묶음(선발 · 불펜 · 마무리) */
+const staffScore = (e: Eval) => e.raw * 10 + e.parts.find((p) => p.k === 'pit')!.v;
+
+/** 투수 칸에 놓기 — 다른 투수 칸에 있으면 맞바꾸고, 벤치 · 보관함에서 오면 원래 투수는 보관함으로 (벤치의 타자를 밀어내지 않게) */
+function placeStaff(st: LineupState, slot: StaffSlot, id: string): LineupState {
+  const cur = getSlot(st, slot);
+  if (cur === id) return st;
+  const from = slotOf(st, id);
+  if (from) return place(st, slot, id);
+  const nx = clone(st);
+  nx.bench = nx.bench.filter((b) => b !== id);
+  setSlot(nx, slot, id);
+  return nx;
+}
+
+/**
+ * 투수진 짜기 — 선발 5(가장 센 선발이 1선발) → 마무리 → 불펜 10 순서로, 보직 적성 + 카드 세기로 고른다.
+ * 켜진 세트덱(같은 구단 · 연도)에 드는 카드는 그 단계 가치만큼 더 쳐서 세트가 쉽게 깨지지 않게.
+ * 레전드급 투수는 LEGEND_MAX.pit 명까지 · 같은 사람은 한 번 · 다친 투수는 −10. 결과는 '이렇게 두면 좋다'는 목표 배치.
+ */
+export function staffPlan(st: LineupState, cur: Eval = evaluate(st)): Partial<Record<StaffSlot, string>> {
+  const pool = new Set<string>();
+  for (const s of STAFF_SLOTS) { const id = getSlot(st, s); if (id) pool.add(id); }
+  for (const id of st.bench) pool.add(id);
+  for (const id of boxOf(st)) pool.add(id);
+  const batPeople = new Set(BAT_SLOTS.map((s) => st.field[s]).filter(isStr).map((id) => personOfId(unit(id).player.id)));
+  const setV = (u: Unit) => {
+    const y = u.card.year != null ? fullYear(u.card.year) : undefined;
+    let v = 0;
+    for (const sp of cur.active) {
+      const hit = sp.kind === 'teamYear' ? sp.code === u.team.code && sp.year === y : sp.kind === 'team' ? sp.code === u.team.code : sp.year === y;
+      if (hit) v = Math.max(v, sp.cur?.v ?? 0);
+    }
+    return v;
+  };
+  const cands = [...pool].map((id) => unit(id))
+    .filter((u) => u.player.pos === 'P' && !batPeople.has(personOfId(u.player.id)))
+    .map((u) => ({ u, power: cardPower(u) + setV(u) * 1.5, leg: isLegendGrade(u.card.grade) }));
+  const plan: Partial<Record<StaffSlot, string>> = {};
+  const taken = new Set<string>();
+  const people = new Set<string>();
+  let legLeft = LEGEND_MAX.pit;
+  const fill = (slot: StaffSlot) => {
+    let best: (typeof cands)[number] | null = null;
+    let bv = -Infinity;
+    for (const c of cands) {
+      if (taken.has(c.u.id) || people.has(personOfId(c.u.player.id)) || (c.leg && legLeft <= 0)) continue;
+      const v = c.power - STAFF_FIT_PENALTY[fitOf(c.u.player, slot)] * 1.5;
+      if (v > bv) { bv = v; best = c; }
+    }
+    if (!best) return;
+    plan[slot] = best.u.id;
+    taken.add(best.u.id);
+    people.add(personOfId(best.u.player.id));
+    if (best.leg) legLeft -= 1;
+  };
+  ROT_SLOTS.forEach(fill);
+  fill('CL');
+  PEN_SLOTS.forEach(fill);
+  return plan;
+}
+
+/** 투수진 자동 편성 — 목표 배치(staffPlan)대로 한 칸씩 옮기되, 팀 종합 · 투수 묶음이 나빠지는 한 수는 건너뛴다. 끝까지 나빠지면 그대로 */
+export function autoStaff(st: LineupState): LineupState {
+  const e0 = evaluate(st);
+  const plan = staffPlan(st, e0);
+  let cur = st;
+  let sc = staffScore(e0);
+  for (const slot of STAFF_SLOTS) {
+    const want = plan[slot];
+    if (!want || getSlot(cur, slot) === want) continue;
+    const nx = placeStaff(cur, slot, want);
+    if (legendBlock(cur, nx)) continue;
+    const v = staffScore(evaluate(nx));
+    if (v >= sc - 0.3) { cur = nx; sc = Math.max(sc, v); }
+  }
+  // 같은 사람이 두 칸에 남았으면(건너뛴 한 수 때문에) 뒤 칸을 비운다
+  const seenP = new Set<string>();
+  for (const slot of STAFF_SLOTS) {
+    const id = getSlot(cur, slot);
+    if (!id) continue;
+    const who = personOfId(unit(id).player.id);
+    if (seenP.has(who)) { const nx = clone(cur); setSlot(nx, slot, null); cur = nx; } else seenP.add(who);
+  }
+  // 1선발 — 선발 다섯 중 케미까지 따져 팀 종합이 가장 높은 투수를 마운드에
+  let best = cur;
+  let bv = evaluate(cur).raw;
+  for (const s of ROT_SLOTS.slice(1)) {
+    const id = getSlot(cur, s);
+    if (!id) continue;
+    const nx = place(cur, 'R0', id);
+    const v = evaluate(nx).raw;
+    if (v > bv + 0.05) { best = nx; bv = v; }
+  }
+  return staffScore(evaluate(best)) >= staffScore(e0) - 0.01 ? best : st;
+}
+
+/** 자동 편성 — 타자는 가장 많이 오르는 한 수를 반복(자리마다 카드 세기 상위만 계산) + 추천 타순, 투수진은 보직 · 세기대로(autoStaff) */
 export function autoLineup(st: LineupState): LineupState {
   let cur = st;
   let ce = evaluate(cur);
   for (let it = 0; it < 14; it++) {
     let best: { st: LineupState; sc: number } | null = null;
-    for (const slot of [...BAT_SLOTS, 'R0'] as Slot[]) {
-      for (const c of candidates(cur, slot, ce).filter((x) => !x.blocked).slice(0, 6)) {
+    for (const slot of BAT_SLOTS) {
+      for (const c of candidates(cur, slot, ce, { limit: 24 }).filter((x) => !x.blocked).slice(0, 6)) {
         const sc = score(c.ev);
         if (sc > score(ce) + 0.5 && (!best || sc > best.sc)) best = { st: c.next, sc };
       }
@@ -583,13 +732,7 @@ export function autoLineup(st: LineupState): LineupState {
     ce = evaluate(cur);
   }
   cur = autoOrder(cur);
-  // 비어 있는 투수 칸 — 가장 좋은 투수로
-  for (const slot of STAFF_SLOTS) {
-    if (getSlot(cur, slot)) continue;
-    const c = candidates(cur, slot, evaluate(cur)).find((x) => x.src !== 'swap' && x.fit === 'main' && !x.blocked);
-    if (c) cur = c.next;
-  }
-  return cur;
+  return autoStaff(cur);
 }
 
 /* ───────── 저장 — 보유 카드 저장소(game/inventory)에 같이 둔다: 새로고침해도 유지 ───────── */
@@ -611,12 +754,13 @@ export function sanitize(raw: LineupState | null | undefined): LineupState | nul
   };
   const field = Object.fromEntries(BAT_SLOTS.map((s) => [s, ok(raw.field[s])])) as Record<BatSlot, string | null>;
   const order = raw.order.length === 9 && BAT_SLOTS.every((s) => raw.order.includes(s)) ? [...raw.order] : [...BAT_SLOTS];
-  const five = (xs: unknown) => Array.from({ length: 5 }, (_, i) => ok(Array.isArray(xs) ? xs[i] : null));
-  const rotation = five(raw.rotation);
-  const bullpen = five(raw.bullpen);
+  const slots = (xs: unknown, n: number) => Array.from({ length: n }, (_, i) => ok(Array.isArray(xs) ? xs[i] : null));
+  const rotation = slots(raw.rotation, ROT_SLOTS.length);
+  const bullpen = slots(raw.bullpen, PEN_SLOTS.length);
   const closer = ok(raw.closer);
   const bench = (Array.isArray(raw.bench) ? raw.bench : []).map(ok).filter(isStr);
   let st: LineupState = legendFit({ field, order, rotation, bullpen, closer, bench });
+  st = { ...st, bench: benchFor(st) };
   for (const s of BAT_SLOTS) {
     if (st.field[s]) continue;
     const cur = st;

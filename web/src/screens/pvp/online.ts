@@ -5,7 +5,12 @@ import { ApiError, api, newRequestId, toWireId, type PvpBattleRes, type PvpClub,
 import { useAuth } from '../../app/auth';
 import { isTeamId, serverClubId, teamById } from '../../game/mock';
 import { mySide } from './local-mock';
-import { getSlot, initialLineup, store as lineupStore, unit } from '../lineup/calc';
+import { PEN_SLOTS, STAFF_FIT_PENALTY, fitOf, getSlot, initialLineup, store as lineupStore, unit, type StaffSlot } from '../lineup/calc';
+
+/* 대전 목록에 마지막으로 올린 시각 — 대전 화면 · 1시간마다 자동 올리기(./sync)가 같이 쓴다 */
+const SYNC_KEY = 'bb.pvp.sync';
+export const lastPvpSync = (): number => { try { return Number(localStorage.getItem(SYNC_KEY)) || 0; } catch { return 0; } };
+export const markPvpSynced = () => { try { localStorage.setItem(SYNC_KEY, String(Date.now())); } catch { /* 저장이 막히면 다음에 또 올린다 */ } };
 
 /** 서버 구단 코드 → 세계관 구단 (모르는 코드면 독수리스) */
 export const clubTeam = (code: string) => (isTeamId(code) ? teamById(code) : teamById('dj'));
@@ -18,16 +23,18 @@ export function mySnapshot(): PvpSnapshot {
   const club = side.team.id;
   // 라인업 화면의 1군 엔트리 (타순 9 · 선발 · 불펜 · 마무리)
   const st = lineupStore.get() ?? initialLineup();
-  const item = (id: string | null, pos: string) => {
+  // 투수는 보직 밖(선발 ↔ 불펜)이면 라인업 화면 · 시즌 경기와 같은 만큼 깎아서 올린다
+  const item = (id: string | null, pos: string, staff?: StaffSlot) => {
     if (!id) return null;
     const u = unit(id);
-    return { id: toWireId(u.player.id), pos, ovr: clamp(u.card.ovr ?? u.player.ovr, 1, 120), name: u.player.name.slice(0, 16), ...(u.card.year != null ? { y: u.card.year % 100 } : {}), c: u.player.teamId };
+    const pen = staff ? STAFF_FIT_PENALTY[fitOf(u.player, staff)] : 0;
+    return { id: toWireId(u.player.id), pos, ovr: clamp((u.card.ovr ?? u.player.ovr) - pen, 1, 120), name: u.player.name.slice(0, 16), ...(u.card.year != null ? { y: u.card.year % 100 } : {}), c: u.player.teamId };
   };
   const lineup = [
     ...st.order.map((slot) => item(st.field[slot], slot)),
-    item(getSlot(st, 'R0'), 'SP'),
-    ...st.bullpen.map((id) => item(id, 'RP')),
-    item(st.closer, 'CP'),
+    item(getSlot(st, 'R0'), 'SP', 'R0'),
+    ...st.bullpen.map((id, i) => item(id, 'RP', PEN_SLOTS[i])),
+    item(st.closer, 'CP', 'CL'),
   ].filter((x): x is NonNullable<typeof x> => !!x);
   return {
     club: serverClubId(club), // 부활 구단(옛 구단)은 서버가 아는 자리 코드로 — 이름은 부활 구단 그대로
@@ -64,6 +71,7 @@ export function usePvpOnline(demo = false) {
     if (demo) { setSt({ kind: 'ready', ...demoData() }); return; }
     try {
       await api.pvpPutMe(mySnapshot());
+      markPvpSynced();
       const r = await api.pvpOpponents();
       if (alive.current) setSt({ kind: 'ready', me: r.me, opponents: r.opponents, today: r.today });
     } catch (e) {

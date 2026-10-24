@@ -62,11 +62,11 @@ function Hero({ sp }: { sp: SetProgress }) {
           <span className={s.kind}>{SET_KIND_KO[sp.kind]} 세트{sp.cur ? ` · ${sp.cur.trait}` : ''}</span>
         </p>
         <div className={s.track}>
-          <Segments have={sp.have} need={ENTRY_SIZE} ticks={tiers.map((x) => x.at - 1).filter((x) => x < ENTRY_SIZE - 1)} tone={tone} />
+          <Segments have={Math.min(sp.have, ENTRY_SIZE)} need={ENTRY_SIZE} ticks={tiers.map((x) => x.at - 1).filter((x) => x < ENTRY_SIZE - 1)} tone={tone} />
           <span className={s.scale} aria-hidden>
             {tiers.map((x, i) => (
               <i key={x.at} className={['num', i <= sp.tier && s.reached].filter(Boolean).join(' ')} style={{ left: `${(x.at / ENTRY_SIZE) * 100}%` }}>
-                {x.at >= ENTRY_SIZE ? (sp.kind === 'teamYear' ? '왕조' : '전원') : `+${x.v}`}
+                {x.at >= ENTRY_SIZE ? (sp.kind === 'teamYear' ? '왕조' : `${x.at}명`) : `+${x.v}`}
               </i>
             ))}
           </span>
@@ -94,7 +94,7 @@ export function TeamColorPanel({ ev }: TeamColorProps) {
   return (
     <section className={s.panel} aria-label="세트덱">
       <header className={s.head}>
-        <h3 className={s.h}>세트덱 <small>엔트리 <span className="num">{ev.entry}</span>/<span className="num">{ENTRY_SIZE}</span> · 켜진 세트 <span className="num">{active.length}</span>/2</small></h3>
+        <h3 className={s.h}>세트덱 <small>엔트리 <span className="num">{ev.entry}</span>명 · 켜진 세트 <span className="num">{active.length}</span>/2</small></h3>
         <button type="button" className={s.more} onClick={() => navigate('/sets')}>효과 표 <Icon name="chevron" size={14} /></button>
       </header>
       {active.map((sp) => <Hero key={sp.id} sp={sp} />)}
