@@ -9,7 +9,7 @@
 export class PressError extends Error { constructor(public status: number, msg: string) { super(msg); } }
 
 /** 한 번에 쓰는 최대 출력 토큰 — 개막 특집 · 시즌 결산(글 5개) / 특이사항(글 2~3개) / 인터뷰(질문 3 × 답 3) */
-export const NEWS_MAX_TOKENS = 1400;
+export const NEWS_MAX_TOKENS = 2000; // 특집 5개 × (제목 + 본문 + 댓글 3개 20~45자) — 잘리지 않게 (Haiku 라 늘려도 1회 $0.001 안쪽)
 export const EVENT_MAX_TOKENS = 800;
 export const IV_MAX_TOKENS = 1000;
 
@@ -160,7 +160,7 @@ export function parseNewsIn(v: unknown): NewsIn {
   }
   const squad = listOf(v.squad, 8, (x) => {
     const t = tuple(x, 3);
-    const n = t && nameOf(t[0]), p = t && typeof t[1] === 'string' && POS_KO[t[1]] ? t[1] : undefined, m = t && (t[2] === '' ? '' : lineOf(t[2], 40));
+    const n = t && nameOf(t[0]), p = t && typeof t[1] === 'string' && Object.hasOwn(POS_KO, t[1]) ? t[1] : undefined, m = t && (t[2] === '' ? '' : lineOf(t[2], 40));
     return n && p && m !== undefined ? ([n, p, m] as [string, string, string]) : undefined;
   });
   const leaders = listOf(v.leaders, 10, (x) => {
@@ -170,7 +170,7 @@ export function parseNewsIn(v: unknown): NewsIn {
   });
   let post: NewsIn['post'];
   if (isObj(v.post)) {
-    const stage = typeof v.post.stage === 'string' && (v.post.stage === '' || STAGE_KO[v.post.stage]) ? v.post.stage : undefined;
+    const stage = typeof v.post.stage === 'string' && (v.post.stage === '' || Object.hasOwn(STAGE_KO, v.post.stage)) ? v.post.stage : undefined;
     const seed = int(v.post.seed, 0, 20);
     if (stage !== undefined && seed !== undefined) post = { stage, seed, opp: teamOf(v.post.opp) };
   }
@@ -213,7 +213,7 @@ export function parseInterviewIn(v: unknown): InterviewIn {
     if (!isObj(x)) return undefined;
     const k = typeof x.k === 'string' && KEY_RE.test(x.k) && !keys.has(x.k) ? x.k : undefined;
     const id = typeof x.id === 'string' && ID_RE.test(x.id) ? x.id : undefined;
-    const n = nameOf(x.n), pos = typeof x.pos === 'string' && POS_KO[x.pos] ? x.pos : undefined;
+    const n = nameOf(x.n), pos = typeof x.pos === 'string' && Object.hasOwn(POS_KO, x.pos) ? x.pos : undefined;
     const c = int(x.c, 1, 5), f = int(x.f, 0, 100);
     if (!k || !id || !n || !pos || c === undefined || f === undefined) return undefined;
     keys.add(k);
@@ -221,7 +221,7 @@ export function parseInterviewIn(v: unknown): InterviewIn {
   });
   if (!players.length) return bad('players');
   const recT = intsOf(v.rec, 3, 0, 200);
-  const stage = typeof v.stage === 'string' && (v.stage === '' || STAGE_KO[v.stage]) ? v.stage : undefined;
+  const stage = typeof v.stage === 'string' && (v.stage === '' || Object.hasOwn(STAGE_KO, v.stage)) ? v.stage : undefined;
   return {
     moment, year, date, me,
     lv: typeof v.lv === 'string' && LEVELS.includes(v.lv) ? v.lv : undefined,

@@ -6,7 +6,7 @@ import type { ComponentProps } from 'react';
 import { navigate } from '../../app/router';
 import { CardMini, cardProps } from '../../cards';
 import { CARDS, playerById } from '../../game/mock';
-import { cardInst, kboCardsWhere, seasonCardOf, viewPlayer } from '../../game/kbo';
+import { cardInst, kboCardsOf, seasonCardOf, viewPlayer } from '../../game/kbo';
 import { synthPlayer } from '../../game/starter';
 import type { CardInst, GradeId, Player, Pos } from '../../game/types';
 import { fromWireId, type PvpLineupItem } from '../../api';
@@ -33,15 +33,23 @@ const LEGEND_CLASS = new Set<GradeId>(['legend', 'franchise', 'black', 'signatur
 const VIEW_RE = /^(k[0-9a-z]+)~(\d{4})$/;
 const hrefOf = (p: Player, card?: { id: string } | null) => `/player/${encodeURIComponent(p.id)}${card ? `?card=${encodeURIComponent(card.id)}` : ''}`;
 
-/** 카탈로그 카드 찾기 — 같은 선수 · 같은 카드 연도(연도 없는 레전드급은 그 무리) · 종합이 가장 가까운 카드 */
+/** 카탈로그 카드 찾기 — 같은 선수 · 같은 카드 연도(연도 없는 레전드급은 그 무리) · 종합이 가장 가까운 카드 (한 번 찾은 건 기억) */
+const catalogMemo = new Map<string, CardInst | null>();
 function catalogCard(kid: string, viewYear: number, y?: number, ovr?: number): CardInst | null {
-  const all = kboCardsWhere({ kid });
+  const key = `${kid}|${viewYear}|${y ?? ''}|${ovr ?? ''}`;
+  if (catalogMemo.has(key)) return catalogMemo.get(key)!;
+  const r = findCatalogCard(kid, viewYear, y, ovr);
+  catalogMemo.set(key, r);
+  return r;
+}
+function findCatalogCard(kid: string, viewYear: number, y?: number, ovr?: number): CardInst | null {
+  const all = kboCardsOf(kid); // 그 선수 카드만 (전체 13,000여 장을 훑지 않게)
   if (!all.length) return null;
   let cands = y != null
     ? all.filter((c) => !LEGEND_CLASS.has(c.grade) && c.year != null && c.year % 100 === y)
     : all.filter((c) => LEGEND_CLASS.has(c.grade));
   if (!cands.length) cands = all.filter((c) => c.view === viewYear);
-  if (!cands.length) cands = all;
+  if (!cands.length) cands = [...all];
   const best = ovr != null ? cands.reduce((a, b) => (Math.abs(b.ovr - ovr) < Math.abs(a.ovr - ovr) ? b : a)) : cands[0];
   return cardInst(best);
 }
@@ -68,16 +76,20 @@ export function cardsFromSnapshot(lineup: PvpLineupItem[]): LineupCards {
     const v = VIEW_RE.exec(id);
     const isP = it.pos === 'SP' || it.pos === 'RP' || it.pos === 'CP' || it.pos === 'P';
     let p: Player | undefined = v ? viewPlayer(v[1], Number(v[2])) : playerById(id);
+    // 카탈로그 밖 id(특별 선수 'p-special' 등)는 기기마다 다른 선수 — 이름이 다르면 내 기기의 같은 id 선수로 그리지 않는다
+    if (!v && p && it.name && p.name !== it.name) p = undefined;
     let card: CardInst | null = v ? catalogCard(v[1], Number(v[2]), it.y, it.ovr) : null;
+    if (p && !card && !v) card = CARDS.find((x) => x.playerId === p!.id) ?? null; // 예전 목업 카드 (등급 그대로)
     if (!p) {
       // 카탈로그에 없는 선수(특별 선수 등) — 이름 · 종합만으로 그린다
       const pos = (isP ? 'P' : it.pos) as Pos;
       p = { ...synthPlayer({ id: `snap-${i}-${it.id}`, teamId: it.c ?? 'dj', pos, role: it.pos === 'SP' ? 'SP' : it.pos === 'CP' ? 'CL' : isP ? 'RP' : undefined, ovr: it.ovr, seed: `snap:${it.id}` }), name: it.name ?? '선수' };
       card = null;
     }
+    const special = id === 'p-special' || id === 'p41'; // 특별 선수 — 서버엔 등급이 없어도 ONLY ONE 카드로
     const look: MiniLook = card
       ? { player: p, grade: card.grade, year: card.year, cardId: card.id, signaturePitch: card.signaturePitch ?? null, award: card.award, ovrShown: it.ovr }
-      : { player: p, grade: 'normal', ovrShown: it.ovr };
+      : { player: p, grade: special ? 'unique' : 'normal', ovrShown: it.ovr };
     const href = card ? hrefOf(p, card) : undefined;
     if (isP) mound.push({ key: `p${i}`, badge: 'P', pos: it.pos === 'SP' ? '선발' : it.pos === 'CP' ? '마무리' : '불펜', look, href });
     else bat.push({ key: `b${i}`, badge: String(bat.length + 1), pos: POS_SHORT[it.pos] ?? it.pos, look, href });
@@ -94,7 +106,8 @@ function myCardMap(): Map<string, CardInst> {
   try {
     const st = lineupStore.get() ?? initialLineup();
     const ids = [...Object.values(st.field), ...st.rotation, ...st.bullpen, st.closer, ...st.bench].filter((x): x is string => !!x);
-    for (const id of ids) { try { const u = unit(id); m.set(u.player.id, u.card); } catch { /* 없는 카드 */ } }
+    // 라인업 자리가 먼저 — 같은 선수의 벤치 카드가 주전 카드를 덮지 않게
+    for (const id of ids) { try { const u = unit(id); if (!m.has(u.player.id)) m.set(u.player.id, u.card); } catch { /* 없는 카드 */ } }
   } catch { /* 라인업 없음 */ }
   return m;
 }

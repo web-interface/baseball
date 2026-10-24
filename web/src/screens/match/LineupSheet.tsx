@@ -32,12 +32,12 @@ export function LineupButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-/** 오늘 타자 기록 (지금 장면 앞까지) */
-function batToday(id: string, upto: number) {
+/** 오늘 타자 기록 (지금 장면 앞까지) — 그 팀 공격만 (같은 선수 id 가 두 팀에 있어도 섞이지 않게) */
+function batToday(id: string, upto: number, side: Side) {
   let pa = 0, ab = 0, h = 0, hr = 0, rbi = 0, bb = 0;
   for (let i = 0; i < upto && i < PLAYS.length; i++) {
     const p = PLAYS[i];
-    if (p.batterId !== id || !p.isPA) continue;
+    if (p.batterId !== id || !p.isPA || (p.half === 'top' ? 'away' : 'home') !== side) continue;
     pa++;
     if (p.code === 'BB' || p.code === 'HBP') bb++;
     else if (p.code !== 'SF' && p.code !== 'SAC') ab++;
@@ -83,7 +83,7 @@ function myCards(): Map<string, CardInst> {
   try {
     const st = lineupStore.get() ?? initialLineup();
     const ids = [...Object.values(st.field), ...st.rotation, ...st.bullpen, st.closer, ...st.bench].filter((x): x is string => !!x);
-    for (const id of ids) { try { const u = unit(id); m.set(u.player.id, u.card); } catch { /* 없는 카드 */ } }
+    for (const id of ids) { try { const u = unit(id); if (!m.has(u.player.id)) m.set(u.player.id, u.card); } catch { /* 없는 카드 */ } }
   } catch { /* 라인업 없음 */ }
   return m;
 }
@@ -104,8 +104,17 @@ function cardFor(p: Player, mine: Map<string, CardInst>) {
 
 interface Cell { key: string; p: Player; badge: string; pos: string; short: string; long: string; season: string; now: boolean; pitcher: boolean }
 
-/** 그 팀 1~9번(지금 그 자리 선수) + 지금 투수 */
-function cellsOf(side: Side, live: Live, pre: boolean): Cell[] {
+/** 내 편 — 대전 다시 보기는 늘 원정(pvp-game: 나 = away), 그 밖은 내 구단 쪽(같은 구단끼리면 홈 — 경기 화면 다른 곳과 같게) */
+function mySideOf(): Side | null {
+  if (GAME.match.id.startsWith('pvp-')) return 'away';
+  if (GAME.match.homeId === ME.teamId) return 'home';
+  if (GAME.match.awayId === ME.teamId) return 'away';
+  return null;
+}
+const NO_CARDS = new Map<string, CardInst>();
+
+/** 그 팀 1~9번(지금 그 자리 선수) + 지금 투수 — 경기가 끝났으면 '타석 · 투구 중' 표시 없이 */
+function cellsOf(side: Side, live: Live, pre: boolean, done: boolean): Cell[] {
   const g = GAME[side];
   const upto = pre ? 0 : live.playIdx + (live.applied ? 1 : 0);
   const bySlot = new Map<number, { pid: string; pos: string }>();
@@ -116,13 +125,13 @@ function cellsOf(side: Side, live: Live, pre: boolean): Cell[] {
     const cur = bySlot.get(p.slot);
     if (cur && cur.pid !== p.batterId) bySlot.set(p.slot, { pid: p.batterId, pos: cur.pos }); // 대타 · 교체 — 그 자리 포지션 그대로
   }
-  const batting = !pre && (live.play.half === 'top' ? 'away' : 'home') === side;
+  const batting = !pre && !done && (live.play.half === 'top' ? 'away' : 'home') === side;
   const cells: Cell[] = [];
   [...bySlot.keys()].sort((a, b) => a - b).forEach((slot) => {
     const x = bySlot.get(slot)!;
     const p = playerById(x.pid);
     if (!p) return;
-    const t = batToday(x.pid, upto);
+    const t = batToday(x.pid, upto, side);
     cells.push({
       key: `b${slot}`, p, badge: String(slot), pos: POS_SHORT[x.pos] ?? x.pos, short: batShort(t), long: batLong(t),
       season: seasonBat(p), now: batting && live.play.batterId === x.pid, pitcher: false,
@@ -136,12 +145,12 @@ function cellsOf(side: Side, live: Live, pre: boolean): Cell[] {
   }
   const pp = playerById(pid);
   if (pp) {
-    const t = pitcherToday(pid, upto);
+    const t = pitcherToday(pid, upto, side);
     const thrown = t.outs > 0 || t.pitches > 0;
     cells.push({
       key: 'p', p: pp, badge: 'P', pos: pid === g.starter ? '선발' : '구원', short: thrown ? `${ipText(t.outs)}이닝` : '—',
       long: thrown ? `${ipText(t.outs)}이닝 · ${t.pitches}구 · ${t.k}삼진 · ${t.r}실점` : '아직 투구 없음',
-      season: seasonPit(pp), now: !pre && !batting, pitcher: true,
+      season: seasonPit(pp), now: !pre && !done && !batting, pitcher: true,
     });
   }
   return cells;
@@ -155,17 +164,19 @@ export function LineupSheet({ open, onClose, live, pre, done }: { open: boolean;
   return (
     <Sheet open={open} onClose={() => { setSel(null); onClose(); }} title="라인업" sub={when} height="tall">
       {(['away', 'home'] as Side[]).map((side) => (
-        <TeamBlock key={side} side={side} live={live} pre={pre} mine={mine} sel={sel} onSel={setSel} />
+        <TeamBlock key={side} side={side} live={live} pre={pre} done={done} mine={mine} sel={sel} onSel={setSel} />
       ))}
       <p className={s.note}>카드를 누르면 능력치 · 오늘 기록 · 시즌 성적이 나와요. 오늘 기록은 지금 보는 장면까지만 세요.</p>
     </Sheet>
   );
 }
 
-function TeamBlock({ side, live, pre, mine, sel, onSel }: { side: Side; live: Live; pre: boolean; mine: Map<string, CardInst>; sel: string | null; onSel: (k: string | null) => void }) {
+function TeamBlock({ side, live, pre, done, mine: myCardsMap, sel, onSel }: { side: Side; live: Live; pre: boolean; done: boolean; mine: Map<string, CardInst>; sel: string | null; onSel: (k: string | null) => void }) {
   const team = teamById(side === 'away' ? GAME.match.awayId : GAME.match.homeId);
-  const my = team.id === ME.teamId;
-  const cells = useMemo(() => cellsOf(side, live, pre), [side, live, pre]);
+  const my = mySideOf() === side;
+  // 내 카드 모양(강화 · 보너스 · '우리 선수')은 내 편에만 — 상대에 같은 선수가 있어도 상대 카드는 그 해 카드로
+  const mine = my ? myCardsMap : NO_CARDS;
+  const cells = useMemo(() => cellsOf(side, live, pre, done), [side, live, pre, done]);
   const picked = cells.find((c) => `${side}:${c.key}` === sel) ?? null;
   return (
     <section className={[s.team, my && s.myTeam].filter(Boolean).join(' ')} aria-label={`${side === 'away' ? '원정' : '홈'} ${team.name}`}>

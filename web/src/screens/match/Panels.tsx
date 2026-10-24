@@ -32,11 +32,12 @@ export function batterToday(id: string, upto: number) {
   return { ab, h, rbi, bb, pa };
 }
 
-export function pitcherToday(id: string, upto: number) {
+export function pitcherToday(id: string, upto: number, side?: 'away' | 'home') {
   let outs = 0, k = 0, r = 0, pitches = 0, h = 0, bb = 0;
   for (let i = 0; i < upto; i++) {
     const p = PLAYS[i];
     if (p.pitcherId !== id) continue;
+    if (side && (p.half === 'top' ? 'home' : 'away') !== side) continue; // 초에는 홈 투수가 던진다
     outs += Math.max(0, Math.min(3, p.outsAfter) - p.outsBefore);
     if (p.code === 'K') k++;
     if (HITS.includes(p.code)) h++;

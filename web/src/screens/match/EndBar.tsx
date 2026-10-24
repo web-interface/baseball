@@ -1,6 +1,6 @@
 // 경기 끝 — 시즌 경기는 '다음 경기 바로' · 시즌 성적 · 오늘 다른 구장 결과, 대전은 레이팅 변화 · 전적.
 import { navigate } from '../../app/router';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Button, Emblem, Icon, Sheet, fmt } from '../../ui';
 import { ME, teamById } from '../../game/mock';
 import { longDate, shortDate } from '../../season/schedule';
@@ -8,6 +8,7 @@ import { allDays, isOver, pctLabel, rankLabel, standingsOf, teamLine, useSeason,
 import { SERIES_KO, nextPostGame } from '../../season/post';
 import { LeaguePanel } from '../season/LeaguePanel';
 import { nextMyGame } from '../../season/run';
+import { APPLY_FAILED } from './season-game';
 import s from './EndBar.module.css';
 
 export interface PvpEnd {
@@ -184,6 +185,13 @@ export function NextGameSheet({ ctx, final, awayId, homeId, open, onClose }: {
   ctx: MatchCtx; final: [number, number]; awayId: string; homeId: string; open: boolean; onClose: () => void;
 }) {
   const st = useSeason();
+  // 오늘 결과 넣기가 실패했으면(season-game) 기다리는 글 대신 알리고 홈으로
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    const on = (e: Event) => { if (ctx.kind === 'season' && (e as CustomEvent<number>).detail === ctx.idx) setFailed(true); };
+    window.addEventListener(APPLY_FAILED, on);
+    return () => window.removeEventListener(APPLY_FAILED, on);
+  }, [ctx]);
   if (ctx.kind !== 'season' && ctx.kind !== 'post') return null;
   const meAway = awayId === ME.teamId;
   const my = meAway ? final[0] : final[1];
@@ -200,11 +208,12 @@ export function NextGameSheet({ ctx, final, awayId, homeId, open, onClose }: {
     applied = st.next > ctx.idx;
     const nx = applied ? nextMyGame() : null;
     const ln = teamLine(ME.teamId, st);
-    sub = applied ? <><span className="num">{ln.row.w}</span>승 <span className="num">{ln.row.d}</span>무 <span className="num">{ln.row.l}</span>패 · {rankLabel(ln)}</> : '오늘 결과를 넣는 중이에요…';
+    sub = applied ? <><span className="num">{ln.row.w}</span>승 <span className="num">{ln.row.d}</span>무 <span className="num">{ln.row.l}</span>패 · {rankLabel(ln)}</> : failed ? '오늘 결과를 넣지 못했어요' : '오늘 결과를 넣는 중이에요…';
     if (nx) {
       const opp = teamById(nx.home === ME.teamId ? nx.away : nx.home);
       next = { label: `${longDate(nx.day.date)} · ${opp.short}전 · ${nx.home === ME.teamId ? '홈' : '원정'}`, go: () => navigate(`/match?g=season&n=${Date.now()}`) };
     } else if (applied) none = isOver(st) ? '정규 시즌이 끝났어요. 최종 순위와 가을야구는 홈에서 확인해요.' : '남은 우리 경기가 없어요.';
+    else if (failed) { none = '오늘 결과를 시즌에 넣지 못했어요. 홈에서 이 경기를 다시 열면 이어서 넣어요.'; applied = true; }
   } else {
     const p = st.post;
     const nx = nextPostGame(p);

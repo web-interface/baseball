@@ -44,11 +44,14 @@ export function Sheet({ open, onClose, title, sub, footer, dismissible = true, h
     return () => window.clearTimeout(t);
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 열려 있는 동안 뒤 화면 스크롤 막기 + Esc
+  // 열려 있는 동안 뒤 화면 스크롤 막기 + Esc — onClose 는 ref 로(부모가 그릴 때마다 새 함수를 넘겨도
+  // 잠금 · 초점이 다시 걸리지 않게: 경기 화면처럼 초당 여러 번 다시 그리는 곳에서 초점이 시트 밖으로 튀던 것)
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
     if (!mounted || closing) return;
     const unlock = lockScroll();
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && dismissible) onClose(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && dismissible) closeRef.current(); };
     window.addEventListener('keydown', onKey);
     requestAnimationFrame(() => panel.current?.focus());
     return () => {
@@ -56,7 +59,7 @@ export function Sheet({ open, onClose, title, sub, footer, dismissible = true, h
       window.removeEventListener('keydown', onKey);
       (lastFocus.current as HTMLElement | null)?.focus?.();
     };
-  }, [mounted, closing, dismissible, onClose]);
+  }, [mounted, closing, dismissible]);
 
   // 휴대폰 — 시트 안에서는 목록만 스크롤된다. 머리 · 바깥을 밀거나, 목록 끝에서 더 당겨도 뒤 화면이 움직이거나
   // '당겨서 새로고침'으로 화면이 날아가지 않게 (overscroll-behavior 를 모르는 옛 iOS 까지 — 터치 이동을 직접 막는다)

@@ -166,7 +166,7 @@
 .dim { color: var(--inv-fg-3); }
 
 /* 타구 정보 */
-.readout { right: 8px; bottom: 8px; width: 112px; padding: 5px 9px 4px; font-size: 10px; animation: rdIn 220ms var(--ease-out) both; }
+.readout { right: 8px; bottom: 46px; width: 112px; /* 라인업 단추(오른쪽 아래 32px) 위로 */ padding: 5px 9px 4px; font-size: 10px; animation: rdIn 220ms var(--ease-out) both; }
 .readout p { display: flex; justify-content: space-between; align-items: baseline; height: 17px; color: var(--inv-fg-3); font-weight: 600; }
 .readout p + p { box-shadow: inset 0 1px 0 var(--inv-line); }
 .readout b { font-size: 14px; color: var(--inv-fg); }

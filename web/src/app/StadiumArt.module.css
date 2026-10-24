@@ -50,6 +50,7 @@
   position: absolute;
   left: 50%;
   top: 50%;
+  width: 100vmax; /* 컨테이너 단위를 모르는 옛 브라우저 — 그림이 0×0 으로 사라지지 않게 */
   width: max(100cqw, 100cqh);
   aspect-ratio: 1;
   transform: translate(-50%, -50%);

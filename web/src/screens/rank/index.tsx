@@ -1,7 +1,7 @@
 // 순위 #/rank — 감독 순위(서버: 레이팅 · 승률 · 구단 전력). 구단 10개 리그 순위는 경기 운영 > 순위·리그 기록(#/league)으로 옮겼다.
 //   ?by=winrate|power  (예전 주소 ?tab=league 는 #/league 로 넘긴다)
 //   감독 순위는 실제 가입한 감독만 나온다(AI 구단은 순위에 없다). 로그인해야 내 순위가 보인다.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { Link, navigate, setQueryQuiet } from '../../app/router';
 import { useAuth } from '../../app/auth';
@@ -9,8 +9,8 @@ import { Button, Emblem, Icon, Sheet, Tabs, fmt } from '../../ui';
 import { isTeamId, myTeam, teamById } from '../../game/mock';
 import { rankLabel, teamLine, useSeason } from '../../season/store';
 import { ApiError, api, type PvpLineupItem, type RankingBy, type RankingsRes, type RankingRow } from '../../api';
-import { TeamLineup, cardsFromSnapshot } from '../pvp/TeamLineup';
-import { mySnapshot } from '../pvp/online';
+import { TeamLineup, cardsFromRoster, cardsFromSnapshot, type LineupCards } from '../pvp/TeamLineup';
+import { myRoster } from '../../season/rosters';
 import { demoRankings } from './demo';
 import s from './rank.module.css';
 
@@ -58,15 +58,24 @@ function Managers({ by, setBy, demo }: { by: RankingBy; setBy: (v: RankingBy) =>
   // 감독을 누르면 그 감독이 올려 둔 라인업 카드 — 순위 응답엔 라인업이 없어서 대전 상대 목록(GET /pvp/opponents)에서 찾는다(나는 내 라인업)
   const [peek, setPeek] = useState<Pick<RankingRow, 'userId' | 'username' | 'teamName' | 'club' | 'ovr' | 'power' | 'rating'> & { me?: boolean } | null>(null);
   const [lineups, setLineups] = useState<Map<number, PvpLineupItem[]> | 'loading' | 'error' | null>(null);
+  const fetchedAt = useRef(0);
   const openPeek = (row: NonNullable<typeof peek>) => {
     setPeek(row);
-    if (demo || row.me || lineups instanceof Map || lineups === 'loading') return;
+    if (demo || row.me || lineups === 'loading') return;
+    // 받은 지 1분이 지났으면 다시 (다른 감독이 라인업을 바꿨을 수 있다)
+    if (lineups instanceof Map && Date.now() - fetchedAt.current < 60_000) return;
     setLineups('loading');
     api.pvpOpponents()
-      .then((r) => setLineups(new Map(r.opponents.map((o) => [o.userId, o.lineup ?? []]))))
+      .then((r) => { fetchedAt.current = Date.now(); setLineups(new Map(r.opponents.map((o) => [o.userId, o.lineup ?? []]))); })
       .catch(() => setLineups('error'));
   };
-  const peekLineup = !peek ? null : peek.me ? mySnapshot().lineup : lineups instanceof Map ? lineups.get(peek.userId) ?? null : null;
+  // 나는 내 카드 그대로(등급 · 강화 · 특별 선수), 다른 감독은 올려 둔 라인업에서 되살린 카드
+  const peekCards: LineupCards | null = (() => {
+    if (!peek) return null;
+    if (peek.me) { try { return cardsFromRoster(myRoster()); } catch { return null; } }
+    const l = lineups instanceof Map ? lineups.get(peek.userId) : undefined;
+    return l?.length ? cardsFromSnapshot(l) : null;
+  })();
 
   const col = BY.find((x) => x.value === by)!.col;
   const data = load.kind === 'ok' && load.data.by === by ? load.data : null;
@@ -174,11 +183,11 @@ function Managers({ by, setBy, demo }: { by: RankingBy; setBy: (v: RankingBy) =>
       >
         {peek && (demo
           ? <p className={s.peekNote}>예시 순위라 라인업이 없어요.</p>
-          : peekLineup
-            ? <TeamLineup cards={cardsFromSnapshot(peekLineup)} onOpen={() => setPeek(null)} />
+          : peekCards
+            ? <TeamLineup cards={peekCards} onOpen={() => setPeek(null)} />
             : lineups === 'loading' ? <p className={s.peekNote}>라인업을 불러오는 중이에요…</p>
               : lineups === 'error' ? <p className={s.peekNote}>라인업을 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요.</p>
-                : <p className={s.peekNote}>이 감독은 아직 대전 라인업을 올리지 않았어요.</p>)}
+                : <p className={s.peekNote}>대전 상대 목록(레이팅이 가까운 20명)에 없는 감독이라 라인업을 못 불러왔어요.</p>)}
       </Sheet>
     </section>
   );
