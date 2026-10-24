@@ -47,6 +47,27 @@
 
 .price { display: inline-flex; align-items: center; gap: 5px; }
 
+/* 자동 열기 — 무대 안(어두운 바탕) 작은 줄: 팩 수(1~10) + 자동 열기 버튼 */
+.auto {
+  --fg: var(--inv-fg);
+  --fg-2: var(--inv-fg-2);
+  --fg-3: var(--inv-fg-3);
+  --line-3: color-mix(in srgb, var(--inv-fg) 40%, transparent);
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--inv-line);
+}
+.autoRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.autoK { font-size: 12.5px; font-weight: 700; letter-spacing: -.03em; color: var(--inv-fg); white-space: nowrap; }
+.stepper { display: inline-flex; align-items: center; gap: 2px; }
+.stepper button { display: grid; place-items: center; width: 34px; height: 34px; border-radius: var(--r-2); color: var(--inv-fg); box-shadow: inset 0 0 0 1px var(--inv-line); }
+.stepper button:disabled { opacity: .32; }
+.stepper > span { min-width: 42px; text-align: center; font-size: 12px; color: var(--inv-fg-2); white-space: nowrap; }
+.stepper > span b { margin-right: 1px; font-size: 17px; color: var(--inv-fg); }
+.autoBtn { font-size: 13px; }
+
 /* night — 경기장 조명 두 줄기 + 바닥 빛 */
 :global([data-theme='night']) .stage { background: radial-gradient(120% 90% at 26% 40%, #0E1A2E 0%, #050911 62%, #03060B 100%); }
 :global([data-theme='night']) .beamL, :global([data-theme='night']) .beamR {

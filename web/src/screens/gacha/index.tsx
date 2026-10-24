@@ -12,15 +12,19 @@ import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
 import { GRADES } from '../../game/grades';
 import type { ClubCode, GradeId, Pack } from '../../game/types';
 import { Button, CoinGP, Emblem, GoldenBall, Icon, Tabs, YearPicker, fmt, type YearCell } from '../../ui';
-import { atLeastOne, oddsFor, pctStr, pullPack, useGacha, type Pick, type PullResult } from './draw';
+import { AUTO_MAX, affordCount, atLeastOne, oddsFor, pctStr, pullMany, pullPack, useGacha, type Pick, type PullResult } from './draw';
+import { readWallet } from '../../game/wallet';
 import { PACK_LOOK, YEAR_OPTIONS, clubShort, eraText, yearOption } from './local-mock';
 import { PackArt } from './PackArt';
 import { OddsBar, PityTally, Price, Swatch, gradeShort } from './bits';
 import { OddsSheet } from './OddsSheet';
 import { Opening, type OpeningStep } from './Opening';
+import { AutoOpen } from './AutoOpen';
 import s from './Gacha.module.css';
 
 const TAB_LABEL: Record<string, string> = { basic: '일반', premium: '프리미엄', special: '스페셜', legend: '레전드', year: '연도', club: '구단' };
+/** 팩 k개 값 */
+const times = (p: Pack['price'], k: number): Pack['price'] => (p.ball != null ? { ball: p.ball * k } : { gp: (p.gp ?? 0) * k });
 
 
 /** 이 팩으로 맞출 수 있는 세트덱 — 지금 라인업(엔트리 20명) 진행에서 */
@@ -59,6 +63,9 @@ function Store({ query }: { query: URLSearchParams }) {
   const [oddsOpen, setOddsOpen] = useState(query.get('odds') === '1');
   const [result, setResult] = useState<PullResult | null>(null);
   const [demoStep, setDemoStep] = useState<OpeningStep | undefined>();
+  // 자동 열기 — 고른 팩 수(1~10) · 연 결과
+  const [autoN, setAutoN] = useState(AUTO_MAX);
+  const [auto, setAuto] = useState<{ runs: PullResult[]; asked: number } | null>(null);
 
   const pack = PACKS.find((p) => p.id === packId) ?? PACKS[1];
   const pick: Pick | null = pack.pick?.kind === 'year' ? { kind: 'year', year } : pack.pick?.kind === 'club' ? { kind: 'club', club } : null;
@@ -86,6 +93,13 @@ function Store({ query }: { query: URLSearchParams }) {
   const affordable = pack.price.ball != null ? g.wallet.ball >= pack.price.ball : g.wallet.gp >= (pack.price.gp ?? 0);
 
   const open = () => { setDemoStep(undefined); setResult(pullPack(pack, pick)); };
+  // 자동 열기 — 살 수 있는 만큼(최대 고른 수) 한 번에 열고 요약으로
+  const nAuto = Math.min(autoN, affordCount(pack, g.wallet));
+  const autoOpen = () => {
+    const want = Math.min(autoN, affordCount(pack, readWallet()));
+    const runs = pullMany(pack, pick, want);
+    if (runs.length) { setResult(null); setAuto({ runs, asked: want }); }
+  };
 
   return (
     <div className={s.screen}>
@@ -153,6 +167,27 @@ function Store({ query }: { query: URLSearchParams }) {
           >
             30장 열기
           </Button>
+          <div className={s.auto}>
+            <div className={s.autoRow}>
+              <span className={s.autoK}>자동 열기</span>
+              <div className={s.stepper} role="group" aria-label="자동으로 열 팩 수">
+                <button type="button" onClick={() => setAutoN((x) => Math.max(1, x - 1))} disabled={autoN <= 1} aria-label="1팩 줄이기"><Icon name="minus" size={15} /></button>
+                <span><b className="num">{autoN}</b>팩</span>
+                <button type="button" onClick={() => setAutoN((x) => Math.min(AUTO_MAX, x + 1))} disabled={autoN >= AUTO_MAX} aria-label="1팩 늘리기"><Icon name="plus" size={15} /></button>
+              </div>
+            </div>
+            <Button
+              variant="secondary"
+              size="s"
+              block
+              className={s.autoBtn}
+              onClick={autoOpen}
+              disabled={nAuto < 1}
+              trailing={<Price price={times(pack.price, Math.max(1, nAuto))} className={s.buyPrice} />}
+            >
+              {nAuto > 0 && nAuto < autoN ? <><span className="num">{nAuto}</span>팩만 자동</> : <><span className="num">{autoN}</span>팩 자동 열기</>}
+            </Button>
+          </div>
           <p className={s.wallet}>
             보유 {pack.price.ball != null
               ? <><GoldenBall size={11} /> <span className="num">{fmt.int(g.wallet.ball)}</span></>
@@ -263,6 +298,17 @@ function Store({ query }: { query: URLSearchParams }) {
           onClose={() => setResult(null)}
           onAgain={affordable ? open : undefined}
           onCombo={() => { setResult(null); navigate('/combine'); }}
+        />
+      )}
+      {auto && (
+        <AutoOpen
+          key={auto.runs[0].requestId}
+          runs={auto.runs}
+          asked={auto.asked}
+          onClose={() => setAuto(null)}
+          onAgain={nAuto > 0 ? autoOpen : undefined}
+          againN={nAuto}
+          onCombo={() => { setAuto(null); navigate('/combine'); }}
         />
       )}
     </div>

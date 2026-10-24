@@ -7,7 +7,7 @@ import { CARDS, PACKS, PLAYERS, teamByCode } from '../../game/mock';
 import { addCards, lineupIds, ownedCard, spareOf, useForRoulette, useInventory } from '../../game/inventory';
 import { cryptoRandom, rollCombine, type CombineRoll, type CombineView } from '../../game/combine';
 import { GRADES } from '../../game/grades';
-import { spend, useWallet } from '../../game/wallet';
+import { readWallet, spend, useWallet } from '../../game/wallet';
 import { PITCH_KO, POS_KO } from '../../game/labels';
 import { CURRENT_SEASON, eraOfCode, isOldCode, shortLabel } from '../../game/world';
 import { championOf } from '../../game/clubSeasons';
@@ -396,6 +396,70 @@ export function pullPack(pack: Pack, pick: Pick | null, opt: { seed?: string; fo
   state.lastResult = res;
   bump();
   return res;
+}
+
+/* ───────── 자동 열기 — 같은 팩을 여러 개(최대 10) 연달아. 팩마다 따로 처리(요청 번호 · 천장 · 보관함 · 재화) ───────── */
+export const AUTO_MAX = 10;
+
+/** 지금 재화로 살 수 있는 팩 수 (cap 까지) */
+export function affordCount(pack: Pack, w: { gp: number; ball: number }, cap = AUTO_MAX): number {
+  const gp = pack.price.gp ?? 0, ball = pack.price.ball ?? 0;
+  let k = cap;
+  if (gp > 0) k = Math.min(k, Math.floor(w.gp / gp));
+  if (ball > 0) k = Math.min(k, Math.floor(w.ball / ball));
+  return Math.max(0, k);
+}
+
+/** 같은 팩 n개 연달아 열기 (목업 서버) — 결과는 여기서 다 정해지고 보관함에 들어간다. 재화가 모자라면 거기서 멈춘다 */
+export function pullMany(pack: Pack, pick: Pick | null, n: number): PullResult[] {
+  const out: PullResult[] = [];
+  const want = Math.max(0, Math.min(AUTO_MAX, Math.floor(n)));
+  for (let i = 0; i < want; i++) {
+    if (affordCount(pack, readWallet(), 1) < 1) break;
+    out.push(pullPack(pack, pick));
+  }
+  return out;
+}
+
+export interface AutoSummary {
+  packs: number;
+  cards: number;
+  counts: { grade: GradeId; n: number }[];
+  fresh: number;
+  dups: number;
+  ups: PullResult['ups'];
+  /** 천장에 닿은 팩 (몇 번째 · 보상) */
+  hits: { pack: number; reward: string }[];
+  /** 빛나는 카드(엘리트 이상 — 레전드 · 수상 · 프랜차이즈 …) — 귀한 순 · 종합 순. 하나도 없으면 가장 좋은 카드 몇 장 */
+  top: PulledCard[];
+  /** top 이 빛나는 카드인가 (아니면 '가장 좋은 카드') */
+  topIsGlow: boolean;
+  spent: { gp: number; ball: number };
+  /** 마지막 팩 뒤 천장 */
+  pity: PullResult['pity'];
+}
+
+/** 자동 열기 요약 — 등급별 장수 · 새 카드 · 중복 · 강화 · 천장 · 빛나는 카드 */
+export function summarize(runs: PullResult[]): AutoSummary {
+  const cards = runs.flatMap((r) => r.cards);
+  const countMap = new Map<GradeId, number>();
+  for (const c of cards) countMap.set(c.card.grade, (countMap.get(c.card.grade) ?? 0) + 1);
+  const counts = [...countMap].map(([grade, n]) => ({ grade, n })).sort((a, b) => rarity(b.grade) - rarity(a.grade));
+  const sorted = [...cards].sort(better).reverse();
+  const glow = sorted.filter((c) => rarity(c.card.grade) >= rarity('legend')); // 레전드(4) · 엘리트(5) 이상 = 카드 테가 빛나는 등급
+  return {
+    packs: runs.length,
+    cards: cards.length,
+    counts,
+    fresh: cards.filter((c) => c.isNew).length,
+    dups: cards.filter((c) => !c.isNew).length,
+    ups: runs.flatMap((r) => r.ups),
+    hits: runs.map((r, i) => (r.pity.hit ? { pack: i + 1, reward: r.pity.reward } : null)).filter((x): x is { pack: number; reward: string } => !!x),
+    top: glow.length ? glow : sorted.slice(0, 6),
+    topIsGlow: glow.length > 0,
+    spent: runs.reduce((a, r) => ({ gp: a.gp + (r.price.gp ?? 0), ball: a.ball + (r.price.ball ?? 0) }), { gp: 0, ball: 0 }),
+    pity: runs[runs.length - 1]?.pity ?? { before: 0, after: 0, max: 0, hit: false, reward: '' },
+  };
 }
 
 /* ───────── 카드 조합(룰렛) — 안 쓰는 카드 n장 → 새 카드 1장. 칸 크기 = 확률 (요구 39) ───────── */

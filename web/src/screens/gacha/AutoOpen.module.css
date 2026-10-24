@@ -1,0 +1,33 @@
+/* 자동 열기 — 팩 열기(Opening.module.css)의 어두운 무대 · 위 줄 · 요약 글을 같이 쓰고, 여기엔 팩 줄 · 레전드급 줄만 */
+.body { align-items: flex-start; }
+.wrap { display: grid; gap: 18px; width: 100%; max-width: 560px; margin: 0 auto; padding: 6px 0 14px; }
+
+.h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 9px; font-size: 13px; font-weight: 750; letter-spacing: -.03em; color: var(--fg); }
+.h .hSub { font-size: 12px; font-weight: 500; color: var(--fg-3); white-space: nowrap; }
+.h b { font-size: 17px; color: var(--accent-2); margin: 0 1px; }
+
+/* 카드 칸 — 팩 열기의 뒤집는 칸(.cell)을 칸 너비 그대로 (li 안이라 늘여 줘야 한다) */
+.flipBtn { width: 100%; }
+
+/* 팩마다 가장 좋은 카드 — 다섯 칸씩 */
+.packs { display: grid; grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr)); gap: 10px 9px; }
+.pack { position: relative; min-width: 0; }
+.packNo { display: block; margin-top: 4px; text-align: center; font-size: 11px; color: var(--fg-3); }
+.packNo .num { font-size: 12px; }
+
+/* 레전드급 (없으면 가장 좋은 카드) — 여섯 칸씩 */
+.result { display: grid; gap: 8px; animation: resIn 320ms var(--ease-out) both; }
+@keyframes resIn { from { opacity: 0; transform: translateY(10px); } }
+.top { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px 6px; margin-bottom: 6px; }
+.top li { min-width: 0; }
+.more { font-size: 12px; color: var(--fg-3); letter-spacing: -.03em; }
+.spent { margin-left: 4px; vertical-align: -2px; color: var(--fg); }
+
+/* 여는 동안 아래 줄 */
+.runFoot { display: flex; align-items: center; justify-content: space-between; gap: 14px; max-width: 560px; margin: 0 auto; }
+.running { display: flex; align-items: baseline; gap: 2px; min-width: 0; }
+.running b { font-size: 28px; line-height: .9; }
+.running > .num { font-size: 15px; color: var(--fg-3); }
+.running > span:last-child { margin-left: 10px; font-size: 12px; color: var(--fg-3); white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) { .result { animation: none; } }
