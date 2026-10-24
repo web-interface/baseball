@@ -1,5 +1,6 @@
 // 홈 데이터 — 순위·전적·선수 기록·지난 경기·소식은 모두 저장된 시즌 진행(season/store)에서 (개막일엔 0승 0무 0패).
 // 다음 경기 미리보기 · 바로가기 숫자처럼 시즌 기록이 아닌 것만 game/mock 값을 이어 붙여 쓴다(서버가 붙으면 같은 모양으로 채움).
+import { dexIndex } from '../../game/dex';
 import { ME, NEXT_GAME, PACKS, SCOUT_SHOP, TEAMS, cardById, playerById, teamById } from '../../game/mock';
 import { LEAGUE } from '../../game/world';
 import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
@@ -205,7 +206,7 @@ export function shortcuts() {
     gacha: { pity: premium.pity.count, max: premium.pity.max },
     shop: { left: SCOUT_SHOP.dailyLimit - SCOUT_SHOP.bought, limit: SCOUT_SHOP.dailyLimit },
     pvp: { left: ME.pvpLeft, rating: ME.rating },
-    cards: { have: ME.collection.have, total: ME.collection.total },
+    cards: (() => { const a = dexIndex().all; return { have: a.have, total: a.total }; })(),
   };
 }
 

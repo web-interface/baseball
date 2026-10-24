@@ -1,4 +1,5 @@
 // 오늘 할 일 — 바로가기 6칸 (숫자가 먼저 보이게) + 시즌 자동 진행 시트 (요구 35)
+import { pctText } from '../../game/dex';
 import { useState, type ReactNode } from 'react';
 import { Button, Icon, Sheet, Tabs, useToast, type IconName } from '../../ui';
 import { Link } from '../../app/router';
@@ -21,7 +22,7 @@ export function Todo() {
     { key: 'gacha', to: '/gacha', icon: 'pack', label: '카드구매', value: <b className="num">{n.gacha.pity}<i>/{n.gacha.max}</i></b>, note: '천장까지 — 프리미엄팩', hot: n.gacha.max - n.gacha.pity <= 3 },
     { key: 'shop', to: '/shop', icon: 'shop', label: '스카우터', value: <b className="num">{n.shop.left}<i>명</i></b>, note: <>오늘 더 데려올 수 있어요</> },
     { key: 'pvp', to: '/pvp', icon: 'versus', label: '대전', value: <b className="num">{n.pvp.left}<i>번</i></b>, note: <>레이팅 <span className="num">{int(n.pvp.rating)}</span></> },
-    { key: 'cards', to: '/cards', icon: 'card', label: '카드', value: <b className="num">{int(n.cards.have)}</b>, note: <>도감 <span className="num">{Math.round((n.cards.have / n.cards.total) * 100)}</span>%</> },
+    { key: 'cards', to: '/dex', icon: 'card', label: '도감', value: <b className="num">{int(n.cards.have)}<i>종</i></b>, note: <>모은 카드 <span className="num">{pctText(n.cards)}</span>%</> },
     { key: 'season', to: '/season', icon: 'fast', label: '시즌 빨리 감기', value: <b className="num">{line.left}<i>경기</i></b>, note: '남은 시즌 한 번에' },
   ];
   return (

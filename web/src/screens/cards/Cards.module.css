@@ -26,6 +26,8 @@
 .tally dd .num { font-size: 21px; }
 .tally dd small { margin-left: 1px; font-size: 13px; color: var(--fg-3); }
 .album { padding-right: 0 !important; }
+.albumLink { display: inline-flex; align-items: center; gap: 2px; color: inherit; }
+.albumLink:hover { color: var(--accent); }
 .albumBar { position: absolute; left: 14px; right: 0; bottom: -1px; height: 2px; background: linear-gradient(90deg, var(--fg) 0 var(--p), transparent var(--p)); }
 :global([data-theme='broadcast']) .albumBar { background: linear-gradient(90deg, var(--accent) 0 var(--p), transparent var(--p)); height: 3px; }
 :global([data-theme='broadcast']) .tally { border-top: 2px solid var(--fg); }

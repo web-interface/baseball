@@ -36,13 +36,14 @@ export const ROUTES: RouteDef[] = [
   { key: 'games', path: '/games', title: '경기 기록', menu: '경기 기록', owner: '경기 운영 개발자', desc: '지난 경기 목록(우리 경기/모든 경기 · 달별 · 포스트시즌) · ?g=<경기 키> 박스스코어(이닝 점수 · 타자 · 투수 · 홈런 · 결승타)', load: () => import('../screens/games') },
   { key: 'match', path: '/match', title: '경기', owner: '경기 화면 개발자', desc: '빨리 보기(10초) · 주요 장면 · 이닝별 · 자세히(2D) · 강조 문구 · 원인 표시 · ?g=season 지금 바로 경기(엔진) · ?pvp=<id> 대전 다시 보기', load: () => import('../screens/match') },
   { key: 'cards', path: '/cards', title: '카드', menu: '카드', owner: '카드 화면 개발자', desc: '보관함 · 등급 11종 · 강화 I~X · 레벨 · 도감', load: () => import('../screens/cards') },
+  { key: 'dex', path: '/dex', title: '도감', menu: '도감', owner: '카드 화면 개발자', desc: '카드 도감 — 전체 · 등급별 진행, 구단별(시즌 판 → 그 시즌 카드) · 연도별(구단 칩 → 카드), 못 모은 카드는 흑백 · 자물쇠 · ?mode=year&year=2025&club=DJ', load: () => import('../screens/dex') },
   { key: 'combine', path: '/combine', title: '선수조합', owner: '선수조합 개발자', desc: '선수조합 — 카드 3~5장으로 새 카드 1장 · 조합 공식(같은 구단 · 연도 · 포지션 · 짝)에 따라 상위 등급 · 마구마구식 조합 룰렛', load: () => import('../screens/combine') },
   { key: 'enhance', path: '/enhance', title: '훈련', owner: '카드 화면 개발자', desc: '훈련 — 카드 한 장 · 능력치 하나씩 골라 훈련(단계 0~10, 5부터 카드 불빛 · 10 최종) · 장소 13곳 · 특수구질 훈련 · ?card=<카드 id> (같은 카드 강화 I~X 목록은 #/cards?mode=enhance)', load: () => import('../screens/train') },
   { key: 'gacha', path: '/gacha', title: '카드구매', menu: '카드구매', owner: '뽑기 화면 개발자', desc: '스카우트(카드 뽑기) · 확률 공개 · 천장 · 레전드 이펙트', load: () => import('../screens/gacha') },
   { key: 'shop', path: '/shop', title: '스카우터', menu: '스카우터', owner: '상점 화면 개발자', desc: 'AI 스카우트가 매일 진열 · 하루 살 수 있는 인원 제한', load: () => import('../screens/shop') },
   { key: 'pvp', path: '/pvp', title: '대전', menu: '대전', owner: '대전 화면 개발자', desc: '다른 감독 구단과 혼자 대결(상대 접속 필요 없음) · AI 구단 연습 · 레이팅 · 내 기록', load: () => import('../screens/pvp') },
   { key: 'rank', path: '/rank', title: '순위', menu: '순위', owner: '대전 화면 개발자', desc: '감독 순위(레이팅 · 승률 · 구단 전력, 실제 가입자) · 구단 순위는 순위·리그 기록(#/league)', load: () => import('../screens/rank') },
-  { key: 'chat', path: '/chat', title: '로비 채팅', back: '/home', chrome: 'bare', owner: '채팅 개발자', desc: '로비 실시간 채팅 · 대화는 5분 뒤 사라짐 · 신고 · 이 감독 숨기기 · ?demo=1 예시', load: () => import('../screens/chat') },
+  { key: 'chat', path: '/chat', title: '로비 채팅', back: '/home', chrome: 'bare', owner: '채팅 개발자', desc: '로비 실시간 채팅 · 대화는 하루 뒤 사라짐 · 신고 · 이 감독 숨기기 · ?demo=1 예시', load: () => import('../screens/chat') },
   { key: 'player', path: '/player/:id', title: '선수 정보', sample: '/player/p03', back: '/cards', chrome: 'bare', owner: '선수 화면 개발자', desc: 'FM 식 상세 능력치 · 고유 구종 · 시즌 기록 · 폼 · 날씨 체질', load: () => import('../screens/player') },
   { key: 'club-select', path: '/club-select', title: '구단 선택', back: '/home', chrome: 'bare', owner: '구단 선택 화면 개발자', desc: '2027 시즌을 함께할 구단 고르기 · 엠블럼·연고·구장·난이도', load: () => import('../screens/club-select') },
   { key: 'settings', path: '/settings', title: '설정', back: '/home', chrome: 'bare', owner: '설정 화면 개발자', desc: '테마 · 경기 보기 방식 · 소리 · 로그아웃', load: () => import('../screens/settings') },
@@ -62,7 +63,7 @@ export interface MenuGroup {
 export const GROUPS: MenuGroup[] = [
   { key: 'home', label: '홈', items: [{ route: 'home', label: '홈' }] },
   { key: 'team', label: '팀관리', items: [
-    { route: 'lineup', label: '라인업' }, { route: 'cards', label: '선수보관' }, { route: 'combine', label: '선수조합' }, { route: 'sets', label: '세트덱' }, { route: 'enhance', label: '훈련' },
+    { route: 'lineup', label: '라인업' }, { route: 'cards', label: '선수보관' }, { route: 'combine', label: '선수조합' }, { route: 'sets', label: '세트덱' }, { route: 'enhance', label: '훈련' }, { route: 'dex', label: '도감' },
   ] },
   { key: 'play', label: '경기 운영', landing: 'season', items: [
     { route: 'schedule', label: '시즌 일정' }, { route: 'season', label: '경기 준비·진행' }, { route: 'tactics', label: '전술' }, { route: 'league', label: '순위·리그 기록' }, { route: 'games', label: '경기 기록' },

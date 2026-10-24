@@ -19,7 +19,7 @@ const KEEP_LOCAL = 120;
 
 let state: ChatState = {
   status: 'idle', loaded: false, msgs: [], fading: [], pending: [], online: null, me: null, meChecked: false,
-  retryAt: null, notice: null, restore: null, ttl: 5 * 60_000, maxLen: 200, skew: 0,
+  retryAt: null, notice: null, restore: null, ttl: 24 * 3600_000, maxLen: 200, skew: 0,
 };
 const listeners = new Set<() => void>();
 const set = (patch: Partial<ChatState>) => { state = { ...state, ...patch }; listeners.forEach((l) => l()); };

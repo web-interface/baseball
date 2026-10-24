@@ -5,6 +5,7 @@
 //                         (메뉴 '훈련' #/enhance 는 screens/train — 능력치 훈련 0~10단계, 강화와 따로)
 //   보유 카드는 모두 보유 카드 저장소(game/inventory)에서 — 카드구매 · 조합 · 스카우터로 얻은 카드가 바로 보이고,
 //   같은 카드가 필요 수량만큼 모이면 자동으로 강화된다(최근 강화 줄에 'II → III').
+import { dexIndex } from '../../game/dex';
 import { useCallback, useMemo, useState } from 'react';
 import { useIncremental } from '../../ui/useIncremental';
 import type { ScreenProps } from '../../app/screen';
@@ -128,7 +129,8 @@ function Collection({ openId, openBack, colsParam, sortParam, enhance = false }:
   const reset = () => { setGrade('all'); setPos('all'); setTeam('all'); };
   const pickCols = (n: 2 | 3) => { setCols(n); saveCols(n); };
   const close = useCallback(() => setOpenKey(null), []);
-  const pct = Math.round((ME.collection.have / ME.collection.total) * 100);
+  const dex = useMemo(() => dexIndex().all, [ver]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pct = Math.round((dex.have / Math.max(1, dex.total)) * 1000) / 10;
 
   return (
     <div className={s.page}>
@@ -146,8 +148,8 @@ function Collection({ openId, openBack, colsParam, sortParam, enhance = false }:
           <div><dt>{enhance ? '보유' : '보관'}</dt><dd className="num">{mine.length}<small>종</small></dd>{!enhance && inLine > 0 && <Link to="/lineup" className={s.inLine}>라인업 {inLine}명 ›</Link>}</div>
           <div><dt>{enhance ? '강화에 쓴 카드' : '같은 카드'}</dt><dd className="num">{enhance ? st.enhUsed : dupTotal}<small>{enhance ? '장' : `/${copies}장`}</small></dd></div>
           <div className={s.album}>
-            <dt>도감</dt>
-            <dd><span className="num">{ME.collection.have.toLocaleString('en-US')}</span><small className="num">/{ME.collection.total.toLocaleString('en-US')}</small></dd>
+            <dt><Link to="/dex" className={s.albumLink}>도감 <Icon name="chevron" size={12} /></Link></dt>
+            <dd><span className="num">{dex.have.toLocaleString('en-US')}</span><small className="num">/{dex.total.toLocaleString('en-US')}</small></dd>
             <i className={s.albumBar} style={{ ['--p' as string]: pct + '%' }} aria-hidden />
           </div>
         </dl>
