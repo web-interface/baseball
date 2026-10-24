@@ -11,7 +11,7 @@ import { Button, IconButton } from '../../ui';
 import { roman } from '../../ui/format';
 import { lockScroll } from '../../ui/scrollLock';
 import { packTitle, summarize, type PullResult, type PulledCard } from './draw';
-import { PulledSheet, upText } from './Opening';
+import { PulledSheet, SpaceKey, isSpace, spaceGuard, typingIn, upText } from './Opening';
 import { Price, Swatch, gradeFill, gradeShort } from './bits';
 import o from './Opening.module.css';
 import s from './AutoOpen.module.css';
@@ -83,14 +83,20 @@ export function AutoOpen({ runs, asked, onClose, onAgain, againN = 0, onCombo }:
     root.current?.focus();
     return () => { unlock(); last?.focus?.(); };
   }, []);
-  // Esc — 끝났으면 닫기, 아니면 건너뛰기
+  // Esc — 끝났으면 닫기, 아니면 건너뛰기 · 스페이스 — 여는 중이면 바로 결과, 끝났으면 'N팩 더 자동 열기'
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || detail) return;
-      if (done) onClose(); else setShown(n);
+      if (detail) return;
+      if (e.key === 'Escape') { if (done) onClose(); else setShown(n); return; }
+      if (!isSpace(e) || typingIn(e)) return;
+      e.preventDefault();
+      if (e.repeat) return;
+      if (!done) { if (canSkip) setShown(n); }
+      else if (onAgain && againN > 0) onAgain();
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keyup', spaceGuard);
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', spaceGuard); };
   });
 
   const first = runs[0];
@@ -193,7 +199,7 @@ export function AutoOpen({ runs, asked, onClose, onAgain, againN = 0, onCombo }:
             {onAgain && againN > 0 && (
               <Button variant="primary" size="l" block onClick={onAgain} className={o.again}
                 trailing={<Price price={first.pack.price.ball != null ? { ball: (first.pack.price.ball ?? 0) * againN } : { gp: (first.pack.price.gp ?? 0) * againN }} />}>
-                <span className="num">{againN}</span>팩 더 자동 열기
+                <span className="num">{againN}</span>팩 더 자동 열기<SpaceKey />
               </Button>
             )}
             <div className={o.actions2}>
@@ -204,7 +210,7 @@ export function AutoOpen({ runs, asked, onClose, onAgain, againN = 0, onCombo }:
         ) : (
           <div className={s.runFoot}>
             <p className={s.running}><b className="num">{Math.min(shown, n)}</b><span className="num">/{n}</span><span>팩 여는 중</span></p>
-            <Button variant="primary" size="l" onClick={() => setShown(n)} disabled={!canSkip}>바로 결과</Button>
+            <Button variant="primary" size="l" onClick={() => setShown(n)} disabled={!canSkip}>바로 결과<SpaceKey /></Button>
           </div>
         )}
       </footer>

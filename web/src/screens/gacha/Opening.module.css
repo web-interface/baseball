@@ -227,3 +227,11 @@
 .seasonLine > span { margin-right: 8px; font-size: 11.5px; color: var(--fg-3); }
 .seasonLine b { color: var(--fg); font-size: 13.5px; }
 @media (min-width: 420px) { .statList { grid-template-columns: 1fr 1fr; column-gap: 18px; } }
+
+/* 스페이스 단축키 표시 — 마우스 · 키보드가 있는 화면에서만 */
+.kbd {
+  display: none; align-items: center; height: 18px; margin-left: 8px; padding: 0 5px; border-radius: 4px;
+  font: 700 10.5px/1 var(--font-num); letter-spacing: .02em; vertical-align: 1px;
+  color: inherit; opacity: .72; box-shadow: inset 0 0 0 1px currentColor;
+}
+@media (hover: hover) and (pointer: fine) { .kbd { display: inline-flex; } }

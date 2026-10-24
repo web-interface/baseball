@@ -23,6 +23,14 @@ type Phase = 'pack' | 'deal' | 'grid' | 'done';
 const reduced = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 const COLS = 6;
 
+/** 스페이스 단축키 — 글 쓰는 칸이 아니면 화면 어디서든 (팩 열기 · 자동 열기가 같이 쓴다) */
+export const isSpace = (e: KeyboardEvent) => e.key === ' ' || e.code === 'Space';
+export const typingIn = (e: KeyboardEvent) => !!(e.target as HTMLElement | null)?.closest?.('input, textarea, select, [contenteditable="true"]');
+/** 스페이스 keyup 막기 — 초점 있던 단추가 keyup 에 한 번 더 눌리지 않게 */
+export const spaceGuard = (e: KeyboardEvent) => { if (isSpace(e) && !typingIn(e)) e.preventDefault(); };
+/** 단추 안 '스페이스' 표시 (마우스 · 키보드가 있는 화면에서만 보인다) */
+export const SpaceKey = () => <kbd className={s.kbd} aria-hidden>Space</kbd>;
+
 export interface OpeningProps {
   result: PullResult;
   /** 데모 — 바로 그 단계로 */
@@ -184,14 +192,23 @@ export function Opening({ result, step, onClose, onAgain, onCombo }: OpeningProp
     else animateTear(0, 260);
   };
 
-  // Esc — 끝났으면 닫기, 아니면 건너뛰기
+  // Esc — 끝났으면 닫기, 아니면 건너뛰기 · 스페이스 — 그 단계의 주 단추(바로 열기 → 전부 뒤집기 → 건너뛰기 → 한 번 더)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || detail) return;
-      if (phase === 'done') onClose(); else skipAll();
+      if (detail) return;
+      if (e.key === 'Escape') { if (phase === 'done') onClose(); else skipAll(); return; }
+      if (!isSpace(e) || typingIn(e)) return;
+      e.preventDefault(); // 초점 있는 단추가 스페이스로 눌리지 않게 (keyup 도 막는다 — spaceGuard)
+      if (e.repeat) return;
+      if (phase === 'pack') { if (!torn) openNow(); }
+      else if (phase === 'done') onAgain?.();
+      else if (cine != null) endCine();
+      else if (phase === 'grid' && !flippingAll.current) flipAll();
+      else skipAll();
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keyup', spaceGuard);
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', spaceGuard); };
   }); // 매번 최신 상태로
 
   const flippedCount = flipped.filter(Boolean).length;
@@ -286,7 +303,7 @@ export function Opening({ result, step, onClose, onAgain, onCombo }: OpeningProp
         {phase === 'pack' && (
           <div className={s.packFoot}>
             <p className={s.hint}>위쪽 띠를 오른쪽으로 밀어서 뜯어요</p>
-            <Button variant="primary" size="l" block onClick={openNow} disabled={torn}>바로 열기</Button>
+            <Button variant="primary" size="l" block onClick={openNow} disabled={torn}>바로 열기<SpaceKey /></Button>
           </div>
         )}
         {(phase === 'deal' || phase === 'grid') && (
@@ -295,7 +312,7 @@ export function Opening({ result, step, onClose, onAgain, onCombo }: OpeningProp
               <b className="num">{flippedCount}</b><span className="num">/30</span>
               <span className={s.countHint}>{flippedCount === 0 ? '한 장씩 눌러도 돼요' : '가장 좋은 카드는 마지막에'}</span>
             </p>
-            <Button variant="primary" size="l" onClick={flipAll} disabled={phase !== 'grid' || cine != null || flippingAll.current}>전부 뒤집기</Button>
+            <Button variant="primary" size="l" onClick={flipAll} disabled={phase !== 'grid' || cine != null || flippingAll.current}>전부 뒤집기<SpaceKey /></Button>
           </div>
         )}
         {phase === 'done' && (
@@ -433,7 +450,7 @@ function Summary({ result, onAgain, onClose, onCombo, onBest }: {
       <div className={s.actions}>
         {onAgain && (
           <Button variant="primary" size="l" block onClick={onAgain} trailing={<Price price={result.price} />} className={s.again}>
-            한 번 더
+            한 번 더<SpaceKey />
           </Button>
         )}
         <div className={s.actions2}>
