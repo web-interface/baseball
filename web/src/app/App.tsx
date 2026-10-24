@@ -62,7 +62,16 @@ function findRoute(path: string) {
 
 function Routes() {
   const loc = useLocation();
-  const { status, recoveryCode } = useAuth();
+  const { status, recoveryCode, offline } = useAuth();
+
+  // 대전 목록에 내 구단 올리기 — 로그인해 앱을 켜 두면 1시간마다(대전 화면에 안 들어가도 다른 감독 목록에 나오게)
+  useEffect(() => {
+    if (status !== 'in' || offline) return;
+    let stop: (() => void) | null = null;
+    let dead = false;
+    void import('../screens/pvp/sync').then((m) => { if (!dead) stop = m.startPvpSync(); });
+    return () => { dead = true; stop?.(); };
+  }, [status, offline]);
 
   // 첫 주소 · 로그인 뒤 이동
   useEffect(() => {
