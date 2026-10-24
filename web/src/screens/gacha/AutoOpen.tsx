@@ -10,7 +10,10 @@ import { navigate } from '../../app/router';
 import { Button, IconButton } from '../../ui';
 import { roman } from '../../ui/format';
 import { lockScroll } from '../../ui/scrollLock';
-import { packTitle, summarize, type PullResult, type PulledCard } from './draw';
+import { affordCount, packTitle, pullPack, rarity, summarize, type Pick, type PullResult, type PulledCard } from './draw';
+import { CARD_CAP, CARD_CAP_KO, batchInventory, totalCards } from '../../game/inventory';
+import { readWallet } from '../../game/wallet';
+import type { Pack } from '../../game/types';
 import { PulledSheet, SpaceKey, isSpace, spaceGuard, typingIn, upText } from './Opening';
 import { Price, Swatch, gradeFill, gradeShort } from './bits';
 import o from './Opening.module.css';
@@ -102,7 +105,6 @@ export function AutoOpen({ runs, asked, onClose, onAgain, againN = 0, onCombo }:
   const first = runs[0];
   const title = packTitle(first.pack, first.pick);
   const glowN = sum.topIsGlow ? sum.top.length : 0;
-  const TOP_MAX = 12;
   const said = done
     ? `${n}팩 ${sum.cards}장을 열었어요. ${glowN ? `엘리트 이상 ${glowN}장` : '엘리트 이상은 없어요'}. 새 카드 ${sum.fresh}장.`
     : '';
@@ -144,52 +146,7 @@ export function AutoOpen({ runs, asked, onClose, onAgain, againN = 0, onCombo }:
             </ol>
           </section>
 
-          {done && (
-            <section className={s.result} aria-label="자동 열기 결과">
-              <p className={s.h}>
-                <span>{sum.topIsGlow ? <>빛나는 카드 <b className="num">{glowN}</b>장</> : '가장 좋은 카드'}</span>
-                <span className={s.hSub}>{sum.topIsGlow ? '엘리트 이상' : '엘리트 이상은 안 나왔어요'}</span>
-              </p>
-              <ul className={s.top}>
-                {sum.top.slice(0, TOP_MAX).map((c, i) => (
-                  <li key={`${c.card.id}-${i}`}>
-                    <FlipCard pc={c} on onOpen={() => setDetail(c)} label={`${GRADES[c.card.grade].ko} ${c.player.name}${c.isNew ? ', 새 카드' : ', 중복'}`} />
-                  </li>
-                ))}
-              </ul>
-              {sum.top.length > TOP_MAX && <p className={s.more}>외 <span className="num">{sum.top.length - TOP_MAX}</span>장 — 보관함에서 볼 수 있어요</p>}
-
-              <ul className={o.counts} aria-label="등급별 장수">
-                {sum.counts.map((c) => (
-                  <li key={c.grade}><Swatch grade={c.grade} /><span>{gradeShort(c.grade)}</span><b className="num">{c.n}</b></li>
-                ))}
-              </ul>
-              <p className={o.sumLine}>
-                새 카드 <b className="num">{sum.fresh}</b> · 중복 <b className="num">{sum.dups}</b>
-                <span> — 같은 카드가 모이면 자동 강화</span>
-              </p>
-              {sum.ups.length > 0 && (
-                <p className={[o.sumLine, o.sumUps].join(' ')}>
-                  강화 <b className="num">{sum.ups.length}</b>
-                  <span className={o.sumUpList}>
-                    {sum.ups.slice(0, 3).map((u, i) => (
-                      <span key={`${u.card.id}-${i}`}>{u.player.name} <b className="num">+1</b> <span className="num">({upText(u)})</span></span>
-                    ))}
-                    {sum.ups.length > 3 && <span>외 <span className="num">{sum.ups.length - 3}</span>장</span>}
-                  </span>
-                </p>
-              )}
-              <p className={o.sumLine}>
-                {sum.hits.length > 0 && <>천장 도달 <b className="num">{sum.hits.length}</b>번 — <b>{sum.hits[0].reward}</b> · </>}
-                천장까지 <b className="num">{sum.pity.max - sum.pity.after}</b>팩
-                <span> · <span className="num">{sum.pity.after}</span>/<span className="num">{sum.pity.max}</span></span>
-              </p>
-              <p className={o.sumLine}>
-                쓴 재화 <Price price={sum.spent.ball ? { ball: sum.spent.ball } : { gp: sum.spent.gp }} className={s.spent} />
-                {n < asked && <span> · 재화가 모자라 <span className="num">{asked}</span>팩 중 <span className="num">{n}</span>팩만 열었어요</span>}
-              </p>
-            </section>
-          )}
+          {done && <ResultBlock sum={sum} n={n} asked={asked} onDetail={setDetail} />}
         </div>
       </main>
 
@@ -218,6 +175,184 @@ export function AutoOpen({ runs, asked, onClose, onAgain, againN = 0, onCombo }:
       <PulledSheet pc={detail} onClose={() => setDetail(null)} onPlayer={(id) => { setDetail(null); onClose(); navigate(`/player/${id}`); }} />
 
       <p className="sr-only" aria-live="polite">{said}</p>
+    </div>,
+    document.body,
+  );
+}
+
+/** 결과 요약 — 빛나는 카드 · 등급별 장수 · 새 카드/중복 · 자동 강화 · 천장 · 쓴 재화 (자동 열기 · 가득 찰 때까지가 같이 쓴다) */
+function ResultBlock({ sum, n, asked, onDetail }: { sum: ReturnType<typeof summarize>; n: number; asked: number; onDetail: (pc: PulledCard) => void }) {
+  const glowN = sum.topIsGlow ? sum.top.length : 0;
+  const TOP_MAX = 12;
+  const setDetail = onDetail;
+  return (
+    <section className={s.result} aria-label="자동 열기 결과">
+          <p className={s.h}>
+            <span>{sum.topIsGlow ? <>빛나는 카드 <b className="num">{glowN}</b>장</> : '가장 좋은 카드'}</span>
+            <span className={s.hSub}>{sum.topIsGlow ? '엘리트 이상' : '엘리트 이상은 안 나왔어요'}</span>
+          </p>
+          <ul className={s.top}>
+            {sum.top.slice(0, TOP_MAX).map((c, i) => (
+              <li key={`${c.card.id}-${i}`}>
+                <FlipCard pc={c} on onOpen={() => setDetail(c)} label={`${GRADES[c.card.grade].ko} ${c.player.name}${c.isNew ? ', 새 카드' : ', 중복'}`} />
+              </li>
+            ))}
+          </ul>
+          {sum.top.length > TOP_MAX && <p className={s.more}>외 <span className="num">{sum.top.length - TOP_MAX}</span>장 — 보관함에서 볼 수 있어요</p>}
+    
+          <ul className={o.counts} aria-label="등급별 장수">
+            {sum.counts.map((c) => (
+              <li key={c.grade}><Swatch grade={c.grade} /><span>{gradeShort(c.grade)}</span><b className="num">{c.n}</b></li>
+            ))}
+          </ul>
+          <p className={o.sumLine}>
+            새 카드 <b className="num">{sum.fresh}</b> · 중복 <b className="num">{sum.dups}</b>
+            <span> — 같은 카드가 모이면 자동 강화</span>
+          </p>
+          {sum.ups.length > 0 && (
+            <p className={[o.sumLine, o.sumUps].join(' ')}>
+              강화 <b className="num">{sum.ups.length}</b>
+              <span className={o.sumUpList}>
+                {sum.ups.slice(0, 3).map((u, i) => (
+                  <span key={`${u.card.id}-${i}`}>{u.player.name} <b className="num">+1</b> <span className="num">({upText(u)})</span></span>
+                ))}
+                {sum.ups.length > 3 && <span>외 <span className="num">{sum.ups.length - 3}</span>장</span>}
+              </span>
+            </p>
+          )}
+          <p className={o.sumLine}>
+            {sum.hits.length > 0 && <>천장 도달 <b className="num">{sum.hits.length}</b>번 — <b>{sum.hits[0].reward}</b> · </>}
+            천장까지 <b className="num">{sum.pity.max - sum.pity.after}</b>팩
+            <span> · <span className="num">{sum.pity.after}</span>/<span className="num">{sum.pity.max}</span></span>
+          </p>
+          <p className={o.sumLine}>
+            쓴 재화 <Price price={sum.spent.ball ? { ball: sum.spent.ball } : { gp: sum.spent.gp }} className={s.spent} />
+            {n < asked && <span> · 재화가 모자라 <span className="num">{asked}</span>팩 중 <span className="num">{n}</span>팩만 열었어요</span>}
+          </p>
+        </section>
+  );
+}
+
+/* ───────── 가득 찰 때까지 — 한 번 눌러 두면 보관함 상한(CARD_CAP, 3만 장) 또는 재화까지 같은 팩을 계속 연다 (휴대폰용, 멈추기 가능) ───────── */
+const BULK_MAX = 2000;
+type BulkEnd = 'cap' | 'gp' | 'stop' | 'max';
+const BULK_END_KO: Record<BulkEnd, string> = {
+  cap: `보관함이 ${CARD_CAP_KO} 장을 넘었어요 — 자동 정리로 줄이면 다시 살 수 있어요`,
+  gp: '재화가 다 됐어요',
+  stop: '멈췄어요',
+  max: `한 번에 ${BULK_MAX.toLocaleString()}팩까지예요 — 다시 누르면 이어서 열어요`,
+};
+
+export function BulkOpen({ pack, pick, onClose, onClean, onCombo }: { pack: Pack; pick: Pick | null; onClose: () => void; onClean: () => void; onCombo: () => void }) {
+  const [runs, setRuns] = useState<PullResult[]>([]);
+  const [end, setEnd] = useState<BulkEnd | null>(null);
+  const [detail, setDetail] = useState<PulledCard | null>(null);
+  const stop = useRef(false);
+  const acc = useRef<PullResult[]>([]);
+  const root = useRef<HTMLDivElement>(null);
+  const done = end != null;
+  const start0 = useRef(totalCards());
+
+  // 조금씩 나눠 연다 — 한 번에 팩 4개(저장은 한 번), 그 사이 화면이 숨 쉰다
+  useEffect(() => {
+    let timer = 0;
+    let alive = true;
+    const tick = () => {
+      if (!alive) return;
+      let why: BulkEnd | null = stop.current ? 'stop' : null;
+      if (!why) batchInventory(() => {
+        for (let k = 0; k < 4; k++) {
+          if (totalCards() > CARD_CAP) { why = 'cap'; break; }
+          if (affordCount(pack, readWallet(), 1) < 1) { why = 'gp'; break; }
+          if (acc.current.length >= BULK_MAX) { why = 'max'; break; }
+          acc.current.push(pullPack(pack, pick));
+        }
+      });
+      setRuns(acc.current.slice());
+      if (why) setEnd(why); else timer = window.setTimeout(tick, 24);
+    };
+    timer = window.setTimeout(tick, 150);
+    return () => { alive = false; window.clearTimeout(timer); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const unlock = lockScroll();
+    const last = document.activeElement as HTMLElement | null;
+    root.current?.focus();
+    return () => { unlock(); last?.focus?.(); };
+  }, []);
+  // 스페이스 · Esc — 여는 중이면 멈추기, 끝났으면 닫기
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (detail) return;
+      if (e.key !== 'Escape' && (!isSpace(e) || typingIn(e))) return;
+      e.preventDefault();
+      if (e.repeat) return;
+      if (!done) stop.current = true; else onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('keyup', spaceGuard);
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', spaceGuard); };
+  });
+
+  const sum = useMemo(() => (done && runs.length ? summarize(runs) : null), [done, runs]);
+  const total = totalCards();
+  const cards = runs.length * pack.size;
+  const glow = useMemo(() => runs.reduce((a, r) => a + r.cards.filter((c) => rarity(c.card.grade) >= rarity('legend')).length, 0), [runs]);
+  const lastBest = runs.length ? runs[runs.length - 1].cards[runs[runs.length - 1].best] : null;
+  const pct = Math.min(100, Math.round((total / CARD_CAP) * 1000) / 10);
+  const title = packTitle(pack, pick);
+
+  return createPortal(
+    <div ref={root} className={o.root} role="dialog" aria-modal="true" aria-label={`${title} 가득 찰 때까지 열기`} tabIndex={-1}>
+      <div className={o.bg} aria-hidden />
+      <header className={o.bar}>
+        <p className={o.barTitle}>
+          <b>{title} 계속 열기</b>
+          <span><span className="num">{runs.length}</span>팩 · <span className="num">{cards.toLocaleString()}</span>장</span>
+        </p>
+        {done && <IconButton icon="close" label="닫기" onClick={onClose} className={o.close} />}
+      </header>
+      <main className={[o.body, s.body].join(' ')}>
+        <div className={s.wrap}>
+          <section className={s.bulk} aria-label="계속 열기 진행">
+            <p className={s.bulkBig}><b className="num">{runs.length.toLocaleString()}</b><span>팩</span></p>
+            <div className={s.bar} role="progressbar" aria-valuemin={0} aria-valuemax={CARD_CAP} aria-valuenow={total} aria-label="보관함 카드 수">
+              <i style={{ width: `${pct}%` }} />
+            </div>
+            <p className={s.bulkLine}>
+              보관함 <b className="num">{total.toLocaleString()}</b> / <span className="num">{CARD_CAP.toLocaleString()}</span>장
+              <span> · 이번에 +<span className="num">{Math.max(0, total - start0.current).toLocaleString()}</span></span>
+            </p>
+            <p className={s.bulkLine}>빛나는 카드(엘리트 이상) <b className="num">{glow.toLocaleString()}</b>장</p>
+            {!done && lastBest && (
+              <div className={s.bulkNow}>
+                <span className={s.bulkCard}><FlipCard pc={lastBest} on onOpen={() => {}} label={`방금 팩 최고 ${lastBest.player.name}`} /></span>
+                <small>방금 팩 최고 · {GRADES[lastBest.card.grade].ko} {lastBest.player.name}</small>
+              </div>
+            )}
+            {done && end && <p className={[s.bulkEnd, end === 'cap' && s.bulkCap].filter(Boolean).join(' ')}>{BULK_END_KO[end]}</p>}
+          </section>
+          {sum && <ResultBlock sum={sum} n={runs.length} asked={runs.length} onDetail={setDetail} />}
+        </div>
+      </main>
+      <footer className={o.foot}>
+        {done ? (
+          <div className={o.actions}>
+            {end === 'cap' && <Button variant="primary" size="l" block onClick={onClean}>자동 정리하러 가기</Button>}
+            <div className={o.actions2}>
+              <Button variant="secondary" onClick={onCombo}>조합으로 보내기</Button>
+              <Button variant="secondary" onClick={onClose}>닫기<SpaceKey /></Button>
+            </div>
+          </div>
+        ) : (
+          <div className={s.runFoot}>
+            <p className={s.running}><span className={s.spinner} aria-hidden /><span>여는 중 · {CARD_CAP_KO} 장이 되면 멈춰요</span></p>
+            <Button variant="primary" size="l" onClick={() => { stop.current = true; }}>멈추기<SpaceKey /></Button>
+          </div>
+        )}
+      </footer>
+      <PulledSheet pc={detail} onClose={() => setDetail(null)} onPlayer={(id) => { setDetail(null); onClose(); navigate(`/player/${id}`); }} />
     </div>,
     document.body,
   );

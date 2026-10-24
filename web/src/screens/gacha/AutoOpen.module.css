@@ -31,3 +31,22 @@
 .running > span:last-child { margin-left: 10px; font-size: 12px; color: var(--fg-3); white-space: nowrap; }
 
 @media (prefers-reduced-motion: reduce) { .result { animation: none; } }
+
+/* 가득 찰 때까지 — 진행 */
+.bulk { display: grid; gap: 8px; padding: 6px 0 4px; }
+.bulkBig { display: flex; align-items: baseline; gap: 4px; }
+.bulkBig b { font-size: 44px; line-height: .95; color: var(--fg); }
+.bulkBig span { font-size: 15px; color: var(--fg-3); }
+.bar { height: 10px; border-radius: 999px; background: color-mix(in srgb, var(--fg) 10%, transparent); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 200ms linear; }
+.bulkLine { font-size: 13px; color: var(--fg-2); letter-spacing: -.03em; }
+.bulkLine b { font-size: 15px; color: var(--fg); }
+.bulkLine span { color: var(--fg-3); }
+.bulkNow { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.bulkCard { display: block; width: 72px; }
+.bulkNow small { font-size: 12.5px; color: var(--fg-2); }
+.bulkEnd { margin-top: 4px; font-size: 13.5px; font-weight: 700; color: var(--fg); }
+.bulkCap { color: var(--bad, #e0565b); }
+.spinner { width: 16px; height: 16px; margin-right: 8px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--fg) 25%, transparent); border-top-color: var(--accent); animation: spin 800ms linear infinite; align-self: center; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } .bar i { transition: none; } }

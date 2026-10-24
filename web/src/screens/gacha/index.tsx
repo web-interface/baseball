@@ -20,7 +20,7 @@ import { PackArt } from './PackArt';
 import { OddsBar, PityTally, Price, Swatch, gradeShort } from './bits';
 import { OddsSheet } from './OddsSheet';
 import { Opening, type OpeningStep } from './Opening';
-import { AutoOpen } from './AutoOpen';
+import { AutoOpen, BulkOpen } from './AutoOpen';
 import s from './Gacha.module.css';
 
 const TAB_LABEL: Record<string, string> = { basic: '일반', premium: '프리미엄', special: '스페셜', legend: '레전드', year: '연도', club: '구단' };
@@ -68,6 +68,8 @@ function Store({ query }: { query: URLSearchParams }) {
   // 자동 열기 — 고른 팩 수(1~10) · 연 결과
   const [autoN, setAutoN] = useState(AUTO_MAX);
   const [auto, setAuto] = useState<{ runs: PullResult[]; asked: number } | null>(null);
+  // 가득 찰 때까지 (휴대폰용 — 한 번 눌러 두면 상한까지)
+  const [bulk, setBulk] = useState(0);
 
   const pack = PACKS.find((p) => p.id === packId) ?? PACKS[1];
   const pick: Pick | null = pack.pick?.kind === 'year' ? { kind: 'year', year } : pack.pick?.kind === 'club' ? { kind: 'club', club } : null;
@@ -94,7 +96,7 @@ function Store({ query }: { query: URLSearchParams }) {
   const second = view.rows.find((r) => r.grade === 'legend' && r !== top) ?? view.rows[1];
   const affordable = pack.price.ball != null ? g.wallet.ball >= pack.price.ball : g.wallet.gp >= (pack.price.gp ?? 0);
 
-  // 보관함이 1만 장을 넘으면 카드구매를 막는다 — 선수조합 › 자동 정리로 줄이고 오게 (사용자 지시)
+  // 보관함이 상한(3만 장)을 넘으면 카드구매를 막는다 — 선수조합 › 자동 정리로 줄이고 오게 (사용자 지시)
   const total = totalCards();
   const full = total > CARD_CAP;
   const goClean = () => { setResult(null); setAuto(null); navigate('/combine?auto=1'); };
@@ -203,6 +205,9 @@ function Store({ query }: { query: URLSearchParams }) {
             >
               {nAuto > 0 && nAuto < autoN ? <><span className="num">{nAuto}</span>팩만 자동</> : <><span className="num">{autoN}</span>팩 자동 열기</>}
             </Button>
+            <button type="button" className={s.bulkBtn} onClick={() => { if (totalCards() > CARD_CAP) { goClean(); return; } setBulk(Date.now()); }} disabled={nAuto < 1 || full}>
+              가득 찰 때까지 계속 열기 <small>보관함 <span className="num">{CARD_CAP.toLocaleString()}</span>장까지 · 멈추기 가능</small>
+            </button>
           </div>
           <p className={s.wallet}>
             보유 {pack.price.ball != null
@@ -314,6 +319,16 @@ function Store({ query }: { query: URLSearchParams }) {
           onClose={() => setResult(null)}
           onAgain={affordable ? open : undefined}
           onCombo={() => { setResult(null); navigate('/combine'); }}
+        />
+      )}
+      {bulk > 0 && (
+        <BulkOpen
+          key={bulk}
+          pack={pack}
+          pick={pick}
+          onClose={() => setBulk(0)}
+          onClean={() => { setBulk(0); navigate('/combine?auto=1'); }}
+          onCombo={() => { setBulk(0); navigate('/combine'); }}
         />
       )}
       {auto && (

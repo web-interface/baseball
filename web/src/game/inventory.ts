@@ -283,7 +283,9 @@ export const entryOf = (id: string): InvEntry | undefined => S().cards[id];
 export const ownedCount = (id: string) => S().cards[id]?.n ?? 0;
 export const isOwned = (id: string) => ownedCount(id) > 0;
 /** 보관함 카드 수 상한 — 넘으면 카드구매를 막고 선수조합 › 자동 정리로 줄이게 한다 (사용자 지시) */
-export const CARD_CAP = 10_000;
+export const CARD_CAP = 30_000; // 사용자 지시 (처음 1만 → 3만). 저장은 카드 종류 · 장수라 장수가 늘어도 크기는 종류 수만큼
+/** 상한 글 ('3만') */
+export const CARD_CAP_KO = `${CARD_CAP / 10_000}만`;
 /** 가진 카드 장수 합 (같은 카드 여러 장 포함) */
 export function totalCards(): number {
   let n = 0;
