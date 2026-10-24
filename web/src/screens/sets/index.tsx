@@ -75,6 +75,7 @@ function Rules() {
         <li><b>그 선수에게만</b> — 세트에 든 선수만 받고, 한 선수가 여러 세트에 들면 가장 센 것 하나만 받아요.</li>
         <li><b>공정하게</b> — 같은 종류·같은 단계면 어느 구단·연도든 총합이 같아요. 타자는 8칸 합 = 8 × 단계 가치, 투수는 7칸 합 = 7 × 단계 가치. 상황 효과(득점권 컨택 등)는 반만 쳐요 — 색깔만 다르고 손해는 없어요.</li>
         <li><b>왕조</b> — 엔트리에 한 구단 · 한 연도 카드가 {ENTRY_SIZE}명이면 능력치 폭발.</li>
+        <li><b>연도 없는 카드</b> — 레전드 · 프랜차이즈 · 블랙 · 시그니처 · 특별 선수는 아무 연도로 쳐요. 같은 구단의 구단+연도 세트, 그리고 연도 세트에 함께 들어가 인원으로도 세고 효과도 받아요(왕조 포함).</li>
         <li>케미 선(이웃한 자리의 공통점) 보너스는 세트와 따로 붙어요.</li>
       </ul>
     </section>
@@ -110,7 +111,8 @@ interface Spare { id: string; code: string; year: number | null }
 function MineRow({ sp, spare }: { sp: SetProgress; spare: Spare[] }) {
   const t = sp.code ? teamByCode(sp.code) : undefined;
   const need = sp.next ? sp.next.at : ENTRY_SIZE;
-  const fits = spare.filter((u) => (sp.code ? u.code === sp.code : true) && (sp.year != null ? u.year === sp.year : true));
+  // 연도 없는 카드(레전드급 · 특별 선수)는 아무 연도 — 같은 구단 연도 세트 · 연도 세트에도 든다
+  const fits = spare.filter((u) => (sp.code ? u.code === sp.code : true) && (sp.year != null ? u.year === sp.year || u.year == null : true));
   const more = sp.next ? sp.next.at - sp.have : 0;
   const short = sp.code ? shortLabel(sp.code) : '';
   const want = sp.kind === 'teamYear' ? `${short} ${fmt.yearTag(sp.year! % 100)} 카드` : sp.kind === 'team' ? `${short} 카드(연도 무관)` : `${fmt.yearTag(sp.year! % 100)} 카드(구단 무관)`;

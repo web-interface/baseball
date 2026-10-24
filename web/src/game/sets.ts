@@ -1,4 +1,5 @@
 // 세트덱 — 1군 엔트리(타자 9 · 선발 5 · 불펜 최대 10 · 마무리 1 — 최대 25명) 안에서 같은 구단·같은 연도 카드를 모으면
+// (연도 없는 카드 — 레전드 · 프랜차이즈 · 블랙 · 시그니처 · 특별 선수 — 는 아무 연도로 쳐서 같은 구단 연도 세트 · 연도 세트에 함께 든다)
 // 인원 단계(5 · 9 · 14 · 20명)마다 그 선수들의 능력치가 오른다. 구단+연도 20명이면 왕조.
 //  · 세트 3종: 구단+연도(가장 셈) · 구단(연도 무관) · 연도(구단 무관)
 //  · 오르는 능력치는 조합마다 다르다 — 구단 성향(세계관) + 그 해 성격(구단 연도 기록) / 연도 세트는 그 해 리그 특징
@@ -356,6 +357,15 @@ export function computeSets(members: EntryMember[]): SetsResult {
     if (m.year != null) {
       add(`ty:${m.code}:${m.year}`, 'teamYear', m, m.code, m.year);
       add(`year:${m.year}`, 'year', m, undefined, m.year);
+    }
+  }
+  // 연도 없는 카드(레전드 · 프랜차이즈 · 블랙 · 시그니처 · 특별 선수)는 '아무 연도' — 연도 카드가 만든 세트에 함께 든다
+  //  (같은 구단의 구단+연도 세트 모두 · 연도 세트 모두). 혼자서는 연도 세트를 만들지 않는다. 사용자 지시
+  const wild = members.filter((m) => m.year == null);
+  if (wild.length) {
+    for (const [id, g] of [...groups]) {
+      if (g.kind === 'teamYear') { for (const m of wild) if (m.code === g.code) add(id, 'teamYear', m, g.code, g.year); }
+      else if (g.kind === 'year') { for (const m of wild) add(id, 'year', m, undefined, g.year); }
     }
   }
   const all: SetProgress[] = [...groups.entries()].map(([id, g]) => {
