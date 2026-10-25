@@ -189,3 +189,8 @@
 @media (prefers-reduced-motion: reduce) {
   .ringFg, .clubTile, .cell, .yearTile, .locked > :first-child, .got > :first-child { transition: none; }
 }
+/* 귀한 등급 — 누르면 목록 */
+.gTap { padding: 0 !important; }
+.gBtn { display: grid; gap: 3px; width: 100%; padding: 7px 9px 8px; border-radius: inherit; text-align: left; color: inherit; }
+.gBtn:hover { background: color-mix(in srgb, var(--g) 10%, transparent); }
+.gName em { margin-left: auto; font-style: normal; font-size: 13px; color: var(--fg-3); }

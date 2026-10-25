@@ -5,6 +5,7 @@
 //  · 연도별: 연대마다 시즌 타일 → 그 해: 구단 칩 → 그 구단 · 그 해 카드 판
 //  · 카드 판: 모은 카드는 그대로(여러 장이면 ×n), 못 모은 카드는 흑백 · 어둡게 · 자물쇠 — 누르면 나오는 팩으로
 // 주소: ?mode=club|year · ?club=DJ · ?year=2025 (미리보기 · 공유용)
+import { GradeSheet, LISTED } from './GradeSheet';
 import { useMemo, useState, type CSSProperties } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { navigate, setQueryQuiet } from '../../app/router';
@@ -74,6 +75,7 @@ const GRADE_KO: Partial<Record<GradeId, string>> = { franchise: '프랜차이즈
 const GRADE_SHOW: GradeId[] = (['signature', 'black', 'franchise', 'mvp', 'gg', 'th', 'legend', 'elite', 'rare', 'special', 'normal'] as GradeId[]).sort((a, b) => rarity(b) - rarity(a));
 function Hero({ idx }: { idx: ReturnType<typeof dexIndex> }) {
   const a = idx.all;
+  const [grade, setGrade] = useState<GradeId | null>(null);
   return (
     <header className={s.hero}>
       <div className={s.heroTop}>
@@ -89,14 +91,23 @@ function Hero({ idx }: { idx: ReturnType<typeof dexIndex> }) {
         {GRADE_SHOW.filter((g) => idx.grade.has(g)).map((g) => {
           const t = idx.grade.get(g)!;
           return (
-            <li key={g} className={t.have >= t.total ? s.gDone : undefined} style={{ '--g': `var(--gr-${g})` } as CSSProperties}>
-              <span className={s.gName}><i aria-hidden />{GRADE_KO[g] ?? GRADES[g].ko}</span>
-              <span className={s.gNum}><b className="num">{n(t.have)}</b><span className="num">/{n(t.total)}</span></span>
-              <span className={s.gBar} aria-hidden><i style={{ width: `${pctOf(t)}%` }} /></span>
+            <li key={g} className={[t.have >= t.total && s.gDone, LISTED.includes(g) && s.gTap].filter(Boolean).join(' ') || undefined} style={{ '--g': `var(--gr-${g})` } as CSSProperties}>
+              {LISTED.includes(g)
+                ? <button type="button" className={s.gBtn} onClick={() => setGrade(g)} aria-label={`${GRADE_KO[g] ?? GRADES[g].ko} 카드 목록`}>
+                    <span className={s.gName}><i aria-hidden />{GRADE_KO[g] ?? GRADES[g].ko}<em aria-hidden>›</em></span>
+                    <span className={s.gNum}><b className="num">{n(t.have)}</b><span className="num">/{n(t.total)}</span></span>
+                    <span className={s.gBar} aria-hidden><i style={{ width: `${pctOf(t)}%` }} /></span>
+                  </button>
+                : <>
+                    <span className={s.gName}><i aria-hidden />{GRADE_KO[g] ?? GRADES[g].ko}</span>
+                    <span className={s.gNum}><b className="num">{n(t.have)}</b><span className="num">/{n(t.total)}</span></span>
+                    <span className={s.gBar} aria-hidden><i style={{ width: `${pctOf(t)}%` }} /></span>
+                  </>}
             </li>
           );
         })}
       </ul>
+      <GradeSheet grade={grade} onClose={() => setGrade(null)} />
     </header>
   );
 }

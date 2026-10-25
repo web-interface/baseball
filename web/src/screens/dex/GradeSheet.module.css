@@ -1,0 +1,42 @@
+/* 도감 — 등급별 카드 목록 */
+.title { display: inline-flex; align-items: center; gap: 8px; }
+.title i { width: 12px; height: 12px; border-radius: 3px; background: var(--g); box-shadow: 0 0 10px var(--g); }
+.title b { margin-left: 4px; font-size: 18px; font-weight: 900; }
+.title small { font-size: 13px; font-weight: 700; color: var(--fg-3); }
+
+.show { display: flex; gap: 6px; margin-bottom: 10px; overflow-x: auto; scrollbar-width: none; }
+.show::-webkit-scrollbar { display: none; }
+.chip { flex: none; height: 30px; padding: 0 11px; border-radius: 999px; font-size: 12px; font-weight: 700; color: var(--fg-2); box-shadow: inset 0 0 0 1px var(--line-2); }
+.on { color: var(--accent-ink, #fff); background: var(--accent); box-shadow: none; }
+
+.list { display: grid; gap: 7px; padding-bottom: 14px; }
+.row {
+  display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 12px; width: 100%; padding: 8px 12px 8px 8px; border-radius: 12px; text-align: left; color: var(--fg);
+  background: linear-gradient(100deg, color-mix(in srgb, var(--tc) 16%, transparent), transparent 60%), color-mix(in srgb, var(--fg) 3%, transparent);
+  box-shadow: inset 0 0 0 1px var(--line-2), inset 3px 0 0 var(--tc);
+}
+.card { position: relative; display: block; width: 64px; }
+.copies { position: absolute; top: -5px; right: -6px; z-index: 3; padding: 1px 5px; border-radius: 999px; font-style: normal; font-size: 10px; font-weight: 900; color: #1a1300; background: #ffe08a; }
+.lock { position: absolute; left: 50%; top: 44%; z-index: 3; transform: translate(-50%, -50%); font-style: normal; font-size: 16px; filter: grayscale(1) brightness(1.6); }
+.main { display: grid; gap: 3px; min-width: 0; }
+.top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.top b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 850; letter-spacing: -.04em; }
+.top em { flex: none; padding: 1px 6px; border-radius: 4px; font-style: normal; font-size: 10.5px; font-weight: 800; color: #2a1c00; background: linear-gradient(180deg, #ffe08a, #e0a93a); }
+.main small { font-size: 11.5px; color: var(--fg-3); }
+.stats { display: grid; grid-template-columns: repeat(3, auto); justify-content: start; gap: 2px 10px; font-size: 11px; color: var(--fg-3); }
+.stats i { font-style: normal; margin-right: 3px; }
+.stats b { font-size: 12.5px; color: var(--fg-2); }
+.stats .mid b { color: var(--fg); }
+.stats .hi b { color: #ffcf4d; }
+.ovr { display: grid; justify-items: end; line-height: 1; }
+.ovr b { font-size: 26px; font-weight: 900; letter-spacing: -.05em; }
+.ovr small { margin-top: 3px; font-size: 10px; color: var(--fg-3); }
+
+/* 못 모은 카드 — 흑백 · 흐리게 */
+.locked .card > :first-child { filter: grayscale(1) brightness(.55); opacity: .6; }
+.locked .card :global([class*='aura']), .locked .card :global([class*='shine']), .locked .card :global([class*='glint']), .locked .card :global([class*='holo']) { display: none !important; }
+.locked .main, .locked .ovr { opacity: .55; }
+.got .row { cursor: pointer; }
+.got .row:hover { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--tc) 60%, var(--line-2)), inset 3px 0 0 var(--tc); }
+.more { height: 24px; text-align: center; color: var(--fg-3); }
+.none { padding: 20px 4px; text-align: center; font-size: 13px; color: var(--fg-3); }
