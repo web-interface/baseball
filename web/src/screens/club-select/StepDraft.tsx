@@ -24,7 +24,7 @@ export function StepDraft({ st, set, go, Dock }: StepProps) {
 
   const toggle = (p: Player) => {
     if (st.picks.includes(p.id)) { set({ picks: st.picks.filter((x) => x !== p.id) }); return; }
-    if (st.picks.length >= 3) { toast({ text: '세 명까지예요. 먼저 한 명을 빼 주세요', tone: 'bad' }); return; }
+    if (st.picks.length >= 3) { toast({ text: '세 명까지예요', tone: 'bad' }); return; }
     set({ picks: [...st.picks, p.id] });
   };
 
@@ -33,11 +33,6 @@ export function StepDraft({ st, set, go, Dock }: StepProps) {
       <header className={s.head}>
         <p className={s.kicker}>{t.old ? '부활 구단 창단' : '클럽 창단'} · {t.name}</p>
         <h1 className={s.title}>{shortLabel(t.code)}에서 세 명을 데려와요</h1>
-        {t.old ? (
-          <p className={s.lead}>후보는 {t.name}의 옛 시즌 주축이에요. 지명한 선수는 <b>그 선수가 뛴 해의 시즌 카드</b>로 와요(등급은 그 해 실제 성적으로). 나머지 기본 선수단 22장은 2027 리그의 다른 구단 최근 시즌 카드로 채워 드려요.</p>
-        ) : (
-          <p className={s.lead}>후보는 최근 세 시즌의 젊은 선수예요. 지명한 선수는 <b>그 시즌 카드</b>로 와요(등급은 그 해 실제 성적으로). 나머지 기본 선수단 22장은 다른 구단 최근 시즌 카드로 채워 드려요.</p>
-        )}
       </header>
 
       <div className={d.slots} aria-label="지명한 선수">
@@ -100,11 +95,8 @@ export function StepDraft({ st, set, go, Dock }: StepProps) {
           );
         })}
       </ul>
-      <p className={d.note}>
-        지명 세 명 + 특별 선수면 <b>{shortLabel(t.code)} <span className="num">4/5</span></b> — 같은 구단 카드 한 장만 더 모으면 구단 세트가 켜져요. {t.old ? '옛 시즌 카드는 영입의 구단팩·연도팩에서 나와요.' : '연도가 서로 달라 처음엔 세트덱이 없어요.'}
-      </p>
 
-      <Dock note={<span><b>지명 <span className="num">{st.picks.length}</span>/3</b><small>{picked.map((p) => p.name).join(' · ') || '세 명을 골라 주세요'}</small></span>}>
+      <Dock note={<span><b>지명 <span className="num">{st.picks.length}</span>/3</b>{picked.length > 0 && <small>{picked.map((p) => p.name).join(' · ')}</small>}</span>}>
         <Button size="l" disabled={st.picks.length < 3} onClick={() => go('special')} trailing={<Icon name="arrow-right" size={18} />}>다음</Button>
       </Dock>
     </>

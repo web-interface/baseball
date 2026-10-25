@@ -39,10 +39,6 @@ export default function TacticsScreen({ query }: ScreenProps) {
     <div className={s.screen}>
       <header className={s.top}>
         <h2 className={['head', s.title].join(' ')}>전술</h2>
-        <p className={s.lead}>
-          경기 전에 정해 두면 시즌 경기 · 빨리 감기 · 가을야구의 <b>우리 경기</b>에 그대로 들어가요.
-          전술은 판단의 기울기만 바꾸고, 결과는 선수 실력이 정해요.
-        </p>
       </header>
 
       <AdviceCard tac={tac} />
@@ -58,7 +54,7 @@ export default function TacticsScreen({ query }: ScreenProps) {
       {tab === 'bat' && <PlayerTab kind="bat" tac={tac} />}
       {tab === 'pit' && <PlayerTab kind="pit" tac={tac} />}
 
-      <p className={s.foot}>대전(다른 감독 구단과의 경기)은 서버가 팀 종합으로 결과를 정해서 전술이 들어가지 않아요.</p>
+      <p className={s.foot}>대전에는 적용되지 않아요</p>
     </div>
   );
 }
@@ -78,9 +74,8 @@ function TeamTab({ tac }: { tac: TacState }) {
             const fx = d.opts.find((o) => o.v === v)?.fx;
             return (
               <div key={d.key} className={[s.opt, v !== d.def && s.optSet].filter(Boolean).join(' ')}>
-                <div className={s.optHead}>
+                <div className={s.optHead} title={d.help}>
                   <b>{d.ko}</b>
-                  <small>{d.help}</small>
                 </div>
                 <Seg opts={d.opts} value={v} label={d.ko} onChange={(x) => setTeamTac(d.key, x)} />
                 {fx && <p className={s.fx}>{fx}</p>}
@@ -91,7 +86,7 @@ function TeamTab({ tac }: { tac: TacState }) {
       ))}
       {changed > 0 && (
         <div className={s.resetRow}>
-          <Button variant="ghost" size="s" onClick={() => { saveTactics({ ...tac, team: {} }); toast({ text: '팀 전술을 모두 기본으로 되돌렸어요', tone: 'info' }); }}>팀 전술 모두 기본으로</Button>
+          <Button variant="ghost" size="s" onClick={() => { saveTactics({ ...tac, team: {} }); toast({ text: '기본으로 되돌렸어요', tone: 'info' }); }}>모두 기본값</Button>
         </div>
       )}
     </section>
@@ -129,7 +124,6 @@ function PlayerTab({ kind, tac }: { kind: 'bat' | 'pit'; tac: TacState }) {
   const map = kind === 'bat' ? tac.bat : tac.pit;
   return (
     <section className={s.sec} aria-label={kind === 'bat' ? '타자별 전술' : '투수별 전술'}>
-      <p className={s.hint}>{kind === 'bat' ? '타순 1~9번. 누르면 그 타자만 따로 정해요 — 안 정하면 팀 전술을 따라요.' : '선발 · 불펜 · 마무리. 누르면 그 투수만 따로 정해요.'}</p>
       <ul className={s.list}>
         {rows.map((r) => {
           const u = unit(r.id);
@@ -148,7 +142,7 @@ function PlayerTab({ kind, tac }: { kind: 'bat' | 'pit'; tac: TacState }) {
             </li>
           );
         })}
-        {!rows.length && <li className={s.empty}>라인업이 비어 있어요. 팀관리 › 라인업에서 먼저 채워 주세요.</li>}
+        {!rows.length && <li className={s.empty}>라인업이 비어 있어요</li>}
       </ul>
       <PlayerSheet kind={kind} row={open} tac={tac} onClose={() => setOpen(null)} />
     </section>
@@ -178,7 +172,6 @@ function PlayerSheet({ kind, row, tac, onClose }: { kind: 'bat' | 'pit'; row: Ro
               </div>
             );
           })}
-          {kind === 'pit' && !isSp && <p className={s.hint}>투구 수 한도는 선발만 정해요 — 불펜은 이닝마다 바꿔요.</p>}
         </div>
       )}
     </Sheet>
@@ -195,7 +188,7 @@ function AdviceCard({ tac }: { tac: TacState }) {
     if (busy) return;
     setBusy(true);
     try { setOut(await askAdvice(buildAdviceInput(tac))); }
-    catch { toast({ text: '분석을 만들지 못했어요. 잠시 뒤 다시 해 주세요', tone: 'bad' }); }
+    catch { toast({ text: '분석하지 못했어요', tone: 'bad' }); }
     finally { setBusy(false); }
   };
   const applyTeam = (key: TeamKey, v: string) => setTeamTac(key, v);
@@ -205,7 +198,7 @@ function AdviceCard({ tac }: { tac: TacState }) {
     for (const x of out.team) t.team[x.key] = x.v;
     for (const p of out.players) { const m = p.kind === 'bat' ? t.bat : t.pit; m[p.id] = { ...(m[p.id] ?? {}), ...p.set }; }
     saveTactics(t);
-    toast({ text: '추천 전술을 모두 적용했어요', tone: 'good' });
+    toast({ text: '모두 적용했어요', tone: 'good' });
   };
   const teamApplied = (key: TeamKey, v: string) => teamVal(tac, key) === v;
   const playerApplied = (p: AdviceOut['players'][number]) => { const m = (p.kind === 'bat' ? tac.bat : tac.pit)[p.id] ?? {}; return Object.entries(p.set).every(([k, v]) => (m as Record<string, string>)[k] === v); };
@@ -218,7 +211,6 @@ function AdviceCard({ tac }: { tac: TacState }) {
         <p className={s.coachK}>수석코치 분석</p>
         {out && <span className={out.source === 'ai' ? s.srcAi : s.srcRule}>{out.source === 'ai' ? 'Claude 분석' : '기본 분석'}</span>}
       </div>
-      {!out && <p className={s.coachLead}>라인업 · 능력치 · 이번 시즌 기록을 보고 강점과 약점, 경기 전 전술을 추천해요.</p>}
       {out && (
         <>
           <p className={s.headline}>{out.headline}</p>
@@ -267,7 +259,7 @@ function AdviceCard({ tac }: { tac: TacState }) {
         <Button variant={out ? 'secondary' : 'primary'} size="s" onClick={run} loading={busy} disabled={busy}>
           {busy ? '분석 중…' : out ? '다시 분석' : '팀 분석 받기'}
         </Button>
-        <small className={s.left}>Claude 분석 오늘 <b className="num">{left}</b>/{ADVICE_DAILY}번</small>
+        <small className={s.left}>오늘 <b className="num">{left}</b>/{ADVICE_DAILY}번</small>
       </div>
     </section>
   );

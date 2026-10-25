@@ -11,7 +11,7 @@ import { navigate } from '../../app/router';
 import { CardMini, cardProps } from '../../cards';
 import { GRADES } from '../../game/grades';
 import { cardInst, playerOfKCard } from '../../game/kbo';
-import { CARD_CAP, CARD_CAP_KO, totalCards, useInventory } from '../../game/inventory';
+import { CARD_CAP, totalCards, useInventory } from '../../game/inventory';
 import { spend, useWallet } from '../../game/wallet';
 import { shortLabel } from '../../game/world';
 import { MAX_MATS, MIN_MATS, analyze, reelOf, type CombineView, type Side } from '../../game/combine';
@@ -80,19 +80,19 @@ export default function CombineScreen({ query }: ScreenProps) {
   const add = (m: Mat) => {
     if (run) return;
     if (usedOf(m.id) >= m.spare) return;
-    if (slots.length >= MAX_MATS) { toast('조합 대기가 다 찼어요. 넣은 카드를 누르면 빠져요'); return; }
+    if (slots.length >= MAX_MATS) { toast(`${MAX_MATS}장까지예요`); return; }
     setSlots([...slots, m.id]);
   };
   const removeAt = (i: number) => { if (!run) setSlots(slots.filter((_, k) => k !== i)); };
 
   const go = () => {
     if (run || !view.ready) return;
-    if (wallet.gp < view.fee) { toast({ text: `GP가 모자라요. 조합에 ${fmt.int(view.fee)} GP가 들어요`, tone: 'bad' }); return; }
+    if (wallet.gp < view.fee) { toast({ text: 'GP가 모자라요', tone: 'bad' }); return; }
     const use: Record<string, number> = {};
     for (const id of slots) use[id] = (use[id] ?? 0) + 1;
     const r = rollComboWith({ view, use, pay: () => spend({ gp: view.fee }) });
     if (!r.ok) {
-      toast({ text: r.why === 'gp' ? 'GP가 모자라요' : r.why === 'material' ? '재료 카드가 바뀌었어요. 다시 골라 주세요' : '지금은 조합할 수 없어요', tone: 'bad' });
+      toast({ text: r.why === 'gp' ? 'GP가 모자라요' : r.why === 'material' ? '재료가 바뀌었어요' : '지금은 조합할 수 없어요', tone: 'bad' });
       if (r.why === 'material') setSlots([]);
       return;
     }
@@ -116,7 +116,7 @@ export default function CombineScreen({ query }: ScreenProps) {
     const ids = refill(prev.view, prev.grades, fresh, new Set([prev.resultId]));
     setSlots(ids);
     const want = prev.view.n;
-    toast(ids.length >= want ? '같은 공식으로 다시 채웠어요' : ids.length ? `같은 공식 카드가 ${ids.length}장뿐이에요. 더 골라 주세요` : '같은 공식으로 채울 카드가 없어요');
+    toast(ids.length >= want ? '같은 공식으로 다시 채웠어요' : ids.length ? `같은 공식 카드가 ${ids.length}장뿐이에요` : '같은 공식으로 채울 카드가 없어요');
     top.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -128,7 +128,7 @@ export default function CombineScreen({ query }: ScreenProps) {
     <div className={s.page}>
       <header className={s.head} ref={top}>
         <h1 className={['head', s.h1].join(' ')}>선수조합</h1>
-        <p className={s.lead}>안 쓰는 카드 3~5장을 넣으면 새 카드 1장이 나와요. 공식이 맞을수록 위 등급이 잘 떠요.</p>
+        <p className={s.lead}>카드 3~5장으로 새 카드 1장</p>
       </header>
 
       {/* ───── 자동 정리 — 카드가 많이 쌓였을 때 (상한 3만 장을 넘으면 카드구매가 막힌다) ───── */}
@@ -136,7 +136,7 @@ export default function CombineScreen({ query }: ScreenProps) {
         <span className={s.autoText}>
           <b>자동 정리</b>
           <small>
-            보유 <span className="num">{fmt.int(total)}</span>장{total > CARD_CAP ? ` · ${CARD_CAP_KO} 장을 넘어 카드구매가 막혔어요` : ''} — 남길 등급 · 구단만 고르면 나머지를 5장씩 빠르게 조합해요
+            보유 <span className="num">{fmt.int(total)}</span>장{total > CARD_CAP ? ' · 상한 초과' : ''}
           </small>
         </span>
         <Icon name="chevron" size={18} />
@@ -170,7 +170,6 @@ export default function CombineScreen({ query }: ScreenProps) {
             );
           })}
         </ol>
-        <p className={s.slotHint}>{slots.length ? '넣은 카드를 누르면 빠져요' : '아래 목록에서 카드를 누르면 여기로 들어와요'}</p>
       </section>
 
       <Recipe view={view} />
@@ -209,11 +208,11 @@ export default function CombineScreen({ query }: ScreenProps) {
 
         {mats.length === 0 ? (
           <div className={s.empty}>
-            <p>조합에 쓸 카드가 없어요. 라인업 · 강화 · 훈련한 카드는 1장을 남기고, 특별 선수는 쓰지 않아요.</p>
+            <p>조합에 쓸 카드가 없어요</p>
             <Button variant="secondary" size="s" onClick={() => navigate('/gacha')}>카드구매</Button>
           </div>
         ) : side.length === 0 ? (
-          <div className={s.empty}><p>쓸 수 있는 {tab === 'P' ? '투수' : '타자'} 카드가 없어요.</p></div>
+          <div className={s.empty}><p>쓸 수 있는 {tab === 'P' ? '투수' : '타자'} 카드가 없어요</p></div>
         ) : (
           <ul className={s.grid}>
             {inc.shown.map((m) => {

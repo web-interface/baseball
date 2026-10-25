@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { navigate, setQueryQuiet } from '../../app/router';
 import { useAuth } from '../../app/auth';
-import { Button, Emblem, Icon, Sheet, Tabs, fmt, useToast } from '../../ui';
+import { Button, Emblem, Sheet, Tabs, fmt, useToast } from '../../ui';
 import { CardMini } from '../../cards';
 import { POS_KO } from '../../game/labels';
 import { teamById } from '../../game/mock';
@@ -92,7 +92,7 @@ function Lobby({ query, left, extra }: { query: URLSearchParams; left: number; e
 
   return (
     <div className={s.screen}>
-      {demo && <p className={s.demo}>예시 화면이에요 — 서버에 아무것도 보내지 않아요.</p>}
+      {demo && <p className={s.demo}>예시 화면</p>}
       {real ? <RealBoard me={real} today={on.st.kind === 'ready' ? on.st.today : null} games={on.games} /> : <MockBoard left={left} extra={extra} user={user} />}
 
       <div className={s.tabsWrap}>
@@ -104,7 +104,6 @@ function Lobby({ query, left, extra }: { query: URLSearchParams; left: number; e
           <section className={s.sec}>
             <header className={s.secHead}>
               <h3 className="head">다른 감독</h3>
-              <span className={s.secMeta}>저장된 구단과 혼자 붙어요 · 상대는 접속 안 해도 돼요</span>
             </header>
             <RealList on={on} onPeek={setPeekReal} onStart={start} />
           </section>
@@ -112,7 +111,7 @@ function Lobby({ query, left, extra }: { query: URLSearchParams; left: number; e
           <section className={s.sec}>
             <header className={s.secHead}>
               <h3 className="head">AI 구단</h3>
-              <span className={s.secMeta}>연습 상대 · 결과는 이 기기에서만, 순위에 안 들어가요</span>
+              <span className={s.secMeta}>연습용</span>
             </header>
             <ul className={s.opps}>
               {PVP_OPPONENTS.map((o) => {
@@ -124,7 +123,7 @@ function Lobby({ query, left, extra }: { query: URLSearchParams; left: number; e
                       <span className={s.oppBody}>
                         <span className={s.oppName}>
                           <b>{tm.name}</b>
-                          {o.rival && <em className={s.tag}>{o.rival === 'rival' ? '라이벌 · 보상 2배' : '설욕전'}</em>}
+                          {o.rival && <em className={s.tag}>{o.rival === 'rival' ? '라이벌 ×2' : '설욕전'}</em>}
                         </span>
                         <span className={s.oppSub}>
                           {o.user} <span className={s.ai}>(AI)</span> · <span className="num">{o.record.w}</span>승 <span className="num">{o.record.d}</span>무 <span className="num">{o.record.l}</span>패 <span className="num">{pctOf(o.record.w, o.record.l)}</span>
@@ -144,11 +143,7 @@ function Lobby({ query, left, extra }: { query: URLSearchParams; left: number; e
                 );
               })}
             </ul>
-            <p className={s.note}>AI 구단은 감독이 없는 연습 상대예요. 이름 옆에 (AI)가 붙어요.</p>
           </section>
-          <p className={s.foot}>
-            <Icon name="info" size={14} /> 순위는 위 메뉴 <button type="button" className={s.linkBtn} onClick={() => navigate('/rank')}>순위</button> 탭에서 봐요.
-          </p>
         </>
       )}
 
@@ -182,9 +177,9 @@ function RealBoard({ me, today, games }: { me: PvpClub; today: { used: number; l
           <i>레이팅</i>
           <b className="num-display">{fmt.int(me.rating)}</b>
           {games.length > 0 && <span className={['num', s.delta].join(' ')}>{fmt.signed(sessionDelta)}</span>}
-          <small>시작 <span className="num">1,500</span> · 팀 종합 <span className="num">{me.ovr}</span> · 전력 <span className="num">{fmt.int(me.power)}</span></small>
+          <small>팀 종합 <span className="num">{me.ovr}</span> · 전력 <span className="num">{fmt.int(me.power)}</span></small>
         </div>
-        {series.length >= 2 ? <Spark values={series} className={s.spark} label="이번 접속 레이팅" /> : <span className={s.sparkEmpty}>대전하면 레이팅 흐름이 여기 그려져요</span>}
+        {series.length >= 2 ? <Spark values={series} className={s.spark} label="이번 접속 레이팅" /> : null}
       </div>
       {games.length > 0 && (
         <div className={s.recent} aria-label="이번 접속 대전">
@@ -220,7 +215,7 @@ function MockBoard({ left, extra, user }: { left: number; extra: { rating: numbe
           <i>레이팅 · 예시</i>
           <b className="num-display">{fmt.int(rating)}</b>
           <span className={['num', s.delta].join(' ')}>{fmt.signed(ME.ratingDelta + extra.rating)}</span>
-          <small>전체 <span className="num">{MY_RANK.rating.rank}</span>위 · 로그인하면 내 실제 전적이 나와요</small>
+          <small>전체 <span className="num">{MY_RANK.rating.rank}</span>위</small>
         </div>
         <Spark values={series} className={s.spark} label="최근 20판 레이팅" />
       </div>
@@ -238,22 +233,22 @@ function RealList({ on, onPeek, onStart }: { on: ReturnType<typeof usePvpOnline>
   if (st.kind === 'out') {
     return (
       <div className={s.empty}>
-        <p><b>로그인하면 다른 감독 구단과 붙을 수 있어요.</b> 내 구단도 자동으로 상대 목록에 올라가요.</p>
+        <p><b>로그인이 필요해요</b></p>
         <Button size="s" variant="secondary" onClick={() => navigate('/login')}>로그인</Button>
       </div>
     );
   }
-  if (st.kind === 'loading') return <p className={s.emptyLine}>다른 감독을 찾는 중이에요…</p>;
+  if (st.kind === 'loading') return <p className={s.emptyLine}>불러오는 중…</p>;
   if (st.kind === 'error') {
     return (
       <div className={s.empty}>
-        <p><b>목록을 못 불러왔어요.</b> {st.msg}</p>
-        <Button size="s" variant="secondary" onClick={() => void on.reload()}>다시 불러오기</Button>
+        <p><b>못 불러왔어요</b> {st.msg}</p>
+        <Button size="s" variant="secondary" onClick={() => void on.reload()}>다시 시도</Button>
       </div>
     );
   }
   if (st.opponents.length === 0) {
-    return <div className={s.empty}><p><b>아직 다른 감독이 없어요.</b> 내 구단은 올려 뒀으니, 누가 들어오면 여기 나와요. 그동안 아래 AI 구단과 붙어 보세요.</p></div>;
+    return <div className={s.empty}><p><b>아직 다른 감독이 없어요</b></p></div>;
   }
   const out = st.today.used >= st.today.limit;
   return (
@@ -289,10 +284,7 @@ function RealList({ on, onPeek, onStart }: { on: ReturnType<typeof usePvpOnline>
           );
         })}
       </ul>
-      <p className={s.note}>
-        결과는 서버가 두 팀 종합·전력으로 정해요. 강팀도 질 수 있어요. 12회까지 같으면 무승부.
-        {out ? ' 오늘 대전을 다 했어요 — 오전 9시에 다시 채워져요.' : ` 하루 ${st.today.limit}판까지.`}
-      </p>
+      {out && <p className={s.note}>오전 9시에 다시 채워져요</p>}
     </>
   );
 }
@@ -311,7 +303,7 @@ function RealSheet({ opp, onClose, onStart, busy }: { opp: PvpClub | null; onClo
       open={!!opp}
       onClose={onClose}
       title={opp ? `${opp.teamName} · ${opp.username}` : ''}
-      sub={opp ? <>저장된 라인업 · 팀 종합 <span className="num">{opp.ovr}</span> · 전력 <span className="num">{fmt.int(opp.power)}</span> · 레이팅 <span className="num">{fmt.int(opp.rating)}</span></> : undefined}
+      sub={opp ? <>팀 종합 <span className="num">{opp.ovr}</span> · 전력 <span className="num">{fmt.int(opp.power)}</span></> : undefined}
       footer={opp ? <Button block disabled={busy} onClick={() => onStart(opp)}>대전 시작</Button> : undefined}
     >
       {opp && <TeamLineup cards={cardsFromSnapshot(opp.lineup ?? [])} onOpen={onClose} />}
@@ -327,8 +319,8 @@ function OpponentSheet({ opp, onClose, disabled }: { opp: PvpOpponent | null; on
       open={!!opp}
       onClose={onClose}
       title={side ? `${side.team.name} · ${side.user}` : ''}
-      sub={side ? `저장 라인업 「${side.lineupName}」 · ${side.savedAgo} 저장 · ${side.style}` : undefined}
-      footer={opp ? <Button block disabled={disabled} onClick={() => { onClose(); navigate(`/pvp?vs=${opp.id}`); }} trailing={<span>승 {fmt.int(opp.reward)} GP</span>}>이 라인업에 도전</Button> : undefined}
+      sub={side ? `「${side.lineupName}」 · ${side.style}` : undefined}
+      footer={opp ? <Button block disabled={disabled} onClick={() => { onClose(); navigate(`/pvp?vs=${opp.id}`); }} trailing={<span>승 {fmt.int(opp.reward)} GP</span>}>도전</Button> : undefined}
     >
       {side && <TeamLineup cards={cardsFromMockSide(side)} onOpen={onClose} />}
     </Sheet>
@@ -347,7 +339,6 @@ function MyLog({ games }: { games: SessionGame[] }) {
         <section className={s.sec}>
           <header className={s.secHead}>
             <h3 className="head">다른 감독과 한 대전</h3>
-            <span className={s.secMeta}>누르면 그 경기를 다시 봐요 · 서버 기록</span>
           </header>
           <ul className={s.log}>
             {saved.map((x) => (
@@ -367,7 +358,7 @@ function MyLog({ games }: { games: SessionGame[] }) {
       <section className={s.sec}>
         <header className={s.secHead}>
           <h3 className="head">AI 구단과 한 대전</h3>
-          <span className={s.secMeta}>예시 기록 · 다시 보기는 하이라이트만</span>
+          <span className={s.secMeta}>예시</span>
         </header>
         <ul className={s.log}>
           {log.map((x, i) => {
@@ -387,7 +378,7 @@ function MyLog({ games }: { games: SessionGame[] }) {
       <section className={s.sec}>
         <header className={s.secHead}>
           <h3 className="head">구단별 상대 전적</h3>
-          <span className={s.secMeta}>AI 구단 예시 · 상대 구단 기준</span>
+          <span className={s.secMeta}>예시</span>
         </header>
         <ul className={s.clubs}>
           {clubs.map((c) => {
@@ -408,7 +399,6 @@ function MyLog({ games }: { games: SessionGame[] }) {
         </ul>
         <p className={s.legend}><i className={s.clW} />승 <i className={s.clD} />무 <i className={s.clL} />패</p>
       </section>
-      <p className={s.foot}><Icon name="info" size={14} /> 다른 감독과의 대전 결과는 서버가 정하고, 새로고침해도 바뀌지 않아요.</p>
     </>
   );
 }

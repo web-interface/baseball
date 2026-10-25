@@ -27,15 +27,17 @@ export default function LeagueScreen({ query }: ScreenProps) {
     <div className={s.screen}>
       <header className={s.head}>
         <h2 className={['head', s.h].join(' ')}><span className="num">{year}</span> 순위·리그 기록</h2>
-        <p className={s.meta}>{played === 0 ? '개막 전 · 모든 구단 0승 0무 0패' : isOver(st) ? '정규 시즌 끝' : <>정규 시즌 진행 중 · <span className="num">{played}</span>/<span className="num">{days.length}</span>일</>}</p>
+        <p className={s.meta}>{played === 0 ? '개막 전' : isOver(st) ? '정규 시즌 끝' : <><span className="num">{played}</span>/<span className="num">{days.length}</span>일</>}</p>
       </header>
 
       <Standings st={st} />
 
-      <section className={s.sec} aria-label="순위 경쟁">
-        <h3 className={s.secH}>순위 경쟁 <small>날마다 순위</small></h3>
-        <RankChart hist={st.rankHist} dates={dates} total={days.length} />
-      </section>
+      {played > 0 && (
+        <section className={s.sec} aria-label="순위 경쟁">
+          <h3 className={s.secH}>순위 경쟁</h3>
+          <RankChart hist={st.rankHist} dates={dates} total={days.length} />
+        </section>
+      )}
 
       {st.post && <PostSummary st={st} />}
 
@@ -58,7 +60,7 @@ function Standings({ st }: { st: SeasonState }) {
   const seeds = st.post?.seeds.length ?? 5;
   return (
     <section className={s.sec} aria-label="팀 순위">
-      <h3 className={s.secH}>팀 순위 <small><span className="num">{seeds}</span>위까지 포스트시즌 · 승률 = 승 ÷ (승 + 패)</small></h3>
+      <h3 className={s.secH}>팀 순위</h3>
       <div className={s.tblWrap}>
         <table className={s.stand}>
           <thead>
@@ -103,15 +105,15 @@ function Standings({ st }: { st: SeasonState }) {
           </tbody>
         </table>
       </div>
-      <p className={s.hint}><Icon name="swap" size={12} /> 표는 옆으로 밀어서 봐요 · 굵은 선 위가 포스트시즌</p>
+      <p className={s.hint}>굵은 선 위가 포스트시즌</p>
       <Sheet
         open={!!peek}
         onClose={() => setPeek(null)}
         title={peek ? teamById(peek).name : ''}
-        sub={peekRoster ? <>{peek === ME.teamId ? '내 라인업' : '지금 시즌 선수단'} · 팀 종합 <span className="num">{peekRoster.ovr}</span></> : undefined}
+        sub={peekRoster ? <>팀 종합 <span className="num">{peekRoster.ovr}</span></> : undefined}
         height="tall"
       >
-        {peekRoster ? <TeamLineup cards={cardsFromRoster(peekRoster)} onOpen={() => setPeek(null)} /> : peek ? <p className={s.peekNote}>선수단을 불러오지 못했어요.</p> : null}
+        {peekRoster ? <TeamLineup cards={cardsFromRoster(peekRoster)} onOpen={() => setPeek(null)} /> : peek ? <p className={s.peekNote}>선수단을 불러오지 못했어요</p> : null}
       </Sheet>
     </section>
   );
@@ -235,17 +237,19 @@ function Leaders({ st, query }: { st: SeasonState; query: URLSearchParams }) {
   return (
     <section className={s.sec} aria-label="개인 기록">
       <h3 className={s.secH}>
-        개인 기록 <small>TOP 10 · 정규 시즌</small>
+        개인 기록 <small>TOP 10</small>
         <Tabs className={s.sideTabs} variant="box" size="s" aria-label="타자 · 투수" value={side} onChange={setSide} items={[{ value: 'bat', label: '타자' }, { value: 'pit', label: '투수' }]} />
       </h3>
       <div ref={catsRef} className={s.cats}>
         <Tabs size="s" aria-label="부문" value={cat} onChange={setCat} items={CATS[side].map((x) => ({ value: x.value, label: x.label }))} />
       </div>
-      <p className={s.rule}>
-        {side === 'bat'
-          ? <>규정타석 = 소속 팀 경기 × 3.1 — 타율 · OPS 에만 적용{myGames ? <> · 우리 구단 <span className="num">{myGames}</span>경기면 <b className="num">{Math.ceil(myGames * 3.1)}</b>타석</> : null}</>
-          : <>규정이닝 = 소속 팀 경기 × 1.0 — 평균자책점 · WHIP 에만 적용{myGames ? <> · 우리 구단 <span className="num">{myGames}</span>경기면 <b className="num">{myGames}</b>이닝</> : null}</>}
-      </p>
+      {info.rate && myGames > 0 && (
+        <p className={s.rule} title={side === 'bat' ? '팀 경기 × 3.1' : '팀 경기 × 1.0'}>
+          {side === 'bat'
+            ? <>규정타석 <b className="num">{Math.ceil(myGames * 3.1)}</b></>
+            : <>규정이닝 <b className="num">{myGames}</b></>}
+        </p>
+      )}
       {list.length ? (
         <ol className={s.leaders}>
           {list.map((e) => {
@@ -270,7 +274,7 @@ function Leaders({ st, query }: { st: SeasonState; query: URLSearchParams }) {
           })}
         </ol>
       ) : (
-        <p className={s.empty}>{st.next === 0 ? '개막 전이라 기록이 없어요.' : info.rate ? `아직 ${side === 'bat' ? '규정타석' : '규정이닝'}을 채운 선수가 없어요.` : '아직 기록이 없어요.'}</p>
+        <p className={s.empty}>{st.next === 0 ? '아직 기록이 없어요' : info.rate ? `${side === 'bat' ? '규정타석' : '규정이닝'}을 채운 선수가 없어요` : '아직 기록이 없어요'}</p>
       )}
     </section>
   );

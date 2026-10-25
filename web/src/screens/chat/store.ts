@@ -258,7 +258,7 @@ export const liveChat: ChatSource = {
     const text = raw.replace(/\s+/g, ' ').trim();
     if (!text) return '내용을 써 주세요';
     if ([...text].length > state.maxLen) return `${state.maxLen}자까지 쓸 수 있어요`;
-    if (!state.me) return state.meChecked || !ws ? '로그인하면 채팅할 수 있어요' : '로그인을 확인하는 중이에요. 잠시 뒤 보내 주세요';
+    if (!state.me) return state.meChecked || !ws ? '로그인하면 채팅할 수 있어요' : '로그인 확인 중이에요';
     const sock = ws;
     if (!sock || sock.readyState !== WebSocket.OPEN || state.status !== 'open') return '연결되면 보낼 수 있어요';
     const wait = 3000 - (now() - lastSendAt);

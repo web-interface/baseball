@@ -11,13 +11,12 @@ import { Button, IconButton } from '../../ui';
 import { roman } from '../../ui/format';
 import { lockScroll } from '../../ui/scrollLock';
 import { affordCount, packTitle, pullPack, rarity, summarize, type Pick, type PullResult, type PulledCard } from './draw';
-import { CARD_CAP, CARD_CAP_KO, batchInventory, totalCards } from '../../game/inventory';
+import { CARD_CAP, batchInventory, totalCards } from '../../game/inventory';
 import { readWallet } from '../../game/wallet';
 import type { Pack } from '../../game/types';
 import { PulledSheet, SpaceKey, isSpace, spaceGuard, typingIn, upText } from './Opening';
 import { Price, Swatch, gradeFill, gradeShort } from './bits';
-import { quotaKo, quotaPacks, quotaView, spendQuota } from './autoQuota';
-import { LEVEL_KO } from '../../season/league';
+import { quotaPacks, spendQuota } from './autoQuota';
 import o from './Opening.module.css';
 import s from './AutoOpen.module.css';
 
@@ -160,12 +159,12 @@ export function AutoOpen({ runs, asked, onClose, onAgain, againN = 0, note, onCo
             {onAgain && againN > 0 && (
               <Button variant="primary" size="l" block onClick={onAgain} className={o.again}
                 trailing={<Price price={first.pack.price.ball != null ? { ball: (first.pack.price.ball ?? 0) * againN } : { gp: (first.pack.price.gp ?? 0) * againN }} />}>
-                <span className="num">{againN}</span>팩 더 자동 열기<SpaceKey />
+                <span className="num">{againN}</span>팩 더 열기<SpaceKey />
               </Button>
             )}
             {note && !(onAgain && againN > 0) && <p className={s.quotaNote}>{note}</p>}
             <div className={o.actions2}>
-              <Button variant="secondary" onClick={onCombo}>조합으로 보내기</Button>
+              <Button variant="secondary" onClick={onCombo}>선수조합</Button>
               <Button variant="secondary" onClick={onClose}>닫기</Button>
             </div>
           </div>
@@ -194,7 +193,7 @@ function ResultBlock({ sum, n, asked, onDetail }: { sum: ReturnType<typeof summa
     <section className={s.result} aria-label="자동 열기 결과">
           <p className={s.h}>
             <span>{sum.topIsGlow ? <>빛나는 카드 <b className="num">{glowN}</b>장</> : '가장 좋은 카드'}</span>
-            <span className={s.hSub}>{sum.topIsGlow ? '엘리트 이상' : '엘리트 이상은 안 나왔어요'}</span>
+            {sum.topIsGlow && <span className={s.hSub}>엘리트 이상</span>}
           </p>
           <ul className={s.top}>
             {sum.top.slice(0, TOP_MAX).map((c, i) => (
@@ -203,7 +202,7 @@ function ResultBlock({ sum, n, asked, onDetail }: { sum: ReturnType<typeof summa
               </li>
             ))}
           </ul>
-          {sum.top.length > TOP_MAX && <p className={s.more}>외 <span className="num">{sum.top.length - TOP_MAX}</span>장 — 보관함에서 볼 수 있어요</p>}
+          {sum.top.length > TOP_MAX && <p className={s.more}>외 <span className="num">{sum.top.length - TOP_MAX}</span>장</p>}
     
           <ul className={o.counts} aria-label="등급별 장수">
             {sum.counts.map((c) => (
@@ -212,7 +211,6 @@ function ResultBlock({ sum, n, asked, onDetail }: { sum: ReturnType<typeof summa
           </ul>
           <p className={o.sumLine}>
             새 카드 <b className="num">{sum.fresh}</b> · 중복 <b className="num">{sum.dups}</b>
-            <span> — 같은 카드가 모이면 자동 강화</span>
           </p>
           {sum.ups.length > 0 && (
             <p className={[o.sumLine, o.sumUps].join(' ')}>
@@ -226,13 +224,12 @@ function ResultBlock({ sum, n, asked, onDetail }: { sum: ReturnType<typeof summa
             </p>
           )}
           <p className={o.sumLine}>
-            {sum.hits.length > 0 && <>천장 도달 <b className="num">{sum.hits.length}</b>번 — <b>{sum.hits[0].reward}</b> · </>}
+            {sum.hits.length > 0 && <>천장 보상 <b>{sum.hits[0].reward}</b>{sum.hits.length > 1 && <> ×<b className="num">{sum.hits.length}</b></>} · </>}
             천장까지 <b className="num">{sum.pity.max - sum.pity.after}</b>팩
-            <span> · <span className="num">{sum.pity.after}</span>/<span className="num">{sum.pity.max}</span></span>
           </p>
           <p className={o.sumLine}>
             쓴 재화 <Price price={sum.spent.ball ? { ball: sum.spent.ball } : { gp: sum.spent.gp }} className={s.spent} />
-            {n < asked && <span> · 재화가 모자라 <span className="num">{asked}</span>팩 중 <span className="num">{n}</span>팩만 열었어요</span>}
+            {n < asked && <span> · 재화 부족으로 <span className="num">{n}</span>팩만</span>}
           </p>
         </section>
   );
@@ -242,13 +239,13 @@ function ResultBlock({ sum, n, asked, onDetail }: { sum: ReturnType<typeof summa
 const BULK_MAX = 2000;
 type BulkEnd = 'cap' | 'gp' | 'stop' | 'max' | 'quota';
 const BULK_END_KO: Record<Exclude<BulkEnd, 'quota'>, string> = {
-  cap: `보관함이 ${CARD_CAP_KO} 장을 넘었어요 — 자동 정리로 줄이면 다시 살 수 있어요`,
+  cap: '보관함이 가득 찼어요',
   gp: '재화가 다 됐어요',
   stop: '멈췄어요',
-  max: `한 번에 ${BULK_MAX.toLocaleString()}팩까지예요 — 다시 누르면 이어서 열어요`,
+  max: `한 번에 ${BULK_MAX.toLocaleString()}팩까지예요`,
 };
 /** 리그 단계 한도로 멈췄을 때 */
-const quotaEndText = () => { const v = quotaView(); return `이번 자동 열기 한도(${LEVEL_KO[v.level]} ${quotaKo(v.quota)})를 다 썼어요 — 1분 뒤 다시 열 수 있어요 · 리그 단계가 오르면 한도가 늘어요`; };
+const quotaEndText = () => '한도를 다 썼어요. 1분 뒤 다시 열 수 있어요';
 
 export function BulkOpen({ pack, pick, onClose, onClean, onCombo }: { pack: Pack; pick: Pick | null; onClose: () => void; onClean: () => void; onCombo: () => void }) {
   const [runs, setRuns] = useState<PullResult[]>([]);
@@ -258,7 +255,6 @@ export function BulkOpen({ pack, pick, onClose, onClean, onCombo }: { pack: Pack
   const acc = useRef<PullResult[]>([]);
   const root = useRef<HTMLDivElement>(null);
   const done = end != null;
-  const start0 = useRef(totalCards());
   // 리그 단계 한도 — 시작할 때 남은 만큼만 (레전드는 끝없이)
   const budget = useRef(quotaPacks(pack.size));
   const limited = Number.isFinite(budget.current);
@@ -337,19 +333,17 @@ export function BulkOpen({ pack, pick, onClose, onClean, onCombo }: { pack: Pack
             </div>
             <p className={s.bulkLine}>
               보관함 <b className="num">{total.toLocaleString()}</b> / <span className="num">{CARD_CAP.toLocaleString()}</span>장
-              <span> · 이번에 +<span className="num">{Math.max(0, total - start0.current).toLocaleString()}</span></span>
             </p>
             {limited && (
               <p className={s.bulkLine}>
-                이번 한도 <b className="num">{cards.toLocaleString()}</b> / <span className="num">{(budget.current * pack.size).toLocaleString()}</span>장
-                <span> · 리그 단계 한도</span>
+                한도 <b className="num">{cards.toLocaleString()}</b> / <span className="num">{(budget.current * pack.size).toLocaleString()}</span>장
               </p>
             )}
-            <p className={s.bulkLine}>빛나는 카드(엘리트 이상) <b className="num">{glow.toLocaleString()}</b>장</p>
+            <p className={s.bulkLine}>엘리트 이상 <b className="num">{glow.toLocaleString()}</b>장</p>
             {!done && lastBest && (
               <div className={s.bulkNow}>
                 <span className={s.bulkCard}><FlipCard pc={lastBest} on onOpen={() => {}} label={`방금 팩 최고 ${lastBest.player.name}`} /></span>
-                <small>방금 팩 최고 · {GRADES[lastBest.card.grade].ko} {lastBest.player.name}</small>
+                <small>{GRADES[lastBest.card.grade].ko} {lastBest.player.name}</small>
               </div>
             )}
             {done && end && <p className={[s.bulkEnd, end === 'cap' && s.bulkCap].filter(Boolean).join(' ')}>{end === 'quota' ? quotaEndText() : BULK_END_KO[end]}</p>}
@@ -360,15 +354,15 @@ export function BulkOpen({ pack, pick, onClose, onClean, onCombo }: { pack: Pack
       <footer className={o.foot}>
         {done ? (
           <div className={o.actions}>
-            {end === 'cap' && <Button variant="primary" size="l" block onClick={onClean}>자동 정리하러 가기</Button>}
+            {end === 'cap' && <Button variant="primary" size="l" block onClick={onClean}>자동 정리</Button>}
             <div className={o.actions2}>
-              <Button variant="secondary" onClick={onCombo}>조합으로 보내기</Button>
+              <Button variant="secondary" onClick={onCombo}>선수조합</Button>
               <Button variant="secondary" onClick={onClose}>닫기<SpaceKey /></Button>
             </div>
           </div>
         ) : (
           <div className={s.runFoot}>
-            <p className={s.running}><span className={s.spinner} aria-hidden /><span>여는 중 · {limited ? <>한도 <span className="num">{(budget.current * pack.size).toLocaleString()}</span>장이 차면 멈춰요</> : <>{CARD_CAP_KO} 장이 되면 멈춰요</>}</span></p>
+            <p className={s.running}><span className={s.spinner} aria-hidden /><span>여는 중</span></p>
             <Button variant="primary" size="l" onClick={() => { stop.current = true; }}>멈추기<SpaceKey /></Button>
           </div>
         )}

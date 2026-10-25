@@ -7,7 +7,7 @@ import { navigate } from '../../app/router';
 import { CURRENT_TEAMS, OLD_TEAMS, PACKS, isTeamId, myTeam, teamByCode } from '../../game/mock';
 import { CURRENT_SEASON, FIRST_SEASON } from '../../game/world';
 import { LAST_REAL_SEASON } from '../../game/history';
-import { SET_KIND_KO, statLine } from '../../game/sets';
+import { SET_KIND_KO } from '../../game/sets';
 import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
 import { GRADES } from '../../game/grades';
 import type { ClubCode, GradeId, Pack } from '../../game/types';
@@ -43,8 +43,8 @@ function combosFor(pick: Pick | null) {
       have: x.have,
       need: x.next!.at,
       left: Math.max(0, x.next!.at - x.have),
-      next: { bonus: `+${x.next!.v} 단계 — ${statLine(x.next!.bat, 2)} · ${statLine(x.next!.pit, 1)}` },
-      current: x.cur ? `+${x.cur.v} 단계` : '',
+      next: { bonus: `+${x.next!.v}단계` },
+      current: x.cur ? `+${x.cur.v}단계` : '',
     }));
 }
 
@@ -105,15 +105,15 @@ function Store({ query }: { query: URLSearchParams }) {
   const full = total > CARD_CAP;
   const goClean = () => { setResult(null); setAuto(null); navigate('/combine?auto=1'); };
   const open = () => {
-    if (totalCards() > CARD_CAP) { toast({ text: `카드가 ${CARD_CAP.toLocaleString()}장을 넘었어요 — 자동 정리로 줄이고 와 주세요`, tone: 'bad' }); goClean(); return; }
+    if (totalCards() > CARD_CAP) { toast({ text: '보관함이 가득 찼어요', tone: 'bad' }); goClean(); return; }
     setDemoStep(undefined); setResult(pullPack(pack, pick));
   };
   // 자동 열기 — 살 수 있는 만큼(최대 고른 수 · 남은 한도) 한 번에 열고 요약으로
   const qPacks = quotaPacks(pack.size, aq);
   const nAuto = Math.min(autoN, affordCount(pack, g.wallet), qPacks);
-  const coolMsg = () => `자동 열기 한도(${LEVEL_KO[aq.level]} ${quotaKo(aq.quota)})를 다 썼어요 — ${coolText(aq)} 뒤 다시 열 수 있어요`;
+  const coolMsg = () => `한도를 다 썼어요. ${coolText(aq)} 뒤 다시 열 수 있어요`;
   const autoOpen = () => {
-    if (totalCards() > CARD_CAP) { toast({ text: `카드가 ${CARD_CAP.toLocaleString()}장을 넘었어요 — 자동 정리로 줄이고 와 주세요`, tone: 'bad' }); goClean(); return; }
+    if (totalCards() > CARD_CAP) { toast({ text: '보관함이 가득 찼어요', tone: 'bad' }); goClean(); return; }
     const v = quotaView();
     if (v.cooling) { toast({ text: coolMsg(), tone: 'bad' }); return; }
     const want = Math.min(autoN, affordCount(pack, readWallet()), quotaPacks(pack.size, v));
@@ -139,8 +139,8 @@ function Store({ query }: { query: URLSearchParams }) {
 
       {full && (
         <div className={s.capBar} role="alert">
-          <p><b>카드가 <span className="num">{total.toLocaleString()}</span>장이에요</b> · <span className="num">{CARD_CAP.toLocaleString()}</span>장을 넘으면 카드를 살 수 없어요. 선수조합 › 자동 정리로 줄이고 와 주세요.</p>
-          <Button size="s" onClick={goClean}>자동 정리하러 가기</Button>
+          <p><b>보관함 가득</b> <span className="num">{total.toLocaleString()}</span>/<span className="num">{CARD_CAP.toLocaleString()}</span>장</p>
+          <Button size="s" onClick={goClean}>자동 정리</Button>
         </div>
       )}
       {/* ───── 무대: 고른 팩 ───── */}
@@ -169,8 +169,8 @@ function Store({ query }: { query: URLSearchParams }) {
           </p>
           <h2 className={['head', s.title].join(' ')}>{pack.name}{pick && <small>{pick.kind === 'year' ? yo?.tag : clubShort(pick.club)}</small>}</h2>
           <p className={s.desc}>
-            {pick?.kind === 'club' && team ? `${team.name} · ${eraText(team.code)} 모든 연도${team.old ? ' · 옛 구단' : ''}`
-              : pick?.kind === 'year' ? `${year} 시즌 카드만 · 그 해 ${yo?.clubs.length ?? 10}개 구단`
+            {pick?.kind === 'club' && team ? `${team.name} ${eraText(team.code)}`
+              : pick?.kind === 'year' ? `${year} 시즌 카드만`
               : look.blurb}
           </p>
           <dl className={s.facts}>
@@ -222,18 +222,16 @@ function Store({ query }: { query: URLSearchParams }) {
                 : nAuto > 0 && nAuto < autoN ? <><span className="num">{nAuto}</span>팩만 자동</> : <><span className="num">{autoN}</span>팩 자동 열기</>}
             </Button>
             <button type="button" className={s.bulkBtn} onClick={startBulk} disabled={nAuto < 1 || full}>
-              {aq.unlimited
-                ? <>가득 찰 때까지 계속 열기 <small>보관함 <span className="num">{CARD_CAP.toLocaleString()}</span>장까지 · 멈추기 가능</small></>
-                : <>한도까지 계속 열기 <small>{aq.cooling ? <>쉬는 중 · <span className="num">{coolText(aq)}</span> 뒤 다시 <span className="num">{quotaKo(aq.quota)}</span></> : <>남은 <span className="num">{aq.left.toLocaleString()}</span>장(<span className="num">{qPacks}</span>팩) · 멈추기 가능</>}</small></>}
+              {aq.unlimited ? '가득 찰 때까지 열기' : '한도까지 열기'}
             </button>
             {/* 자동 열기 한도 — 리그 단계마다. 다 쓰면 1분 쉬기 */}
             <div className={[s.quota, aq.cooling && s.quotaCool].filter(Boolean).join(' ')} aria-live="polite">
               <p className={s.quotaTop}>
                 <span className={s.quotaLv}>{LEVEL_KO[aq.level]}</span>
                 {aq.unlimited
-                  ? <span>자동 열기 <b>한도 없음</b> · 보관함이 찰 때까지</span>
+                  ? <span>자동 열기 <b>한도 없음</b></span>
                   : aq.cooling
-                    ? <span>쉬는 중 · <b className="num">{coolText(aq)}</b> 뒤 다시 <b className="num">{aq.quota.toLocaleString()}</b>장</span>
+                    ? <span>쉬는 중 <b className="num">{coolText(aq)}</b></span>
                     : <span>자동 열기 한도 <b className="num">{aq.left.toLocaleString()}</b><i>/{aq.quota.toLocaleString()}장</i></span>}
               </p>
               {!aq.unlimited && (
@@ -241,7 +239,7 @@ function Store({ query }: { query: URLSearchParams }) {
                   <i style={{ width: `${aq.cooling ? Math.max(0, Math.min(100, 100 - ((aq.until - Date.now()) / 600))) : Math.round((aq.left / aq.quota) * 100)}%` }} />
                 </div>
               )}
-              {nextQ && <small className={s.quotaNext}>리그 단계가 오르면 늘어나요 · 다음 {nextQ.ko} {quotaKo(nextQ.quota)}{nextQ.level !== 'legend' ? ' · 레전드는 한도 없음' : ''} · 다 쓰면 1분 쉬기</small>}
+              {nextQ && <small className={s.quotaNext}>다음 {nextQ.ko} {quotaKo(nextQ.quota)}</small>}
             </div>
           </div>
           <p className={s.wallet}>
@@ -255,16 +253,16 @@ function Store({ query }: { query: URLSearchParams }) {
       {/* ───── 골라 뽑기 ───── */}
       {pack.pick?.kind === 'year' && (
         <section className={s.pick} aria-label="시즌 고르기">
-          <div className={s.secHead}><h3 className="head">시즌 고르기</h3><span>{FIRST_SEASON}~{LAST_REAL_SEASON} 한 해씩 · 그 해 그 구단에서 뛴 실제 선수 카드만</span></div>
+          <div className={s.secHead}><h3 className="head">시즌 고르기</h3><span className="num">{FIRST_SEASON}~{LAST_REAL_SEASON}</span></div>
           <YearPicker className={s.yearPicker} cells={YEAR_CELLS} value={year} onChange={setYear} aria-label="시즌" />
           <YearNote year={year} />
         </section>
       )}
       {pack.pick?.kind === 'club' && (
         <section className={s.pick} aria-label="구단 고르기">
-          <div className={s.secHead}><h3 className="head">구단 고르기</h3><span>연도는 고를 수 없어요 — 그 구단이 있던 모든 연도</span></div>
-          <ClubGrid label="지금 구단" note={`2027 리그 10개 구단`} teams={CURRENT_TEAMS} club={club} setClub={setClub} />
-          <ClubGrid label="옛 구단" note="없어진 구단 · 지금 이름이 되기 전 시대" teams={OLD_TEAMS} club={club} setClub={setClub} old />
+          <div className={s.secHead}><h3 className="head">구단 고르기</h3></div>
+          <ClubGrid label="지금 구단" teams={CURRENT_TEAMS} club={club} setClub={setClub} />
+          <ClubGrid label="옛 구단" teams={OLD_TEAMS} club={club} setClub={setClub} old />
         </section>
       )}
 
@@ -285,10 +283,10 @@ function Store({ query }: { query: URLSearchParams }) {
           ))}
         </ul>
         {view.missing.length > 0 && (
-          <p className={s.missing}>
+          <p className={s.missing} title="빠진 몫은 남은 등급에 비율대로 나눠요">
             <Icon name="info" size={15} />
             <span>
-              <b>이 조합에 없는 등급</b> {view.missing.map((m) => gradeShort(m.grade)).join(' · ')} — 빠진 몫은 남은 등급에 비율대로 나눴어요.
+              <b>없는 등급</b> {view.missing.map((m) => gradeShort(m.grade)).join(' · ')}
             </span>
           </p>
         )}
@@ -298,13 +296,13 @@ function Store({ query }: { query: URLSearchParams }) {
       <section className={s.sec}>
         <div className={s.secHead}>
           <h3 className="head">천장</h3>
-          <span>팩 종류마다 따로</span>
+          <span>{pack.pity.guaranteed}</span>
         </div>
         <div className={s.pityRow}>
           <p className={s.pityBig}>천장까지 <b className="num-display">{toPity}</b>팩</p>
           <div className={s.pityRight}>
             <PityTally count={pity} max={pack.pity.max} />
-            <p><span className="num">{pity}</span>/<span className="num">{pack.pity.max}</span> · <span className="num">{pack.pity.max}</span>번째 팩에서 {pack.pity.guaranteed}</p>
+            <p><span className="num">{pity}</span>/<span className="num">{pack.pity.max}</span></p>
           </div>
         </div>
       </section>
@@ -312,8 +310,7 @@ function Store({ query }: { query: URLSearchParams }) {
       {/* ───── 조합 ───── */}
       <section className={s.sec}>
         <div className={s.secHead}>
-          <h3 className="head">이 팩으로 맞출 수 있는 조합</h3>
-          <span>지금 라인업 기준</span>
+          <h3 className="head">맞출 수 있는 세트</h3>
         </div>
         {combos.length ? (
           <ul className={s.combos}>
@@ -326,12 +323,12 @@ function Store({ query }: { query: URLSearchParams }) {
                 <div className={s.comboBar} style={{ ['--n' as string]: c.need }}>
                   {Array.from({ length: c.need }, (_, i) => <i key={i} className={i < c.have ? s.on : undefined} />)}
                 </div>
-                <p>{c.left > 0 ? <><b className="num">{c.left}</b>명 더 모으면 <em>{c.next.bonus}</em></> : <>다 모았어요 · {c.current}</>}</p>
+                <p>{c.left > 0 ? <><b className="num">{c.left}</b>명 더 → <em>{c.next.bonus}</em></> : <>완성 {c.current}</>}</p>
               </li>
             ))}
           </ul>
         ) : (
-          <p className={s.empty}>{team?.short ?? '이 팩'} 카드로 새 세트를 시작해요 — 같은 구단·같은 연도 5명부터 세트덱이 켜져요</p>
+          <p className={s.empty}>아직 없어요</p>
         )}
       </section>
 
@@ -339,7 +336,7 @@ function Store({ query }: { query: URLSearchParams }) {
       <button type="button" className={s.toCombo} onClick={() => navigate('/combine')}>
         <span className={s.toComboText}>
           <b className="head">선수조합</b>
-          <span>안 쓰는 카드 3~5장으로 새 카드 1장. 공식이 맞으면 위 등급이 잘 떠요.</span>
+          <span>카드 3~5장으로 새 카드 1장</span>
         </span>
         <Icon name="arrow-right" size={20} />
       </button>
@@ -394,10 +391,10 @@ const YEAR_CELLS: YearCell[] = YEAR_OPTIONS.map((o) => {
   };
 });
 
-function ClubGrid({ label, note, teams, club, setClub, old }: { label: string; note: string; teams: ReturnType<typeof teamByCode>[]; club: ClubCode; setClub: (c: ClubCode) => void; old?: boolean }) {
+function ClubGrid({ label, teams, club, setClub, old }: { label: string; teams: ReturnType<typeof teamByCode>[]; club: ClubCode; setClub: (c: ClubCode) => void; old?: boolean }) {
   return (
     <div className={s.clubGroup}>
-      <p className={s.clubGroupHead}><b>{label}</b><span>{note}</span></p>
+      <p className={s.clubGroupHead}><b>{label}</b></p>
       <div className={s.clubs} role="radiogroup" aria-label={label}>
         {teams.map((t) => (
           <button
@@ -427,7 +424,6 @@ function YearNote({ year }: { year: number }) {
   const runner = o.runnerUp ? teamByCode(o.runnerUp) : undefined;
   return (
     <div className={s.yearNote}>
-      <p><b className="num">{year}</b> · {o.note}</p>
       {champ && (
         <p className={s.champLine}>
           우승 <b>{champ.name}</b>{runner ? <> · 준우승 {runner.name}</> : null}
@@ -444,19 +440,6 @@ function YearNote({ year }: { year: number }) {
           );
         })}
       </div>
-      {o.legends.length > 0 && (
-        <ul>
-          {o.legends.map((l) => {
-            const t = teamByCode(l.club);
-            return (
-              <li key={l.club}>
-                <Emblem team={t} size={18} />
-                <span><b>{t.name}</b> {l.era.endsWith('우승') ? '' : `‘${l.era}’ `}— {l.desc}</span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { navigate } from '../../app/router';
 import { polarToField } from '../../game/field';
 import type { Player, Team, Weather } from '../../game/types';
 import { clubLine, nextGameView, pitchLine } from './local-mock';
-import { longDate, shortDate } from '../../season/schedule';
+import { longDate } from '../../season/schedule';
 import { useSeason } from '../../season/store';
 import { condsText } from '../../game/weatherFit';
 import s from './NextGame.module.css';
@@ -96,9 +96,7 @@ export function NextGame({ inHub = false }: { inHub?: boolean }) {
     <section className={s.next} aria-labelledby="next-h">
       <header className={s.head}>
         <h2 id="next-h" className={s.h}>다음 경기</h2>
-        <p className={s.count}>
-          {g.over ? '정규 시즌 끝' : <>{longDate(g.date)} <b className="num">{g.time}</b></>}
-        </p>
+        {g.over && <p className={s.count}>정규 시즌 끝</p>}
       </header>
 
       <div className={s.board}>
@@ -107,7 +105,7 @@ export function NextGame({ inHub = false }: { inHub?: boolean }) {
             {g.time.split('').map((ch, i) => <span key={i} className={ch === ':' ? s.colon : s.digit} aria-hidden>{ch}</span>)}
           </b>
           <p className={s.whenText}>
-            <span>{g.over ? '시즌 끝' : shortDate(g.date)} · {g.isHome ? '홈' : '원정'}</span>
+            <span>{g.over ? '시즌 끝' : longDate(g.date)} · {g.isHome ? '홈' : '원정'}</span>
             <span>{gameNo} · {st.name}</span>
           </p>
         </div>
@@ -136,7 +134,7 @@ export function NextGame({ inHub = false }: { inHub?: boolean }) {
             <i className={s.wpOpp} />
           </span>
           <span className={[s.wpNum, s.wpNumOpp].join(' ')}><b className="num">{100 - wpMine}</b>%</span>
-          <small className={s.wpLabel}>승리 예상 — 오늘 라인업 팀 종합 · 상대 전력 · 홈 이점으로{g.rainedBefore ? ` · 사이에 비로 밀린 경기 ${g.rainedBefore}` : ''}</small>
+          <small className={s.wpLabel} title="팀 종합 · 상대 전력 · 홈 이점">승리 예상</small>
         </div>
       </div>
 
@@ -160,30 +158,28 @@ export function NextGame({ inHub = false }: { inHub?: boolean }) {
           </li>
           <li>
             <Icon name="rain" size={17} />
-            <span>비 <b className="num">{w.rainPct}</b><small>%</small> <small>· 미세먼지 {w.dust}</small></span>
+            <span>비 <b className="num">{w.rainPct}</b><small>%</small></span>
           </li>
           {w.effects.slice(0, 1).map((e) => <li key={e} className={s.cause}>↳ {e}</li>)}
-          {g.wx && g.wx.conds.length > 0 && (
+          {g.wx && g.wx.conds.length > 0 && (g.wx.good.length > 0 || g.wx.bad.length > 0) && (
             <li className={s.fit}>
               <span className={s.fitHead}>날씨 궁합 <small>{condsText(g.wx.conds)}</small></span>
               {g.wx.good.length > 0 && <span className={s.fitGood}>+ {g.wx.good.map((p) => p.name).join(' · ')}</span>}
               {g.wx.bad.length > 0 && <span className={s.fitBad}>− {g.wx.bad.map((p) => p.name).join(' · ')}</span>}
-              {!g.wx.good.length && !g.wx.bad.length && <small>우리 선수 중 맞거나 상극인 선수는 없어요</small>}
             </li>
           )}
-          <li className={s.park}>
+          <li className={s.park} title={st.note}>
             <span className="num">{st.fence[0]}·{st.fence[1]}·{st.fence[2]}</span>m{wallNote && <> · {wallNote}</>}
-            <small>{st.note}</small>
           </li>
         </ul>
       </div>
 
       <div className={s.cta}>
         {g.over
-          ? <Button size="l" block icon="arrow-right" onClick={() => navigate('/season')}>시즌 결과 보기</Button>
-          : <Button size="l" block icon="play" onClick={() => navigate('/match?g=season')}>지금 바로 경기</Button>}
+          ? <Button size="l" block icon="arrow-right" onClick={() => navigate('/season')}>시즌 결과</Button>
+          : <Button size="l" block icon="play" onClick={() => navigate('/match?g=season')}>경기 시작</Button>}
         <Button size="l" variant="secondary" onClick={() => navigate('/lineup')}>라인업</Button>
-        {!inHub && <Button size="l" variant="ghost" icon="fast" className={s.ff} onClick={() => navigate('/season')}>남은 시즌 빨리 감기</Button>}
+        {!inHub && <Button size="l" variant="ghost" icon="fast" className={s.ff} onClick={() => navigate('/season')}>빨리 감기</Button>}
       </div>
     </section>
   );

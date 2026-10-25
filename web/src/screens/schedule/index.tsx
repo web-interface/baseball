@@ -133,8 +133,8 @@ export default function ScheduleScreen({ query }: ScreenProps) {
           <Tabs variant="box" size="s" aria-label="보기" value={view} onChange={setView} items={[{ value: 'month', label: '월별' }, { value: 'list', label: '전체 일정' }]} />
         </div>
         <p className={s.meta}>
-          <span>정규 <span className="num">{regularCount()}</span>경기 · <span className="num">{shortDate(openingDate(year))}</span> 개막 ~ <span className="num">{shortDate(reg[reg.length - 1]?.date ?? last)}</span></span>
-          <span>우리 <b className="num">{ln.played}</b>경기 치름 · <span className="num">{ln.left}</span>경기 남음</span>
+          <span>정규 <span className="num">{regularCount()}</span>경기 · <span className="num">{shortDate(openingDate(year))}</span>~<span className="num">{shortDate(reg[reg.length - 1]?.date ?? last)}</span></span>
+          <span>남은 <b className="num">{ln.left}</b>경기</span>
         </p>
       </header>
 
@@ -171,7 +171,7 @@ function Calendar({ year, month, byDate, today }: { year: number; month: number;
   const dates = [...byDate.keys()].sort();
   const from = dates[0] ?? openingDate(year), to = dates[dates.length - 1] ?? from;
   // 이 달 우리 성적
-  let w = 0, d = 0, l = 0, left = 0, games = 0, rained = 0;
+  let w = 0, d = 0, l = 0, games = 0, rained = 0;
   for (const c of cells) {
     if (!c) continue;
     for (const day of byDate.get(c) ?? []) {
@@ -181,7 +181,6 @@ function Calendar({ year, month, byDate, today }: { year: number; month: number;
       const r = myRes(g);
       if (r === 'W') w++; else if (r === 'L') l++; else if (r === 'D') d++;
       else if (g.state === 'cancelled') rained++;
-      else if (g.state === 'next' || g.state === 'later') left++;
     }
   }
   return (
@@ -192,7 +191,6 @@ function Calendar({ year, month, byDate, today }: { year: number; month: number;
           <span>우리 <span className="num">{games}</span>경기</span>
           {w + d + l > 0 && <span><span className="num">{w}</span>승 <span className="num">{d}</span>무 <span className="num">{l}</span>패</span>}
           {rained > 0 && <span>취소 <span className="num">{rained}</span></span>}
-          {left > 0 && <span>남은 <span className="num">{left}</span>경기</span>}
         </> : <span>경기 없음</span>}
       </p>
       <div className={s.grid} role="grid">
@@ -273,7 +271,7 @@ function CalCell({ date, dow, days, today, inSeason, allstar }: { date: string |
 /* ───────── 전체 일정 (날짜별 목록) ───────── */
 function DayList({ days, all, today, seed }: { days: Day[]; all: boolean; today: string | null; seed: string }) {
   const shown = days.filter((d) => (all ? d.games.length > 0 : !!myGameOfDay(d)));
-  if (!shown.length) return <p className={s.empty}>이 달에는 {all ? '경기가' : '우리 경기가'} 없어요.</p>;
+  if (!shown.length) return <p className={s.empty}>이 달에는 {all ? '경기가' : '우리 경기가'} 없어요</p>;
   return (
     <div className={s.dlist}>
       {shown.map((d) => {
@@ -356,7 +354,7 @@ function AllLine({ g, date }: { g: Game; date: string }) {
 
 /* ───────── 포스트시즌 ───────── */
 function PostList({ days }: { days: Day[] }) {
-  if (!days.length) return <p className={s.empty}>포스트시즌 경기가 아직 없어요.</p>;
+  if (!days.length) return <p className={s.empty}>포스트시즌 경기가 아직 없어요</p>;
   return (
     <div className={s.dlist}>
       {days.map((d) => (
@@ -365,7 +363,7 @@ function PostList({ days }: { days: Day[] }) {
           <ul>{d.games.map((g) => <AllLine key={g.key} g={g} date={d.date} />)}</ul>
         </section>
       ))}
-      <button type="button" className={s.toHub} onClick={() => navigate('/season')}>포스트시즌 판 · 다음 경기 <Icon name="chevron" size={14} /></button>
+      <button type="button" className={s.toHub} onClick={() => navigate('/season')}>포스트시즌 판 <Icon name="chevron" size={14} /></button>
     </div>
   );
 }

@@ -71,10 +71,10 @@ export default function ShopScreen(_: ScreenProps) {
     const got = enough && p ? buy(confirm.id) : null;
     if (got && p) {
       spend(cost);
-      const what = got.up ? `같은 카드가 모여 강화 +1 (${got.up.from > 0 ? roman(got.up.from) : '0'} → ${roman(got.up.to)})` : got.isNew ? '보관함에 넣었어요' : `같은 카드 ${got.had + 1}장째예요`;
-      toast({ text: `${p.name}${hasJong(p.name) ? '을' : '를'} 데려왔어요. ${what}.`, tone: 'good', action: { label: '라인업에 넣기', onClick: () => navigate(`/lineup?bench=${got.id}`) } });
+      const what = got.up ? ` · 강화 ${roman(got.up.to)}` : '';
+      toast({ text: `${p.name}${hasJong(p.name) ? '을' : '를'} 데려왔어요${what}`, tone: 'good', action: { label: '라인업에 넣기', onClick: () => navigate(`/lineup?bench=${got.id}`) } });
     } else {
-      toast({ text: enough ? '오늘은 더 데려올 수 없어요.' : '재화가 모자라요.', tone: 'bad' });
+      toast({ text: enough ? '오늘 한도를 다 썼어요' : '재화가 모자라요', tone: 'bad' });
     }
     setConfirm(null);
   };
@@ -87,7 +87,7 @@ export default function ShopScreen(_: ScreenProps) {
           <PlayerArt player={SCOUT.person} team={team} set="away" variant="portrait" eager />
         </div>
         <div className={s.scoutText}>
-          <p className={s.scoutRole}>{team.short} {SCOUT.role} · <span className="num">{SCOUT.years}</span>년째</p>
+          <p className={s.scoutRole}>{team.short} {SCOUT.role}</p>
           <h2 className={['head', s.scoutName].join(' ')}>{SCOUT.name}</h2>
           <p className={s.scoutLine}>{line}</p>
         </div>
@@ -102,14 +102,13 @@ export default function ShopScreen(_: ScreenProps) {
           </span>
           <b className="num">{shop.used}</b><span className={s.of}>/<span className="num">{shop.limit}</span></span>
         </div>
-        <p className={s.leftText}>{shop.left > 0 ? <><b className="num">{shop.limit}</b>명 중 <b className="num">{shop.left}</b>명 남음</> : '오늘은 다 데려왔어요'}</p>
-        <p className={s.refresh}><Icon name="clock" size={14} />새 진열까지 <span className="num">{left}</span></p>
+        <p className={s.refresh} title="새 진열까지"><Icon name="clock" size={14} /><span className="num">{left}</span></p>
       </section>
 
       {/* ───── 오늘의 진열 ───── */}
       <div className={s.listHead}>
         <h3 className="head">오늘의 진열</h3>
-        <span>감독님만 보는 진열 · <span className="num">{SHELF.length}</span>명</span>
+        <span><span className="num">{SHELF.length}</span>명</span>
       </div>
       <ol className={s.list}>
         {SHELF.map((it, n) => {
@@ -138,7 +137,6 @@ export default function ShopScreen(_: ScreenProps) {
                     {stats.map((x, i) => <span key={i} className="num">{x}</span>)}
                   </p>
                 )}
-                <p className={s.note}>{it.scoutNote}</p>
                 <div className={s.buyRow}>
                   <div className={s.priceCol}>
                     <Price price={it.price} />
@@ -160,10 +158,6 @@ export default function ShopScreen(_: ScreenProps) {
         })}
       </ol>
 
-      <p className={s.foot}>
-        진열은 감독님마다 달라요. 매일 <span className="num">05:00</span>에 바뀌고, 하루 <span className="num">{shop.limit}</span>명까지 데려올 수 있어요.
-        가격은 선수 가치와 수요로 정해요 — 스카우트 말은 참고만 하세요.
-      </p>
 
       <Sheet
         open={!!confirm}
@@ -186,7 +180,7 @@ export default function ShopScreen(_: ScreenProps) {
 /** 이미 가진 같은 카드 — 데려오면 몇 장이 되고, 수량이 차면 자동 강화 */
 function dupLine(cardId: string) {
   const n = ownedCount(cardId);
-  if (n <= 0) return '처음 데려와요';
+  if (n <= 0) return '새 카드';
   const e = entryOf(cardId)!;
   const c = cardById(cardId)!;
   const st = ENH_STEPS[e.enh];

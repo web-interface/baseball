@@ -119,12 +119,12 @@ export const clubShort = (code: ClubCode) => shortLabel(code);
 export type PackSkin = 'graphite' | 'gold' | 'crimson' | 'sepia' | 'year' | 'club';
 
 export const PACK_LOOK: Record<string, { skin: PackSkin; en: string; tag: string; blurb: string }> = {
-  basic: { skin: 'graphite', en: 'PLAYER PACK', tag: '노멀~레전드', blurb: '도감 채우기 · 노멀 위주' },
-  premium: { skin: 'gold', en: 'PREMIUM', tag: '스페셜 이상', blurb: '특별 등급(MVP·GG·TH)도 나와요' },
-  special: { skin: 'crimson', en: 'SPECIAL', tag: '레어 이상', blurb: 'MVP·GG·TH 확률이 높아요' },
-  legend: { skin: 'sepia', en: 'LEGEND', tag: '엘리트 이상', blurb: '이번 주 한정 · 골든볼' },
-  year: { skin: 'year', en: 'SEASON', tag: '고른 시즌만', blurb: '그 해 모든 구단 · 프리미엄 확률' },
-  club: { skin: 'club', en: 'CLUB', tag: '고른 구단만', blurb: '그 구단이 있던 모든 연도' },
+  basic: { skin: 'graphite', en: 'PLAYER PACK', tag: '노멀~레전드', blurb: '노멀 위주' },
+  premium: { skin: 'gold', en: 'PREMIUM', tag: '스페셜 이상', blurb: 'MVP·GG·TH 포함' },
+  special: { skin: 'crimson', en: 'SPECIAL', tag: '레어 이상', blurb: 'MVP·GG·TH 확률 높음' },
+  legend: { skin: 'sepia', en: 'LEGEND', tag: '엘리트 이상', blurb: '골든볼 전용' },
+  year: { skin: 'year', en: 'SEASON', tag: '고른 시즌만', blurb: '그 해 모든 구단' },
+  club: { skin: 'club', en: 'CLUB', tag: '고른 구단만', blurb: '구단의 모든 연도' },
 };
 
 /** 신문 제호 — 가상 리그(한별 리그)의 가상 스포츠 신문 */

@@ -144,12 +144,9 @@ export default function ChatScreen({ query }: ScreenProps) {
 
       <div className={s.listWrap}>
         <div ref={scroller} className={s.scroller} onScroll={onScroll}>
-          <p className={s.rules}>
-            욕설은 별표로 가려지고 링크는 눌리지 않아요 · 3초에 한 번, 1분에 <span className="num">15</span>번까지 · 메시지를 누르면 신고나 숨기기
-          </p>
           {!st.loaded && <p className={s.empty}>{statusText(st)}…</p>}
           {st.loaded && msgs.length === 0 && st.pending.length === 0 && (
-            <p className={s.empty}>지금은 조용해요. 먼저 인사를 남겨 보세요.</p>
+            <p className={s.empty}>아직 대화가 없어요</p>
           )}
           <ol className={s.list} aria-live="polite" aria-relevant="additions" aria-label="로비 채팅 메시지">
             {items.map((it) => (it.kind === 'day'

@@ -302,7 +302,7 @@ export function Opening({ result, step, onClose, onAgain, onCombo }: OpeningProp
       <footer className={s.foot}>
         {phase === 'pack' && (
           <div className={s.packFoot}>
-            <p className={s.hint}>위쪽 띠를 오른쪽으로 밀어서 뜯어요</p>
+            <p className={s.hint}>띠를 밀어서 뜯어요</p>
             <Button variant="primary" size="l" block onClick={openNow} disabled={torn}>바로 열기<SpaceKey /></Button>
           </div>
         )}
@@ -310,7 +310,6 @@ export function Opening({ result, step, onClose, onAgain, onCombo }: OpeningProp
           <div className={s.gridFoot}>
             <p className={s.count}>
               <b className="num">{flippedCount}</b><span className="num">/30</span>
-              <span className={s.countHint}>{flippedCount === 0 ? '한 장씩 눌러도 돼요' : '가장 좋은 카드는 마지막에'}</span>
             </p>
             <Button variant="primary" size="l" onClick={flipAll} disabled={phase !== 'grid' || cine != null || flippingAll.current}>전부 뒤집기<SpaceKey /></Button>
           </div>
@@ -357,10 +356,8 @@ export function PulledSheet({ pc, onClose, onPlayer }: { pc: PulledCard | null; 
             <p className={s.detailGrade} style={{ color: `var(--gr-${pc.card.grade})` }}>
               {GRADES[pc.card.grade].ko}{pc.card.year && GRADES[pc.card.grade].yearTagged ? ` ${yearTag(pc.card.year)}` : ''}
             </p>
-            <p className={pc.isNew ? s.isNew : s.isDup}>{pc.isNew ? '새 카드' : pc.up ? <>강화 +1 <span className="num">({upText(pc.up)})</span></> : '중복 +1 · 강화 재료'}</p>
-            {!pc.isNew && (pc.up
-              ? <p className={s.detailNote}>같은 카드가 <b className="num">{pc.had + 1}</b>장 모여 재료로 쓰고 한 단계 올랐어요.</p>
-              : <p className={s.detailNote}>이미 <b className="num">{pc.had}</b>장 있어요. 같은 카드가 모이면 자동으로 강화돼요.</p>)}
+            <p className={pc.isNew ? s.isNew : s.isDup}>{pc.isNew ? '새 카드' : pc.up ? <>강화 +1 <span className="num">({upText(pc.up)})</span></> : '중복 +1'}</p>
+            {!pc.isNew && !pc.up && <p className={s.detailNote}>보유 <b className="num">{pc.had}</b>장</p>}
             {pc.card.signaturePitch && <p className={s.detailNote}>고유 구종 <b>{pc.card.signaturePitch.name}</b></p>}
           </div>
         </div>
@@ -377,13 +374,13 @@ function DetailStats({ pc }: { pc: PulledCard }) {
   const bat = p.season.bat, pit = p.season.pit;
   return (
     <section className={s.stats} aria-label="능력치">
-      <h3 className={s.statsH}>능력치 <small>1~100</small></h3>
+      <h3 className={s.statsH}>능력치</h3>
       <div className={s.statList}>
         {p.face.map((f) => <StatBar key={f.code} label={f.ko} value={f.v} size="s" labelWidth={56} />)}
       </div>
       {isP && p.pitches && p.pitches.length > 0 && (
         <>
-          <h3 className={s.statsH}>구종 <small>위력 · 평균 구속</small></h3>
+          <h3 className={s.statsH}>구종</h3>
           <div className={s.statList}>
             {p.pitches.map((x) => <StatBar key={x.type} label={x.ko} value={x.stuff} size="s" labelWidth={56} note={<span className="num">{x.kmh}</span>} />)}
           </div>
@@ -429,7 +426,6 @@ function Summary({ result, onAgain, onClose, onCombo, onBest }: {
       </ul>
       <p className={s.sumLine}>
         새 카드 <b className="num">{result.fresh}</b> · 중복 <b className="num">{result.dups}</b>
-        <span> — 같은 카드가 모이면 자동 강화</span>
       </p>
       {result.ups.length > 0 && (
         <p className={[s.sumLine, s.sumUps].join(' ')}>
@@ -444,8 +440,8 @@ function Summary({ result, onAgain, onClose, onCombo, onBest }: {
       )}
       <p className={s.sumLine}>
         {result.pity.hit
-          ? <>천장 도달 — <b>{result.pity.reward}</b> 받았어요</>
-          : <>천장까지 <b className="num">{result.pity.max - result.pity.after}</b>팩 <span>· <span className="num">{result.pity.after}</span>/<span className="num">{result.pity.max}</span></span></>}
+          ? <>천장 보상 <b>{result.pity.reward}</b></>
+          : <>천장까지 <b className="num">{result.pity.max - result.pity.after}</b>팩</>}
       </p>
       <div className={s.actions}>
         {onAgain && (
@@ -454,7 +450,7 @@ function Summary({ result, onAgain, onClose, onCombo, onBest }: {
           </Button>
         )}
         <div className={s.actions2}>
-          <Button variant="secondary" onClick={onCombo}>조합으로 보내기</Button>
+          <Button variant="secondary" onClick={onCombo}>선수조합</Button>
           <Button variant="secondary" onClick={onClose}>닫기</Button>
         </div>
       </div>

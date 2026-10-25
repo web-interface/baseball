@@ -43,7 +43,7 @@ function Masthead({ manager }: { manager: string }) {
       </div>
       <p className={s.kicker}>
         <span>{leagueName} <span className="num">{season.year ?? 2027}</span></span>
-        <span>구단 <b className="num">{(season.year ?? 2027) - 2026}</b>년차 · {next}</span>
+        <span>{next}</span>
       </p>
       <div className={s.club}>
         <ClubEmblem team={team} size={60} className={s.em} />
@@ -83,7 +83,7 @@ function Masthead({ manager }: { manager: string }) {
               <span className={s.form} aria-label={`최근 10경기 ${ln.form.split('').map((c) => (c === 'W' ? '승' : c === 'L' ? '패' : '무')).join(' ')}`}>
                 {ln.form.split('').map((c, i) => <i key={i} className={c === 'W' ? s.fw : c === 'L' ? s.fl : s.fd} />)}
               </span>
-            ) : <small>아직 경기 전</small>}
+            ) : <b className="num">—</b>}
             {streak && <small>{streak}</small>}
           </dd>
         </div>
@@ -97,10 +97,7 @@ function StartGuide() {
   if (savedStartClub()) return null;
   return (
     <section className={s.guide} aria-label="처음 시작">
-      <p>
-        <b>2027 시즌을 함께할 구단을 골라 주세요</b>
-        <span>지금은 기본 구단({myTeam().short})으로 보여요 — 현재 구단 10 · 옛 구단 10 중에서</span>
-      </p>
+      <p><b>아직 구단을 안 골랐어요</b></p>
       <Button size="m" icon="arrow-right" onClick={() => navigate('/club-select?step=club')}>구단 고르기</Button>
     </section>
   );
@@ -127,12 +124,12 @@ function Vault({ seasonNo }: { seasonNo: number }) {
           <Icon name="alert" size={16} />
           <span>
             <b>자금 정리까지 {left === 0 ? '이번 시즌' : <><span className="num">{left}</span>시즌</>}</b>
-            11시즌부터 지갑이 정상 수준으로 정리돼요(예정: GP 5천만 · 골든볼 5천). 그 전에 쓸 곳을 정해 두세요.
+            11시즌부터 GP 5천만, 골든볼 5천
           </span>
         </p>
       ) : (
         <p className={s.vaultNote}>
-          처음 <b className="num">{ME.richUntil}</b>시즌은 마음껏 쓰세요. 11시즌부터는 경기·시즌 보상으로 꾸리는 정상 경제예요.
+          처음 <b className="num">{ME.richUntil}</b>시즌은 넉넉해요
         </p>
       )}
     </section>

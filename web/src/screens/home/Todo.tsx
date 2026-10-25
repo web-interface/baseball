@@ -18,12 +18,12 @@ export function Todo() {
   const line = clubLine(ME.teamId, season);
   const [open, setOpen] = useState(false);
   const tiles: Tile[] = [
-    { key: 'lineup', to: '/lineup', icon: 'lineup', label: '라인업', value: <b className="num">{n.lineup.overall}</b>, note: <>{n.lineup.set ? <>{n.lineup.set} 세트까지 <b className="num">{n.lineup.remain}</b>명</> : '세트덱 모으기'}</>, hot: n.lineup.remain > 0 && n.lineup.remain <= 2 },
-    { key: 'gacha', to: '/gacha', icon: 'pack', label: '카드구매', value: <b className="num">{n.gacha.pity}<i>/{n.gacha.max}</i></b>, note: '천장까지 — 프리미엄팩', hot: n.gacha.max - n.gacha.pity <= 3 },
-    { key: 'shop', to: '/shop', icon: 'shop', label: '스카우터', value: <b className="num">{n.shop.left}<i>명</i></b>, note: <>오늘 더 데려올 수 있어요</> },
+    { key: 'lineup', to: '/lineup', icon: 'lineup', label: '라인업', value: <b className="num">{n.lineup.overall}</b>, note: <>{n.lineup.set ? <>{n.lineup.set} 세트까지 <b className="num">{n.lineup.remain}</b>명</> : '팀 종합'}</>, hot: n.lineup.remain > 0 && n.lineup.remain <= 2 },
+    { key: 'gacha', to: '/gacha', icon: 'pack', label: '카드구매', value: <b className="num">{n.gacha.pity}<i>/{n.gacha.max}</i></b>, note: '천장까지', hot: n.gacha.max - n.gacha.pity <= 3 },
+    { key: 'shop', to: '/shop', icon: 'shop', label: '스카우터', value: <b className="num">{n.shop.left}<i>명</i></b>, note: '오늘 남음' },
     { key: 'pvp', to: '/pvp', icon: 'versus', label: '대전', value: <b className="num">{n.pvp.left}<i>번</i></b>, note: <>레이팅 <span className="num">{int(n.pvp.rating)}</span></> },
     { key: 'cards', to: '/dex', icon: 'card', label: '도감', value: <b className="num">{int(n.cards.have)}<i>종</i></b>, note: <>모은 카드 <span className="num">{pctText(n.cards)}</span>%</> },
-    { key: 'season', to: '/season', icon: 'fast', label: '시즌 빨리 감기', value: <b className="num">{line.left}<i>경기</i></b>, note: '남은 시즌 한 번에' },
+    { key: 'season', to: '/season', icon: 'fast', label: '빨리 감기', value: <b className="num">{line.left}<i>경기</i></b>, note: '남은 경기' },
   ];
   return (
     <section className={s.todo} aria-labelledby="todo-h">
@@ -64,11 +64,11 @@ function SeasonSheet({ open, onClose, left }: { open: boolean; onClose: () => vo
       open={open}
       onClose={onClose}
       title="시즌 자동 진행"
-      sub={<>남은 <b className="num">{left}</b>경기를 한 번에 — 하이라이트 경기에서는 잠깐 멈춰 명장면을 보여 줘요.</>}
+      sub={<>남은 <b className="num">{left}</b>경기</>}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>닫기</Button>
-          <Button icon="fast" onClick={() => { onClose(); toast({ text: '시즌 자동 진행은 경기 엔진이 붙으면 열려요', tone: 'info' }); }}>시작</Button>
+          <Button icon="fast" onClick={() => { onClose(); toast({ text: '준비 중이에요', tone: 'info' }); }}>시작</Button>
         </>
       }
     >
@@ -92,8 +92,7 @@ function SeasonSheet({ open, onClose, left }: { open: boolean; onClose: () => vo
           <input type="checkbox" checked={stop} onChange={(e) => setStop(e.target.checked)} />
           <span className={s.switch} aria-hidden />
           <span className={s.toggleText}>
-            <b>감독 결정이 필요하면 멈추기</b>
-            <small>주전 부상 · 슬럼프 면담 · 트레이드 제안</small>
+            <b>결정이 필요하면 멈추기</b>
           </span>
         </label>
       </div>

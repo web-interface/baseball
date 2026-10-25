@@ -9,7 +9,7 @@ import { navigate } from '../../app/router';
 import { Button, Emblem, Tabs, useToast } from '../../ui';
 import { ME, playerById, teamById } from '../../game/mock';
 import { longDate, openingDate, shortDate } from '../../season/schedule';
-import { allDays, getSeason, isOver, rankLabel, teamLine, useSeason, yearOf, type DayHighlight, type NewsRec } from '../../season/store';
+import { allDays, getSeason, isOver, teamLine, useSeason, yearOf, type DayHighlight, type NewsRec } from '../../season/store';
 import { markFastDay } from '../../game/press';
 import { LeaguePanel, useStartNextSeason } from './LeaguePanel';
 import { PostPanel } from './PostPanel';
@@ -98,7 +98,7 @@ export default function SeasonScreen({ query }: ScreenProps) {
           <Emblem team={me} size={34} />
           <p className={s.meMain}>
             <b>{me.short} <span className="num">{rec.w}</span>승 <span className="num">{rec.d}</span>무 <span className="num">{rec.l}</span>패</b>
-            <small>{rankLabel(ln)} · <span className="num">{ln.played}</span>경기 · 최근 {ln.form.split('').reverse().map((c) => (c === 'W' ? '승' : c === 'L' ? '패' : '무')).join('') || '—'}</small>
+            <small><span className="num">{ln.played}</span>경기{ln.form ? <> · 최근 {ln.form.split('').reverse().map((c) => (c === 'W' ? '승' : c === 'L' ? '패' : '무')).join('')}</> : null}</small>
           </p>
           <span className={['num-display', s.rankBig].join(' ')}>{ln.started ? <>{ln.rank}<i>위</i></> : <>—<i>개막 전</i></>}</span>
         </div>
@@ -115,7 +115,7 @@ export default function SeasonScreen({ query }: ScreenProps) {
       {/* 경기 전 준비 — 라인업 점검 · 감독 인터뷰 */}
       {!over && (
         <section className={s.sec} aria-label="경기 전 준비">
-          <p className={s.secH}>경기 전 준비 <small>다음 경기 전에 해 두면 좋아요</small></p>
+          <p className={s.secH}>경기 전 준비</p>
           <Prep />
           <InterviewCard />
         </section>
@@ -124,7 +124,7 @@ export default function SeasonScreen({ query }: ScreenProps) {
       {/* 진행 — 남은 정규 시즌 빨리 감기 */}
       {!over && (
         <section className={s.sec} aria-label="남은 시즌 빨리 감기">
-          <p className={s.secH}>남은 시즌 빨리 감기 <small>내 경기도 결과만 — 직접 보려면 '지금 바로 경기'</small></p>
+          <p className={s.secH}>빨리 감기</p>
           <div className={s.prog}>
             <div className={s.progTop}>
               <b>{cur ? longDate(cur.date) : ''}</b>
@@ -141,7 +141,7 @@ export default function SeasonScreen({ query }: ScreenProps) {
             <div className={s.ctrlBtns}>
               {running
                 ? <Button size="l" block variant="secondary" icon="pause" onClick={stop}>멈춤</Button>
-                : <Button size="l" block variant="secondary" icon="fast" onClick={() => void loop()}>{doneN === 0 ? '빨리 감기 시작' : '빨리 감기 이어서'}</Button>}
+                : <Button size="l" block variant="secondary" icon="fast" onClick={() => void loop()}>{doneN === 0 ? '시작' : '이어서'}</Button>}
             </div>
           </div>
           {hl && <HighlightCard h={hl} />}
@@ -155,7 +155,7 @@ export default function SeasonScreen({ query }: ScreenProps) {
 
       {/* 리그 뉴스 — 기사 · 독자 댓글 (특집 · 큰일은 AI, 날마다 기사는 템플릿) */}
       <section className={s.sec} aria-label="리그 뉴스">
-        <p className={s.secH}>리그 뉴스 <small>최근 기사와 댓글</small></p>
+        <p className={s.secH}>리그 뉴스</p>
         <NewsFeed limit={6} />
         {!running && news.length > 0 && (
           <details className={s.moreNews}>
@@ -169,7 +169,7 @@ export default function SeasonScreen({ query }: ScreenProps) {
       <div className={s.lastWrap}><LastGame /></div>
       {st.my.length > 0 && (
         <p className={s.boxLink}>
-          <button type="button" onClick={() => navigate(`/games?g=${boxKeyOfMyGame(st.my[st.my.length - 1])}`)}>지난 경기 박스스코어 보기 ›</button>
+          <button type="button" onClick={() => navigate(`/games?g=${boxKeyOfMyGame(st.my[st.my.length - 1])}`)}>박스스코어 ›</button>
         </p>
       )}
 
@@ -181,16 +181,16 @@ export default function SeasonScreen({ query }: ScreenProps) {
           <div className={s.endBtns}>
             {st.post?.champion
               ? <Button size="l" block icon="play" onClick={startNext}><span className="num">{yearOf(st) + 1}</span> 시즌 시작</Button>
-              : <Button size="l" block variant="secondary" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>위로 — 포스트시즌</Button>}
+              : <Button size="l" block variant="secondary" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>포스트시즌 보기</Button>}
           </div>
         </section>
       )}
 
       {/* 경기 운영 다른 화면 */}
       <nav className={s.jump} aria-label="경기 운영 더 보기">
-        <button type="button" onClick={() => navigate('/schedule')}><b>시즌 일정</b><small>월별 · 전체 일정</small></button>
-        <button type="button" onClick={() => navigate('/league')}><b>순위·리그 기록</b><small>팀 순위 · 개인 기록</small></button>
-        <button type="button" onClick={() => navigate('/games')}><b>경기 기록</b><small>지난 경기 · 박스스코어</small></button>
+        <button type="button" onClick={() => navigate('/schedule')}><b>시즌 일정</b></button>
+        <button type="button" onClick={() => navigate('/league')}><b>순위·리그 기록</b></button>
+        <button type="button" onClick={() => navigate('/games')}><b>경기 기록</b></button>
       </nav>
     </div>
   );
@@ -219,7 +219,7 @@ function Prep() {
         <li>타격 <b className="num">{ev.parts.find((p) => p.k === 'bat')?.v}</b> · 수비 <b className="num">{ev.parts.find((p) => p.k === 'def')?.v}</b> · 투수 <b className="num">{ev.parts.find((p) => p.k === 'pit')?.v}</b></li>
         <li>레전드급 타자 <b className="num">{ev.legend.bat}</b>/{LEGEND_MAX.bat} · 투수 <b className="num">{ev.legend.pit}</b>/{LEGEND_MAX.pit} · MVP <b className="num">{ev.legend.mvp}</b>/{MVP_MAX}{ev.active.length > 0 && <> · 세트 <b className="num">{ev.active.length}</b>개 켜짐</>}</li>
         {empty > 0 && <li className={s.prepBad}>비어 있는 자리 <b className="num">{empty}</b>곳</li>}
-        {hurt > 0 && <li className={s.prepBad}>부상 선수 <b className="num">{hurt}</b>명이 엔트리에 있어요</li>}
+        {hurt > 0 && <li className={s.prepBad}>부상 <b className="num">{hurt}</b>명</li>}
       </ul>
       <Button size="m" variant={warn ? 'primary' : 'secondary'} onClick={() => navigate('/lineup')}>라인업 {warn ? '고치기' : '확인'}</Button>
     </div>

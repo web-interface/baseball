@@ -251,9 +251,8 @@ export function StepSpecial({ st, set, go, Dock }: StepProps) {
   return (
     <>
       <header className={s.head}>
-        <p className={s.kicker}>특별 선수 · 세상에 한 장</p>
+        <p className={s.kicker}>세상에 한 장</p>
         <h1 className={s.title}>나만의 특별 선수</h1>
-        <p className={s.lead}>이름을 고르거나 직접 짓고, 던지고 치는 방식까지 정해요. 처음엔 강하고, 경기와 훈련으로 더 크게 자라요.</p>
       </header>
 
       <div className={x.preview}>
@@ -266,7 +265,7 @@ export function StepSpecial({ st, set, go, Dock }: StepProps) {
             {isP && <i aria-hidden />}
             {isP ? sig.name : skills[0].name}
           </p>
-          <p className={x.sigEff}>{isP ? sig.effect.replace(' (특별 선수 전용)', '') : skills[0].effect}</p>
+          <p className={x.sigEff}>{isP ? sig.effect.replace(' (특별 선수 전용)', '').split(' — ').pop() : skills[0].effect}</p>
           {isP ? (
             <p className={x.more} aria-label="구종표">
               {(player.pitches ?? []).map((p, i, all) => (
@@ -287,7 +286,7 @@ export function StepSpecial({ st, set, go, Dock }: StepProps) {
       </div>
 
       <div className={x.form}>
-        <Group title="이름" note="추천 11명 · 직접 입력">
+        <Group title="이름">
           <Plates
             label="추천 이름"
             cols={4}
@@ -316,7 +315,7 @@ export function StepSpecial({ st, set, go, Dock }: StepProps) {
             />
           </Group>
         ) : (
-          <Group title="포지션" note={oddThrow(c) ? '좌투는 드문 자리 — 송구 −3' : '자리를 눌러 고르세요'}>
+          <Group title="포지션" note={oddThrow(c) ? '좌투 송구 −3' : undefined}>
             <Diamond value={c.pos} onChange={(v) => put({ pos: v })} throws={c.throws} />
           </Group>
         )}
@@ -356,7 +355,7 @@ export function StepSpecial({ st, set, go, Dock }: StepProps) {
                 <Tabs variant="box" fill aria-label="타이밍" value={c.timing} onChange={(v: Timing) => put({ timing: v })} items={(Object.keys(TIMING_KO) as Timing[]).map((k) => ({ value: k, label: TIMING_KO[k] }))} />
               </div>
             </Group>
-            <Group title="타격 특기" note={<><span className="num">{c.skills.length}</span>/{SKILL_MAX} · 먼저 고른 게 대표</>}>
+            <Group title="타격 특기" note={<><span className="num">{c.skills.length}</span>/{SKILL_MAX}</>}>
               <SkillPick c={c} onChange={(v) => put({ skills: v })} />
               <div className={x.nameStyle}>
                 <Tabs variant="underline" size="s" aria-label="특기 이름 짓기" value={c.sigStyle} onChange={(v) => put({ sigStyle: v })} items={nameTabs} />
@@ -365,9 +364,9 @@ export function StepSpecial({ st, set, go, Dock }: StepProps) {
           </>
         )}
 
-        <Group title="외모" note="캐릭터 생성기로 그려요">
+        <Group title="외모">
           <div className={x.looks}>
-            <Button variant="secondary" size="m" icon="refresh" block onClick={() => put({ seed: c.seed + 1 })}>얼굴 다시 돌리기</Button>
+            <Button variant="secondary" size="m" icon="refresh" block onClick={() => put({ seed: c.seed + 1 })}>다른 얼굴</Button>
             <p className={x.lookLabel}>체격</p>
             <Tabs variant="box" fill aria-label="체격" value={c.build} onChange={(v: BuildPreset) => put({ build: v, seed: 0 })} items={(Object.keys(BUILD_KO) as BuildPreset[]).map((k) => ({ value: k, label: <>{BUILD_KO[k].ko} <small className="num">{BUILD_KO[k].h}·{BUILD_KO[k].w}</small></> }))} />
             <p className={x.lookLabel}>머리</p>

@@ -48,12 +48,12 @@ export function LobbyChat() {
             ))}
           </ul>
         ) : (
-          <p className={s.empty}>{st.loaded ? '지금은 조용해요. 먼저 인사를 남겨 보세요.' : `${statusText(st)}…`}</p>
+          <p className={s.empty}>{st.loaded ? '아직 대화가 없어요' : `${statusText(st)}…`}</p>
         )}
       </Link>
 
       <div className={s.foot}>
-        <TtlNote st={st}> · 욕설은 별표로 가려져요</TtlNote>
+        <TtlNote st={st} />
         <Composer src={src} compact />
       </div>
     </section>

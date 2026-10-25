@@ -153,12 +153,11 @@ export function TeamLineup({ cards, onOpen }: { cards: LineupCards; onOpen?: () 
       ))}
     </ol>
   );
-  if (!cards.bat.length && !cards.mound.length) return <p className={s.empty}>저장된 라인업이 없어요.</p>;
+  if (!cards.bat.length && !cards.mound.length) return <p className={s.empty}>저장된 라인업이 없어요</p>;
   return (
     <div className={s.wrap}>
       {cards.bat.length > 0 && <><h3 className={s.h}>타선</h3>{grid(cards.bat)}</>}
       {cards.mound.length > 0 && <><h3 className={s.h}>마운드</h3>{grid(cards.mound)}</>}
-      <p className={s.note}>카드를 누르면 선수 능력치를 볼 수 있어요.</p>
     </div>
   );
 }

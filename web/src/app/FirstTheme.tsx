@@ -19,8 +19,8 @@ export function FirstTheme() {
       open={open}
       onClose={done}
       dismissible={false}
-      title="화면 테마를 골라 주세요"
-      sub="경기장 · 카드 · 기록 화면의 분위기예요. 나중에 설정 › 테마에서 언제든 바꿀 수 있어요"
+      title="테마를 골라 주세요"
+      sub="설정에서 언제든 바꿀 수 있어요"
       footer={<Button size="l" block onClick={done}>이 테마로 시작</Button>}
     >
       <ThemePicker />

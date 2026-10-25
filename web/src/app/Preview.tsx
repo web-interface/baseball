@@ -81,7 +81,6 @@ export function Preview() {
       <header className={s.intro}>
         <p className={s.eyebrow}><span className="num">2027</span> 시즌 · 화면 미리보기</p>
         <h1 className={s.title}>야구 매니저,<br />먼저 둘러보세요</h1>
-        <p className={s.lead}>로그인 없이 모든 화면을 볼 수 있어요. 선수·숫자는 아직 연습용이고, 경기 결과는 서버가 붙으면 진짜로 정해져요.</p>
       </header>
 
       <section className={s.sec}>
@@ -90,14 +89,13 @@ export function Preview() {
       </section>
 
       <section className={s.sec}>
-        <h2 className={s.h}><span>바로 보는 장면</span><em>누르면 그 장면부터</em></h2>
+        <h2 className={s.h}><span>바로 보는 장면</span></h2>
         <ul className={s.scenes}>
           {SCENES.map((sc) => (
             <li key={sc.k}>
-              <Link to={sc.path} className={s.scene}>
+              <Link to={sc.path} className={s.scene} title={sc.desc}>
                 <span className={['num', s.sceneK].join(' ')}>{sc.k}</span>
                 <b>{sc.title}</b>
-                <small>{sc.desc}</small>
               </Link>
             </li>
           ))}
@@ -111,9 +109,8 @@ export function Preview() {
             <li key={sc.path}>
               <Link to={sc.path} className={s.screen}>
                 <span className={['num', s.no].join(' ')}>{String(sc.no).padStart(2, '0')}</span>
-                <span className={s.sText}>
+                <span className={s.sText} title={sc.desc}>
                   <b>{sc.title}</b>
-                  <small>{sc.desc}</small>
                 </span>
                 <code className={s.path}>#{sc.path.split('?')[0]}</code>
                 <Icon name="chevron" size={16} className={s.chev} />
@@ -138,7 +135,6 @@ export function Preview() {
 
       <section className={s.sec}>
         <h2 className={s.h}><span>강조 문구</span><em>호수비 · 클러치 · 극적인 순간</em></h2>
-        <p className={s.note}>경기 화면이 쓰는 부품이에요. 승리 확률이 크게 바뀌거나 잡기 힘든 타구를 잡았을 때만, 한 경기에 몇 번만 떠요.</p>
         <Tabs variant="box" size="s" items={PACES} value={pace} onChange={setPace} aria-label="보기 방식" className={s.paceTabs} />
         <CalloutStage callout={callout} pace={pace} onDone={() => setCallout(null)} className={s.stage}>
           <div className={s.stageField}>
@@ -163,7 +159,7 @@ export function Preview() {
 
       <section className={s.sec}>
         <h2 className={s.h}><span>카드 등급</span><em>11종 + 특별 선수</em></h2>
-        <p className={s.note}>서열 순서예요. 등급이 높을수록 테가 두꺼워지고, 엘리트·블랙·시그니처는 테가 움직여요. <Link to="/cards?gallery=1&same=1" className={s.inline}>같은 선수로 비교하기</Link></p>
+        <p className={s.note}><Link to="/cards?gallery=1&same=1" className={s.inline}>같은 선수로 비교하기</Link></p>
         <div className={s.cards}>
           {GRADE_CARDS.map((c) => (
             <figure key={c.id} className={s.cardFig}>

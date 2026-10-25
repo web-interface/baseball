@@ -72,7 +72,6 @@ export function AuthScreen() {
           <div className={s.stub} aria-hidden>
             <span className={s.stubL}>
               <b>2027 SEASON TICKET</b>
-              <small>한별 리그 · 열 개 구장 어디든 입장</small>
             </span>
             <svg className={s.barcode} viewBox="0 0 74 24"><path d={BARS} /></svg>
           </div>
@@ -82,7 +81,6 @@ export function AuthScreen() {
             {mode === 'reset' ? (
               <div className={s.resetHead}>
                 <h2>비밀번호 다시 정하기</h2>
-                <p>가입할 때 받은 복구 코드가 있으면 새 비밀번호로 바꿀 수 있어요.</p>
               </div>
             ) : (
               <Tabs
@@ -142,7 +140,6 @@ export function AuthScreen() {
               <Button type="submit" block size="l" loading={busy} className={s.cta} trailing={busy ? undefined : <Icon name="arrow-right" size={20} />}>
                 {busy ? '잠시만요' : CTA[mode]}
               </Button>
-              <p className={s.note}>이 기기에서는 다음부터 로그인 없이 바로 들어와요.</p>
             </form>
           </div>
         </div>

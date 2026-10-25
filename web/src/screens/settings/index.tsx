@@ -109,7 +109,7 @@ function CalloutDemo() {
         </div>
       </CalloutStage>
       <div className={s.demoRow}>
-        <Button variant="secondary" size="s" icon="play" onClick={play}>호수비 장면으로 보기</Button>
+        <Button variant="secondary" size="s" icon="play" onClick={play}>미리 보기</Button>
         <label className={s.toggle}>
           <input type="checkbox" checked={p.shake} onChange={(e) => setPrefs({ shake: e.target.checked })} />
           <span className={s.switch} aria-hidden />
@@ -122,16 +122,16 @@ function CalloutDemo() {
 
 function Sound() {
   const p = usePrefs();
-  const rows: { k: keyof Omit<SoundPrefs, 'mute'>; ko: string; note: string }[] = [
-    { k: 'bgm', ko: '배경 음악', note: '메뉴·경기장' },
-    { k: 'cheer', ko: '응원가', note: '구단 응원가·선수 구호' },
-    { k: 'sfx', ko: '효과음', note: '타구·뽑기' },
+  const rows: { k: keyof Omit<SoundPrefs, 'mute'>; ko: string }[] = [
+    { k: 'bgm', ko: '배경 음악' },
+    { k: 'cheer', ko: '응원가' },
+    { k: 'sfx', ko: '효과음' },
   ];
   return (
     <div className={s.sound}>
       {rows.map((r) => (
         <label key={r.k} className={[s.vol, p.sound.mute && s.muted].filter(Boolean).join(' ')}>
-          <span className={s.volText}><b>{r.ko}</b><small>{r.note}</small></span>
+          <span className={s.volText}><b>{r.ko}</b></span>
           <input type="range" min={0} max={10} step={1} value={p.sound[r.k]} disabled={p.sound.mute} onChange={(e) => setPrefs({ sound: { ...p.sound, [r.k]: Number(e.target.value) } })} style={{ ['--v' as string]: `${p.sound[r.k] * 10}%` }} />
           <span className={['num', s.volNum].join(' ')}>{p.sound[r.k]}</span>
         </label>
@@ -141,7 +141,7 @@ function Sound() {
         <span className={s.switch} aria-hidden />
         <span>모두 끄기</span>
       </label>
-      <p className={s.soon}>소리는 아직 준비 중이에요 — 직접 만든 응원가가 들어오면 이 값대로 나와요.</p>
+      <p className={s.soon}>준비 중이에요</p>
     </div>
   );
 }
@@ -159,7 +159,7 @@ function Devices() {
   return (
     <>
       <p className={s.who}>
-        {status === 'in' ? <><Icon name="user" size={16} /><b>{user}</b> 로 들어와 있어요</> : <><Icon name="eye" size={16} />로그인 없이 둘러보는 중 <Link to="/login" className={s.loginLink}>로그인</Link></>}
+        {status === 'in' ? <><Icon name="user" size={16} /><b>{user}</b></> : <><Icon name="eye" size={16} />둘러보는 중 <Link to="/login" className={s.loginLink}>로그인</Link></>}
       </p>
       <ul className={s.devices}>
         {DEVICES.map((d) => (
@@ -169,7 +169,7 @@ function Devices() {
           </li>
         ))}
       </ul>
-      <p className={s.soon}>기기 목록은 서버와 연결하면 실제 기기로 바뀌어요. 같은 기기면 다음부터 로그인 없이 들어와요.</p>
+      <p className={s.soon}>예시 목록이에요</p>
       <div className={s.outs}>
         <Button variant="secondary" icon="logout" disabled={status !== 'in'} onClick={() => logout()}>이 기기 로그아웃</Button>
         <Button variant="ghost" onClick={() => setAsk(true)}>모든 기기 로그아웃</Button>
@@ -178,8 +178,7 @@ function Devices() {
         open={ask}
         onClose={() => setAsk(false)}
         title="모든 기기에서 로그아웃할까요?"
-        sub="노트북·태블릿에서도 다시 로그인해야 해요."
-        footer={<><Button variant="secondary" onClick={() => setAsk(false)}>그만두기</Button><Button onClick={() => { setAsk(false); toast({ text: '모든 기기 로그아웃은 서버 연결 뒤 열려요', tone: 'info' }); }}>모두 로그아웃</Button></>}
+        footer={<><Button variant="secondary" onClick={() => setAsk(false)}>그만두기</Button><Button onClick={() => { setAsk(false); toast({ text: '준비 중이에요', tone: 'info' }); }}>모두 로그아웃</Button></>}
       />
     </>
   );
@@ -195,19 +194,17 @@ function NewStart() {
   return (
     <>
       <button type="button" className={s.linkRow} onClick={() => setAsk(true)}>
-        <span><b>새로 시작 — 구단 다시 고르기</b><small>지금 {me.name} · {ln.played ? `${ln.played}경기 ${record(ln.row.w, ln.row.d, ln.row.l)}` : '개막 전'}</small></span>
+        <span><b>새로 시작</b><small>{me.name} · {ln.played ? `${ln.played}경기 ${record(ln.row.w, ln.row.d, ln.row.l)}` : '개막 전'}</small></span>
         <Icon name="chevron" size={16} />
       </button>
       <Sheet
         open={ask}
         onClose={() => setAsk(false)}
         title="새로 시작할까요?"
-        sub={ln.played || season.next
-          ? <>지금 시즌 진행(<b className="num">{ln.played}</b>경기 · {record(ln.row.w, ln.row.d, ln.row.l)})은 지워지고, 다시 고른 구단으로 2027 개막전부터 시작해요. 되돌릴 수 없어요.</>
-          : <>구단 · 지명 · 특별 선수를 다시 골라 2027 개막전부터 시작해요.</>}
+        sub={ln.played || season.next ? '시즌 기록이 지워지고 되돌릴 수 없어요' : '구단부터 다시 골라요'}
         footer={<>
           <Button variant="secondary" onClick={() => setAsk(false)}>그만두기</Button>
-          <Button onClick={() => { setAsk(false); resetSeason(); resetLeague(); toast({ text: '시즌 진행을 지웠어요 — 구단부터 다시 골라 주세요', tone: 'info' }); navigate('/club-select?step=club'); }}>새로 시작</Button>
+          <Button onClick={() => { setAsk(false); resetSeason(); resetLeague(); toast({ text: '구단을 다시 골라 주세요', tone: 'info' }); navigate('/club-select?step=club'); }}>새로 시작</Button>
         </>}
       />
     </>
@@ -215,18 +212,15 @@ function NewStart() {
 }
 
 export default function SettingsScreen(_: ScreenProps) {
-  const p = usePrefs();
-  const mode = WATCH_MODES.find((m) => m.id === p.watch)!;
   return (
     <div className={s.page}>
-      <Section id="set-theme" title="테마" note="누르면 바로 바뀌고, 이 기기에 기억해요">
+      <Section id="set-theme" title="테마">
         <ThemeTiles />
       </Section>
-      <Section id="set-watch" title="경기 보기" note={<>지금 <b>{mode.ko}</b></>}>
+      <Section id="set-watch" title="경기 보기">
         <WatchModes />
         <div className={s.sub}>
           <h3>강조 문구</h3>
-          <p>호수비·클러치 히트·끝내기처럼 승부가 크게 흔들린 순간에만, 한 경기 3~4번 크게 띄워요. 어느 보기 방식에서도 떠요.</p>
           <CalloutDemo />
         </div>
       </Section>
@@ -235,8 +229,7 @@ export default function SettingsScreen(_: ScreenProps) {
       </Section>
       <Section id="set-play" title="경기 운영">
         <ul className={s.links}>
-          <li><span><b>전술</b><small>팀 · 그룹(테이블세터·클린업·필승조) · 선수 개인 지시</small></span><em>준비 중</em></li>
-          <li><span><b>AI 상대 난이도</b><small>시즌을 시작할 때 6단계 중에서 골라요</small></span><em>시즌 시작 때</em></li>
+          <li><span><b>AI 상대 난이도</b></span><em>시즌 시작 때</em></li>
           <li><NewStart /></li>
         </ul>
       </Section>
@@ -244,7 +237,7 @@ export default function SettingsScreen(_: ScreenProps) {
         <Devices />
       </Section>
       <p className={s.ver}>야구 매니저 · 2027 시즌 시험판</p>
-      <p className={s.ver}>{KBO_SOURCE_NOTE} · 구단은 게임 속 구단 이름</p>
+      <p className={s.ver}>{KBO_SOURCE_NOTE}</p>
     </div>
   );
 }

@@ -53,12 +53,12 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
       // 고른 구단이 앱 전체의 내 구단(ME.teamId)이 되게 — 시즌 진행을 지우고 화면을 다시 불러
       // 내 구단 · 순위표 · 일정 · 라인업 · 구단 색을 새 구단(부활 구단이면 바뀐 리그 구성)으로 맞춘다
       clearSeason();
-      setNextNotice(`${t.name} 창단! 2027 개막전부터 시작해요`, t.id);
+      setNextNotice(`${t.name} 창단!`, t.id);
       navigate('/home', { replace: true });
       location.reload();
       return;
     }
-    toast({ text: `${t.name} 창단! 2027 시즌을 시작해요`, tone: 'good' });
+    toast({ text: `${t.name} 창단!`, tone: 'good' });
     navigate('/home', { replace: true });
   };
 
@@ -76,7 +76,7 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
           <div>
             <h1 className={o.club}>{t.name}</h1>
             <p className={o.mgr}>감독 <b>{user ?? ME.user}</b> · {t.stadium.name}</p>
-            {slot && <p className={o.dates}>부활 구단 — <b>{slot.name}</b> 자리에서 뛰어요</p>}
+            {slot && <p className={o.dates}><b>{slot.name}</b> 자리로 부활</p>}
             <p className={o.dates}><span className="num">4</span>월 개막 → <span className="num">10</span>월 가을야구</p>
           </div>
         </div>
@@ -93,21 +93,18 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
             <button type="button" className={o.edit} onClick={() => go('draft')}><Icon name="swap" size={14} /> 바꾸기</button>
           </div>
         </div>
-        <p className={o.starter}>
-          나머지는 다른 구단 최근 시즌(’24~’26)의 노멀·스페셜 <span className="num">22</span>장 — 포수 <span className="num">2</span>명 포함, 빈자리 없이 채워 드려요.
-          처음엔 어떤 세트덱도 켜지지 않아요. 지금 팀 종합 <b className="num">{ovr}</b>.
-        </p>
+        <p className={o.starter}>팀 종합 <b className="num">{ovr}</b></p>
       </section>
 
       <section className={s.group} aria-labelledby="ai-h">
-        <div className={s.groupHead}><h2 id="ai-h">리그 단계 · AI 상대</h2><small>고르지 않아요 — 성적과 팀 조건으로 자동</small></div>
+        <div className={s.groupHead}><h2 id="ai-h">리그 단계</h2><small>성적으로 자동</small></div>
         <ol className={o.ladder} aria-label="리그 단계">
           {LEVELS.map((id, i) => {
             const g = GATE[id];
             const need = [
-              g.ovr ? `팀 종합 ${g.ovr}` : '처음 시작',
-              g.teamYear ? (g.teamYear >= 20 ? '단일팀 연도덱 전원(왕조) · 우승 연도' : `단일팀 연도덱 ${g.teamYear}명 · 우승 연도`) : '',
-              g.enh ? `평균 강화 ${['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][g.enh]}` : '',
+              g.ovr ? `종합 ${g.ovr}` : '처음 시작',
+              g.teamYear ? (g.teamYear >= 20 ? '우승 연도 왕조' : `우승 연도덱 ${g.teamYear}명`) : '',
+              g.enh ? `강화 ${['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][g.enh]}` : '',
             ].filter(Boolean).join(' · ');
             return (
               <li key={id}>
@@ -129,7 +126,7 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
             );
           })}
         </ol>
-        <p className={o.fair}>연습생에서 시작해요. 시즌이 끝날 때 <b>정규 시즌 1위</b>이고 다음 단계 조건을 모두 채웠으면 한 단계 올라가고, <b>9·10위</b>면 한 단계 내려가요. 상대 전력은 내 팀 종합을 따라와서 성적 올리기가 쉽지 않아요. 엔진 규칙과 확률은 모든 단계가 같아요.</p>
+        <p className={o.fair}><b>1위</b>면 올라가고 <b>9·10위</b>면 내려가요</p>
       </section>
 
       <section className={s.group} aria-labelledby="fund-h">
@@ -140,7 +137,7 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
         </dl>
       </section>
 
-      <Dock note={<span><b>{level.ko} 상대로 개막</b><small>AI 상대는 성적대로 자동 · {shortLabel(t.code)}</small>{switching && played > 0 && <small>지금 시즌 진행은 지우고 {t.short}로 개막전부터 다시 시작해요</small>}</span>}>
+      <Dock note={<span><b>{level.ko} 상대로 개막</b><small>{shortLabel(t.code)}</small>{switching && played > 0 && <small>시즌 기록이 지워져요</small>}</span>}>
         <Button size="l" icon="play" onClick={start}>개막</Button>
       </Dock>
     </>

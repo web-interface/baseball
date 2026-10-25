@@ -40,7 +40,7 @@ export function BoxScore({ board, view, note, loading }: { board: BoardData; vie
   return (
     <article className={s.box} aria-label={`${a.short} ${board.score[0]} 대 ${h.short} ${board.score[1]} 박스스코어`}>
       <p className={s.kicker}>
-        <span><b>{kind}</b>{board.gameNo ? <> · 우리 <span className="num">{board.gameNo}</span>번째 경기</> : null}</span>
+        <span><b>{kind}</b>{board.gameNo ? <> · <span className="num">{board.gameNo}</span>번째 경기</> : null}</span>
         <span>{longDate(board.date)} <span className="num">{startTime(board.date)}</span> · {h.stadium.name}</span>
       </p>
 
@@ -78,7 +78,7 @@ export function BoxScore({ board, view, note, loading }: { board: BoardData; vie
       </section>
 
       {note && <p className={s.note}>{note}</p>}
-      {loading && <p className={s.loading} aria-live="polite">박스스코어를 다시 계산하는 중이에요…</p>}
+      {loading && <p className={s.loading} aria-live="polite">불러오는 중…</p>}
 
       {view && <Notables view={view} />}
       {view && ([0, 1] as const).map((side) => <BatTable key={`b${side}`} view={view} side={side} />)}

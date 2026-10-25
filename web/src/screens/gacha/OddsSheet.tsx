@@ -17,7 +17,7 @@ export function OddsSheet({ open, onClose, pack, pick, view, pity }: {
       open={open}
       onClose={onClose}
       title={`확률 공개 · ${packTitle(pack, pick)}`}
-      sub={<>30장 하나하나가 이 확률로 정해져요 · <span className="num">2027.06.14</span> 기준</>}
+      sub={<><span className="num">2027.06.14</span> 기준</>}
       height="tall"
       footer={<Button variant="secondary" onClick={onClose}>닫기</Button>}
     >
@@ -49,7 +49,7 @@ export function OddsSheet({ open, onClose, pack, pick, view, pity }: {
 
       {changed && (
         <section className={s.missing}>
-          <h3>이 조합에 없는 등급</h3>
+          <h3>없는 등급</h3>
           <ul>
             {view.missing.map((m) => (
               <li key={m.grade}>
@@ -58,23 +58,19 @@ export function OddsSheet({ open, onClose, pack, pick, view, pity }: {
               </li>
             ))}
           </ul>
-          <p>빠진 몫은 남은 등급에 원래 비율대로 나눴어요. 위 표는 다시 계산한 값이에요.</p>
+          <p>빠진 몫은 남은 등급에 비율대로 나눠요</p>
         </section>
       )}
 
       <section className={s.pity}>
         <h3>천장</h3>
         <p>
-          이 팩을 <b className="num">{pack.pity.max}</b>번 열면 <b>{pack.pity.guaranteed}</b>.
-          지금 <b className="num">{pity}</b>/<span className="num">{pack.pity.max}</span> — 천장은 팩 종류마다 따로 세요.
+          <b className="num">{pack.pity.max}</b>번째 팩 <b>{pack.pity.guaranteed}</b> · <span className="num">{pity}</span>/<span className="num">{pack.pity.max}</span>
         </p>
         <PityTally count={pity} max={pack.pity.max} className={s.tally} />
       </section>
 
-      <p className={s.foot}>
-        결과는 서버 난수로 정하고 이 표와 같은 값을 써요. 같은 카드가 또 나오면 강화 재료가 돼요.
-        확률을 바꿀 땐 7일 전에 알려 드려요.
-      </p>
+      <p className={s.foot}>확률을 바꿀 땐 7일 전에 알려 드려요</p>
     </Sheet>
   );
 }

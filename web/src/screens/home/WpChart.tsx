@@ -68,13 +68,12 @@ export function WpChart({ plays, homeShort, awayShort, marks, active, onPick, ma
             <b className="num">{Math.round(shown.play.wp[1] * 100)}%</b>
             <small>{halfKo(shown.play)} · {shown.play.text}</small>
           </span>
-        ) : (
-          <span className={s.hintCap}>{homeShort} 기준 · 점을 누르면 다시 보기</span>
-        )}
+        ) : null}
       </figcaption>
       <div
         ref={box}
         className={s.plot}
+        title="점을 누르면 다시 보기"
         onPointerMove={onMove}
         onPointerDown={onMove}
         onPointerLeave={() => setHover(null)}

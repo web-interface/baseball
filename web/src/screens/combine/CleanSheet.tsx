@@ -51,7 +51,7 @@ export function CleanSheet({ open, onClose }: { open: boolean; onClose: () => vo
   const toggle = <T,>(xs: T[], x: T) => (xs.includes(x) ? xs.filter((y) => y !== x) : [...xs, x]);
   const start = () => {
     if (!pv || !pv.combos) return;
-    if (wallet.gp < 30_000) { toast({ text: 'GP가 모자라요 — 5장 조합 한 번에 3만 GP', tone: 'bad' }); return; }
+    if (wallet.gp < 30_000) { toast({ text: 'GP가 모자라요', tone: 'bad' }); return; }
     const r = runClean(opts);
     setDone(r);
     if (r.spins.length) setSpinIdx(0);
@@ -82,7 +82,7 @@ export function CleanSheet({ open, onClose }: { open: boolean; onClose: () => vo
       />
     )}
     <Sheet open={open && spinIdx == null} onClose={close} height="tall" title="자동 정리"
-      sub={done ? '정리를 마쳤어요' : `남길 등급 · 구단을 빼고, 나머지를 5장씩 빠르게 조합해요`}
+      sub={done ? '정리를 마쳤어요' : undefined}
       footer={done ? (
         <>
           <Button variant="secondary" onClick={() => setDone(null)}>한 번 더 정리</Button>
@@ -97,10 +97,10 @@ export function CleanSheet({ open, onClose }: { open: boolean; onClose: () => vo
       {done ? <Done r={done} /> : (
         <div className={s.body}>
           <p className={[s.count, over && s.over].filter(Boolean).join(' ')}>
-            보유 카드 <b className="num">{fmt.int(total)}</b>장{over ? <> · 상한 <span className="num">{fmt.int(CARD_CAP)}</span>장을 넘어서 카드구매가 막혔어요</> : <> · 상한 <span className="num">{fmt.int(CARD_CAP)}</span>장</>}
+            보유 <b className="num">{fmt.int(total)}</b> / <span className="num">{fmt.int(CARD_CAP)}</span>장{over ? ' · 상한 초과' : ''}
           </p>
 
-          <h3 className={s.h}>정리할 등급 <small>고른 등급의 남는 카드를 재료로</small></h3>
+          <h3 className={s.h}>정리할 등급</h3>
           <div className={s.chips}>
             {avail.grades.map(([g, n]) => (
               <button key={g} type="button" aria-pressed={grades.includes(g)} className={[s.chip, grades.includes(g) && s.on].filter(Boolean).join(' ')} onClick={() => setGrades(toggle(grades, g))}>
@@ -109,7 +109,7 @@ export function CleanSheet({ open, onClose }: { open: boolean; onClose: () => vo
             ))}
           </div>
 
-          <h3 className={s.h}>남길 구단 <small>고른 구단 카드는 재료로 쓰지 않아요</small></h3>
+          <h3 className={s.h}>남길 구단</h3>
           <div className={[s.chips, s.scroll].join(' ')}>
             {avail.clubs.map(([code, n]) => (
               <button key={code} type="button" aria-pressed={keepClubs.includes(code)} className={[s.chip, keepClubs.includes(code) && s.keep].filter(Boolean).join(' ')} onClick={() => setKeepClubs(toggle(keepClubs, code))}>
@@ -120,17 +120,16 @@ export function CleanSheet({ open, onClose }: { open: boolean; onClose: () => vo
 
           <label className={s.toggle}>
             <input type="checkbox" checked={keepOne} onChange={(e) => setKeepOne(e.target.checked)} />
-            <span><b>종류마다 1장 남기기</b><small>도감 · 세트용으로 카드마다 1장은 두고, 겹친 장만 써요</small></span>
+            <span><b>종류마다 1장 남기기</b></span>
           </label>
           <label className={s.toggle}>
             <input type="checkbox" checked={cascade} onChange={(e) => setCascade(e.target.checked)} />
-            <span><b>끝까지 정리</b><small>조합 결과가 정리할 등급이면 다시 재료로 — 그 등급이 3장 미만이 될 때까지</small></span>
+            <span title="조합 결과도 다시 재료로 써요"><b>끝까지 정리</b></span>
           </label>
 
           {pv && (
             <div className={s.preview}>
-              <p>재료 <b className="num">{fmt.int(pv.cards)}</b>장 → 첫 바퀴 조합 <b className="num">{fmt.int(pv.combos)}</b>번 · <CoinGP size={12} /> <span className="num">{fmt.int(pv.gp)}</span>{cascade ? ' + 결과로 몇 번 더' : ''}</p>
-              <p className={s.sub}>라인업 · 강화 · 훈련 카드의 마지막 1장, 특별 선수, 잠근 카드는 쓰지 않아요. 같은 구단 · 연도끼리 먼저 묶어 조합 공식(구단 · 연도 · 왕조)을 맞춰요. 한 번에 최대 <span className="num">{fmt.int(CLEAN_CAP)}</span>번.</p>
+              <p>재료 <b className="num">{fmt.int(pv.cards)}</b>장 → 조합 <b className="num">{fmt.int(pv.combos)}</b>번 · <CoinGP size={12} /> <span className="num">{fmt.int(pv.gp)}</span></p>
             </div>
           )}
         </div>
@@ -147,13 +146,13 @@ function Done({ r }: { r: CleanResult }) {
         <p><span className="num">{fmt.int(r.before)}</span>장 → <b className="num">{fmt.int(r.after)}</b>장</p>
         <small>조합 <span className="num">{fmt.int(r.combos)}</span>번 · 재료 <span className="num">{fmt.int(r.used)}</span>장 · <CoinGP size={11} /> <span className="num">{fmt.int(r.gp)}</span></small>
       </div>
-      {r.stopped !== 'done' && <p className={s.warn}>{r.stopped === 'gp' ? 'GP가 모자라 중간에 멈췄어요' : `한 번에 ${fmt.int(CLEAN_CAP)}번까지라 멈췄어요 — 한 번 더 정리하면 이어서 해요`}</p>}
+      {r.stopped !== 'done' && <p className={s.warn}>{r.stopped === 'gp' ? 'GP가 모자라 중간에 멈췄어요' : `한 번에 ${fmt.int(CLEAN_CAP)}번까지예요`}</p>}
       <ul className={s.made} aria-label="나온 카드 등급">
         {r.made.map((x) => <li key={x.grade}><Swatch grade={x.grade} />{gradeShort(x.grade)}<b className="num">{fmt.int(x.n)}</b></li>)}
       </ul>
       {r.best.length > 0 && (
         <>
-          <h3 className={s.h}>빛나는 카드 <small>엘리트 이상 · 귀한 순</small></h3>
+          <h3 className={s.h}>빛나는 카드 <small>엘리트 이상</small></h3>
           <ul className={s.best}>
             {r.best.map((pc, i) => <li key={`${pc.card.id}-${i}`}><CardMini {...cardProps(pc.card)} fluid still /></li>)}
           </ul>

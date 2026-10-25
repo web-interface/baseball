@@ -13,7 +13,7 @@ import { Link, navigate } from '../../app/router';
 import { Card, CardBack, CardMini, cardProps } from '../../cards';
 import { GEAR_GRADE_KO, SLOT_KO, gearSet, slotsOf } from '../../cards';
 import { Button, Emblem, Icon, Sheet, Tabs } from '../../ui';
-import { avg as fmtAvg, level as fmtLevel, levelColor, roman, yearTag } from '../../ui/format';
+import { level as fmtLevel, levelColor, roman, yearTag } from '../../ui/format';
 import { GRADES } from '../../game/grades';
 import { POS_KO, ROLE_KO } from '../../game/labels';
 import { CARDS, ME, TEAMS, cardById, playerById, playerOfCard, teamById } from '../../game/mock';
@@ -141,9 +141,6 @@ function Collection({ openId, openBack, colsParam, sortParam, enhance = false }:
             ? <Link to="/cards" className={s.galleryLink}>선수보관<Icon name="chevron" size={16} /></Link>
             : <Link to="/cards?gallery=1" className={s.galleryLink}>등급 갤러리<Icon name="chevron" size={16} /></Link>}
         </div>
-        {enhance && (
-          <p className={s.lead}>같은 카드가 표의 장수만큼 모이면 <b>I~V</b> 는 바로 올라가요(재료로 쓴 장수만큼 줄어요). <b>VI~X</b> 는 같은 카드 1장 + GP 로 도전해요 — 실패해도 단계는 그대로예요.</p>
-        )}
         <dl className={s.tally}>
           <div><dt>{enhance ? '보유' : '보관'}</dt><dd className="num">{mine.length}<small>종</small></dd>{!enhance && inLine > 0 && <Link to="/lineup" className={s.inLine}>라인업 {inLine}명 ›</Link>}</div>
           <div><dt>{enhance ? '강화에 쓴 카드' : '같은 카드'}</dt><dd className="num">{enhance ? st.enhUsed : dupTotal}<small>{enhance ? '장' : `/${copies}장`}</small></dd></div>
@@ -237,12 +234,12 @@ function Collection({ openId, openBack, colsParam, sortParam, enhance = false }:
       {list.length === 0 ? (
         mine.length === 0 && !enhance ? (
           <div className={s.empty}>
-            <p>보관함이 비어 있어요. 라인업 밖의 카드가 여기 모여요.</p>
-            <Button variant="secondary" size="s" onClick={() => navigate('/gacha')}>상점 › 카드구매</Button>
+            <p>보관함이 비어 있어요</p>
+            <Button variant="secondary" size="s" onClick={() => navigate('/gacha')}>카드구매</Button>
           </div>
         ) : (
           <div className={s.empty}>
-            <p>이 조건에 맞는 카드가 없어요.</p>
+            <p>맞는 카드가 없어요</p>
             <Button variant="secondary" size="s" onClick={reset}>거르기 풀기</Button>
           </div>
         )
@@ -303,7 +300,7 @@ function EnhRules() {
           ))}
         </tbody>
       </table>
-      <p>I~V 는 모이면 자동 · VI <span className="num">100</span> · VII <span className="num">75</span> · VIII <span className="num">60</span> · IX <span className="num">45</span> · X <span className="num">35%</span>, 실패마다 <span className="num">+15%p</span>, 세 번 실패하면 다음은 확정.</p>
+      <p title="실패마다 +15%p · 세 번 실패하면 다음은 확정">VI~X 성공 <span className="num">100 · 75 · 60 · 45 · 35%</span></p>
     </section>
   );
 }
@@ -337,13 +334,10 @@ function CardSheet({ card, onClose, startBack = false }: { card: CardInst | null
   const mineHere = isOwned(c.id);
   const entry = entryOf(c.id);
   const nx = mineHere ? nextStep(c.id) : null;
-  const nextLine = c.grade === 'unique' ? '— 특별 선수는 강화권으로 강화해요'
-    : !nx ? (c.dup > 0 ? `— X 완성 · 남는 ${c.dup}장은 조합 재료` : '— X 완성')
-    : nx.auto ? `— ${roman(nx.stage)} 까지 ${nx.need}장 중 ${nx.have}장 (모이면 자동 강화)`
-    : `— ${roman(nx.stage)} 도전에 1장 + ${nx.gp.toLocaleString('en-US')} GP · 지금 ${nx.chance}%`;
-  const line = p.season.bat
-    ? `타율 ${fmtAvg(p.season.bat.avg)} · 홈런 ${p.season.bat.hr} · OPS ${fmtAvg(p.season.bat.ops)}`
-    : p.season.pit ? `평균자책 ${p.season.pit.era.toFixed(2)} · ${p.role === 'CL' ? `${p.season.pit.sv}세이브` : p.role === 'RP' ? `${p.season.pit.hld}홀드` : `${p.season.pit.w}승 ${p.season.pit.l}패`}` : '';
+  const nextLine = c.grade === 'unique' ? '강화권 전용'
+    : !nx ? 'X 완성'
+    : nx.auto ? `${roman(nx.stage)}까지 ${nx.have}/${nx.need}`
+    : `${roman(nx.stage)} 도전 ${nx.chance}%`;
 
   return (
     <Sheet
@@ -351,7 +345,7 @@ function CardSheet({ card, onClose, startBack = false }: { card: CardInst | null
       onClose={onClose}
       height="tall"
       title={<>{p.name} <span className={s.sheetGrade} style={{ color: `var(--gr-${c.grade})` }}>{g.ko}{c.year != null && g.yearTagged ? ' ' + yearTag(c.year) : ''}</span></>}
-      sub={`${t.name} · ${posKo} · ${line}`}
+      sub={`${t.name} · ${posKo}`}
       footer={<>
         {/* 선수 교체 — 보관함 카드는 누구와 바꿀지 고르는 라인업 시트로, 이미 라인업에 있으면 라인업 화면으로 (뒤집기는 카드를 누르면 됨) */}
         {mineHere && (inLineup(c.id)
@@ -393,7 +387,7 @@ function CardSheet({ card, onClose, startBack = false }: { card: CardInst | null
           {mineHere && entry && (
             <div className={s.fact}>
               <dt>기록</dt>
-              <dd><small>받은 <span className="num">{entry.got}</span>장 · 강화에 <span className="num">{entry.mat}</span>장 · 조합에 <span className="num">{entry.rl}</span>장{inLineup(c.id) ? ' · 라인업 카드(마지막 1장 보호)' : ''}</small></dd>
+              <dd><small>받은 <span className="num">{entry.got}</span> · 강화 <span className="num">{entry.mat}</span> · 조합 <span className="num">{entry.rl}</span></small></dd>
             </div>
           )}
           {mineHere && (
@@ -429,7 +423,7 @@ function CardSheet({ card, onClose, startBack = false }: { card: CardInst | null
                   );
                 })}
               </ul>
-              {set3 && set3.bonus > 0 && <p className={s.setNote}>{set3.name} 세트 {set3.count}부위 — 세트 능력치 +{set3.bonus}</p>}
+              {set3 && set3.bonus > 0 && <p className={s.setNote}>{set3.name} 세트 {set3.count}부위 +{set3.bonus}</p>}
             </dd>
           </div>
         </dl>
@@ -469,11 +463,6 @@ function Gallery({ same }: { same: boolean }) {
           <h1 className={['head', s.h1].join(' ')}>카드 등급</h1>
           <Link to="/cards" className={s.galleryLink}>보관함<Icon name="chevron" size={16} /></Link>
         </div>
-        <p className={s.lead}>
-          {mode === 'same'
-            ? '같은 그림에 테 색 · 이름 띠 · 빛만 바뀌어요. 엘리트부터 테가 빛나요.'
-            : '높은 등급일수록 테가 두꺼워지고 빛이 움직여요. 서열은 시그니처 > 블랙 > 프랜차이즈 > 엘리트 > 레전드 > 레어 > 스페셜 > 노멀.'}
-        </p>
       </header>
       <div className={s.galleryBar}>
         <Tabs variant="box" size="s" items={[{ value: 'real', label: '실제 카드' }, { value: 'same', label: '같은 선수로' }]} value={mode} onChange={setMode} aria-label="보기" />
@@ -482,16 +471,15 @@ function Gallery({ same }: { same: boolean }) {
         {items.map(({ g, card }, i) => (
           <li key={g} className={[s.rung, s['k-' + GRADES[g].kind]].join(' ')}>
             <Card {...cardProps(card!)} fluid dense isNew={false} onClick={() => navigate('/player/' + card!.playerId)} />
-            <div className={s.rungCap}>
+            <div className={s.rungCap} title={LOOK[g]}>
               <span className={['num', s.rungNo].join(' ')}>{String(i + 1).padStart(2, '0')}</span>
               <b style={{ color: `var(--gr-${g})` }}>{GRADES[g].ko}{LIMIT[g] && <em className="num">{LIMIT[g]}</em>}</b>
-              <span>{LOOK[g]}</span>
             </div>
           </li>
         ))}
       </ol>
       <section className={s.minis}>
-        <div className={s.minisHead}><h2 className="head">작은 카드</h2><span>라인업 경기장 위 · 촘촘한 목록</span></div>
+        <div className={s.minisHead}><h2 className="head">작은 카드</h2></div>
         <div className={s.minisRow}>
           {items.map(({ g, card }, i) => (
             <CardMini key={g} {...cardProps(card!)} width={64} badge={i < 9 ? i + 1 : undefined} isNew={false} />
@@ -499,14 +487,13 @@ function Gallery({ same }: { same: boolean }) {
         </div>
       </section>
       <section className={s.minis}>
-        <div className={s.minisHead}><h2 className="head">뒷면</h2><span>뒤집기 전 — 높은 등급은 빛이 살짝 새어 나와요</span></div>
+        <div className={s.minisHead}><h2 className="head">뒷면</h2></div>
         <div className={s.minisRow}>
           {(['normal', 'rare', 'elite', 'legend', 'black', 'signature'] as GradeId[]).map((g) => (
             <CardBack key={g} grade={g} width={86} />
           ))}
         </div>
       </section>
-      <p className={s.foot}>MVP · 골든글러브 · 타이틀 홀더는 시즌 수상으로 생기는 특별 등급이에요. 특별 선수는 리그에 한 장뿐이에요.</p>
     </div>
   );
 }

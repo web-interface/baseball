@@ -192,7 +192,7 @@ export function Reveal({ pc, pick, onDone }: { pc: PulledCard; pick: Pick | null
             {posOf(p)} · {team.name}
             {pc.card.signaturePitch && <> · <span className={s.sig} style={{ ['--sig' as string]: pc.card.signaturePitch.color }}>{pc.card.signaturePitch.name}</span></>}
           </p>
-          <p className={pc.isNew ? s.isNew : s.isDup}>{pc.isNew ? '새 카드 · 보관함에 넣었어요' : pc.up ? `같은 카드가 모여 강화 +1 (${pc.up.from > 0 ? roman(pc.up.from) : '0'} → ${roman(pc.up.to)})` : '중복 +1 · 강화 재료'}</p>
+          <p className={pc.isNew ? s.isNew : s.isDup}>{pc.isNew ? '새 카드' : pc.up ? `강화 +1 (${pc.up.from > 0 ? roman(pc.up.from) : '0'} → ${roman(pc.up.to)})` : '중복 +1'}</p>
           <Button variant="primary" size="l" block onClick={onDone} className={s.next} autoFocus>계속</Button>
         </div>
       )}
@@ -322,8 +322,8 @@ function Plate({ kind, p, team, className }: { kind: Kind; p: Player; team: Team
   const seasons = Math.max(1, 2027 - p.draftYear);
   const top = kind === 'legend' ? 'LEGEND' : kind === 'franchise' ? 'FRANCHISE' : 'BLACK';
   const line = kind === 'legend'
-    ? (era ? `${yearTag(era.year)} ‘${era.era}’ — ${era.desc}` : team.name)
-    : kind === 'franchise' ? `${seasons}시즌째 ${team.short} — 한 팀에서만 뛴 상징`
+    ? (era ? (era.era.endsWith('우승') ? `${yearTag(era.year)} 우승` : `${yearTag(era.year)} ‘${era.era}’`) : team.name)
+    : kind === 'franchise' ? `${team.short} ${seasons}시즌째`
     : `${team.short} 결번 ${p.number}`;
   return (
     <div className={className} aria-hidden>

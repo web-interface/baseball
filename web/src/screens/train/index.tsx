@@ -80,14 +80,13 @@ export default function TrainScreen({ query }: ScreenProps) {
           <h1 className={cx('head', s.h1)}>훈련</h1>
           <Link to="/cards?mode=enhance" className={s.toEnh}>카드 강화 I~X<Icon name="chevron" size={16} /></Link>
         </div>
-        <p className={s.lead}>능력치 하나를 골라 훈련해요. 성공하면 단계가 오르고 그 능력치가 올라요. 실패하면 비용만 들어요.</p>
       </header>
 
       {id ? (
         <Trainer key={id} id={id} placeId={placeId} setPlaceId={setPlaceId} onPickCard={() => setPicking(true)} log={log} onLog={onLog} onOpen={choose} />
       ) : (
         <>
-          <p className={s.empty}>훈련할 카드가 없어요.</p>
+          <p className={s.empty}>훈련할 카드가 없어요</p>
           <RulesTable lv={0} />
         </>
       )}
@@ -196,7 +195,6 @@ function Trainer({ id, placeId, setPlaceId, onPickCard, log, onLog, onOpen }: {
           <span className={s.meta}><span className="num">{openCount}</span>곳 열림 · 전체 <span className="num">{PLACES.length}</span>곳</span>
         </header>
         <PlacePicker cur={place.id} onPick={pickPlace} lockOf={(pl) => placeLock(pl, p, card, tr.lv)} bonusOf={(pl) => specText(pl, keys)} />
-        <p className={s.placeLine}><b>{place.name}</b> {place.line}</p>
       </section>
 
       {/* 능력치 */}
@@ -224,7 +222,7 @@ function Trainer({ id, placeId, setPlaceId, onPickCard, log, onLog, onOpen }: {
           <button type="button" role="radio" aria-checked={key === SIG} disabled={maxed} className={cx(s.sig, key === SIG && s.on, maxed && s.done)} style={{ '--sig': sig.color } as CSSProperties} onClick={() => pickKey(SIG)}>
             <span className={s.sigHead}>
               <span className={s.sigTag}>특수구질 훈련</span>
-              <span className={s.sigHard}>확률 <b className="num">×{SIG_MUL}</b> · 더 어려워요</span>
+              <span className={s.sigHard}>확률 <b className="num">×{SIG_MUL}</b></span>
             </span>
             <b className={s.sigName}>{sig.name}</b>
             <span className={s.sigMeta}>
@@ -271,13 +269,12 @@ function Trainer({ id, placeId, setPlaceId, onPickCard, log, onLog, onOpen }: {
               <Button size="l" block disabled={rolling || !canPay(wallet, q.cost)} onClick={go} trailing={<CostText cost={q.cost} />}>
                 {rolling ? '훈련 중' : '훈련하기'}
               </Button>
-              <p className={s.fine}>실패해도 단계는 그대로예요 · 연속 실패마다 다음 확률 +{TR_PITY_STEP}%p (최대 +{TR_PITY_MAX}%p)</p>
             </div>
           </>
         ) : (
           <p className={s.maxed}>
-            {maxed ? <>최종 단계까지 마쳤어요. 카드에 최종 표시가 들어가요.</>
-              : 'why' in quote && quote.why === 'locked' ? <>{place.name}: {quote.text}</> : <>지금은 이 훈련을 할 수 없어요.</>}
+            {maxed ? <>최종 단계까지 마쳤어요</>
+              : 'why' in quote && quote.why === 'locked' ? <>{place.name}: {quote.text}</> : <>지금은 이 훈련을 할 수 없어요</>}
           </p>
         )}
       </section>
@@ -303,7 +300,7 @@ function Result({ r, ko }: { r: Extract<TrainTry, { ok: true }>; ko: string }) {
       <span className={s.resSub}>
         {r.success
           ? <>{ko} <b className="num">+{r.gain}</b> · <span className="num">{r.from}</span>단계 → <span className="num">{r.to}</span>단계</>
-          : <>비용만 들었어요 · {pityUp > 0 ? <>다음 확률 <b className="num">+{pityUp}%p</b></> : <>보정 최대 <b className="num">+{TR_PITY_MAX}%p</b></>}</>}
+          : <>{pityUp > 0 ? <>다음 확률 <b className="num">+{pityUp}%p</b></> : <>보정 최대 <b className="num">+{TR_PITY_MAX}%p</b></>}</>}
       </span>
       {glowNow && <span className={s.resNote}>카드에 불빛이 들어왔어요</span>}
       {final && <span className={s.resNote}>카드에 최종 표시가 붙어요</span>}
@@ -377,10 +374,12 @@ function Summary({ tr, statKo }: { tr: TrainState; statKo: (k: string) => string
         <ul className={s.gains}>
           {list.map(([k, v]) => <li key={k}><span>{statKo(k)}</span><b className="num">+{v}</b></li>)}
         </ul>
-      ) : <p className={s.muted}>아직 오른 능력치가 없어요.</p>}
-      <p className={s.effect}>
-        라인업에 서면 팀 종합 <b className="num">+{bonus}</b> <small>(오른 값 합 <span className="num">{sumGains(tr.gains)}</span> ÷ 4)</small> · 시즌·경기에서도 오른 능력치로 뛰어요.
-      </p>
+      ) : <p className={s.muted}>아직 오른 능력치가 없어요</p>}
+      {list.length > 0 && (
+        <p className={s.effect} title={`오른 값 합 ${sumGains(tr.gains)} ÷ 4`}>
+          팀 종합 <b className="num">+{bonus}</b>
+        </p>
+      )}
     </section>
   );
 }
@@ -428,11 +427,8 @@ function RulesTable({ lv }: { lv: number }) {
         </tbody>
       </table>
       <ul className={s.rules}>
-        <li>실패해도 단계와 오른 능력치는 그대로예요. 비용만 들어요.</li>
-        <li>연속으로 실패하면 다음 확률이 <b className="num">+{TR_PITY_STEP}%p</b>씩 올라요(최대 <span className="num">+{TR_PITY_MAX}%p</span>). 성공하면 처음부터예요.</li>
-        <li>장소마다 잘하는 능력치가 있어요(<span className="num">+2~6%p</span>). 특수구질은 확률 <span className="num">×{SIG_MUL}</span>, 대신 더 많이 올라요(오르는 값의 작은 숫자).</li>
-        <li><span className="num">{GLOW_FROM}</span>단계부터 카드에 불빛이 들어오고, <span className="num">{TRAIN_MAX}</span>단계는 최종 표시가 붙어요.</li>
-        <li>기본 비용은 구단 실내 연습장 기준이에요. 장소 배율 · 특수구질(×2)만큼 달라져요.</li>
+        <li>실패해도 단계는 그대로예요</li>
+        <li>연속 실패마다 <b className="num">+{TR_PITY_STEP}%p</b> · 최대 <span className="num">+{TR_PITY_MAX}%p</span></li>
       </ul>
     </section>
   );
@@ -461,12 +457,12 @@ function CardPicker({ open, onClose, cur, owned, lineup, onPick }: {
   const list = lists[tab];
   const shown = list.slice(0, PAGE * more);
   return (
-    <Sheet open={open} onClose={onClose} height="tall" title="훈련할 카드" sub="라인업 카드가 먼저예요 · 카드 아래 숫자는 훈련 단계">
+    <Sheet open={open} onClose={onClose} height="tall" title="훈련할 카드">
       <Tabs
         items={[{ value: 'line', label: '라인업', count: lists.line.length }, { value: 'box', label: '보관함', count: lists.box.length }, { value: 'done', label: '훈련한 카드', count: lists.done.length }]}
         value={tab} onChange={(v) => { setTab(v); setMore(1); }} size="s" fill aria-label="카드 묶음"
       />
-      {shown.length === 0 ? <p className={s.muted}>{tab === 'done' ? '아직 훈련한 카드가 없어요.' : '카드가 없어요.'}</p> : (
+      {shown.length === 0 ? <p className={s.muted}>{tab === 'done' ? '아직 훈련한 카드가 없어요' : '카드가 없어요'}</p> : (
         <ul className={s.pickGrid}>
           {shown.map((c) => {
             const lv = c.train?.lv ?? 0;

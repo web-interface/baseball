@@ -22,14 +22,14 @@ export async function resimGame(key: string): Promise<Resim> {
   const hit = cache.get(ck);
   if (hit) return hit;
   const k = parseBoxKey(key);
-  if (!k) return { kind: 'none', why: '경기를 찾지 못했어요.' };
-  if (k.away === ME.teamId || k.home === ME.teamId) return { kind: 'none', why: '우리 경기는 다시 계산하지 않아요 — 그때 라인업이 저장돼 있지 않아요.' };
+  if (!k) return { kind: 'none', why: '경기를 찾지 못했어요' };
+  if (k.away === ME.teamId || k.home === ME.teamId) return { kind: 'none', why: '박스스코어가 없어요' };
   let res: Resim;
   if (!k.post) {
     const d = allDays(s)[k.n];
     const rec = k.n < s.next ? s.results[k.n]?.find((r) => r.a === k.away && r.h === k.home) : undefined;
-    if (!d || !rec) res = { kind: 'none', why: '아직 치르지 않은 경기예요.' };
-    else if (rec.c) res = { kind: 'none', why: '비로 취소된 경기예요.' };
+    if (!d || !rec) res = { kind: 'none', why: '아직 치르지 않은 경기예요' };
+    else if (rec.c) res = { kind: 'none', why: '비로 취소된 경기예요' };
     else {
       const sim = await loadSim();
       const run = sim.runGame(s.seed, d.day, d.date, k.away, k.home, { log: true });
@@ -38,7 +38,7 @@ export async function resimGame(key: string): Promise<Resim> {
     }
   } else {
     const at = postGames(s.post).find((x) => x.n === k.n && x.rec.away === k.away && x.rec.home === k.home);
-    if (!at) res = { kind: 'none', why: '아직 치르지 않은 경기예요.' };
+    if (!at) res = { kind: 'none', why: '아직 치르지 않은 경기예요' };
     else {
       const sim = await loadSim();
       const run = sim.runGame(s.seed, 1000 + at.n, at.rec.date, k.away, k.home, { post: true, log: true });

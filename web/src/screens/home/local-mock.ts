@@ -38,7 +38,7 @@ export function nextGameView() {
     const weather: Weather = {
       city: home.region, sky: w.wet ? 'drizzle' : night ? 'night-clear' : 'clear', skyKo: w.dome ? '돔' : w.wet ? '약한 비' : '맑음', tempC: w.tC, humidity: w.wet ? 85 : 60,
       windMps: w.windMs, windTo: w.windMs < 1 ? 'calm' : 'out-cf', windKo: w.windMs < 1 ? '바람 없음' : '가운데 담장 쪽으로', rainPct: w.wet ? 70 : 10, dust: '보통',
-      effects: [w.dome ? '돔 — 바람 영향 없음' : w.windMs >= 3 ? `가운데 비거리 +${Math.round(w.windMs)}m` : '바람 영향 거의 없음'],
+      effects: [w.dome ? '바람 영향 없음' : w.windMs >= 3 ? `가운데 비거리 +${Math.round(w.windMs)}m` : '바람 영향 거의 없음'],
     };
     // 예상 선발 — 날마다 다섯 명이 돌아가며 (엔진과 같은 규칙)
     const ti = (id: string) => TEAMS.findIndex((t) => t.id === id);
@@ -139,7 +139,7 @@ export function feedItems(s: SeasonState = getSeason()): FeedItem[] {
   const out: FeedItem[] = [];
   // 개막 안내
   if (notStarted(s)) {
-    out.push({ id: 'open', kind: '시즌', text: `${LEAGUE.name} ${yearOf(s)} 개막`, detail: `${longDate(allDays(s)[0].date)} — 10개 구단 모두 0승 0무 0패에서, 구단마다 ${seasonGames()}경기`, when: '오늘' });
+    out.push({ id: 'open', kind: '시즌', text: `${LEAGUE.name} ${yearOf(s)} 개막`, detail: `${longDate(allDays(s)[0].date)} · ${seasonGames()}경기`, when: '오늘' });
   }
   // 다음 시리즈 (라이벌이면 더비 예고)
   const nx = nextMyGame();
@@ -153,13 +153,13 @@ export function feedItems(s: SeasonState = getSeason()): FeedItem[] {
       if (g && (g[0] === oppId || g[1] === oppId)) n++; else break;
     }
     const rival = me.rival.toLowerCase() === oppId;
-    const where = `${nx.home === me.id ? '홈' : '원정'} · ${teamById(nx.home).stadium.name}`;
+    const where = nx.home === me.id ? '홈' : '원정';
     out.push({
       id: 'series', kind: rival ? '라이벌' : '구단',
-      text: rival ? `${me.rivalry} — ${opp.short} ${n}연전` : `${notStarted(s) ? '개막 ' : ''}${opp.short}와 ${n}연전`,
-      detail: `${longDate(nx.day.date)}부터 · ${where}`, when: when(nx.day.date),
+      text: rival ? `${me.rivalry}, ${opp.short} ${n}연전` : `${notStarted(s) ? '개막 ' : ''}${opp.short}와 ${n}연전`,
+      detail: `${longDate(nx.day.date)} · ${where}`, when: when(nx.day.date),
     });
-    if (nx.rainedBefore > 0) out.push({ id: 'rain-next', kind: '날씨', text: `비 예보 — 내 경기 ${nx.rainedBefore}개 취소`, detail: '취소된 경기는 정규 시즌 끝에 다시 열려요', when: '오늘' });
+    if (nx.rainedBefore > 0) out.push({ id: 'rain-next', kind: '날씨', text: `비로 ${nx.rainedBefore}경기 취소`, detail: '시즌 끝에 다시 열려요', when: '오늘' });
   }
   // 시즌 소식 — 내 구단 것 먼저, 최근 순
   const news = s.news.slice().reverse();
@@ -175,13 +175,13 @@ export function feedItems(s: SeasonState = getSeason()): FeedItem[] {
     const hr = bats.slice().sort((a, b) => b[1].HR - a[1].HR || b[1].RBI - a[1].RBI)[0];
     if (hr && hr[1].HR > 0) {
       const p = playerById(hr[0]);
-      out.push({ id: 'hr', kind: '불방망이', text: `${p?.name ?? '선수'}, 시즌 홈런 ${hr[1].HR}개`, detail: `타율 ${(hr[1].H / Math.max(1, hr[1].AB)).toFixed(3).replace(/^0/, '')} · ${hr[1].RBI}타점 · ${hr[1].G}경기`, when: '시즌', players: [hr[0]], to: `/player/${hr[0]}` });
+      out.push({ id: 'hr', kind: '불방망이', text: `${p?.name ?? '선수'}, 시즌 홈런 ${hr[1].HR}개`, detail: `타율 ${(hr[1].H / Math.max(1, hr[1].AB)).toFixed(3).replace(/^0/, '')} · ${hr[1].RBI}타점`, when: '시즌', players: [hr[0]], to: `/player/${hr[0]}` });
     }
     const regulars = bats.filter(([, b]) => b.AB >= s.my.length * 2.5);
     const cold = regulars.slice().sort((a, b) => a[1].H / Math.max(1, a[1].AB) - b[1].H / Math.max(1, b[1].AB))[0];
     if (cold && cold[1].H / Math.max(1, cold[1].AB) < 0.22) {
       const p = playerById(cold[0]);
-      out.push({ id: 'cold', kind: '슬럼프', text: `${p?.name ?? '선수'}, 타율 ${(cold[1].H / Math.max(1, cold[1].AB)).toFixed(3).replace(/^0/, '')}`, detail: `${cold[1].AB}타수 ${cold[1].H}안타 — 타순을 바꿔 보거나 하루 쉬게 해 보세요`, when: '시즌', players: [cold[0]], to: '/lineup' });
+      out.push({ id: 'cold', kind: '슬럼프', text: `${p?.name ?? '선수'}, 타율 ${(cold[1].H / Math.max(1, cold[1].AB)).toFixed(3).replace(/^0/, '')}`, detail: `${cold[1].AB}타수 ${cold[1].H}안타`, when: '시즌', players: [cold[0]], to: '/lineup' });
     }
     const ace = pits.slice().sort((a, b) => b[1].W - a[1].W || b[1].SO - a[1].SO)[0];
     if (ace && (ace[1].W > 0 || ace[1].SO >= 10)) {

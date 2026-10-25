@@ -13,22 +13,25 @@ const clubText = (code: string) => shortLabel(code);
 const sideText = (v: unknown) => (v === 'P' ? '투수' : '타자');
 const PAIR_KO: Record<string, string> = { '2B+SS': '2루수+유격수', 'P+C': '투수+포수' };
 
+/** 조건만 — ' — 그 구단 카드로' 같은 덧붙임은 화면에서 뺀다 */
+const ruleShort = (rule: string) => rule.split(' — ')[0];
+
 /** 맞았을 때 무엇으로 맞았나 · 안 맞았을 때 조건 (+ 가장 많이 겹친 장수) */
 function detailOf(f: FormulaState, view: CombineView): string {
   const def = FORMULAS.find((x) => x.id === f.id)!;
   if (!f.met) {
     const near = f.have != null && f.have >= 2 && view.n >= 2 && f.id !== 'pair' && f.id !== 'hidden' ? ` · ${f.have}/${view.n}장` : '';
-    return def.rule + near;
+    return ruleShort(def.rule) + near;
   }
   switch (f.id) {
     case 'grade': return `모두 ${GRADES[f.value as GradeId].ko}`;
-    case 'club': return `모두 ${clubText(String(f.value))} — 그 구단 카드로`;
-    case 'year': return `모두 ${f.value}년 — 그 해 카드로`;
-    case 'dynasty': { const [c, y] = String(f.value).split(' '); return `${y} ${clubText(c)} — 그 해 그 구단으로`; }
-    case 'side': return `모두 ${sideText(f.value)} — ${sideText(f.value)} 카드로`;
+    case 'club': return `모두 ${clubText(String(f.value))}`;
+    case 'year': return `모두 ${f.value}년`;
+    case 'dynasty': { const [c, y] = String(f.value).split(' '); return `${y} ${clubText(c)}`; }
+    case 'side': return `모두 ${sideText(f.value)}`;
     case 'pair': return String(f.value).split(' · ').map((x) => PAIR_KO[x] ?? x).join(' · ');
     case 'hidden': return f.avail ? `${view.fix.club ? clubText(view.fix.club) : ''} 프랜차이즈 칸이 열렸어요` : '이 구단엔 프랜차이즈 카드가 없어요';
-    default: return def.rule;
+    default: return ruleShort(def.rule);
   }
 }
 
@@ -52,7 +55,7 @@ export function Recipe({ view }: { view: CombineView }) {
     <section className={s.recipe} aria-labelledby="combine-recipe">
       <div className={s.secHead}>
         <h2 id="combine-recipe" className={['head', s.h2].join(' ')}>조합 공식</h2>
-        <span className={s.secSub}>{view.n < 2 ? '2장부터 맞춰 봐요' : met ? <>맞은 공식 <b className="num">{met}</b>개</> : '맞은 공식 없음'}</span>
+        {view.n >= 2 && <span className={s.secSub}>{met ? <>맞은 공식 <b className="num">{met}</b>개</> : '맞은 공식 없음'}</span>}
       </div>
       <ul className={s.formulas}>
         {FORMULAS.map((def) => {
@@ -86,7 +89,6 @@ function Odds({ view }: { view: CombineView }) {
             ))}
           </tbody>
         </table>
-        <p className={s.note}>기본 등급은 넣은 카드 등급의 평균(내림)이에요. 맞은 공식만큼 위 칸으로 옮겨 가요.</p>
       </div>
     );
   }
@@ -108,13 +110,13 @@ function Odds({ view }: { view: CombineView }) {
       </ul>
       <p className={s.fixLine}>
         <span>결과 카드</span>
-        <b>{fixed.length ? fixed.join(' · ') : '구단 · 연도 · 포지션 제한 없음'}</b>
+        <b>{fixed.length ? fixed.join(' · ') : '제한 없음'}</b>
       </p>
       {relaxed.map((r) => (
-        <p key={'rx' + String(r.step)} className={s.note}><b>{gradeShort(r.grade)}</b> — {r.byMats ? '넣은 카드 말고는 맞는 카드가 없어' : '맞는 카드가 없어'} {relaxText(r.relaxed)}</p>
+        <p key={'rx' + String(r.step)} className={s.note}><b>{gradeShort(r.grade)}</b> 맞는 카드가 없어 {relaxText(r.relaxed)}</p>
       ))}
-      {view.n < 3 && <p className={s.note}>3장부터 조합해요. 지금은 3장 기준 확률이에요.</p>}
-      {view.capped > 0 && <p className={[s.note, s.warn].join(' ')}>수상 · 프랜차이즈 · 블랙 · 시그니처 카드는 레전드로 쳐요. 결과는 레전드까지예요.</p>}
+      {view.n < 3 && <p className={s.note}>3장 기준 확률</p>}
+      {view.capped > 0 && <p className={[s.note, s.warn].join(' ')} title="수상 · 프랜차이즈 · 블랙 · 시그니처는 레전드로 쳐요">결과는 레전드까지예요</p>}
     </div>
   );
 }

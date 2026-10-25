@@ -99,33 +99,32 @@ function Managers({ by, setBy, demo }: { by: RankingBy; setBy: (v: RankingBy) =>
     <section className={s.sec}>
       <header className={s.head}>
         <h2 className={['head', s.h].join(' ')}>감독 순위</h2>
-        <p className={s.meta}>
-          {data ? <>순위에 오른 감독 <span className="num">{fmt.int(data.total)}</span>명{me?.rank ? <> · 나 <b className="num">{me.rank}</b>위</> : null}</> : '실제 가입한 감독만 · 대전할 때마다 바로 반영'}
-        </p>
+        {data && (
+          <p className={s.meta}>
+            <span className="num">{fmt.int(data.total)}</span>명{me?.rank ? <> · 나 <b className="num">{me.rank}</b>위</> : null}
+          </p>
+        )}
       </header>
       <Tabs variant="box" size="s" items={BY.map((x) => ({ value: x.value, label: x.label }))} value={by} onChange={setBy} aria-label="정렬 기준" className={s.by} />
 
-      {demo && <p className={s.demo}>예시 화면이에요 — 실제 순위가 아니에요.</p>}
+      {demo && <p className={s.demo}>예시 화면</p>}
       {status === 'out' && (
         <div className={s.empty}>
-          <p><b>로그인하면 감독 순위가 보여요.</b> 대전 탭에 들어가면 내 구단도 자동으로 순위에 올라가요.</p>
+          <p><b>로그인이 필요해요</b></p>
           <Button size="s" variant="secondary" onClick={() => navigate('/login')}>로그인</Button>
         </div>
       )}
-      {status !== 'out' && (load.kind === 'loading' || load.kind === 'idle' || (load.kind === 'ok' && !data)) && <p className={s.emptyLine}>순위를 불러오는 중이에요…</p>}
+      {status !== 'out' && (load.kind === 'loading' || load.kind === 'idle' || (load.kind === 'ok' && !data)) && <p className={s.emptyLine}>불러오는 중…</p>}
       {load.kind === 'error' && (
         <div className={s.empty}>
-          <p><b>순위를 못 불러왔어요.</b> {load.msg}</p>
-          <Button size="s" variant="secondary" onClick={() => void fetchIt(by)}>다시 불러오기</Button>
+          <p><b>못 불러왔어요</b> {load.msg}</p>
+          <Button size="s" variant="secondary" onClick={() => void fetchIt(by)}>다시 시도</Button>
         </div>
       )}
       {data && data.rows.length === 0 && (
         <div className={s.empty}>
-          <p>
-            <b>{by === 'winrate' ? `아직 ${data.minGames}경기를 넘긴 감독이 없어요.` : '아직 순위에 오른 감독이 없어요.'}</b>{' '}
-            {by === 'winrate' ? '대전을 더 하면 승률 순위가 열려요.' : '대전 탭에서 첫 경기를 해 보세요.'}
-          </p>
-          <Button size="s" variant="secondary" onClick={() => navigate('/pvp')}>대전하러 가기</Button>
+          <p><b>{by === 'winrate' ? `${data.minGames}경기 넘긴 감독이 아직 없어요` : '아직 순위에 오른 감독이 없어요'}</b></p>
+          <Button size="s" variant="secondary" onClick={() => navigate('/pvp')}>대전</Button>
         </div>
       )}
 
@@ -179,29 +178,26 @@ function Managers({ by, setBy, demo }: { by: RankingBy; setBy: (v: RankingBy) =>
           </tbody>
         </table>
       )}
-      {data && (
+      {data && (by === 'winrate' || (!me && status === 'in')) && (
         <p className={s.note}>
-          {by === 'rating' && '레이팅은 1,500에서 시작해요. 이기면 오르고, 강한 상대를 이길수록 더 올라요(수비로 진 판도 반영).'}
-          {by === 'winrate' && <>승률 = 승 ÷ (승+패), 무승부는 빼요. {data.minGames}경기 이상 한 감독만{me && me.rank == null ? <> — 나는 <b className="num">{Math.max(0, data.minGames - (me.w + me.d + me.l))}</b>경기 더 하면 올라요</> : ''}.</>}
-          {by === 'power' && '구단 전력 = 등록한 라인업 선수 점수 합이에요. 대전 탭에 들어갈 때 새로 올라가요.'}
-          {!me && status === 'in' && ' 아직 내 구단이 없어요 — 대전 탭에 한 번 들어가면 등록돼요.'}
-          {' '}상위 50명까지 보여요.
+          {by === 'winrate' && <><span className="num">{data.minGames}</span>경기 이상{me && me.rank == null ? <> · 나 <b className="num">{Math.max(0, data.minGames - (me.w + me.d + me.l))}</b>경기 더</> : ''}</>}
+          {by !== 'winrate' && '대전 탭에 들어가면 등록돼요'}
         </p>
       )}
       <Sheet
         open={!!peek}
         onClose={() => setPeek(null)}
         title={peek ? `${peek.teamName} · ${peek.username}` : ''}
-        sub={peek ? <>저장된 라인업 · 팀 종합 <span className="num">{peek.ovr}</span> · 전력 <span className="num">{fmt.int(peek.power)}</span> · 레이팅 <span className="num">{fmt.int(peek.rating)}</span></> : undefined}
+        sub={peek ? <>팀 종합 <span className="num">{peek.ovr}</span> · 전력 <span className="num">{fmt.int(peek.power)}</span></> : undefined}
         height="tall"
       >
         {peek && (demo
-          ? <p className={s.peekNote}>예시 순위라 라인업이 없어요.</p>
+          ? <p className={s.peekNote}>라인업 없음</p>
           : peekCards
             ? <TeamLineup cards={peekCards} onOpen={() => setPeek(null)} />
-            : lineups === 'loading' ? <p className={s.peekNote}>라인업을 불러오는 중이에요…</p>
-              : lineups === 'error' ? <p className={s.peekNote}>라인업을 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요.</p>
-                : <p className={s.peekNote}>대전 상대 목록(레이팅이 가까운 20명)에 없는 감독이라 라인업을 못 불러왔어요.</p>)}
+            : lineups === 'loading' ? <p className={s.peekNote}>불러오는 중…</p>
+              : lineups === 'error' ? <p className={s.peekNote}>못 불러왔어요</p>
+                : <p className={s.peekNote} title="레이팅이 가까운 20명만 볼 수 있어요">라인업을 볼 수 없어요</p>)}
       </Sheet>
     </section>
   );
@@ -216,7 +212,7 @@ function LeagueLink() {
       <Link to="/league" className={s.leagueLink}>
         <span className={s.llText}>
           <b>구단 순위 · 개인 기록</b>
-          <small><span className="num">{season.year ?? 2027}</span> 시즌 · 우리 구단 {rankLabel(ln)} · 순위·리그 기록에서 봐요</small>
+          <small>우리 구단 {rankLabel(ln)}</small>
         </span>
         <Icon name="chevron" size={16} />
       </Link>

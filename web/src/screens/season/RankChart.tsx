@@ -54,7 +54,7 @@ export function RankChart({ hist, dates, total }: RankChartProps) {
   if (len < 1) {
     return (
       <figure className={s.chart}>
-        <figcaption className={s.cap}>개막 전 — 경기를 치르면 날마다 순위가 여기 그려져요 · 점선 위 5위까지 가을야구</figcaption>
+        <figcaption className={s.cap}>개막 전</figcaption>
       </figure>
     );
   }
@@ -103,7 +103,7 @@ export function RankChart({ hist, dates, total }: RankChartProps) {
           {!order.slice(0, 5).some((o) => o.t.id === ME.teamId) && <span className={s.tipMe}><span className="num">{hist[ME.teamId]?.[hv]}</span> {meT.short}</span>}
         </figcaption>
       ) : (
-        <figcaption className={s.cap}>날마다 순위 · {meT.short}는 구단색 · 이름을 누르면 그 구단도 따라가요 · 점선 위 5위까지 가을야구</figcaption>
+        <figcaption className={s.cap} title="이름을 누르면 그 구단도 따라가요">점선 위는 가을야구</figcaption>
       )}
     </figure>
   );

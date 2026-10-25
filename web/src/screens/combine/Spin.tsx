@@ -147,9 +147,9 @@ function Result({ run, onAgain, onClose, reduced, againLabel }: { run: SpinRun; 
   const team = teamById(p.teamId);
   const row = run.view.rows[run.roll.row];
   const pos = p.pos === 'P' ? (p.role ? ROLE_KO[p.role] : '투수') : POS_KO[p.pos];
-  const status = pc.isNew ? '새 카드 · 보관함에 넣었어요'
-    : pc.up ? `같은 카드가 모여 강화 +1 (${pc.up.from > 0 ? roman(pc.up.from) : '0'} → ${roman(pc.up.to)})`
-    : '중복 +1 · 강화 재료';
+  const status = pc.isNew ? '새 카드'
+    : pc.up ? `강화 +1 (${pc.up.from > 0 ? roman(pc.up.from) : '0'} → ${roman(pc.up.to)})`
+    : '중복 +1';
   return (
     <section className={[s.box, s.result, reduced && s.still].filter(Boolean).join(' ')} aria-live="polite">
       <header className={s.bar}>
@@ -171,7 +171,7 @@ function Result({ run, onAgain, onClose, reduced, againLabel }: { run: SpinRun; 
         <h2 className={['head', s.resName].join(' ')}><NameYear name={p.name} year={card.year} /></h2>
         <p className={s.resMeta}>{pos} · {team.name}</p>
         <p className={pc.isNew ? s.resNew : s.resDup}>{status}</p>
-        {run.roll.relaxed.length > 0 && <p className={s.resNote}>{row.byMats ? '넣은 카드 말고는 맞는 카드가 없어' : '맞는 카드가 없어'} {relaxText(run.roll.relaxed)}</p>}
+        {run.roll.relaxed.length > 0 && <p className={s.resNote}>맞는 카드가 없어 {relaxText(run.roll.relaxed)}</p>}
       </div>
       <div className={s.actions}>
         {onAgain && <Button variant="secondary" size="l" block onClick={onAgain}>{againLabel ?? '한 번 더'}</Button>}

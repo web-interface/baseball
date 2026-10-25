@@ -139,13 +139,13 @@ export function Composer({ src, compact, onSent, className }: { src: ChatSource;
   if (!loggedIn) {
     return (
       <div className={[s.gate, compact && s.compact, className].filter(Boolean).join(' ')}>
-        <p>로그인하면 채팅에 참여할 수 있어요. 지금은 읽기만 돼요.</p>
+        <p>로그인하면 채팅할 수 있어요</p>
         <Button size="m" variant="secondary" className={s.gateBtn} onClick={() => navigate('/login?next=' + encodeURIComponent(location.hash.slice(1) || '/home'))}>로그인</Button>
       </div>
     );
   }
   const expired = st.status === 'open' && st.meChecked && !st.me;
-  const placeholder = expired ? '로그인을 다시 해 주세요' : ready ? (compact ? '로비에 한마디' : '메시지 보내기') : '연결되면 쓸 수 있어요';
+  const placeholder = expired ? '로그인을 다시 해 주세요' : ready ? (compact ? '로비에 한마디' : '메시지 보내기') : '연결 중…';
 
   return (
     <div className={[s.composer, compact && s.compact, className].filter(Boolean).join(' ')}>
@@ -212,7 +212,6 @@ export function MsgSheet({ src, msg, me, onClose }: { src: ChatSource; msg: Chat
   const auth = useAuth();
   const [last, setLast] = useState<ChatMsg | null>(msg);
   const [busy, setBusy] = useState<'report' | 'del' | null>(null);
-  const chatTtl = useChatState(src).ttl;
   useEffect(() => { if (msg) setLast(msg); }, [msg]);
   const m = msg ?? last;
   const mine = !!m && !!me && m.uid === me.uid;
@@ -224,14 +223,14 @@ export function MsgSheet({ src, msg, me, onClose }: { src: ChatSource; msg: Chat
     setBusy('report');
     const r = await src.request('report', m.id);
     setBusy(null);
-    if (r.ok) { toast({ text: '신고했어요. 짧은 시간에 여러 명이 신고하면 그 감독은 1시간 동안 채팅을 못 해요', tone: 'good', duration: 3600 }); onClose(); }
+    if (r.ok) { toast({ text: '신고했어요', tone: 'good' }); onClose(); }
     else toast({ text: r.text, tone: 'bad' });
   };
   const hide = () => {
     if (!m) return;
     hiddenUsers.hide(m.uid, m.name);
     const { uid, name } = m;
-    toast({ text: `${name} 감독의 메시지를 이 기기에서 숨겼어요`, action: { label: '되돌리기', onClick: () => hiddenUsers.show(uid) }, duration: 4200 });
+    toast({ text: `${name} 감독을 숨겼어요`, action: { label: '되돌리기', onClick: () => hiddenUsers.show(uid) }, duration: 4200 });
     onClose();
   };
   const del = async () => {
@@ -249,22 +248,18 @@ export function MsgSheet({ src, msg, me, onClose }: { src: ChatSource; msg: Chat
       title={m ? (mine ? '내 메시지' : `${m.name}`) : ''}
       sub={m ? <><span className="num">{hhmm(m.ts)}</span>{team ? ` · ${team.name}` : ''}</> : null}
       footer={m && (mine
-        ? <Button block variant="secondary" icon="close" loading={busy === 'del'} onClick={del}>모두의 화면에서 지우기</Button>
+        ? <Button block variant="secondary" icon="close" loading={busy === 'del'} onClick={del}>지우기</Button>
         : (
           <>
             <Button variant="secondary" icon="alert" loading={busy === 'report'} disabled={!canReport} onClick={report}>신고</Button>
-            <Button variant="ink" icon="eye" onClick={hide} className={s.grow}>이 감독 숨기기</Button>
+            <Button variant="ink" icon="eye" onClick={hide} className={s.grow}>숨기기</Button>
           </>
         ))}
     >
       {m && (
         <>
           <blockquote className={s.quote}>{m.text}</blockquote>
-          <p className={s.help}>
-            {mine
-              ? `지우면 모든 사람의 화면에서 바로 사라져요. 지우지 않아도 대화는 ${ttlText(chatTtl)} 뒤 사라져요.`
-              : <>신고는 운영 기록에 누가·누구를·언제만 남아요(본문은 남기지 않아요). {canReport ? '' : '신고는 로그인하면 할 수 있어요. '}숨기기는 이 기기에서만 적용되고, 채팅 화면의 ‘숨긴 감독’에서 되돌릴 수 있어요.</>}
-          </p>
+          {!mine && !canReport && <p className={s.help}>신고는 로그인 후 할 수 있어요</p>}
         </>
       )}
     </Sheet>
@@ -276,9 +271,9 @@ export function MsgSheet({ src, msg, me, onClose }: { src: ChatSource; msg: Chat
 export function HiddenSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { list } = useHidden();
   return (
-    <Sheet open={open} onClose={onClose} title="숨긴 감독" sub="이 기기에서만 숨겨요. 서버에는 남지 않아요.">
+    <Sheet open={open} onClose={onClose} title="숨긴 감독" sub="이 기기에서만 숨겨요">
       {list.length === 0
-        ? <p className={s.help}>숨긴 감독이 없어요.</p>
+        ? <p className={s.help}>숨긴 감독이 없어요</p>
         : (
           <ul className={s.hiddenList}>
             {list.map((h) => (

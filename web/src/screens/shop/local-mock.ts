@@ -76,8 +76,8 @@ export const SHELF: ShelfItem[] = baseShelf.map((it) => ({
 /** 스카우트 한마디 — 상황마다 (말맛만, 결과·가격은 코드가 정함) */
 export const SCOUT_LINES = {
   open: SCOUT_SHOP.scout.line,
-  last: '한 명 남았어요. 오늘 진열에서 제일 아까운 선수로 고르세요.',
-  done: '오늘은 여기까지예요. 내일 다섯 시에 새로 데려올게요.',
+  last: '한 명 남았어요.',
+  done: '내일 다섯 시에 봬요.',
 };
 
 /* ───────── 오늘 산 기록 — 보유 카드 저장소(game/inventory)에 05:00 기준 하루치로 저장(새로고침해도 한도 유지) ───────── */

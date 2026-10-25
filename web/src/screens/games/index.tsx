@@ -134,18 +134,18 @@ function GameList({ query }: { query: URLSearchParams }) {
           {!past && <Tabs variant="box" size="s" aria-label="보기" value={all ? 'all' : 'mine'} onChange={(v) => setAll(v === 'all')}
             items={[{ value: 'mine', label: '우리 경기' }, { value: 'all', label: '모든 경기' }]} />}
         </div>
-        <p className={s.meta}>
-          <span>
-            {mine.length
-              ? <>{past ? '지난 시즌 · 저장된 ' : '정규 시즌 '}우리 <b className="num">{mine.length}</b>경기 · <span className="num">{rec.W}</span>승 <span className="num">{rec.D}</span>무 <span className="num">{rec.L}</span>패</>
-              : '아직 치른 경기가 없어요'}
-          </span>
-          {prev && (
-            <button type="button" className={s.seasonSwitch} onClick={() => setSeed(past ? null : prev.seed)}>
-              {past ? <>이번 시즌 보기</> : <>지난 시즌(<span className="num">{prev.year}</span>) 우리 경기</>}
-            </button>
-          )}
-        </p>
+        {(mine.length > 0 || prev) && (
+          <p className={s.meta}>
+            <span>
+              {mine.length > 0 && <>{past ? '지난 시즌 ' : ''}<b className="num">{mine.length}</b>경기 · <span className="num">{rec.W}</span>승 <span className="num">{rec.D}</span>무 <span className="num">{rec.L}</span>패</>}
+            </span>
+            {prev && (
+              <button type="button" className={s.seasonSwitch} onClick={() => setSeed(past ? null : prev.seed)}>
+                {past ? <>이번 시즌</> : <>지난 시즌 <span className="num">{prev.year}</span></>}
+              </button>
+            )}
+          </p>
+        )}
       </header>
 
       {(months.length > 0 || hasPost) && (
@@ -157,9 +157,8 @@ function GameList({ query }: { query: URLSearchParams }) {
 
       {list.length === 0 ? (
         <div className={s.empty}>
-          <p><b>{rows.length ? '이 달에는 치른 경기가 없어요.' : '아직 기록이 없어요.'}</b></p>
-          <p>경기를 치르면 여기 쌓이고, 누르면 박스스코어를 볼 수 있어요.</p>
-          <Link to="/season" className={s.emptyLink}>경기 준비·진행으로 <Icon name="chevron" size={14} /></Link>
+          <p><b>{rows.length ? '이 달에는 치른 경기가 없어요' : '아직 기록이 없어요'}</b></p>
+          <Link to="/season" className={s.emptyLink}>경기 준비·진행 <Icon name="chevron" size={14} /></Link>
         </div>
       ) : all && !past ? (
         <AllList rows={list} limit={PAGE * more} onMore={() => setMore((x) => x + 1)} />
@@ -171,7 +170,6 @@ function GameList({ query }: { query: URLSearchParams }) {
           {list.length > PAGE * more && <button type="button" className={s.more} onClick={() => setMore((x) => x + 1)}>더 보기 <span className="num">{list.length - PAGE * more}</span></button>}
         </>
       )}
-      <p className={s.note}><Icon name="info" size={13} /> 우리 경기 박스스코어는 결과가 들어갈 때 이 기기에 저장해요(이번 · 지난 시즌). 다른 구단끼리 경기는 열 때 같은 조건으로 다시 계산해요.</p>
     </div>
   );
 }
@@ -277,14 +275,14 @@ function BoxPage({ gameKey, seed }: { gameKey: string; seed: string | null }) {
   useEffect(() => {
     if (saved || !k || !cur || mineGame) return;
     let alive = true;
-    resimGame(gameKey).then((r) => { if (alive) setRs(r); }).catch((e) => { console.warn('[경기 기록] 다시 계산 못 함', e); if (alive) setRs({ kind: 'none', why: '다시 계산하지 못했어요.' }); });
+    resimGame(gameKey).then((r) => { if (alive) setRs(r); }).catch((e) => { console.warn('[경기 기록] 다시 계산 못 함', e); if (alive) setRs({ kind: 'none', why: '다시 계산하지 못했어요' }); });
     return () => { alive = false; };
   }, [gameKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const back = (
     <Link to={`/games${seed && !cur ? `?s=${seed}` : ''}`} className={s.back}><Icon name="back" size={16} /> 경기 목록</Link>
   );
-  if (!k) return <div className={s.screen}>{back}<p className={s.empty}>경기를 찾지 못했어요.</p></div>;
+  if (!k) return <div className={s.screen}>{back}<p className={s.empty}>경기를 찾지 못했어요</p></div>;
 
   // 1) 저장된 박스 (우리 경기)
   if (saved) return <div className={s.screen}>{back}<BoxScore view={saved} board={boardOfView(saved, st, cur)} /></div>;
@@ -295,12 +293,12 @@ function BoxPage({ gameKey, seed }: { gameKey: string; seed: string | null }) {
     return (
       <div className={s.screen}>
         {back}
-        {fb ? <BoxScore board={fb} note="이 경기는 박스스코어를 저장하기 전에 치러서 점수판만 있어요." /> : <p className={s.empty}>아직 치르지 않은 경기예요.</p>}
+        {fb ? <BoxScore board={fb} note="점수판만 있어요" /> : <p className={s.empty}>아직 치르지 않은 경기예요</p>}
       </div>
     );
   }
   // 3) 지난 시즌 — 저장된 것만
-  if (!cur) return <div className={s.screen}>{back}<p className={s.empty}>저장된 박스스코어가 없어요.</p></div>;
+  if (!cur) return <div className={s.screen}>{back}<p className={s.empty}>저장된 박스스코어가 없어요</p></div>;
 
   // 4) 다른 구단끼리 — 다시 계산
   if (!rs) {
@@ -312,7 +310,7 @@ function BoxPage({ gameKey, seed }: { gameKey: string; seed: string | null }) {
   return (
     <div className={s.screen}>
       {back}
-      {fb ? <BoxScore board={fb} note={rs.kind === 'mismatch' ? '다시 계산한 경기가 기록과 달라 점수만 보여 드려요.' : rs.why} /> : <p className={s.empty}>{rs.kind === 'none' ? rs.why : '경기를 찾지 못했어요.'}</p>}
+      {fb ? <BoxScore board={fb} note={rs.kind === 'mismatch' ? '점수판만 있어요' : rs.why} /> : <p className={s.empty}>{rs.kind === 'none' ? rs.why : '경기를 찾지 못했어요'}</p>}
     </div>
   );
 }

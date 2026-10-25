@@ -74,7 +74,7 @@ export function Battle({ opp, auto, rating, left, onFinish }: { opp: PvpOpponent
     <div className={s.screen}>
       <div className={s.topRow}>
         <button type="button" className={s.back} onClick={() => goBack('/pvp')}><Icon name="back" size={18} />대전 상대</button>
-        <span className={s.mode}>AI 구단 연습 · {them.user}의 「{them.lineupName}」</span>
+        <span className={s.mode}>AI 연습 · {them.user}</span>
       </div>
       {phase === 'pre' && <Pre me={me} them={them} opp={opp} pace={pace} setPace={setPace} onStart={start} left={left} />}
       {phase !== 'pre' && (
@@ -112,7 +112,6 @@ function Pre({ me, them, opp, pace, setPace, onStart, left }: { me: Side; them: 
           <i style={{ width: `${exp * 100}%`, background: me.team.colors.primary }} />
           <i style={{ flex: 1, background: them.team.colors.primary }} />
         </div>
-        <p className={s.expSub}>레이팅·라인업 전력으로 본 값 · 결과는 서버 엔진이 공 하나하나 계산해요</p>
       </div>
 
       <section className={s.block}>
@@ -132,12 +131,11 @@ function Pre({ me, them, opp, pace, setPace, onStart, left }: { me: Side; them: 
       </section>
 
       <section className={s.block}>
-        <h3 className={['head', s.h].join(' ')}>오늘의 구장 <span className={s.hSub}>{them.team.short} 홈</span></h3>
+        <h3 className={['head', s.h].join(' ')}>구장 <span className={s.hSub}>{them.team.short} 홈</span></h3>
         <div className={s.park}>
           <div className={s.parkField}><Field stadium={st} distances lights={false} label={st.name} /></div>
           <div className={s.parkBody}>
-            <b>{st.name}</b>
-            <p>{st.desc}</p>
+            <b title={st.desc}>{st.name}</b>
             <p className={s.parkNote}>{st.note}</p>
             <p className={['num', s.parkDist].join(' ')}>{st.fence[0]} · {st.fence[1]} · {st.fence[2]}m</p>
           </div>
@@ -260,7 +258,7 @@ function Live({ sim, at, beat, phase, pace, callout, onCalloutDone, onSkip, onRe
       </CalloutStage>
 
       <div className={s.ticker} aria-live="polite">
-        {ticker.length === 0 && <p className={s.tkIdle}>{phase === 'live' ? '1회초 — 원정 공격부터' : ''}</p>}
+        {ticker.length === 0 && <p className={s.tkIdle}>{phase === 'live' ? '1회초' : ''}</p>}
         {ticker.map((b, i) => (
           <div key={`${b.inning}${b.half}`} className={[s.tk, i === 0 && s.tkNew].filter(Boolean).join(' ')}>
             <span className={['num', s.tkInn].join(' ')}>{b.inning}{b.half === 'top' ? '초' : '말'}</span>
@@ -282,13 +280,13 @@ function Live({ sim, at, beat, phase, pace, callout, onCalloutDone, onSkip, onRe
 
       {phase === 'live' && (
         <div className={s.liveBar}>
-          <span className={s.paceNote}>{pace === 'quick' ? '빨리 보기 · 강조 장면에서 잠깐 멈춰요' : '주요 장면 · 강조 장면을 길게'}</span>
-          <Button variant="secondary" size="s" icon="fast" onClick={onSkip}>결과 바로 보기</Button>
+          <span className={s.paceNote}>{pace === 'quick' ? '빨리 보기' : '주요 장면'}</span>
+          <Button variant="secondary" size="s" icon="fast" onClick={onSkip}>결과 보기</Button>
         </div>
       )}
       {phase === 'done' && sim.beats.some((b) => b.highlight) && (
         <section className={s.block}>
-          <h3 className={['head', s.h].join(' ')}>명장면 <span className={s.hSub}>엔진 승리 확률 변화가 컸던 순간</span></h3>
+          <h3 className={['head', s.h].join(' ')}>명장면</h3>
           <ul className={s.hls}>
             {sim.beats.filter((b) => b.highlight).map((b) => (
               <li key={`${b.inning}${b.half}`}>
@@ -358,12 +356,11 @@ function Result({ sim, me, them, delta, opp, onAgain, left }: { sim: Sim; me: Si
       <dl className={s.resList}>
         <div><dt>레이팅</dt><dd><span className="num">{fmt.int(me.rating)}</span> → <b className="num">{fmt.int(shown)}</b> <em className={['num', delta >= 0 ? s.up : s.down].join(' ')}>{fmt.signed(delta)}</em></dd></div>
         <div><dt>보상</dt><dd><b className="num">+{fmt.int(gp)}</b> GP{opp.rival === 'rival' && sim.result === 'W' ? ' · 라이벌 2배' : ''}</dd></div>
-        <div><dt>{them.user} 전적</dt><dd>{sim.result === 'W' ? '이 라인업에 처음 이겼어요' : sim.result === 'L' ? '설욕전 상대로 남아요' : '승부는 다음으로'}</dd></div>
         <div><dt>오늘 남은 대전</dt><dd><b className="num">{left}</b>/10</dd></div>
       </dl>
       {sim.keyFactors.length > 0 && (
         <section className={s.block}>
-          <h3 className={['head', s.h].join(' ')}>오늘의 결정적 요인</h3>
+          <h3 className={['head', s.h].join(' ')}>결정적 요인</h3>
           <ul className={s.factors}>
             {sim.keyFactors.map((c) => <li key={c.text}>↳ {c.text}{c.decisive && <em> · 결정적</em>}</li>)}
           </ul>

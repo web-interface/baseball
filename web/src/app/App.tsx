@@ -130,7 +130,7 @@ function RecoverySheet() {
   const { recoveryCode, clearRecovery } = useAuth();
   const toast = useToast();
   const copy = async () => {
-    try { await navigator.clipboard.writeText(recoveryCode ?? ''); toast({ text: '복구 코드를 복사했어요', tone: 'good' }); } catch { toast({ text: '복사하지 못했어요. 직접 적어 주세요', tone: 'bad' }); }
+    try { await navigator.clipboard.writeText(recoveryCode ?? ''); toast({ text: '복구 코드를 복사했어요', tone: 'good' }); } catch { toast({ text: '복사하지 못했어요', tone: 'bad' }); }
   };
   return (
     <Sheet
@@ -138,7 +138,7 @@ function RecoverySheet() {
       onClose={() => {}}
       dismissible={false}
       title="복구 코드를 적어 두세요"
-      sub="비밀번호를 잊으면 이 코드로만 되찾을 수 있어요. 지금 한 번만 보여 드려요."
+      sub="비밀번호를 잊었을 때 필요해요. 지금 한 번만 보여요"
       footer={
         <>
           <Button variant="secondary" onClick={copy}>복사</Button>

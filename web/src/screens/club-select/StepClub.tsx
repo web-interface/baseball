@@ -6,7 +6,7 @@ import { ClubCrest, ClubEmblem } from '../../art/emblems';
 import { CURRENT_TEAMS, OLD_TEAMS, teamByCode, teamById } from '../../game/mock';
 import { CURRENT_SEASON, LINEAGE, REGION_GROUPS } from '../../game/world';
 import type { Team } from '../../game/types';
-import { DIFF_KO, TIER_KO, clubTip } from './local-mock';
+import { DIFF_KO, TIER_KO } from './local-mock';
 import type { StepProps } from './index';
 import s from './cs.module.css';
 import c from './StepClub.module.css';
@@ -58,17 +58,14 @@ function ClubDetail({ t }: { t: Team }) {
         <div className={c.heroText}>
           <p className={c.region}>{t.old ? `옛 구단 · ${homes ?? t.region}` : `${t.region} · ${t.zone}`}</p>
           <h2 className={c.name}>{t.name}</h2>
-          <p className={c.style}>{t.style}</p>
-          <p className={c.styleDesc}>{t.old ? t.blurb : t.styleDesc}</p>
+          <p className={c.style} title={t.old ? t.blurb : t.styleDesc}>{t.style}</p>
         </div>
       </div>
 
       {slot && (
         <div className={c.revive}>
           <span className={c.reviveTag}>2027 부활</span>
-          <p>
-            2027 시즌엔 <b>{slot.name}</b> 자리를 대신해 리그에 돌아와요 — 홈구장 {st.name}, 리그는 그대로 10개 구단.
-          </p>
+          <p><b>{slot.name}</b> 자리로 복귀</p>
           <span className={c.reviveSwap} aria-hidden>
             <ClubEmblem team={slot} size={22} decorative />
             <Icon name="arrow-right" size={14} />
@@ -108,7 +105,6 @@ function ClubDetail({ t }: { t: Team }) {
             <i style={{ background: t.colors[k] }} />
             <span>
               <b>{t.colorNames[k]}</b>
-              <small className="num">{t.colors[k].toUpperCase()}</small>
             </span>
           </span>
         ))}
@@ -120,7 +116,6 @@ function ClubDetail({ t }: { t: Team }) {
         </div>
         <div className={c.parkText}>
           <p className={c.parkName}><Icon name="stadium" size={16} /> {st.name}</p>
-          <p className={c.parkDesc}>{st.desc}</p>
           <p className={c.fence}>
             <span>좌 <b className="num">{st.fence[0]}</b></span>
             <span>중 <b className="num">{st.fence[1]}</b></span>
@@ -128,16 +123,14 @@ function ClubDetail({ t }: { t: Team }) {
             <small>m</small>
           </p>
           <p className={c.feats}>{feats.join(' · ')}</p>
-          <p className={c.note}>↳ {st.note}</p>
         </div>
       </div>
 
       <div className={c.rival}>
         <ClubEmblem team={rival} size={28} decorative />
-        <span><b>{t.rivalry}</b> — 라이벌 {rival.name}</span>
+        <span><b>{t.rivalry}</b> {rival.name}</span>
       </div>
-      <p className={c.mascot}><span>마스코트</span>{t.mascot}</p>
-      <p className={c.tip}>{clubTip(t)}</p>
+      <p className={c.mascot} title={t.mascot}><span>마스코트</span>{t.mascot.split(' — ')[0]}</p>
     </article>
   );
 }
@@ -166,9 +159,8 @@ export function StepClub({ st, set, go, Dock }: StepProps) {
   return (
     <>
       <header className={s.head}>
-        <p className={s.kicker}><span className="num">2027</span> 시즌 · 한별 리그 10개 구단 + 옛 구단 10개</p>
+        <p className={s.kicker}><span className="num">2027</span> 시즌</p>
         <h1 className={s.title}>함께할 구단을 고르세요</h1>
-        <p className={s.lead}>처음 한 번만 정해요. 고른 구단에서 선수 3명을 바로 데려와요.</p>
       </header>
 
       <div className={c.grid} role="radiogroup" aria-label="지금 구단">
@@ -176,8 +168,7 @@ export function StepClub({ st, set, go, Dock }: StepProps) {
       </div>
 
       <div className={c.oldHead}>
-        <h2>옛 구단 <small>없어진 구단 · 지금 이름이 되기 전 시대</small></h2>
-        <p>고르면 2027 시즌에 같은 연고 계보의 지금 구단 자리를 대신해 <b>부활 구단</b>으로 뛰어요.</p>
+        <h2>옛 구단 <small>2027 부활</small></h2>
       </div>
       <div className={[c.grid, c.oldGrid].join(' ')} role="radiogroup" aria-label="옛 구단">
         {OLD_TEAMS.map((x) => <ClubCell key={x.id} x={x} on={x.id === t.id} onPick={() => set({ club: x.id })} old />)}
@@ -185,7 +176,7 @@ export function StepClub({ st, set, go, Dock }: StepProps) {
 
       <ClubDetail t={t} />
 
-      <Dock note={<><ClubEmblem team={t} size={22} decorative /><span><b>{t.name}</b><small>{t.old ? `2027 부활 · ${teamByCode(t.revives ?? t.code).name} 자리` : `${TIER_KO[t.tier]} · 난이도 ${DIFF_KO[t.difficulty]}`}</small></span></>}>
+      <Dock note={<><ClubEmblem team={t} size={22} decorative /><span><b>{t.name}</b><small>{t.old ? `${teamByCode(t.revives ?? t.code).name} 자리` : `${TIER_KO[t.tier]} · 난이도 ${DIFF_KO[t.difficulty]}`}</small></span></>}>
         <Button size="l" onClick={() => go('draft')} trailing={<Icon name="arrow-right" size={18} />}>이 구단으로</Button>
       </Dock>
     </>

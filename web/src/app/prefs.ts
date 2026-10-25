@@ -18,10 +18,10 @@ export interface WatchInfo {
 }
 
 export const WATCH_MODES: WatchInfo[] = [
-  { id: 'quick', ko: '빨리 보기', time: '10초 안', desc: '1~9회를 감아 결과까지. 명장면 자막은 그대로 떠요.', dwell: [1, 1, 1, 1, 1, 1, 1, 1, 1] },
-  { id: 'key', ko: '주요 장면', time: '30초 안팎', desc: '승리 확률이 크게 바뀐 순간만 골라 2D 로 짧게.', dwell: [0, 0, 1, 0, 2, 1, 3, 3, 4] },
-  { id: 'inning', ko: '이닝별', time: '이닝마다 멈춤', desc: '한 이닝씩 요약을 보고 다음 이닝으로 넘겨요.', dwell: [2, 2, 2, 2, 2, 2, 2, 2, 2] },
-  { id: 'detail', ko: '자세히 보기', time: '공 하나하나', desc: '2D 로 공 하나하나. 대타·작전 지시는 여기서만 돼요.', dwell: [4, 4, 4, 4, 4, 4, 4, 4, 4] },
+  { id: 'quick', ko: '빨리 보기', time: '10초 안', desc: '결과까지 한 번에', dwell: [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+  { id: 'key', ko: '주요 장면', time: '30초 안팎', desc: '승부처만 2D로', dwell: [0, 0, 1, 0, 2, 1, 3, 3, 4] },
+  { id: 'inning', ko: '이닝별', time: '이닝마다 멈춤', desc: '이닝별 요약', dwell: [2, 2, 2, 2, 2, 2, 2, 2, 2] },
+  { id: 'detail', ko: '자세히 보기', time: '공 하나하나', desc: '대타·작전 지시 가능', dwell: [4, 4, 4, 4, 4, 4, 4, 4, 4] },
 ];
 
 const isWatch = (v: unknown): v is WatchMode => v === 'quick' || v === 'key' || v === 'inning' || v === 'detail';

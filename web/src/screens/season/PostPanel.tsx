@@ -11,10 +11,10 @@ import s from './PostPanel.module.css';
 
 const short = (id: string) => teamById(id).short;
 const FORMAT: Record<SeriesId, string> = {
-  wc: '4위 vs 5위 · 4위 1승 안고 시작 · 최대 2경기',
-  spo: '3위 vs WC 승자 · 5전 3선승',
-  po: '2위 vs 준PO 승자 · 5전 3선승',
-  ks: '1위 vs PO 승자 · 7전 4선승',
+  wc: '최대 2경기',
+  spo: '5전 3선승',
+  po: '5전 3선승',
+  ks: '7전 4선승',
 };
 
 function SeriesRow({ sr, live }: { sr?: SeriesRec; live: boolean; id: SeriesId }) {
@@ -50,8 +50,8 @@ function SeriesRow({ sr, live }: { sr?: SeriesRec; live: boolean; id: SeriesId }
           })}
         </ol>
       )}
-      {sr.id === 'wc' && <p className={s.note}>4위 {short(sr.hi)}가 1승을 안고 시작해요 — 비기거나 한 번만 이겨도 올라가요.</p>}
-      {sr.draws > 0 && sr.id !== 'wc' && <p className={s.note}>무승부 {sr.draws} — 기본 {BASE_GAMES[sr.id]}경기에서 늘어날 수 있어요.</p>}
+      {sr.id === 'wc' && <p className={s.note}>4위 1승 안고 시작</p>}
+      {sr.draws > 0 && sr.id !== 'wc' && <p className={s.note} title={`기본 ${BASE_GAMES[sr.id]}경기에서 늘어날 수 있어요`}>무승부 {sr.draws}</p>}
     </div>
   );
 }
@@ -67,10 +67,9 @@ export function PostPanel() {
   if (!post) {
     return (
       <section className={s.panel} aria-label="포스트시즌">
-        <p className={s.kicker}><span className="num">{year}</span> 포스트시즌 · KBO 방식</p>
+        <p className={s.kicker}><span className="num">{year}</span> 포스트시즌</p>
         <h3 className={s.title}>가을야구</h3>
-        <p className={s.lead}>정규 시즌 1~5위가 나가요. 와일드카드 결정전(4위 vs 5위) → 준플레이오프 → 플레이오프 → 한국시리즈. 연장은 15회까지예요.</p>
-        <p className={s.lead}>우리 경기는 <b>이닝별로 끝까지 봐야</b> 다음으로 넘어가요.</p>
+        <p className={s.lead}>정규 시즌 1~5위가 나가요</p>
         <Button size="l" block icon="play" onClick={() => startPost()}>포스트시즌 시작</Button>
       </section>
     );
@@ -82,7 +81,7 @@ export function PostPanel() {
 
   return (
     <section className={s.panel} aria-label="포스트시즌">
-      <p className={s.kicker}><span className="num">{year}</span> 포스트시즌 · KBO 방식</p>
+      <p className={s.kicker}><span className="num">{year}</span> 포스트시즌</p>
       {post.champion ? (
         <div className={[s.champ, post.champion === ME.teamId && s.champMine].filter(Boolean).join(' ')}>
           <Emblem team={teamById(post.champion)} size={44} />
@@ -103,7 +102,7 @@ export function PostPanel() {
             {nx.mine && <b className={s.mineTag}>우리 경기</b>}
           </p>
           {nx.mine ? (
-            <Button size="l" block icon="play" onClick={() => navigate('/match?g=post')}>우리 경기 보기 · 이닝별</Button>
+            <Button size="l" block icon="play" onClick={() => navigate('/match?g=post')}>우리 경기 보기</Button>
           ) : (
             <div className={s.btns}>
               <Button size="l" block icon="fast" disabled={busy} onClick={() => run(async () => {
@@ -115,7 +114,7 @@ export function PostPanel() {
           )}
         </div>
       )}
-      {!post.seeds.includes(ME.teamId) && <p className={s.lead}>우리 구단은 이번 가을야구에 나가지 못했어요 — 다른 구단 경기를 지켜봐요.</p>}
+      {!post.seeds.includes(ME.teamId) && <p className={s.lead}>이번 가을야구엔 못 나갔어요</p>}
 
       <div className={s.bracket}>
         {SERIES_ORDER.slice().reverse().map((id) => {
