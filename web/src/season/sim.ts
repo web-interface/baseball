@@ -99,6 +99,9 @@ export function parkOf(teamId: string): Park {
   return p;
 }
 
+/** 엔진을 KBO 기록에 맞춘 리그 수준(연습생 단계 — AI 팀 종합 64~70, 기본 선수단 66) — 두 팀 평균 팀 종합이 이보다 높으면 그만큼 기준점을 올린다 */
+export const LEVEL_P0 = 67;
+
 const UMP = { id: 'u-std', size: 0, low: 0, high: 0, inside: 0, outside: 0, consistency: 1, countBias: 0, closeCall: 1 };
 const RULES = { maxInnings: 12, dh: true, zone: 'ABS' as const, shift: 'restricted' as const, pitchClock: true, heatRule: false, reviews: 2 };
 /** 포스트시즌 — 연장 15회까지 (KBO) */
@@ -261,8 +264,11 @@ export function runGame(seasonSeed: string, day: number, date: string, awayId: s
     ump: UMP,
     home: home.team,
     away: away.team,
-    // 리그 기준점 R — 능력치가 화면 눈금(힘 눈금보다 평균 14쯤 낮다)으로 들어가니, 두 팀 평균 몫만큼 공통 수준을 되돌린다(선수 사이 차이는 그대로)
-    levelRef: Math.round(((away.shift.sum + home.shift.sum) / Math.max(1, away.shift.n + home.shift.n)) * 10) / 10,
+    // 리그 기준점 R(경기엔진.md 3.4) — 두 팀 공통 수준을 모든 선수에게서 똑같이 뺀다(두 팀 · 선수 사이 차이는 그대로):
+    //  · 화면 눈금 몫(능력치가 힘 눈금보다 평균 14쯤 낮게 들어간다)은 두 팀 평균만큼 되돌리고
+    //  · 리그 단계가 올라 두 팀이 다 세지면(팀 종합 평균 − LEVEL_P0) 그만큼 뺀다 — 예전엔 이걸 빼지 않아 1군 단계부터 '홈런 더비'
+    //    (사용자 지시 10-26 "평균자책 최저가 4점대 · 50홈런이 20명 가까이": 1군 50홈런 20명 · 평균자책 1위 3.45 · 리그 6.36, 레전드 24명 · 4.91 · 6.95)
+    levelRef: Math.round(((away.shift.sum + home.shift.sum) / Math.max(1, away.shift.n + home.shift.n) + ((away.roster.ovr + home.roster.ovr) / 2 - LEVEL_P0)) * 10) / 10,
     // 리그 환경 — 시즌마다 공인구 반발력(타고투저 · 투고타저, season/env). 그 시즌 내내 같다
     env: (({ powerAdj, contactAdj }) => ({ powerAdj, contactAdj }))(leagueEnv(seasonSeed)),
     // 경기 중 작전(내 팀만 — 엔진이 isUser 팀 명령만 받는다). 명령 앞 투구까지는 명령 없는 경기와 똑같다
