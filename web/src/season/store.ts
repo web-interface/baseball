@@ -16,7 +16,8 @@ import type { PostState } from './post';
 import { saveMyBox } from './box';
 
 export interface TeamRec { w: number; d: number; l: number; rs: number; ra: number; streak: number; last10: string }
-export interface GameRec { a: string; h: string; s: [number, number]; inn?: number; wo?: 1; c?: 1 }
+/** u — 던진 투수와 공 수 [선수 보기 id, 공 수] (다음 날 팔 상태 season/arm — 예전 저장엔 없음) */
+export interface GameRec { a: string; h: string; s: [number, number]; inn?: number; wo?: 1; c?: 1; u?: [string, number][] }
 export type NewsKind = '연승' | '연패' | '기록' | '부상' | '취소' | '끝내기' | '역전' | '노히트' | '내 경기' | '순위' | '시즌';
 export interface NewsRec { idx: number; date: string; kind: NewsKind; text: string; team?: string; mine?: boolean }
 export interface MyGameRec {
@@ -332,6 +333,8 @@ const tShort = (id: string) => teamById(id).short;
 const pName = (id: string) => playerById(id)?.name ?? '선수';
 
 /** 하루 결과를 순위표·기록·소식에 넣고 다음 날로. 강조할 경기(끝내기·노히트·대역전)를 돌려준다 */
+/** 경기에서 던진 투수 · 공 수 — 다음 날 팔 상태(season/arm) */
+export const pitchUse = (g: Pick<GameOut, 'pit'>): [string, number][] => g.pit.filter((p) => (p.np ?? 0) > 0).map((p) => [p.id, p.np]);
 export function applyDay(out: DayOutcome): DayHighlight[] {
   const s = load();
   const days = allDays(s);
@@ -347,7 +350,7 @@ export function applyDay(out: DayOutcome): DayHighlight[] {
   let myPlayed = false;
   for (const g of out.games.filter(isGame)) {
     const [as, hs] = g.score;
-    recs.push({ a: g.away, h: g.home, s: [as, hs], inn: g.innings, ...(g.walkoff ? { wo: 1 as const } : {}) });
+    recs.push({ a: g.away, h: g.home, s: [as, hs], inn: g.innings, ...(g.walkoff ? { wo: 1 as const } : {}), u: pitchUse(g) });
     const res = (team: string, mine: number, opp: number) => {
       const r = (s.table[team] ??= emptyRec());
       r.rs += mine; r.ra += opp;

@@ -5,12 +5,14 @@ import {
   type Command, type GameInput, type GameResult, type Park, type PitRole, type PlayerIn, type TeamIn, type Tactics,
 } from '../../../shared/engine/index.ts';
 import { personKey, teamVal, type TeamKey } from '../game/tactics';
-import { TEAMS, teamById } from '../game/mock';
+import { TEAMS, playerById, teamById } from '../game/mock';
 import type { AttrKey, Player, Pos, WeatherKey } from '../game/types';
 import { condsOf, weatherFx } from '../game/weatherFit';
 import type { BatKey, PitKey, SetEffect } from '../game/sets';
 import { rosterOf, type ClubRoster } from './rosters';
 import { playerShift } from '../game/ovrShow';
+import { armLoads, relieverAvail, starterRelief, type ArmLoad } from './arm';
+import { getSeason } from './store';
 import { startTime } from './schedule';
 import { weatherOf } from './weather';
 export { rainedOut, weatherOf } from './weather';
@@ -104,7 +106,8 @@ const POST_RULES = { ...RULES, maxInnings: 15 };
 /* ───────── 선수단 → 엔진 팀 ───────── */
 export interface SideIn { team: TeamIn; webOf: Map<number, string>; idOf: Map<string, number>; roster: ClubRoster; /** 화면 눈금 몫 합 · 선수 수 (levelRef) */ shift: { sum: number; n: number } }
 /** conds — 그 경기에 걸리는 날씨(더위 · 추위 · 비 · 낮 경기): 선수마다 궁합이면 +, 상극이면 − (game/weatherFit) */
-export function teamIn(r: ClubRoster, day: number, idBase: number, conds: WeatherKey[] = []): SideIn {
+/** load — 투수마다 지난 며칠 팔 상태(season/arm). 없으면 모두 쉬고 온 상태 */
+export function teamIn(r: ClubRoster, day: number, idBase: number, conds: WeatherKey[] = [], load?: Map<string, ArmLoad>): SideIn {
   const list: Player[] = [];
   const seen = new Set<string>();
   const add = (p: Player | null | undefined) => { if (p && !seen.has(p.id)) { seen.add(p.id); list.push(p); } };
@@ -132,9 +135,13 @@ export function teamIn(r: ClubRoster, day: number, idBase: number, conds: Weathe
   // 불펜 보직 — 셋업맨 · 필승조 · 좌완 원포인트 · 추격조 · 롱릴리프 · 필승조 2 · 중간 계투 · 추격조 2 · 롱릴리프 2 · 패전조 (라인업 10칸)
   const roles: PitRole[] = ['SU', 'SU', 'MID', 'MID', 'LONG', 'SU', 'MID', 'MID', 'LONG', 'MID'];
   const pen: TeamIn['pen'] = [];
-  if (r.closer) pen.push({ pid: idOf.get(r.closer.id)!, role: 'CL', avail: 2 });
-  r.bullpen.forEach((p, i) => { if (p.id !== sp.id) pen.push({ pid: idOf.get(p.id)!, role: p.throws === 'L' && (i === 2 || i === 6) ? 'LOOGY' : roles[i] ?? 'MID', avail: 2 }); });
-  rot.forEach((p) => { if (p.id !== sp.id && !pen.some((x) => x.pid === idOf.get(p.id))) pen.push({ pid: idOf.get(p.id)!, role: 'LONG', avail: 1 }); });
+  // 등판 가능 — 연투 · 투구 수 · 팔 피로(season/arm, 엔진 availability 규칙): 2 가능 · 1 비상시만 · 0 불가
+  const av = (p: Player) => relieverAvail(load?.get(p.id));
+  if (r.closer) pen.push({ pid: idOf.get(r.closer.id)!, role: 'CL', avail: av(r.closer) });
+  r.bullpen.forEach((p, i) => { if (p.id !== sp.id) pen.push({ pid: idOf.get(p.id)!, role: p.throws === 'L' && (i === 2 || i === 6) ? 'LOOGY' : roles[i] ?? 'MID', avail: av(p) }); });
+  // 오늘 쉬는 선발은 롱릴리프로 비상시만 — 마지막 등판 사흘 뒤부터, 내일 · 모레 선발이면 쉰다
+  const soon = new Set([1, 2].map((k) => rot[(((day + k) % rot.length) + rot.length) % rot.length]?.id));
+  rot.forEach((p) => { if (p.id !== sp.id && !pen.some((x) => x.pid === idOf.get(p.id))) pen.push({ pid: idOf.get(p.id)!, role: 'LONG', avail: starterRelief(load?.get(p.id), soon.has(p.id)) }); });
   const team: TeamIn = {
     id: r.teamId, isUser: r.mine, players,
     lineup: r.batting.map((b) => ({ pid: idOf.get(b.player.id)!, pos: b.pos })),
@@ -213,7 +220,7 @@ export interface BatRow {
   /** [경기 기록] 박스스코어용 — 타순 1~9(교체 선수는 들어간 자리) · 포지션 ('CF' · 'PH' …). season/box 가 저장한다 */
   ord?: number; pos?: string;
 }
-export interface PitRow { id: string; team: string; outs: number; H: number; R: number; ER: number; BB: number; SO: number; HR: number; W: number; L: number; SV: number; HLD: number; GS: number }
+export interface PitRow { id: string; team: string; outs: number; H: number; R: number; ER: number; BB: number; SO: number; HR: number; W: number; L: number; SV: number; HLD: number; GS: number; /** 던진 공 수 — 다음 날 팔 상태(season/arm) */ np: number }
 export interface GameOut {
   away: string; home: string; date: string;
   score: [number, number];
@@ -236,8 +243,10 @@ export function runGame(seasonSeed: string, day: number, date: string, awayId: s
   const ai = TEAMS.findIndex((t) => t.id === awayId), hi = TEAMS.findIndex((t) => t.id === homeId);
   const wx = weatherOf(date, homeId, seasonSeed);
   const conds = condsOf(wx); // 날씨 궁합 — 두 팀 모두 같은 규칙
-  const away = teamIn(opts.away ?? rosterOf(awayId), day + ai, 1000 + ai * 100, conds);
-  const home = teamIn(opts.home ?? rosterOf(homeId), day + hi, 1000 + hi * 100, conds);
+  // 투수 팔 상태 — 이 경기 날짜 전까지 시즌 기록에서 (다시 계산해도 같은 상태)
+  const load = armLoads(getSeason(), date, (id) => playerById(id)?.attrs.recovery ?? 50);
+  const away = teamIn(opts.away ?? rosterOf(awayId), day + ai, 1000 + ai * 100, conds, load);
+  const home = teamIn(opts.home ?? rosterOf(homeId), day + hi, 1000 + hi * 100, conds, load);
   const time = startTime(date);
   const startMin = Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
   const input: GameInput = {
@@ -266,7 +275,7 @@ export function runGame(seasonSeed: string, day: number, date: string, awayId: s
   ([0, 1] as const).forEach((side) => {
     for (const b of result.box.bat[side]) bat.push({ id: web(side, b.pid), team: teamOf(side), PA: b.PA, AB: b.AB, H: b.H, D: b.D, T: b.T, HR: b.HR, RBI: b.RBI, R: b.R, BB: b.BB + b.HBP, SO: b.SO, SB: b.SB, ord: b.ord, pos: b.pos });
     for (const p of result.box.pit[side]) {
-      pit.push({ id: web(side, p.pid), team: teamOf(side), outs: p.outs, H: p.H, R: p.R, ER: p.ER, BB: p.BB + p.HBP, SO: p.SO, HR: p.HR, W: p.W, L: p.L, SV: p.SV, HLD: p.HLD, GS: p.GS });
+      pit.push({ id: web(side, p.pid), team: teamOf(side), outs: p.outs, H: p.H, R: p.R, ER: p.ER, BB: p.BB + p.HBP, SO: p.SO, HR: p.HR, W: p.W, L: p.L, SV: p.SV, HLD: p.HLD, GS: p.GS, np: p.pitches });
       if (p.W) decision.win = web(side, p.pid);
       if (p.L) decision.loss = web(side, p.pid);
       if (p.SV) decision.save = web(side, p.pid);

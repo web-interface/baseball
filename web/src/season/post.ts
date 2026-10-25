@@ -8,7 +8,7 @@
 // 내 구단 경기는 경기 화면에서 이닝별로 끝까지 봐야 결과가 들어간다(screens/match — ?g=post). 다른 구단 경기는 바로 계산.
 import { ME } from '../game/mock';
 import { myRoster } from './rosters';
-import { allDays, getSeason, isOver, setPost, standingsOf } from './store';
+import { allDays, getSeason, isOver, pitchUse, setPost, standingsOf } from './store';
 import { savePostBox } from './box';
 import type { GameRun } from './sim';
 
@@ -25,7 +25,7 @@ const HI_HOME: Record<SeriesId, number[]> = { wc: [1, 2], spo: [1, 2, 5], po: [1
 /** 그 시리즈 윗 순위 = 정규 시즌 몇 위 (0부터) */
 const HI_SEED: Record<SeriesId, number> = { wc: 3, spo: 2, po: 1, ks: 0 };
 
-export interface PostGameRec { no: number; date: string; away: string; home: string; s: [number, number]; inn: number; mine?: boolean }
+export interface PostGameRec { no: number; date: string; away: string; home: string; s: [number, number]; inn: number; mine?: boolean; /** 던진 투수 · 공 수 (season/arm) */ u?: [string, number][] }
 export interface SeriesRec {
   id: SeriesId;
   /** 윗 순위 · 아랫 순위 구단 */
@@ -92,12 +92,12 @@ export function stillAlive(p: PostState | undefined = postOf()) {
 }
 
 /** 경기 결과 넣기 — 시리즈 승수 · 다음 시리즈 · 우승 */
-function apply(p: PostState, g: { away: string; home: string; score: [number, number]; innings: number }, mine: boolean): PostState {
+function apply(p: PostState, g: { away: string; home: string; score: [number, number]; innings: number; pit: GameRun['out']['pit'] }, mine: boolean): PostState {
   const next: PostState = { ...p, series: p.series.map((x) => ({ ...x, wins: [...x.wins] as [number, number], games: x.games.slice() })) };
   const sr = openSeries(next);
   if (!sr) return next;
   const no = sr.games.length + 1;
-  sr.games.push({ no, date: next.date, away: g.away, home: g.home, s: g.score, inn: g.innings, mine: mine || undefined });
+  sr.games.push({ no, date: next.date, away: g.away, home: g.home, s: g.score, inn: g.innings, mine: mine || undefined, u: pitchUse(g) });
   const [as, hs] = g.score;
   const win = as > hs ? g.away : hs > as ? g.home : null;
   if (win) sr.wins[win === sr.hi ? 0 : 1] += 1;
@@ -132,7 +132,7 @@ export async function playOtherPostGame(): Promise<PostGameRec | null> {
   const sim = await loadSim();
   const s = getSeason();
   const run = sim.runGame(s.seed, 1000 + p.n, nx.date, nx.away, nx.home, { post: true });
-  const np = apply(p, { away: nx.away, home: nx.home, score: run.out.score, innings: run.out.innings }, false);
+  const np = apply(p, { away: nx.away, home: nx.home, score: run.out.score, innings: run.out.innings, pit: run.out.pit }, false);
   setPost(np);
   const sr = np.series.find((x) => x.id === nx.series.id)!;
   return sr.games[sr.games.length - 1];
@@ -161,7 +161,7 @@ export function finishPostMyGame(m: { away: string; home: string; date: string; 
   const p = postOf();
   const nx = nextPostGame(p);
   if (!p || !nx || !nx.mine || nx.no !== m.no || nx.date !== m.date || nx.away !== m.away) return;
-  setPost(apply(p, { away: m.away, home: m.home, score: run.out.score, innings: run.out.innings }, true));
+  setPost(apply(p, { away: m.away, home: m.home, score: run.out.score, innings: run.out.innings, pit: run.out.pit }, true));
   // [경기 기록] 포스트시즌 내 경기 박스스코어 (season/box — 키 p<n>, n = 이 경기 앞까지 치른 포스트시즌 경기 수)
   savePostBox(getSeason(), p.n, nx.series.id, m.no, run);
 }
