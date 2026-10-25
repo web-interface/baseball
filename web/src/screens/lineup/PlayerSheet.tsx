@@ -119,7 +119,7 @@ export function PlayerSheet({ slot, st, ev, onClose, onSwap }: PlayerSheetProps)
       footer={
         <>
           <Button variant="secondary" onClick={() => onSwap(at)}>교체</Button>
-          <Button variant="primary" onClick={() => navigate(`/player/${p.id}`)}>자세히</Button>
+          <Button variant="primary" onClick={() => navigate(`/player/${p.id}?card=${c.id}`)}>자세히</Button>
         </>
       }
     >

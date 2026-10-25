@@ -352,7 +352,7 @@ function Grid({ cards, club, year }: { cards: KCard[]; club: ClubCode; year: num
                   fluid
                   still
                   isNew={false}
-                  onClick={() => (own > 0 ? navigate(`/player/${inst.playerId}`) : hint(k))}
+                  onClick={() => (own > 0 ? navigate(`/player/${inst.playerId}?card=${inst.id}`) : hint(k))}
                 />
                 {own > 1 && <span className={[s.copies, 'num'].join(' ')}>×{own}</span>}
                 {own === 0 && <span className={s.lock} aria-hidden><Icon name="lock" size={16} /></span>}

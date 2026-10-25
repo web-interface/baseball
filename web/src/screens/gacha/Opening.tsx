@@ -321,7 +321,7 @@ export function Opening({ result, step, onClose, onAgain, onCombo }: OpeningProp
 
       {cine != null && <Reveal pc={result.cards[cine]} pick={result.pick} onDone={endCine} />}
 
-      <PulledSheet pc={detail} onClose={() => setDetail(null)} onPlayer={(id) => { setDetail(null); onClose(); navigate(`/player/${id}`); }} />
+      <PulledSheet pc={detail} onClose={() => setDetail(null)} onPlayer={(id, cid) => { setDetail(null); onClose(); navigate(`/player/${id}?card=${cid}`); }} />
 
       <p className="sr-only" aria-live="polite">{said}</p>
     </div>,
@@ -330,7 +330,7 @@ export function Opening({ result, step, onClose, onAgain, onCombo }: OpeningProp
 }
 
 /** 뽑은 카드 자세히 (시트) — 팩 열기 · 자동 열기가 같이 쓴다. onPlayer: '선수 정보'(가상 선수는 없음) */
-export function PulledSheet({ pc, onClose, onPlayer }: { pc: PulledCard | null; onClose: () => void; onPlayer: (playerId: string) => void }) {
+export function PulledSheet({ pc, onClose, onPlayer }: { pc: PulledCard | null; onClose: () => void; onPlayer: (playerId: string, cardId: string) => void }) {
   return (
     <Sheet
       open={!!pc}
@@ -338,7 +338,7 @@ export function PulledSheet({ pc, onClose, onPlayer }: { pc: PulledCard | null; 
       title={pc ? pc.player.name : ''}
       sub={pc ? cardLine(pc) : undefined}
       footer={pc && !isSynthetic(pc.player) ? (
-        <Button variant="secondary" onClick={() => onPlayer(pc.player.id)}>선수 정보</Button>
+        <Button variant="secondary" onClick={() => onPlayer(pc.player.id, pc.card.id)}>선수 정보</Button>
       ) : undefined}
     >
       {pc && (

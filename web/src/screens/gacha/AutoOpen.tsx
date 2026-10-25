@@ -176,7 +176,7 @@ export function AutoOpen({ runs, asked, onClose, onAgain, againN = 0, note, onCo
         )}
       </footer>
 
-      <PulledSheet pc={detail} onClose={() => setDetail(null)} onPlayer={(id) => { setDetail(null); onClose(); navigate(`/player/${id}`); }} />
+      <PulledSheet pc={detail} onClose={() => setDetail(null)} onPlayer={(id, cid) => { setDetail(null); onClose(); navigate(`/player/${id}?card=${cid}`); }} />
 
       <p className="sr-only" aria-live="polite">{said}</p>
     </div>,
@@ -367,7 +367,7 @@ export function BulkOpen({ pack, pick, onClose, onClean, onCombo }: { pack: Pack
           </div>
         )}
       </footer>
-      <PulledSheet pc={detail} onClose={() => setDetail(null)} onPlayer={(id) => { setDetail(null); onClose(); navigate(`/player/${id}`); }} />
+      <PulledSheet pc={detail} onClose={() => setDetail(null)} onPlayer={(id, cid) => { setDetail(null); onClose(); navigate(`/player/${id}?card=${cid}`); }} />
     </div>,
     document.body,
   );

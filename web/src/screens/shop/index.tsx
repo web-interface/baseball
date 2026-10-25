@@ -123,7 +123,7 @@ export default function ShopScreen(_: ScreenProps) {
           return (
             <li key={it.id} className={[s.item, mine && s.mine, blocked && s.blocked].filter(Boolean).join(' ')}>
               <span className={['num', s.no].join(' ')}>{String(n + 1).padStart(2, '0')}</span>
-              <button type="button" className={s.cardBtn} onClick={() => navigate(`/player/${p.id}`)} aria-label={`${p.name} 선수 정보`}>
+              <button type="button" className={s.cardBtn} onClick={() => navigate(`/player/${p.id}?card=${c.id}`)} aria-label={`${p.name} 선수 정보`}>
                 <CardMini player={p} grade={c.grade} enhance={0} style={{ width: '100%' }} />
               </button>
               <div className={s.body}>

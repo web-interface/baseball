@@ -50,7 +50,7 @@ export function GradeSheet({ grade, onClose }: { grade: GradeId | null; onClose:
             const award = awardLabel(k);
             return (
               <li key={k.id} className={own > 0 ? s.got : s.locked}>
-                <button type="button" className={s.row} style={{ '--tc': team.colors.primary } as CSSProperties} onClick={() => own > 0 && navigate(`/player/${inst.playerId}`)}>
+                <button type="button" className={s.row} style={{ '--tc': team.colors.primary } as CSSProperties} onClick={() => own > 0 && navigate(`/player/${inst.playerId}?card=${inst.id}`)}>
                   <span className={s.card}>
                     <CardMini {...cardProps(inst)} width={64} still isNew={false} />
                     {own > 1 && <em className={['num', s.copies].join(' ')}>×{own}</em>}
