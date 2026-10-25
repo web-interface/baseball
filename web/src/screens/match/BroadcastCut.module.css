@@ -1,89 +1,169 @@
-/* 중계 화면 컷 — 2D 경기장 위에 잠깐 */
+/* 명장면 컷인 — 시간표(초): 띠 0 · 두 화면 0.08~0.5 · 던짐 0.72 · 공 0.76~1.02 · 임팩트 1.02 · 글자 1.12 · 나감 2.66~3.0
+   글자 크기는 컨테이너 폭(cqw) 기준 — 휴대폰 · PC 무대 크기에 맞춰 함께 커진다 */
 .cut {
-  position: absolute; inset: 0; z-index: 6; overflow: hidden; cursor: pointer; color: #fff;
-  animation: cutIn .32s cubic-bezier(.2, .8, .2, 1) both;
+  --ink: #05070d;
+  position: absolute; inset: 0; z-index: 6; overflow: hidden; cursor: pointer; color: #fff; background: var(--ink);
+  container-type: inline-size; isolation: isolate;
+  animation: cutIn .18s ease-out both;
 }
-.out { animation: cutOut .3s ease-in both; }
-@keyframes cutIn { from { opacity: 0; transform: scale(1.06); filter: brightness(1.6); } to { opacity: 1; transform: none; filter: none; } }
-@keyframes cutOut { to { opacity: 0; transform: scale(1.02); } }
-.scene { position: absolute; inset: 0; width: 100%; height: 100%; animation: camPush 2.6s ease-out both; }
-@keyframes camPush { from { transform: scale(1.04); } to { transform: scale(1); } }
+.out { animation: cutOut .34s cubic-bezier(.6, 0, .9, .4) both; }
+@keyframes cutIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cutOut { to { opacity: 0; filter: brightness(1.8) blur(2px); } }
 
-/* 전광판 글자 */
-.sbHead { font-size: 5.6px; font-weight: 700; fill: #8f97a3; text-anchor: middle; }
-.sbHead:first-of-type { text-anchor: start; }
-.sbTeam { font-size: 6.6px; font-weight: 800; fill: #f2f4f7; }
-.sbNum { font-size: 6.6px; font-weight: 700; fill: #ffcf3d; text-anchor: middle; font-family: var(--font-num, inherit); }
-.sbR { font-size: 7.4px; font-weight: 900; fill: #fff; text-anchor: middle; }
-.sbBall { font-size: 5.6px; font-weight: 800; fill: #9be27a; letter-spacing: .3px; }
-.ad { font-size: 6px; font-weight: 900; letter-spacing: .2px; }
-
-/* 타자 등 */
-.backName { font-size: 9px; font-weight: 900; letter-spacing: .5px; }
-.backNo { font-size: 30px; font-weight: 900; font-family: var(--font-num, inherit); paint-order: stroke; }
-.swing { animation: swing .28s .3s cubic-bezier(.3, 1.6, .5, 1) both; }
-@keyframes swing { from { transform: rotate(0); } to { transform: rotate(-112deg); } }
-
-/* 공 */
-.ballHit { animation: ballHit .85s .38s cubic-bezier(.15, .7, .3, 1) both; transform-box: view-box; }
-@keyframes ballHit { from { transform: translate(0, 0) scale(1); opacity: 1; } 85% { opacity: 1; } to { transform: translate(var(--bx), var(--by)) scale(.25); opacity: .9; } }
-.ballK { animation: ballK .5s .18s cubic-bezier(.5, 0, .9, .6) both; transform-box: fill-box; transform-origin: center; }
-@keyframes ballK { from { transform: translate(0, 0) scale(1); } to { transform: translate(var(--kx), var(--ky)) scale(2.4); } }
-.mark { animation: mark .9s .62s ease-out both; transform-box: fill-box; transform-origin: center; }
-@keyframes mark { from { opacity: 0; transform: scale(2.2); } 40% { opacity: 1; transform: scale(1); } to { opacity: 1; transform: scale(1); } }
-.fire { animation: fire .9s 1.05s ease-out both; transform-box: fill-box; transform-origin: center; }
-@keyframes fire { from { opacity: 0; transform: scale(.1); } 30% { opacity: 1; } to { opacity: 0; transform: scale(1.6); } }
-
-/* 투수 · 내야수 (앞모습 그림) */
-.pitcher, .fld { position: absolute; display: block; transform: translateX(-50%); pointer-events: none; }
-.pitcher { left: 50%; top: 43.7%; width: 13%; height: 19%; animation: windup .55s .02s ease-in-out both; }
-@keyframes windup { 0% { transform: translateX(-50%) translateY(0); } 60% { transform: translateX(-50%) translateY(-3%) rotate(-3deg); } 100% { transform: translateX(-50%) translateY(0); } }
-.fld { width: 7%; height: 10%; opacity: .95; }
-.ss { left: 34.5%; top: 44%; }
-.sb { left: 65.5%; top: 44%; }
-
-/* 점수판 · 주자 판 */
-.bug {
-  position: absolute; right: 8px; top: 8px; display: grid; gap: 2px; min-width: 92px; padding: 5px 8px 5px 6px; border-radius: 6px;
-  background: rgba(10, 14, 22, .82); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); font-size: 11px;
+.stagebox { position: absolute; inset: 0; }
+.shake { animation: shake .36s 1.02s linear both; }
+@keyframes shake {
+  0% { transform: translate(0, 0) scale(1.03); } 12% { transform: translate(-2.2%, 1.4%) scale(1.04); } 26% { transform: translate(2%, -1.6%) scale(1.03); }
+  42% { transform: translate(-1.2%, -.8%) scale(1.02); } 60% { transform: translate(.9%, .8%) scale(1.01); } 80% { transform: translate(-.3%, .2%); } 100% { transform: translate(0, 0); }
 }
-.bug p { display: flex; align-items: center; gap: 5px; }
-.bug p i { width: 4px; height: 12px; border-radius: 1px; }
-.bug p span { flex: 1; font-weight: 800; letter-spacing: -.03em; }
-.bug p b { font-size: 14px; font-weight: 900; color: #ffd84d; }
-.bug small { font-size: 10px; font-weight: 700; color: #b8c2d0; text-align: right; }
-.diamond { position: absolute; left: 10px; top: 30%; width: 54px; height: 54px; }
-.diamond i { position: absolute; width: 14px; height: 14px; transform: rotate(45deg); background: rgba(255, 255, 255, .25); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .9); }
-.diamond i.on { background: #ffd84d; box-shadow: inset 0 0 0 2px #fff, 0 0 8px #ffd84d; }
-.b1 { left: 38px; top: 20px; }
-.b2 { left: 20px; top: 2px; }
-.b0 { left: 2px; top: 20px; }
-.diamond em { position: absolute; left: -2px; top: 46px; font-style: normal; font-size: 11px; font-weight: 900; color: #ff5a5a; text-shadow: 0 1px 2px rgba(0, 0, 0, .6); white-space: nowrap; }
 
-/* 가운데 문구 */
-.cap { position: absolute; left: 0; right: 0; top: 30%; display: grid; justify-items: center; gap: 2px; animation: capPop .5s .62s cubic-bezier(.2, 1.6, .4, 1) both; pointer-events: none; }
-.cap b {
-  font-size: clamp(30px, 11vw, 54px); font-weight: 900; letter-spacing: -.04em; line-height: 1;
-  color: #fff; -webkit-text-stroke: 2px rgba(0, 0, 0, .55); text-shadow: 0 3px 0 rgba(0, 0, 0, .35), 0 0 22px rgba(255, 210, 80, .7);
+/* ── 대각선으로 갈린 두 화면 ── */
+.panel { position: absolute; inset: 0; overflow: hidden; }
+.pTop { clip-path: polygon(0 0, 100% 0, 100% 30%, 0 62%); animation: inLeft .42s .08s cubic-bezier(.16, 1, .3, 1) both; }
+.pBottom { clip-path: polygon(0 66%, 100% 34%, 100% 100%, 0 100%); animation: inRight .42s .16s cubic-bezier(.16, 1, .3, 1) both; }
+@keyframes inLeft { from { transform: translateX(-60%); filter: brightness(2.2); } to { transform: none; filter: none; } }
+@keyframes inRight { from { transform: translateX(60%); filter: brightness(2.2); } to { transform: none; filter: none; } }
+.out .pTop { animation: outLeft .34s cubic-bezier(.6, 0, .9, .4) both; }
+.out .pBottom { animation: outRight .34s cubic-bezier(.6, 0, .9, .4) both; }
+@keyframes outLeft { to { transform: translateX(-70%); } }
+@keyframes outRight { to { transform: translateX(70%); } }
+
+/* 구단 색 조명 — 깊은 바탕 + 한쪽에서 비치는 빛 */
+.light { position: absolute; inset: 0; }
+.pTop .light {
+  background:
+    radial-gradient(70% 90% at 26% 40%, color-mix(in srgb, var(--c1) 70%, #fff 6%) 0%, color-mix(in srgb, var(--c1) 38%, var(--ink)) 48%, var(--ink) 100%),
+    var(--ink);
 }
-.cap small { padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; background: rgba(10, 14, 22, .7); }
-.capHr b { color: #ffe066; text-shadow: 0 3px 0 rgba(0, 0, 0, .35), 0 0 26px rgba(255, 120, 60, .9); }
-.capK b { color: #8fd3ff; text-shadow: 0 3px 0 rgba(0, 0, 0, .35), 0 0 22px rgba(60, 150, 255, .8); }
-@keyframes capPop { from { opacity: 0; transform: scale(2.2); } to { opacity: 1; transform: none; } }
+.pBottom .light {
+  background:
+    radial-gradient(70% 90% at 74% 76%, color-mix(in srgb, var(--c1) 70%, #fff 6%) 0%, color-mix(in srgb, var(--c1) 38%, var(--ink)) 48%, var(--ink) 100%),
+    var(--ink);
+}
+/* 집중선 — 캐릭터 쪽으로 모이는 가는 빛살 (가운데는 비움) */
+.lines { position: absolute; inset: -40%; opacity: .55; mix-blend-mode: screen; animation: linesSpin 3s linear both; }
+.pTop .lines {
+  background: repeating-conic-gradient(from 0deg at 36% 43%, rgba(255, 255, 255, .5) 0deg .55deg, transparent .55deg 5.2deg);
+  -webkit-mask: radial-gradient(circle at 36% 43%, transparent 0 13%, #000 34%); mask: radial-gradient(circle at 36% 43%, transparent 0 13%, #000 34%);
+}
+.pBottom .lines {
+  background: repeating-conic-gradient(from 2deg at 64% 58%, rgba(255, 255, 255, .5) 0deg .55deg, transparent .55deg 5.2deg);
+  -webkit-mask: radial-gradient(circle at 64% 58%, transparent 0 13%, #000 34%); mask: radial-gradient(circle at 64% 58%, transparent 0 13%, #000 34%);
+}
+@keyframes linesSpin { from { transform: rotate(0deg) scale(1.05); } to { transform: rotate(4deg) scale(1); } }
+/* 망점 */
+.tone { position: absolute; inset: 0; opacity: .32; background: radial-gradient(circle, rgba(0, 0, 0, .9) 26%, transparent 30%) 0 0 / 5px 5px; -webkit-mask: linear-gradient(115deg, transparent 40%, #000 90%); mask: linear-gradient(115deg, transparent 40%, #000 90%); }
 
-/* 아래 정보 띠 */
-.bars { position: absolute; left: 6px; right: 6px; bottom: 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; animation: barsIn .35s .15s ease-out both; }
-@keyframes barsIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-.bar { min-width: 0; padding: 4px 7px 5px; border-radius: 5px; background: rgba(10, 14, 22, .86); box-shadow: inset 3px 0 0 var(--tc), inset 0 0 0 1px rgba(255, 255, 255, .12); }
-.barR { box-shadow: inset -3px 0 0 var(--tc), inset 0 0 0 1px rgba(255, 255, 255, .12); }
-.mineBar { box-shadow: inset 3px 0 0 #39d0ff, inset 0 0 0 1.5px #39d0ff, 0 0 10px -2px #39d0ff; }
-.barTop { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: 12px; }
-.barTop em { flex: none; padding: 0 4px; border-radius: 3px; font-style: normal; font-size: 10px; font-weight: 900; color: #111; background: #ffd84d; }
-.barTop b { font-size: 12px; font-weight: 900; color: #ffd84d; }
-.barTop span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; letter-spacing: -.03em; }
-.barTop small { flex: none; font-size: 10px; color: #b8c2d0; }
-.mineTag { flex: none; margin-left: auto; padding: 0 5px; border-radius: 3px; font-style: normal; font-size: 9.5px; font-weight: 900; color: #04202a; background: #39d0ff; }
-.barLine { margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; color: #cfd6e0; }
+/* 큰 SD 그림 — 테두리 빛(림 라이트) + 천천히 다가옴 */
+.char { position: absolute; display: block; pointer-events: none; filter: drop-shadow(0 0 1px rgba(255, 255, 255, .9)) drop-shadow(0 0 14px color-mix(in srgb, var(--c1) 75%, #fff)); }
+.pTop .char { left: 6%; top: 4%; width: 46%; height: 60%; animation: pushP 2.6s .1s cubic-bezier(.2, .7, .2, 1) both, throwP .3s .7s cubic-bezier(.3, 0, .2, 1) both; }
+.pBottom .char { right: 4%; bottom: -2%; width: 54%; height: 66%; animation: pushB 2.6s .18s cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes pushP { from { transform: scale(1.18) translateX(-6%); } to { transform: scale(1) translateX(0); } }
+@keyframes throwP { 0% { rotate: 0deg; translate: 0 0; } 45% { rotate: -6deg; translate: -2% 1%; } 100% { rotate: 4deg; translate: 3% 0; } }
+@keyframes pushB { from { transform: scale(1.16) translateX(6%); } to { transform: scale(1) translateX(0); } }
+.char > span { width: 100%; height: 100%; }
 
-/* 움직임 줄이기 — 그림만 */
+/* 이름판 — 기울인 띠 · 큰 등번호 */
+.plate { position: absolute; display: flex; align-items: center; gap: 2.4cqw; padding: 1.4cqw 3.6cqw 1.4cqw 2.4cqw; transform: skewX(-12deg); background: linear-gradient(90deg, rgba(5, 7, 13, .86), rgba(5, 7, 13, .55)); box-shadow: inset .9cqw 0 0 var(--c1); }
+.plate > * { transform: skewX(12deg); }
+.pTop .plate { right: 4%; top: 13%; animation: plateIn .4s .32s cubic-bezier(.16, 1, .3, 1) both; }
+.pBottom .plate { left: 4%; bottom: 13%; animation: plateIn .4s .4s cubic-bezier(.16, 1, .3, 1) both; }
+@keyframes plateIn { from { opacity: 0; translate: 0 30%; } to { opacity: 1; translate: 0 0; } }
+.plate b { font-size: 8.4cqw; font-weight: 900; line-height: 1; letter-spacing: -.04em; color: transparent; -webkit-text-stroke: .35cqw #fff; font-style: italic; }
+.plate span { display: grid; gap: .3cqw; }
+.plate small { display: flex; align-items: center; gap: 1.2cqw; font-size: 2.6cqw; font-weight: 700; letter-spacing: .02em; color: rgba(255, 255, 255, .72); }
+.plate small em { padding: .2cqw 1.2cqw; border-radius: .6cqw; font-style: normal; font-size: 2.3cqw; font-weight: 900; color: #032029; background: #39d0ff; }
+.plate strong { font-size: 5cqw; font-weight: 900; letter-spacing: -.04em; line-height: 1.1; }
+
+/* 가운데 빛나는 대각선 */
+.slash {
+  position: absolute; left: -10%; right: -10%; top: 48%; height: .7cqw; transform: rotate(-17.7deg); transform-origin: center;
+  background: linear-gradient(90deg, transparent, #fff 18%, #fff 82%, transparent); box-shadow: 0 0 2.4cqw #fff, 0 0 7cqw color-mix(in srgb, #ffd56a 80%, transparent);
+  animation: slashIn .36s .14s cubic-bezier(.16, 1, .3, 1) both;
+}
+@keyframes slashIn { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+
+/* ── 공 궤적 · 임팩트 ── */
+.fx { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.pitchStreak {
+  fill: none; stroke: url(#bcStreak); stroke-width: 1.6; stroke-linecap: round; vector-effect: non-scaling-stroke;
+  stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 0 3px #ffe39a);
+  animation: draw .26s .76s cubic-bezier(.5, 0, .9, .5) both, fadeOut .4s 1.15s ease-out both;
+}
+.pitchStreak { stroke-width: 5px; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes fadeOut { to { opacity: 0; } }
+/* 공 — 화면 비율과 상관없이 둥글게(HTML) */
+.ball {
+  position: absolute; left: 17%; top: 27%; width: 2.4cqw; height: 2.4cqw; margin: -1.2cqw 0 0 -1.2cqw; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff 0 45%, #e7e7e7 70%, #c9c9c9); box-shadow: 0 0 2cqw 0.6cqw rgba(255, 240, 190, .95);
+  opacity: 0; animation: ballFly .26s .76s cubic-bezier(.5, 0, .9, .5) both;
+}
+.hitTone .ball, .hr .ball { animation: ballFly .26s .76s cubic-bezier(.5, 0, .9, .5) both, ballOut .7s 1.02s cubic-bezier(.1, .8, .25, 1) both; }
+@keyframes ballFly { from { opacity: 1; left: 17%; top: 27%; transform: scale(.7); } to { opacity: 1; left: 50%; top: 71%; transform: scale(2.2); } }
+@keyframes ballOut { from { left: 50%; top: 71%; transform: scale(2.2); } to { left: 112%; top: 4%; transform: scale(.6); } }
+.hr .ball { animation: ballFly .26s .76s cubic-bezier(.5, 0, .9, .5) both, ballOutHr .75s 1.02s cubic-bezier(.1, .8, .25, 1) both; }
+@keyframes ballOutHr { from { left: 50%; top: 71%; transform: scale(2.2); } to { left: 112%; top: -20%; transform: scale(.5); } }
+.kTone .ball { animation: ballFly .26s .76s cubic-bezier(.5, 0, .9, .5) both, ballStay .2s 1.02s both; }
+@keyframes ballStay { from { left: 50%; top: 71%; transform: scale(2.2); } to { left: 50%; top: 71%; transform: scale(1.7); } }
+
+.bloom { opacity: 0; transform-box: fill-box; transform-origin: center; animation: bloom .42s 1.02s ease-out both; mix-blend-mode: screen; }
+@keyframes bloom { 0% { opacity: 1; transform: scale(.15); } 100% { opacity: 0; transform: scale(1.6); } }
+.wave { fill: none; stroke: #fff; stroke-width: 3px; vector-effect: non-scaling-stroke; opacity: 0; transform-box: fill-box; transform-origin: center; animation: wave .55s 1.02s ease-out both; }
+.wave2 { stroke: #ffd56a; animation-delay: 1.1s; }
+.waveK { stroke: #8fd3ff; }
+@keyframes wave { 0% { opacity: 1; transform: scale(.4); stroke-width: 6px; } 100% { opacity: 0; transform: scale(6); stroke-width: 1px; } }
+.sparks line { stroke: #fff6c8; stroke-width: 2.4px; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.sparks line:nth-child(3n) { stroke: #ffb13d; }
+.sparks { opacity: 0; transform-box: fill-box; transform-origin: center; animation: sparks .5s 1.02s cubic-bezier(.1, .8, .3, 1) both; }
+@keyframes sparks { 0% { opacity: 1; transform: scale(.25) rotate(0deg); } 100% { opacity: 0; transform: scale(1.3) rotate(10deg); } }
+.hitStreak {
+  fill: none; stroke: #fff0b8; stroke-width: 6px; stroke-linecap: round; vector-effect: non-scaling-stroke;
+  stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 0 5px rgba(255, 210, 110, .95));
+  animation: draw .55s 1.02s cubic-bezier(.1, .8, .25, 1) both, fadeOut .6s 1.75s ease-out both;
+}
+/* 임팩트 프레임 — 아주 짧게 색이 뒤집히는 섬광 (애니메이션 작화의 '임팩트 프레임') */
+.impact { position: absolute; inset: 0; background: #fff; mix-blend-mode: difference; opacity: 0; pointer-events: none; animation: impact .16s 1.02s steps(1, end) both; }
+@keyframes impact { 0% { opacity: 1; } 50% { opacity: 0; } 70% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ── 결과 글자 — 금속 광택 · 기울임 · 빛 지나감 ── */
+.result { position: absolute; left: 0; right: 0; top: 34%; display: grid; justify-items: center; gap: .6cqw; pointer-events: none; animation: slam .42s 1.12s cubic-bezier(.2, 1.4, .35, 1) both; }
+.result::before {
+  content: ''; position: absolute; left: -6%; right: -6%; top: 6%; bottom: 2%; z-index: -1; transform: skewY(-4deg);
+  background: linear-gradient(90deg, transparent, rgba(5, 7, 13, .78) 18%, rgba(5, 7, 13, .78) 82%, transparent);
+  box-shadow: 0 -1px 0 rgba(255, 255, 255, .18), 0 1px 0 rgba(255, 255, 255, .18);
+}
+.result { isolation: isolate; }
+@keyframes slam { from { opacity: 0; transform: scale(2.4) skewX(-12deg); filter: blur(6px); } to { opacity: 1; transform: scale(1) skewX(-8deg); filter: none; } }
+.result b {
+  position: relative; font-size: 17cqw; font-weight: 900; line-height: .95; letter-spacing: -.05em; font-style: italic;
+  color: transparent; background: linear-gradient(180deg, #ffffff 0%, #fff5d6 42%, #f2c14e 52%, #fff2c2 64%, #b9852a 100%); -webkit-background-clip: text; background-clip: text;
+  -webkit-text-stroke: .32cqw rgba(30, 20, 0, .55); filter: drop-shadow(0 .8cqw 0 rgba(0, 0, 0, .45)) drop-shadow(0 0 3cqw rgba(255, 200, 90, .55));
+}
+.result b::after {
+  content: attr(data-t); position: absolute; inset: 0; color: transparent; -webkit-text-stroke: 0;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, .95) 48%, transparent 58%) 0 0 / 260% 100% no-repeat; -webkit-background-clip: text; background-clip: text;
+  animation: sweep .9s 1.5s ease-in-out both;
+}
+@keyframes sweep { from { background-position: 130% 0; } to { background-position: -130% 0; } }
+.kTone .result b { background: linear-gradient(180deg, #ffffff 0%, #dff3ff 44%, #6cc4ff 54%, #e6f7ff 66%, #2b78c9 100%); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 .8cqw 0 rgba(0, 0, 0, .45)) drop-shadow(0 0 3cqw rgba(90, 180, 255, .6)); }
+.hr .result b { font-size: 19cqw; filter: drop-shadow(0 .8cqw 0 rgba(0, 0, 0, .45)) drop-shadow(0 0 4cqw rgba(255, 140, 60, .8)); }
+.result em { font-size: 3.3cqw; font-weight: 900; font-style: italic; letter-spacing: .5em; padding-left: .5em; color: rgba(255, 255, 255, .85); text-shadow: 0 0 2cqw rgba(0, 0, 0, .8); }
+.result span { display: flex; gap: 1.6cqw; margin-top: .8cqw; animation: metaIn .3s 1.35s ease-out both; }
+.result span i { padding: .7cqw 2.2cqw; border-radius: 99px; font-style: normal; font-size: 3cqw; font-weight: 800; letter-spacing: -.02em; background: rgba(5, 7, 13, .72); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22); }
+@keyframes metaIn { from { opacity: 0; transform: translateY(40%); } to { opacity: 1; transform: none; } }
+
+/* ── 시네마 띠 — 위(이닝 · 점수 · 아웃) · 아래 ── */
+.topbar, .botbar { position: absolute; left: 0; right: 0; height: 8.5%; background: #000; z-index: 3; }
+.topbar { top: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 3.4cqw; font-size: 3cqw; font-weight: 800; color: rgba(255, 255, 255, .78); animation: barTop .3s cubic-bezier(.16, 1, .3, 1) both; }
+.botbar { bottom: 0; animation: barBot .3s cubic-bezier(.16, 1, .3, 1) both; }
+@keyframes barTop { from { transform: translateY(-100%); } to { transform: none; } }
+@keyframes barBot { from { transform: translateY(100%); } to { transform: none; } }
+.score { display: flex; align-items: center; gap: 1.4cqw; color: #fff; }
+.score i { width: .9cqw; height: 3.4cqw; border-radius: .3cqw; }
+.score b { font-size: 4.2cqw; font-weight: 900; color: #ffd56a; }
+.score em { font-style: normal; color: rgba(255, 255, 255, .5); }
+
+/* 움직임 줄이기 — 끝 모습만 */
 .still, .still * { animation-duration: .01s !important; animation-delay: 0s !important; }
+.still .impact { display: none; }
