@@ -1,0 +1,146 @@
+/* 시상식 — 신문 지면처럼: 큰 사진 기사(MVP) · 옆 사진 기사(신인왕) · 사진 격자(골든글러브) · 타이틀 목록. 헤어라인 · 글자 위계 · 구단색 사진만 */
+.screen { padding-bottom: 40px; }
+.top { margin: 0 var(--gutter); padding: 18px 0 10px; border-bottom: 1px solid var(--line-2); }
+.kicker { font-size: 11.5px; font-weight: 700; color: var(--fg-3); }
+.title { margin-top: 2px; font-size: 26px; text-shadow: var(--misreg); }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 8px; font-size: 12.5px; color: var(--fg-2); }
+.champ { display: inline-flex; align-items: center; gap: 6px; }
+.champ b { font-weight: 800; color: var(--fg); }
+.mineSum { color: var(--accent); font-weight: 700; }
+.mineSum b { font-weight: 800; }
+.years { margin: 6px var(--gutter) 0; }
+.wait { margin: 18px var(--gutter) 0; font-size: 14px; color: var(--fg-2); }
+.waitLink { margin: 10px var(--gutter) 0; font-size: 13px; font-weight: 700; }
+.waitLink a { display: inline-flex; align-items: center; gap: 2px; color: var(--accent); }
+
+/* ── 사진 ── */
+.photo { position: relative; display: block; overflow: hidden; isolation: isolate; background: var(--tc, var(--surface-3)); border-radius: var(--r-2); }
+.photo::after {
+  content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background:
+    radial-gradient(80% 62% at 50% 0%, rgba(255, 255, 255, .2), transparent 70%),
+    linear-gradient(to bottom, transparent 58%, rgba(0, 0, 0, .26));
+}
+.photoNo {
+  position: absolute; z-index: 0; top: 2%; right: 5%;
+  font-family: var(--font-num); font-weight: 800; line-height: .8; letter-spacing: -.04em;
+  color: var(--tink, #fff); opacity: .15;
+}
+.photoArt { position: absolute; z-index: 1; inset: 8% 0 0; display: block; }
+.photoEm { display: grid; place-items: center; width: 100%; height: 100%; }
+.ph-hero { aspect-ratio: 5 / 4; }
+.ph-hero .photoNo { font-size: 190px; }
+.ph-hero .photoArt { inset: 6% 0 0; }
+.ph-side { width: 116px; height: 132px; flex: none; }
+.ph-side .photoNo { font-size: 92px; }
+.ph-tile { aspect-ratio: 1 / 1; }
+.ph-tile .photoNo { font-size: 104px; }
+.ph-thumb { width: 76px; height: 88px; flex: none; }
+.ph-thumb .photoNo { font-size: 62px; }
+.ph-mini { width: 38px; height: 38px; flex: none; border-radius: var(--r-1); }
+.ph-mini .photoArt { inset: 4% 0 0; }
+.ph-mini::after { background: linear-gradient(to bottom, transparent 60%, rgba(0, 0, 0, .18)); }
+
+/* ── 우리 구단 ── */
+.mineTag { margin-left: 8px; font-style: normal; font-size: 11px; font-weight: 800; letter-spacing: 0; color: var(--accent); }
+.mine { box-shadow: inset 3px 0 0 var(--accent); }
+
+/* ── MVP — 큰 사진 기사 ── */
+.lead { margin: 16px var(--gutter) 0; }
+.lead.mine { box-shadow: none; }
+.lead.mine .body { padding-left: 12px; box-shadow: inset 3px 0 0 var(--accent); }
+.leadPhoto { display: block; }
+.cap { margin-top: 6px; font-size: 11px; line-height: 1.45; color: var(--fg-3); }
+.body { margin-top: 12px; }
+.kick { font-size: 12px; font-weight: 800; letter-spacing: -.01em; color: var(--accent); }
+.headline { margin-top: 4px; font-family: var(--font-head); font-size: 23px; font-weight: var(--head-weight); line-height: 1.28; letter-spacing: var(--head-tracking); word-break: keep-all; text-shadow: var(--misreg); }
+.headlineS { margin-top: 4px; font-family: var(--font-head); font-size: 18px; font-weight: var(--head-weight); line-height: 1.32; letter-spacing: var(--head-tracking); word-break: keep-all; }
+.lede { margin-top: 8px; font-size: 14.5px; line-height: 1.7; letter-spacing: -.02em; color: var(--fg); word-break: keep-all; }
+.cells { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 14px; border-top: 1px solid var(--line-2); border-bottom: 1px solid var(--line); }
+.cells div { display: grid; gap: 3px; padding: 9px 0 10px 10px; }
+.cells div + div { border-left: 1px solid var(--line); }
+.cells div:first-child { padding-left: 0; }
+.cells dt { font-size: 10.5px; font-weight: 700; color: var(--fg-3); }
+.cells dd { font-size: 25px; line-height: 1; }
+.by { display: flex; flex-wrap: wrap; gap: 0 6px; margin-top: 9px; font-size: 11.5px; color: var(--fg-3); }
+.by span + span::before { content: '·'; margin-right: 6px; color: var(--fg-4); }
+.by span:first-child { font-weight: 700; color: var(--fg-2); }
+
+/* ── 신인왕 — 옆 사진 기사 ── */
+.side { margin: 22px var(--gutter) 0; padding-top: 14px; border-top: 1px solid var(--line-2); }
+.side.mine { padding-left: 12px; }
+.sideRow { display: flex; align-items: flex-start; gap: 14px; }
+.sideText { flex: 1; min-width: 0; }
+.sidePhoto { display: block; flex: none; }
+.side .cells dd { font-size: 21px; }
+.none { margin: 22px var(--gutter) 0; padding-top: 12px; border-top: 1px solid var(--line-2); font-size: 13px; color: var(--fg-3); }
+.none b { margin-right: 8px; font-weight: 800; color: var(--fg-2); }
+
+/* ── 구역 (골든글러브 · 타이틀) ── */
+.sec { margin: 26px var(--gutter) 0; }
+.secH { display: flex; align-items: baseline; gap: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line-2); font-family: var(--font-head); font-size: 16px; font-weight: 800; letter-spacing: var(--head-tracking); }
+.secH small { font-family: var(--font-body); font-size: 11.5px; font-weight: 500; letter-spacing: 0; color: var(--fg-3); }
+.note { padding: 10px 0 12px; border-bottom: 1px solid var(--line); }
+.noteH { font-size: 15.5px; font-weight: 800; line-height: 1.35; letter-spacing: -.035em; word-break: keep-all; }
+.noteL { margin-top: 4px; font-size: 13px; line-height: 1.6; color: var(--fg-2); word-break: keep-all; }
+
+/* 골든글러브 — 두 칸 사진 격자 */
+.gg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; margin-top: 14px; }
+.gg li.mine { box-shadow: none; }
+.gg li.mine .ggItem { box-shadow: 0 -3px 0 var(--accent); }
+.ggItem { display: grid; gap: 2px; min-width: 0; color: var(--fg); }
+.ggItem .photo { margin-bottom: 6px; }
+.ggPos { font-size: 11px; font-weight: 800; color: var(--fg-3); }
+.ggName { font-size: 15.5px; font-weight: 800; letter-spacing: -.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ggItem:hover .ggName { color: var(--accent); }
+.ggTeam { display: flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--fg-2); }
+.ggLine { font-family: var(--font-body); font-size: 11.5px; line-height: 1.45; color: var(--fg-3); }
+
+/* 개인 타이틀 — 목록 */
+.tGroup { margin-top: 12px; }
+.tGroupH { padding-bottom: 4px; font-size: 11.5px; font-weight: 750; color: var(--fg-3); border-bottom: 1px solid var(--line); }
+.tRow { display: grid; grid-template-columns: 70px 38px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); color: var(--fg); }
+.tRow:hover .tWho b { color: var(--accent); }
+.tLabel { display: grid; font-size: 12.5px; font-weight: 800; letter-spacing: -.03em; color: var(--fg-2); }
+.tLabel small { font-size: 10.5px; font-weight: 700; color: var(--fg-3); }
+.tWho { display: grid; gap: 2px; min-width: 0; }
+.tWho b { font-size: 14px; font-weight: 750; letter-spacing: -.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tWho small { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--fg-3); white-space: nowrap; }
+.tVal { display: grid; justify-items: end; gap: 1px; }
+.tVal b { font-size: 20px; line-height: 1.05; font-weight: 700; }
+.tVal small { font-size: 10.5px; color: var(--fg-3); }
+.tMine { background: var(--accent-weak); box-shadow: inset 3px 0 0 var(--accent); padding-left: 8px; padding-right: 8px; }
+.tMine .tWho small { color: var(--accent); font-weight: 700; }
+
+/* 기록 더 보기 */
+.more { display: grid; grid-template-columns: 1fr 1fr; margin: 28px var(--gutter) 0; border-top: 1px solid var(--line-2); border-bottom: 1px solid var(--line); }
+.more a { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 13px 10px 13px 0; color: var(--fg); }
+.more a + a { padding-left: 12px; border-left: 1px solid var(--line); }
+.more b { font-size: 13.5px; font-weight: 800; }
+
+/* ── 경기 준비·진행 화면의 시상식 입구 ── */
+.entry { margin: 14px var(--gutter) 0; padding: 12px 14px 14px; background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--r-3); }
+.entryK { font-size: 11px; font-weight: 800; color: var(--accent); }
+.entryRow { display: flex; gap: 12px; align-items: flex-start; margin: 8px 0 12px; }
+.entryText { display: grid; gap: 4px; min-width: 0; }
+.entryText b { font-size: 15.5px; font-weight: 800; line-height: 1.35; letter-spacing: -.035em; word-break: keep-all; }
+.entryText small { font-size: 12px; line-height: 1.5; color: var(--fg-2); }
+.entryText em { font-style: normal; font-size: 12px; line-height: 1.5; font-weight: 700; color: var(--accent); }
+
+/* broadcast — 검정 머리줄 · 기울인 큰 숫자 */
+:global([data-theme='broadcast']) .top, :global([data-theme='broadcast']) .secH { border-bottom: 2px solid var(--fg); }
+:global([data-theme='broadcast']) .cells { border-top: 2px solid var(--fg); }
+:global([data-theme='broadcast']) .photo { border-radius: 0; }
+:global([data-theme='broadcast']) .entry { border-radius: 0; border-color: var(--fg); }
+
+/* classic — 인쇄물: 먹 괘선 · 내 구단 별색 한 가지 · 사진은 망점 */
+:global([data-theme='classic']) .top, :global([data-theme='classic']) .secH { border-bottom: 1.5px solid var(--fg); }
+:global([data-theme='classic']) .cells { border-top: 1.5px solid var(--fg); }
+:global([data-theme='classic']) .photo { border-radius: 0; }
+:global([data-theme='classic']) .photo::after { background-image: var(--halftone), linear-gradient(to bottom, transparent 58%, rgba(0, 0, 0, .22)); background-size: var(--halftone-size), auto; }
+:global([data-theme='classic']) .kick, :global([data-theme='classic']) .mineTag, :global([data-theme='classic']) .mineSum,
+:global([data-theme='classic']) .entryK, :global([data-theme='classic']) .entryText em, :global([data-theme='classic']) .tMine .tWho small { color: var(--club-text); }
+:global([data-theme='classic']) .mine, :global([data-theme='classic']) .lead.mine .body { box-shadow: inset 3px 0 0 var(--club); }
+:global([data-theme='classic']) .gg li.mine .ggItem { box-shadow: 0 -3px 0 var(--club); }
+:global([data-theme='classic']) .tMine { background: color-mix(in srgb, var(--club) 10%, transparent); box-shadow: inset 3px 0 0 var(--club); }
+:global([data-theme='classic']) .entry { border-radius: 0; border-color: var(--fg); }

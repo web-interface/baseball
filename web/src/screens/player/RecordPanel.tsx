@@ -8,6 +8,7 @@ import type { CardInst, Play, Player } from '../../game/types';
 import { Pips, Sec } from './common';
 import { useSeason } from '../../season/store';
 import { careerKey, careerOf, type BatSum, type PitSum } from '../../season/career';
+import { awardsOfPerson } from '../../season/awards';
 import { KBO_SOURCE_NOTE } from '../../game/kbo';
 import { highlightsOf, injuriesOf, hiddenOf, recentOf, type GameRow } from './local-mock';
 import s from './record.module.css';
@@ -17,13 +18,14 @@ export function RecordPanel({ p, card, owned, mineCount }: { p: Player; card: Ca
   const hidden = useMemo(() => hiddenOf(p, owned, mineCount), [p, owned, mineCount]);
   const inj = useMemo(() => injuriesOf(p, hidden.items.find((x) => x.key === 'injuryProne')!.v), [p, hidden]);
   const hls = useMemo(() => highlightsOf(p), [p]);
+  const won = useMemo(() => awardsOfPerson(careerKey(p.id)), [p]);
   return (
     <div className={s.panel}>
       <MySeason p={p} />
       <Recent p={p} rows={recent.rows} summary={recent.summary} trend={recent.trend} />
       {hls.length > 0 && <Highlights p={p} plays={hls} />}
       <Injuries list={inj.list} lvl={inj.lvl} lvlKo={inj.lvlKo} days={inj.days} revealed={hidden.items.find((x) => x.key === 'injuryProne')!.revealed} />
-      {card.award && <Awards card={card} />}
+      {(card.award || won.length > 0) && <Awards card={card} won={won} />}
       {p.real && <p className={s.srcNote}>{KBO_SOURCE_NOTE}</p>}
     </div>
   );
@@ -315,14 +317,23 @@ function Injuries({ list, lvl, lvlKo, days, revealed }: { list: { when: string; 
 }
 
 /* ───────── 수상 ───────── */
-function Awards({ card }: { card: CardInst }) {
+/** 카드에 적힌 실제 수상 + 이 게임 시상식에서 받은 상(season/awards — 해마다 남긴 시상식) */
+function Awards({ card, won }: { card: CardInst; won: ReturnType<typeof awardsOfPerson> }) {
   const g = GRADES[card.grade];
   return (
     <Sec title="수상" meta="시상식 기록">
-      <p className={s.award}>
-        <Icon name={card.grade === 'mvp' ? 'laurel' : card.grade === 'th' ? 'crown' : 'glove'} size={22} />
-        <span><b className="num">{card.year != null ? (card.year > 30 ? 1900 + card.year : 2000 + card.year) : ''}</b> {g.ko}{card.award ? ` · ${card.award}` : ''}</span>
-      </p>
+      {card.award && (
+        <p className={s.award}>
+          <Icon name={card.grade === 'mvp' ? 'laurel' : card.grade === 'th' ? 'crown' : 'glove'} size={22} />
+          <span><b className="num">{card.year != null ? (card.year > 30 ? 1900 + card.year : 2000 + card.year) : ''}</b> {g.ko} · {card.award}</span>
+        </p>
+      )}
+      {won.map((w, i) => (
+        <p key={i} className={s.award}>
+          <Icon name={w.kind === 'mvp' ? 'laurel' : w.kind === 'gg' ? 'glove' : 'crown'} size={22} />
+          <span><b className="num">{w.year}</b> {w.label} <small>· 게임 시상식 · {teamById(w.team).short}</small></span>
+        </p>
+      ))}
     </Sec>
   );
 }

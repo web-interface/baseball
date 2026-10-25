@@ -50,14 +50,29 @@ export const withTac = (st: LineupState): LineupState => ({ ...st, tac: loadTact
 const BAT_POS: Exclude<Pos, 'P'>[] = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'];
 
 const aiCache = new Map<string, ClubRoster>();
-/** AI 구단 선수단 (리그 단계 목표 · 구단마다 늘 같은 선수) */
+/** 같은 사람 — 실제 선수는 시즌마다 보기 id 가 달라('…~2015' · '…~2016') 시즌 꼬리를 떼고 비교 */
+const person = (id: string) => id.replace(/~\d{4}$/, '');
+/** 내 선수단(1군 엔트리 + 벤치)의 사람들 — 라인업이 바뀔 때만 다시 센다 */
+let mineMemo: { st: LineupState; set: Set<string>; sig: string } | null = null;
+function myPersons(): { set: Set<string>; sig: string } {
+  const st = lineupStore.get() ?? initialLineup();
+  if (mineMemo && mineMemo.st === st) return mineMemo;
+  const ids = [...Object.values(st.field), ...st.rotation, ...st.bullpen, st.closer, ...st.bench].filter((x): x is string => !!x);
+  const set = new Set<string>();
+  for (const id of ids) { try { set.add(person(unit(id).player.id)); } catch { /* 보관함에 없는 카드 */ } }
+  mineMemo = { st, set, sig: [...set].sort().join(',') };
+  return mineMemo;
+}
+/** AI 구단 선수단 (리그 단계 목표 · 구단마다 늘 같은 선수).
+ *  내 선수단에 있는 사람은 빼고 다음 선수로 채운다 — 같은 선수가 두 구단에서 동시에 뛰면 시즌 기록이 한 줄로 합쳐진다(288경기 · 타이틀 독식) */
 export function clubRoster(teamId: string, target: number = aiTargetOf(teamId)): ClubRoster {
-  const key = `${teamId}:${target}`;
+  const mine = myPersons();
+  const key = `${teamId}:${target}:${mine.sig}`;
   const hit = aiCache.get(key);
   if (hit) return hit;
   const team = TEAMS.find((t) => t.id === teamId) ?? TEAMS[0];
-  // 그 구단 2027 선수단 = 마지막 실제 시즌 선수단 (부활 옛 구단은 그 이름의 마지막 시즌)
-  const real = seasonRoster(team.code, team.old ? eraOfCode(team.code)[1] : 2027).filter((p) => !!p.real);
+  // 그 구단 2027 선수단 = 마지막 실제 시즌 선수단 (부활 옛 구단은 그 이름의 마지막 시즌) — 내 선수단에 있는 사람은 빼고
+  const real = seasonRoster(team.code, team.old ? eraOfCode(team.code)[1] : 2027).filter((p) => !!p.real && !mine.set.has(person(p.id)));
   const own = real.length >= 12 ? real : PLAYERS.filter((p) => p.teamId === teamId && /^p\d+$/.test(p.id) && p.id !== 'p41');
   const used = new Set<string>();
   const delta = new Map<string, number>();
@@ -98,6 +113,7 @@ export function clubRoster(teamId: string, target: number = aiTargetOf(teamId)):
   const rest = sorted.filter((x) => x !== lead);
   const order = [lead, rest[1], rest[0], rest[2], rest[3], ...rest.slice(4)].filter(Boolean);
   const r: ClubRoster = { teamId, mine: false, batting: order, rotation, bullpen, closer, bench, delta, setFx: new Map(), enh, ovr: Math.round(target) };
+  if (aiCache.size > 40) aiCache.clear(); // 라인업을 바꿀 때마다 열쇠가 새로 생긴다 — 오래된 것은 버린다
   aiCache.set(key, r);
   return r;
 }
@@ -142,7 +158,6 @@ export function myRoster(st: LineupState = withTac(lineupStore.get() ?? initialL
   note('CL', st.closer);
   const closer = pl(st.closer)?.player ?? null;
   // 같은 사람은 로스터에 한 번 — 실제 선수는 시즌마다 보기 id 가 달라('…~2015' · '…~2016') 시즌 꼬리를 떼고 비교
-  const person = (id: string) => id.replace(/~\d{4}$/, '');
   const inUse = new Set([...batting.map((b) => b.player.id), ...rotation.map((p) => p.id), ...bullpen.map((p) => p.id), ...(closer ? [closer.id] : [])].map(person));
   // 투수 보직 감점 — 선발 ↔ 불펜이 엇갈리면(라인업 화면 '보직 밖') 투구 능력치를 그만큼 깎는다 (팀 종합의 감점과 같은 값)
   const staffSlots: StaffSlot[] = [...ROT_SLOTS, ...PEN_SLOTS, 'CL'];

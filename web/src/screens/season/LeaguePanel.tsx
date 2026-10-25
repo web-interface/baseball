@@ -6,7 +6,8 @@ import type { LineupState } from '../lineup/calc';
 import { Button, useToast } from '../../ui';
 import { ME } from '../../game/mock';
 import { LEVELS, LEVEL_KO, LEVEL_INFO, PROMOTE_RANK, RELEGATE_RANK, gateItems, gateOk, metLevel, nextLevel, teamStatus, useLeague, type AiLevel } from '../../season/league';
-import { isOver, nextSeason, standingsOf, teamStatOf, useSeason, yearOf } from '../../season/store';
+import { getSeason, isOver, nextSeason, standingsOf, teamStatOf, useSeason, yearOf } from '../../season/store';
+import { ceremonyOf, saveCeremony } from '../../season/awards';
 import s from './LeaguePanel.module.css';
 
 /** 시즌 끝 — 지금 순위 · 조건이면 다음 해 단계 */
@@ -24,6 +25,9 @@ function forecast(level: AiLevel, rank: number, met: AiLevel, upOk: boolean) {
 export function useStartNextSeason() {
   const toast = useToast();
   return () => {
+    // 시상식 화면을 거치지 않고 넘어가도 그해 시상식은 남긴다 (season/awards — 시즌 기록이 지워지기 전에)
+    const c = ceremonyOf(getSeason());
+    if (c) saveCeremony(c);
     const rec = nextSeason();
     if (!rec) return;
     const head = rec.move === 'up' ? '승격!' : rec.move === 'stay' ? '잔류' : '강등';

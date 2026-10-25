@@ -13,6 +13,7 @@ import { allDays, getSeason, isOver, teamLine, useSeason, yearOf, type DayHighli
 import { markFastDay } from '../../game/press';
 import { LeaguePanel, useStartNextSeason } from './LeaguePanel';
 import { PostPanel } from './PostPanel';
+import { AwardsEntry } from '../awards/AwardsEntry';
 import { playNextDay } from '../../season/run';
 import { LEVEL_KO, aiLevel } from '../../season/rosters';
 import type { GameOut } from '../../season/sim';
@@ -106,6 +107,8 @@ export default function SeasonScreen({ query }: ScreenProps) {
 
       {/* 포스트시즌 (정규 시즌이 끝나면 — KBO 방식) */}
       <PostPanel />
+      {/* 시상식 (우승팀이 정해진 뒤 · 다음 시즌 전 — screens/awards) */}
+      <AwardsEntry />
       {/* 시즌 결산 인터뷰 (정규 시즌이 끝난 뒤 — 가을야구면 포스트시즌 첫 3경기 효과) */}
       {over && <section className={s.sec} aria-label="시즌 결산 인터뷰"><InterviewCard /></section>}
 

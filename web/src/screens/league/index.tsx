@@ -1,20 +1,29 @@
-// 순위·리그 기록 #/league — 팀 순위(경기 · 승 · 무 · 패 · 승률 · 게임차 · 연속 · 최근10 · 득점 · 실점, 표는 안에서만 가로로 · 구단 칸 고정)
-// · 순위 경쟁 그래프(screens/season/RankChart 그대로) · 포스트시즌 요약(#/season 으로) · 개인 기록 TOP 10(타자 · 투수).
-//   ?tab=bat|pit · ?cat=avg|hr|rbi|h|sb|ops|era|w|sv|hld|so|whip
-//   숫자는 시즌 저장(season/store)의 standingsOf · batLine · pitLine 과 같은 값(OPS · WHIP 는 선수 화면과 같은 식).
+// 순위·리그 기록 #/league — 보기 세 개 (?view=team|player, 없으면 순위)
+//   순위: 팀 순위(경기 · 승 · 무 · 패 · 승률 · 게임차 · 연속 · 최근10 · 홈 · 방문 · 득점 · 실점 · 득실, 표는 안에서만 가로로 · 구단 칸 고정)
+//         · 순위 경쟁 그래프(screens/season/RankChart 그대로) · 포스트시즌 요약(#/season · 시상식 #/awards) · 개인 기록 TOP 10(타자 · 투수).
+//         ?tab=bat|pit · ?cat=avg|hr|rbi|h|sb|ops|era|w|sv|hld|so|whip
+//   팀 기록: 팀 타격 · 팀 투구 · 팀 간 승패 (records.tsx) — 구단을 누르면 그 팀 선수 기록
+//   선수 기록: 리그 전체 타자 · 투수 시즌 기록, 구단 거르기 · 머리 칸 정렬 (records.tsx) — ?side=pit&team=dj&sort=hr
+//   숫자는 시즌 저장(season/store)과 같은 값 — 선수 · 팀 줄은 season/awards seasonBook(OPS · WHIP 는 선수 화면과 같은 식).
 //   비율 기록은 규정타석(소속 팀 경기 × 3.1) · 규정이닝(소속 팀 경기 × 1.0)을 채운 선수만.
 import { useEffect, useMemo, useState } from 'react';
 import type { ScreenProps } from '../../app/screen';
-import { Link, setQueryQuiet } from '../../app/router';
-import { Emblem, Icon, Sheet, Tabs } from '../../ui';
-import { ME, playerById, teamById } from '../../game/mock';
-import { allDays, avgLabel, batLine, eraLabel, gamesPlayed, gbLabel, isOver, pctLabel, pitLine, standingsOf, useSeason, yearOf, type SeasonState } from '../../season/store';
+import { Link, setQueryQuiet, useLocation } from '../../app/router';
+import { Button, Emblem, Icon, Sheet, Tabs } from '../../ui';
+import { ME, teamById } from '../../game/mock';
+import { showOvr } from '../../game/ovrShow';
+import { allDays, gamesPlayed, gbLabel, isOver, pctLabel, standingsOf, useSeason, yearOf, type SeasonState } from '../../season/store';
+import { avgOf, eraOf, obpOf, r2, r3, seasonBook, slgOf, whipOf, type TeamRow, type WDL } from '../../season/awards';
 import { SERIES_ORDER, type SeriesRec } from '../../season/post';
 import { RankChart } from '../season/RankChart';
 import { SERIES_KO, ipText, useKeepSelected, useRosters } from '../games/shared';
 import { rosterOf } from '../../season/rosters';
 import { TeamLineup, cardsFromRoster } from '../pvp/TeamLineup';
+import { PlayerRecords, TeamRecords, recOfQuery, recQuery, type RecState } from './records';
 import s from './league.module.css';
+
+type View = 'rank' | 'team' | 'player';
+const viewOf = (v: string | null): View => (v === 'team' || v === 'player' ? v : 'rank');
 
 export default function LeagueScreen({ query }: ScreenProps) {
   useRosters();
@@ -23,25 +32,48 @@ export default function LeagueScreen({ query }: ScreenProps) {
   const days = allDays(st);
   const played = Math.min(st.next, days.length);
   const dates = useMemo(() => days.slice(0, played).map((d) => d.date), [days, played]);
+  // 보기 · 선수 기록 상태 — 주소에 조용히 남기고(setQueryQuiet), 링크로 주소가 바뀌면(같은 주소로 다시 와도) 따라간다
+  const loc = useLocation();
+  const [view, setViewS] = useState<View>(viewOf(query.get('view')));
+  const [rec, setRecS] = useState<RecState>(() => recOfQuery(query));
+  useEffect(() => { setViewS(viewOf(loc.query.get('view'))); setRecS(recOfQuery(loc.query)); }, [loc]);
+  const setView = (v: View) => { setViewS(v); setQueryQuiet({ view: v === 'rank' ? null : v, ...(v === 'player' ? recQuery(rec) : { side: null, team: null, sort: null }) }); };
+  const setRec = (r: RecState) => { setRecS(r); setQueryQuiet(recQuery(r)); };
+  /** 구단 → 그 팀 선수 기록 */
+  const openTeam = (teamId: string) => {
+    const r: RecState = { side: 'bat', team: teamId, sort: null };
+    setRecS(r); setViewS('player');
+    setQueryQuiet({ view: 'player', ...recQuery(r) });
+    window.scrollTo({ top: 0 });
+  };
   return (
     <div className={s.screen}>
       <header className={s.head}>
         <h2 className={['head', s.h].join(' ')}><span className="num">{year}</span> 순위·리그 기록</h2>
         <p className={s.meta}>{played === 0 ? '개막 전' : isOver(st) ? '정규 시즌 끝' : <><span className="num">{played}</span>/<span className="num">{days.length}</span>일</>}</p>
       </header>
+      <div className={s.views}>
+        <Tabs fill aria-label="보기" value={view} onChange={setView} items={[{ value: 'rank', label: '순위' }, { value: 'team', label: '팀 기록' }, { value: 'player', label: '선수 기록' }]} />
+      </div>
 
-      <Standings st={st} />
+      {view === 'rank' && (
+        <>
+          <Standings st={st} onTeamRecords={openTeam} />
 
-      {played > 0 && (
-        <section className={s.sec} aria-label="순위 경쟁">
-          <h3 className={s.secH}>순위 경쟁</h3>
-          <RankChart hist={st.rankHist} dates={dates} total={days.length} />
-        </section>
+          {played > 0 && (
+            <section className={s.sec} aria-label="순위 경쟁">
+              <h3 className={s.secH}>순위 경쟁</h3>
+              <RankChart hist={st.rankHist} dates={dates} total={days.length} />
+            </section>
+          )}
+
+          {st.post && <PostSummary st={st} />}
+
+          <Leaders st={st} query={query} />
+        </>
       )}
-
-      {st.post && <PostSummary st={st} />}
-
-      <Leaders st={st} query={query} />
+      {view === 'team' && <TeamRecords st={st} onTeam={openTeam} />}
+      {view === 'player' && <PlayerRecords st={st} rec={rec} onRec={setRec} />}
     </div>
   );
 }
@@ -51,8 +83,13 @@ const last10Of = (s10: string) => {
   const w = [...s10].filter((c) => c === 'W').length, l = [...s10].filter((c) => c === 'L').length, d = s10.length - w - l;
   return s10.length ? `${w}승${d}무${l}패` : '-';
 };
-function Standings({ st }: { st: SeasonState }) {
+/** 승-무-패 */
+const wdlText = (x: WDL | undefined) => (x ? `${x.w}-${x.d}-${x.l}` : '-');
+const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0');
+function Standings({ st, onTeamRecords }: { st: SeasonState; onTeamRecords: (teamId: string) => void }) {
   const rows = standingsOf(st);
+  const book = useMemo(() => seasonBook(st), [st]);
+  const teamOf = (id: string): TeamRow | undefined => book.teams.find((t) => t.teamId === id);
   // 구단을 누르면 그 팀의 지금 선수단 카드 (AI 구단은 시즌 선수단, 내 구단은 내 라인업)
   const [peek, setPeek] = useState<string | null>(null);
   const peekRoster = useMemo(() => { if (!peek) return null; try { return rosterOf(peek); } catch { return null; } }, [peek]);
@@ -75,8 +112,11 @@ function Standings({ st }: { st: SeasonState }) {
               <th scope="col">게임차</th>
               <th scope="col">연속</th>
               <th scope="col">최근10</th>
+              <th scope="col" title="홈 승-무-패">홈</th>
+              <th scope="col" title="방문 승-무-패">방문</th>
               <th scope="col">득점</th>
               <th scope="col">실점</th>
+              <th scope="col">득실</th>
             </tr>
           </thead>
           <tbody>
@@ -97,8 +137,11 @@ function Standings({ st }: { st: SeasonState }) {
                   <td className="num">{gbLabel(r)}</td>
                   <td className={s.txt}>{r.streak}</td>
                   <td className={s.txt}>{last10Of(r.last10)}</td>
+                  <td className="num">{wdlText(teamOf(r.teamId)?.home)}</td>
+                  <td className="num">{wdlText(teamOf(r.teamId)?.away)}</td>
                   <td className="num">{r.rs}</td>
                   <td className="num">{r.ra}</td>
+                  <td className={['num', r.rs - r.ra > 0 ? s.plus : r.rs - r.ra < 0 ? s.minus : ''].join(' ')}>{signed(r.rs - r.ra)}</td>
                 </tr>
               );
             })}
@@ -110,12 +153,30 @@ function Standings({ st }: { st: SeasonState }) {
         open={!!peek}
         onClose={() => setPeek(null)}
         title={peek ? teamById(peek).name : ''}
-        sub={peekRoster ? <>팀 종합 <span className="num">{peekRoster.ovr}</span></> : undefined}
+        sub={peekRoster ? <>팀 종합 <span className="num">{showOvr(peekRoster.ovr)}</span></> : undefined}
         height="tall"
       >
+        {peek && started && <PeekStat t={teamOf(peek)} onMore={() => { const id = peek; setPeek(null); onTeamRecords(id); }} />}
         {peekRoster ? <TeamLineup cards={cardsFromRoster(peekRoster)} onOpen={() => setPeek(null)} /> : peek ? <p className={s.peekNote}>선수단을 불러오지 못했어요</p> : null}
       </Sheet>
     </section>
+  );
+}
+
+/** 구단 시트 위 — 이번 시즌 팀 기록 한 줄 + 선수 기록으로 */
+function PeekStat({ t, onMore }: { t?: TeamRow; onMore: () => void }) {
+  if (!t) return null;
+  return (
+    <div className={s.peekStat}>
+      <dl>
+        <div><dt>타율</dt><dd className="num">{t.bat.AB ? (avgOf(t.bat)).toFixed(3).replace(/^0/, '') : '-'}</dd></div>
+        <div><dt>OPS</dt><dd className="num">{t.bat.PA ? (obpOf(t.bat) + slgOf(t.bat)).toFixed(3).replace(/^0/, '') : '-'}</dd></div>
+        <div><dt>홈런</dt><dd className="num">{t.bat.HR}</dd></div>
+        <div><dt>평균자책</dt><dd className="num">{t.pit.outs ? r2(eraOf(t.pit)) : '-'}</dd></div>
+        <div><dt>WHIP</dt><dd className="num">{t.pit.outs ? r2(whipOf(t.pit)) : '-'}</dd></div>
+      </dl>
+      <Button size="s" variant="secondary" onClick={onMore}>선수 기록</Button>
+    </div>
   );
 }
 
@@ -128,7 +189,8 @@ function PostSummary({ st }: { st: SeasonState }) {
     <section className={s.sec} aria-label="포스트시즌">
       <h3 className={s.secH}>
         포스트시즌
-        <Link to="/season" className={s.secLink}>포스트시즌 판 <Icon name="chevron" size={13} /></Link>
+        {p.champion && <Link to="/awards" className={s.secLink}>시상식 <Icon name="chevron" size={13} /></Link>}
+        <Link to="/season" className={[s.secLink, p.champion && s.secLink2].filter(Boolean).join(' ')}>포스트시즌 판 <Icon name="chevron" size={13} /></Link>
       </h3>
       {champ && (
         <p className={[s.champ, p.champion === ME.teamId && s.champMine].filter(Boolean).join(' ')}>
@@ -172,41 +234,38 @@ const CATS: Record<Side, { value: Cat; label: string; rate?: boolean }[]> = {
   bat: [{ value: 'avg', label: '타율', rate: true }, { value: 'hr', label: '홈런' }, { value: 'rbi', label: '타점' }, { value: 'h', label: '안타' }, { value: 'sb', label: '도루' }, { value: 'ops', label: 'OPS', rate: true }],
   pit: [{ value: 'era', label: '평균자책점', rate: true }, { value: 'w', label: '승' }, { value: 'sv', label: '세이브' }, { value: 'hld', label: '홀드' }, { value: 'so', label: '탈삼진' }, { value: 'whip', label: 'WHIP', rate: true }],
 };
-interface Entry { id: string; team: string; v: number; tie: number; shown: string; sub: string; rank: number }
-const r3 = (x: number) => (x >= 1 ? x.toFixed(3) : x.toFixed(3).replace(/^0/, ''));
+interface Entry { id: string; team: string; name: string; v: number; tie: number; shown: string; sub: string; rank: number }
 
-/** 부문 TOP 10 — v 로 줄 세우고(같으면 둘째 기준), tie(그 부문 값)가 같으면 공동 순위 */
+/** 부문 TOP 10 — v 로 줄 세우고(같으면 둘째 기준), tie(그 부문 값)가 같으면 공동 순위. 선수 줄은 seasonBook(같은 사람 · 구단은 한 줄) */
 function rankList(st: SeasonState, cat: Cat): Entry[] {
   const out: Omit<Entry, 'rank'>[] = [];
-  const put = (id: string, team: string, v: number, tie: number, shown: string, sub: string) => out.push({ id, team, v, tie, shown, sub });
+  const book = seasonBook(st);
+  const put = (r: { id: string; team: string; name: string }, v: number, tie: number, shown: string, sub: string) => out.push({ id: r.id, team: r.team, name: r.name, v, tie, shown, sub });
   const asc = cat === 'era' || cat === 'whip';
+  const avgL = (b: { AB: number; H: number }) => (b.AB ? r3(b.H / b.AB) : '-');
+  const eraL = (p: { outs: number; ER: number }) => (p.outs ? r2(eraOf(p as Parameters<typeof eraOf>[0])) : '-');
   if (['avg', 'hr', 'rbi', 'h', 'sb', 'ops'].includes(cat)) {
-    for (const [id, a] of Object.entries(st.bat)) {
-      const b = batLine(id, st);
-      const need = gamesPlayed(a.team, st) * 3.1;
-      if (cat === 'avg') { if (b.pa >= need && b.ab > 0) put(id, a.team, b.avg, b.avg, avgLabel(b), `${b.ab}타수 ${b.h}안타`); }
+    for (const r of book.bat) {
+      const b = r.rec;
+      if (cat === 'avg') { if (r.ok) put(r, avgOf(b), avgOf(b), avgL(b), `${b.AB}타수 ${b.H}안타`); }
       else if (cat === 'ops') {
-        if (b.pa >= need && b.ab > 0) {
-          const obp = (a.H + a.BB) / b.pa, slg = (a.H + a.D + 2 * a.T + 3 * a.HR) / b.ab;
-          put(id, a.team, obp + slg, obp + slg, r3(obp + slg), `출루 ${r3(obp)} · 장타 ${r3(slg)}`);
-        }
+        if (r.ok) { const obp = obpOf(b), slg = slgOf(b); put(r, obp + slg, obp + slg, r3(obp + slg), `출루 ${r3(obp)} · 장타 ${r3(slg)}`); }
       }
-      else if (cat === 'hr' && b.hr > 0) put(id, a.team, b.hr * 1000 + b.rbi / 1000, b.hr, `${b.hr}`, `타점 ${b.rbi} · 타율 ${avgLabel(b)}`);
-      else if (cat === 'rbi' && b.rbi > 0) put(id, a.team, b.rbi * 1000 + b.hr / 1000, b.rbi, `${b.rbi}`, `홈런 ${b.hr} · 타율 ${avgLabel(b)}`);
-      else if (cat === 'h' && b.h > 0) put(id, a.team, b.h * 1000 - b.ab / 1000, b.h, `${b.h}`, `${b.ab}타수 · 타율 ${avgLabel(b)}`);
-      else if (cat === 'sb' && b.sb > 0) put(id, a.team, b.sb * 1000 + b.h / 1000, b.sb, `${b.sb}`, `${b.g}경기 · 안타 ${b.h}`);
+      else if (cat === 'hr' && b.HR > 0) put(r, b.HR * 1000 + b.RBI / 1000, b.HR, `${b.HR}`, `타점 ${b.RBI} · 타율 ${avgL(b)}`);
+      else if (cat === 'rbi' && b.RBI > 0) put(r, b.RBI * 1000 + b.HR / 1000, b.RBI, `${b.RBI}`, `홈런 ${b.HR} · 타율 ${avgL(b)}`);
+      else if (cat === 'h' && b.H > 0) put(r, b.H * 1000 - b.AB / 1000, b.H, `${b.H}`, `${b.AB}타수 · 타율 ${avgL(b)}`);
+      else if (cat === 'sb' && b.SB > 0) put(r, b.SB * 1000 + b.H / 1000, b.SB, `${b.SB}`, `${b.G}경기 · 안타 ${b.H}`);
     }
   } else {
-    for (const [id, a] of Object.entries(st.pit)) {
-      const p = pitLine(id, st);
-      const need = gamesPlayed(a.team, st) * 3; // 아웃 수 — 팀 경기 × 1이닝
+    for (const r of book.pit) {
+      const p = r.rec;
       const ip = ipText(p.outs);
-      if (cat === 'era') { if (p.outs > 0 && p.outs >= need) put(id, a.team, p.era, p.era, eraLabel(p), `${ip}이닝 · ${p.w}승 ${p.l}패`); }
-      else if (cat === 'whip') { if (p.outs > 0 && p.outs >= need) { const v = (a.H + a.BB) / (p.outs / 3); put(id, a.team, v, v, v.toFixed(2), `${ip}이닝 · 피안타 ${a.H} · 볼넷 ${a.BB}`); } }
-      else if (cat === 'w' && p.w > 0) put(id, a.team, p.w * 1000 - p.l, p.w, `${p.w}`, `${p.w}승 ${p.l}패 · ${eraLabel(p)}`);
-      else if (cat === 'sv' && p.sv > 0) put(id, a.team, p.sv * 1000 + p.g / 1000, p.sv, `${p.sv}`, `${p.g}경기 · ${eraLabel(p)}`);
-      else if (cat === 'hld' && p.hld > 0) put(id, a.team, p.hld * 1000 + p.g / 1000, p.hld, `${p.hld}`, `${p.g}경기 · ${eraLabel(p)}`);
-      else if (cat === 'so' && p.so > 0) put(id, a.team, p.so * 1000 + p.outs / 1000, p.so, `${p.so}`, `${ip}이닝`);
+      if (cat === 'era') { if (r.ok) put(r, eraOf(p), eraOf(p), eraL(p), `${ip}이닝 · ${p.W}승 ${p.L}패`); }
+      else if (cat === 'whip') { if (r.ok) { const v = whipOf(p); put(r, v, v, r2(v), `${ip}이닝 · 피안타 ${p.H} · 볼넷 ${p.BB}`); } }
+      else if (cat === 'w' && p.W > 0) put(r, p.W * 1000 - p.L, p.W, `${p.W}`, `${p.W}승 ${p.L}패 · ${eraL(p)}`);
+      else if (cat === 'sv' && p.SV > 0) put(r, p.SV * 1000 + p.G / 1000, p.SV, `${p.SV}`, `${p.G}경기 · ${eraL(p)}`);
+      else if (cat === 'hld' && p.HLD > 0) put(r, p.HLD * 1000 + p.G / 1000, p.HLD, `${p.HLD}`, `${p.G}경기 · ${eraL(p)}`);
+      else if (cat === 'so' && p.SO > 0) put(r, p.SO * 1000 + p.outs / 1000, p.SO, `${p.SO}`, `${ip}이닝`);
     }
   }
   out.sort((x, y) => (asc ? x.v - y.v : y.v - x.v) || x.id.localeCompare(y.id));
@@ -253,7 +312,6 @@ function Leaders({ st, query }: { st: SeasonState; query: URLSearchParams }) {
       {list.length ? (
         <ol className={s.leaders}>
           {list.map((e) => {
-            const p = playerById(e.id);
             const t = teamById(e.team);
             const mine = e.team === ME.teamId;
             return (
@@ -261,7 +319,7 @@ function Leaders({ st, query }: { st: SeasonState; query: URLSearchParams }) {
                 <Link to={`/player/${e.id}`} className={[s.ld, mine && s.ldMine, e.rank === 1 && s.ldTop].filter(Boolean).join(' ')}>
                   <span className={['num', s.ldRank].join(' ')}>{e.rank}</span>
                   <span className={s.ldWho}>
-                    <b>{p?.name ?? '선수'}</b>
+                    <b>{e.name}</b>
                     <small><Emblem team={t} size={13} decorative />{t.short}{mine ? ' · 우리' : ''}</small>
                   </span>
                   <span className={s.ldVal}>
