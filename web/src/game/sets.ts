@@ -1,37 +1,50 @@
 // 세트덱 — 1군 엔트리(타자 9 · 선발 5 · 불펜 최대 10 · 마무리 1 — 최대 25명) 안에서 같은 구단·같은 연도 카드를 모으면
-// (연도 없는 카드 — 레전드 · 프랜차이즈 · 블랙 · 시그니처 · 특별 선수 — 는 아무 연도로 쳐서 같은 구단 연도 세트 · 연도 세트에 함께 든다)
-// 인원 단계(5 · 9 · 14 · 20명)마다 그 선수들의 능력치가 오른다. 구단+연도 20명이면 왕조.
+// (연도 없는 카드 — 레전드 · 프랜차이즈 · 블랙 · 시그니처 · 특별 선수 — 는 아무 연도로 쳐서, 같은 계보 구단(옛 이름 · 지금 이름)의
+//  구단 세트 · 구단+연도 세트, 그리고 연도 세트에 함께 든다)
+// 인원 단계(5 · 9 · 14 · 20 · 25명)마다 능력치가 오른다. 구단+연도 20명이면 왕조, 25명(엔트리 전원)이면 황금 왕조.
 //  · 세트 3종: 구단+연도(가장 셈) · 구단(연도 무관) · 연도(구단 무관)
 //  · 오르는 능력치는 조합마다 다르다 — 구단 성향(세계관) + 그 해 성격(구단 연도 기록) / 연도 세트는 그 해 리그 특징
 //  · 공정: 같은 종류·같은 단계면 모든 조합의 '총합 가치'가 같다 — 타자 8칸 합 = 8×v, 투수 7칸 합 = 7×v
 //    (v = 단계 가치. 상황 효과는 반만 쳐서, +2v 상황 효과 하나가 v 만큼 예산을 쓴다)
 //    나누는 비율: 칸마다 평균의 0.3~2.2배 — 성향이 센 칸일수록 크게(구단·연도 색이 또렷하게), 한 칸에 몰리지는 않게
-//  · 동시에 2개까지(센 것부터), 한 선수는 받는 세트 중 가장 센 것 하나만. 케미 선 보너스는 따로.
-import { ALL_CLUBS, shortLabel } from './world';
+//  · 가장 센 세트 하나가 켜지고 엔트리 전원이 받는다(세트에 안 든 선수도 — 사용자 지시 10-25). 케미 선 보너스는 따로.
+import { ALL_CLUBS, LINEAGE, shortLabel } from './world';
 import type { ClubCode } from './types';
 import { clubSeason, clubTitles, fullYear, leagueYear, traitTag, type RankKey, type SeasonRec } from './clubSeasons';
 
-/** 마지막 단계(왕조) 인원 — 엔트리는 불펜 10명까지 최대 25명 */
+/** 왕조 인원 — 엔트리는 불펜 10명까지 최대 25명 */
 export const ENTRY_SIZE = 20;
+/** 마지막 단계(황금 왕조) 인원 — 엔트리 전원 */
+export const FULL_SIZE = 25;
 /** 엔트리 최대 인원 (타자 9 · 선발 5 · 불펜 10 · 마무리 1) */
 export const ENTRY_MAX = 25;
 export type SetKind = 'teamYear' | 'team' | 'year';
 export const SET_KIND_KO: Record<SetKind, string> = { teamYear: '구단+연도', team: '구단', year: '연도' };
 export const SET_KIND_DESC: Record<SetKind, string> = {
-  teamYear: '같은 구단 · 같은 연도 카드 — 가장 세요',
-  team: '같은 구단 카드 (연도는 달라도 돼요)',
-  year: '같은 연도 카드 (구단은 달라도 돼요)',
+  teamYear: '같은 구단·연도',
+  team: '연도 상관없이',
+  year: '구단 상관없이',
 };
 
 export interface Tier { at: number; v: number }
 export const TIERS: Record<SetKind, Tier[]> = {
-  teamYear: [{ at: 5, v: 2 }, { at: 9, v: 4 }, { at: 14, v: 7 }, { at: ENTRY_SIZE, v: 12 }],
-  team: [{ at: 5, v: 1 }, { at: 9, v: 2 }, { at: 14, v: 4 }, { at: ENTRY_SIZE, v: 7 }],
-  year: [{ at: 9, v: 1 }, { at: 14, v: 2 }, { at: ENTRY_SIZE, v: 3 }],
+  teamYear: [{ at: 5, v: 2 }, { at: 9, v: 4 }, { at: 14, v: 7 }, { at: ENTRY_SIZE, v: 12 }, { at: FULL_SIZE, v: 16 }],
+  team: [{ at: 5, v: 1 }, { at: 9, v: 2 }, { at: 14, v: 4 }, { at: ENTRY_SIZE, v: 7 }, { at: FULL_SIZE, v: 9 }],
+  year: [{ at: 9, v: 1 }, { at: 14, v: 2 }, { at: ENTRY_SIZE, v: 3 }, { at: FULL_SIZE, v: 4 }],
 };
+/** 단계 이름 — TIERS 와 같은 순서 */
+export const TIER_NAMES: Record<SetKind, string[]> = {
+  teamYear: ['원팀', '베스트 나인', '우승 전력', '왕조', '황금 왕조'],
+  team: ['한 지붕', '베스트 나인', '명문', '명예의 전당', '드림팀'],
+  year: ['그해 올스타', '시즌 베스트', '골든 시즌', '전설의 해'],
+};
+export const tierName = (kind: SetKind, tier: number) => TIER_NAMES[kind][tier] ?? '';
 /** 엔트리에 구단+연도 한 세트가 20명 = 왕조 — 능력치 폭발 */
 export const DYNASTY_V = 12;
-export const MAX_ACTIVE = 2;
+/** 25명(엔트리 전원) = 황금 왕조 */
+export const GOLDEN_V = 16;
+/** 켜지는 세트 — 가장 센 것 하나(엔트리 전원이 받음) */
+export const MAX_ACTIVE = 1;
 
 /* ───────── 능력치 칸 ───────── */
 export type BatKey = 'con' | 'pow' | 'gap' | 'eye' | 'spd' | 'stl' | 'def' | 'arm';
@@ -332,15 +345,18 @@ export interface SetProgress {
   next: SetEffect | null;
   /** 동시에 켜진 세트(최대 2)에 들었나 */
   active: boolean;
-  /** 왕조 — 엔트리 전원 구단+연도 */
+  /** 왕조 — 구단+연도 20명 */
   dynasty: boolean;
+  /** 황금 왕조 — 구단+연도 25명(엔트리 전원) */
+  golden: boolean;
 }
 export interface SetsResult {
   all: SetProgress[];
   active: SetProgress[];
-  /** 선수(자리)마다 받는 세트 — 가장 센 것 하나 */
+  /** 선수(자리)마다 받는 세트 — 켜진 세트(엔트리 전원) */
   bonusOf: Map<string, SetProgress>;
   dynasty: SetProgress | null;
+  golden: SetProgress | null;
 }
 
 const KIND_ORDER: Record<SetKind, number> = { teamYear: 0, team: 1, year: 2 };
@@ -360,11 +376,13 @@ export function computeSets(members: EntryMember[]): SetsResult {
     }
   }
   // 연도 없는 카드(레전드 · 프랜차이즈 · 블랙 · 시그니처 · 특별 선수)는 '아무 연도' — 연도 카드가 만든 세트에 함께 든다
-  //  (같은 구단의 구단+연도 세트 모두 · 연도 세트 모두). 혼자서는 연도 세트를 만들지 않는다. 사용자 지시
+  //  같은 계보 구단(옛 이름 · 지금 이름 — world LINEAGE)의 구단 세트 · 구단+연도 세트 모두, 연도 세트 모두.
+  //  혼자서는 연도 세트를 만들지 않는다. 사용자 지시 10-24 · 10-25
   const wild = members.filter((m) => m.year == null);
   if (wild.length) {
     for (const [id, g] of [...groups]) {
-      if (g.kind === 'teamYear') { for (const m of wild) if (m.code === g.code) add(id, 'teamYear', m, g.code, g.year); }
+      if (g.kind === 'teamYear') { for (const m of wild) if (sameLine(m.code, g.code!)) add(id, 'teamYear', m, g.code, g.year); }
+      else if (g.kind === 'team') { for (const m of wild) if (m.code !== g.code && sameLine(m.code, g.code!)) add(id, 'team', m, g.code); }
       else if (g.kind === 'year') { for (const m of wild) add(id, 'year', m, undefined, g.year); }
     }
   }
@@ -380,25 +398,28 @@ export function computeSets(members: EntryMember[]): SetsResult {
       next: tier + 1 < tiers.length ? setEffect(g.kind, g.code, g.year, tier + 1) : null,
       active: false,
       dynasty: g.kind === 'teamYear' && have >= ENTRY_SIZE,
+      golden: g.kind === 'teamYear' && have >= FULL_SIZE,
     };
   });
-  // 켜질 세트 고르기 — 센 것부터, 받는 선수에게 더해 주는 게 있을 때만, 2개까지
+  // 켜질 세트 — 가장 센 것 하나. 엔트리 전원(세트에 안 든 선수도)이 받는다
   const best = new Map<string, SetProgress>();
   const cands = all.filter((s) => s.cur).sort((a, b) => b.cur!.v - a.cur!.v || b.have - a.have || KIND_ORDER[a.kind] - KIND_ORDER[b.kind]);
-  const active: SetProgress[] = [];
-  for (const c of cands) {
-    if (active.length >= MAX_ACTIVE) break;
-    const gain = c.members.some((k) => (best.get(k)?.cur?.v ?? 0) < c.cur!.v);
-    if (!gain) continue;
-    c.active = true;
-    active.push(c);
-    for (const k of c.members) if ((best.get(k)?.cur?.v ?? 0) < c.cur!.v) best.set(k, c);
-  }
+  const active: SetProgress[] = cands.slice(0, MAX_ACTIVE);
+  for (const c of active) c.active = true;
+  if (active[0]) for (const m of members) best.set(m.key, active[0]);
   const dynasty = active.find((s) => s.dynasty) ?? null;
+  const golden = active.find((s) => s.golden) ?? null;
   // 보여 줄 순서 — 켜진 것 → 다음 단계까지 적게 남은 것 → 많이 모은 것
   const left = (s: SetProgress) => (s.next ? s.next.at - s.have : 99);
   all.sort((a, b) => Number(b.active) - Number(a.active) || left(a) - left(b) || b.have - a.have || KIND_ORDER[a.kind] - KIND_ORDER[b.kind]);
-  return { all, active, bonusOf: best, dynasty };
+  return { all, active, bonusOf: best, dynasty, golden };
+}
+
+/** 같은 계보 구단인가 (옛 이름 · 지금 이름) */
+export function sameLine(a: string, b: string): boolean {
+  if (a === b) return true;
+  const line = LINEAGE.find((l) => l.includes(a as ClubCode));
+  return !!line && line.includes(b as ClubCode);
 }
 
 /** 한 선수의 능력치 보너스 (face code 기준) — 라인업 묶음 점수 */

@@ -75,7 +75,9 @@ type Fx = { text: string; tone?: 'boom' | 'bad' | 'up' | 'down' };
 /** 바꾸면 달라지는 것 — 왕조 · 세트 단계 · 세트 인원 · 케미 선 */
 function effects(cur: Eval, nx: Eval): Fx[] {
   const out: Fx[] = [];
-  if (nx.exploded && !cur.exploded) out.push({ text: '왕조 — 능력치 폭발', tone: 'boom' });
+  if (nx.golden && !cur.golden) out.push({ text: '황금 왕조 — 능력치 폭발', tone: 'boom' });
+  else if (nx.exploded && !cur.exploded) out.push({ text: '왕조 — 능력치 폭발', tone: 'boom' });
+  else if (cur.golden && !nx.golden) out.push({ text: cur.exploded && nx.exploded ? '황금 왕조 풀림' : '왕조 풀림', tone: 'bad' });
   else if (cur.exploded && !nx.exploded) out.push({ text: '왕조 풀림', tone: 'bad' });
   else {
     const a = new Map(cur.sets.map((x) => [x.id, x]));
@@ -182,7 +184,7 @@ export function SwapSheet({ slot, st, ev, onClose, onApply }: SwapSheetProps) {
       onClose={onClose}
       height="tall"
       title={`${SLOT_KO[at]} ${cu ? '바꾸기' : '채우기'}`}
-      sub={cu ? '위에서부터 넣으면 더 강해지는 순서예요' : '비어 있는 자리예요. 넣을 선수를 골라요'}
+      sub={cu ? undefined : '빈 자리'}
     >
       {cu && ue && (
         <div className={s.cur}>
@@ -242,19 +244,19 @@ export function SwapSheet({ slot, st, ev, onClose, onApply }: SwapSheetProps) {
           );
         })}
         {!list.length && (team !== ALL || year !== ALL
-          ? <li className={s.emptyList}>고른 구단 · 연도에 넣을 수 있는 선수가 없어요. 거르기를 풀어 보세요.</li>
-          : <li className={s.emptyList}>넣을 수 있는 선수가 없어요. 카드구매 · 스카우터에서 데려오면 보관함에 들어와 여기 후보로 나와요.</li>)}
+          ? <li className={s.emptyList}>해당 선수 없음</li>
+          : <li className={s.emptyList}>후보 없음</li>)}
       </ul>
       {total > list.length && (
         <div className={s.moreBox}>
-          <p className={s.note}>카드가 많아 세기 순으로 <b className="num">{list.length}</b>명까지 계산했어요 · 구단 · 연도로 거르면 더 빨라요</p>
+          <p className={s.note}>센 순 <b className="num">{list.length}</b>명</p>
           <button type="button" className={s.moreBtn} onClick={() => setLimit((x) => x + SHOW_STEP)}>
             다음 <span className="num">{Math.min(SHOW_STEP, total - list.length)}</span>명 더 보기 <small>(남은 <span className="num">{total - list.length}</span>명)</small>
           </button>
         </div>
       )}
       {list.some((c) => c.ev.exploded && !ev.exploded) && (
-        <p className={s.note}>왕조 — 엔트리에서 한 구단·한 연도 카드가 20명이 되면 능력치 폭발 (단계 가치 +{BOOM})</p>
+        <p className={s.note}>한 구단·연도 20명 왕조 +{BOOM} · 25명 황금 왕조</p>
       )}
     </Sheet>
   );

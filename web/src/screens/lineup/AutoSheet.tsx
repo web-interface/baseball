@@ -6,7 +6,7 @@ import { Icon, Sheet, Tabs, Emblem } from '../../ui';
 import { DeckBadge } from '../../ui/DeckBadge';
 import { teamByCode } from '../../game/mock';
 import { shortLabel } from '../../game/world';
-import { SET_KIND_KO, TIERS, type SetKind } from '../../game/sets';
+import { SET_KIND_KO, TIERS, tierName, type SetKind } from '../../game/sets';
 import type { Deck } from '../../game/deck';
 import { byStrength, deckOptions, type DeckOption, type DeckTarget } from './deckPlan';
 import type { LineupState } from './calc';
@@ -55,20 +55,19 @@ export function AutoSheet({ open, onClose, st, onBest, onDeck }: {
   };
 
   return (
-    <Sheet open={open} onClose={onClose} height="tall" title="자동 편성" sub="어떤 덱으로 짤까요? 고르면 바로 짜요 — 되돌리기도 돼요">
+    <Sheet open={open} onClose={onClose} height="tall" title="자동 편성">
       <div className={s.body}>
         <button type="button" className={s.hero} onClick={onBest} disabled={!!busy}>
           <span className={s.heroIcon} aria-hidden><Icon name="bolt" size={20} /></span>
           <span className={s.heroText}>
             <b>가장 센 팀으로</b>
-            <small>세트덱 상관없이 팀 종합이 가장 높게 · 지금 켜진 세트는 되도록 지켜요</small>
           </span>
           <Icon name="arrow-right" size={18} />
         </button>
 
         <div className={s.h}>
           <b>세트덱으로 짜기</b>
-          <small>보유 카드로 채울 수 있는 덱 <span className="num">{opts.length}</span>개</small>
+          <small><span className="num">{opts.length}</span>개</small>
         </div>
         <Tabs
           variant="box"
@@ -84,12 +83,6 @@ export function AutoSheet({ open, onClose, st, onBest, onDeck }: {
             { value: 'year', label: '연도', count: byKind.year.length },
           ]}
         />
-        <p className={s.kindNote}>
-          {tab === 'best' ? '채울 수 있는 단계가 높은 덱부터 — 구단+연도가 가장 세요'
-            : tab === 'teamYear' ? '같은 구단 · 같은 연도 (연도 없는 레전드급 카드도 그 구단이면 함께) — 20명이면 왕조'
-              : tab === 'team' ? '같은 구단 카드 — 연도는 달라도 돼요'
-                : '같은 연도 카드 — 구단은 달라도 돼요 (9명부터)'}
-        </p>
 
         {tab === 'teamYear' && clubs.length > 1 && (
           <div className={s.chips} role="group" aria-label="구단으로 거르기">
@@ -121,7 +114,7 @@ export function AutoSheet({ open, onClose, st, onBest, onDeck }: {
           </ul>
         ) : (
           <p className={s.empty}>
-            {tab === 'year' ? '같은 연도 카드 9명을 채울 수 있는 해가 아직 없어요' : '같은 구단 카드 5명을 채울 수 있는 덱이 아직 없어요'} — 연도팩 · 구단팩으로 모아 보세요
+            {tab === 'year' ? '같은 연도 9명부터' : '같은 구단 5명부터'}
           </p>
         )}
         {list.length > show && (
@@ -136,7 +129,7 @@ export function AutoSheet({ open, onClose, st, onBest, onDeck }: {
 
 function Row({ o, busy, dim, onPick }: { o: DeckOption; busy: boolean; dim: boolean; onPick: () => void }) {
   const tiers = TIERS[o.kind];
-  const dynasty = o.kind === 'teamYear' && o.tierIdx === tiers.length - 1;
+  const dynasty = o.kind === 'teamYear' && o.tierIdx >= 3;
   const deck: Deck = { label: o.kind === 'year' ? `${o.name.replace(' 시즌', '')} 연도덱` : `${o.name}덱`, sub: SET_KIND_KO[o.kind], kind: dynasty ? 'dynasty' : o.kind, c1: o.c1, c2: o.c2, have: o.can, code: o.code };
   const goal = o.next?.at ?? o.tier.at;
   return (
@@ -156,16 +149,16 @@ function Row({ o, busy, dim, onPick }: { o: DeckOption; busy: boolean; dim: bool
           </span>
           <span className={s.meta}>
             타자 <b className="num">{o.bat}</b> · 투수 <b className="num">{o.pit}</b>
-            {o.now > 0 && <> · 지금 엔트리 <b className="num">{o.now}</b>명</>}
+            {o.now > 0 && <> · 지금 <b className="num">{o.now}</b></>}
           </span>
           <span className={s.tierRow}>
             <span className={s.pips} aria-hidden>
               {tiers.map((x, i) => <i key={x.at} className={i <= o.tierIdx ? s.pipOn : undefined}><em className="num">{x.at}</em></i>)}
             </span>
             <span className={s.tierTxt}>
-              {dynasty ? <b className={s.dynTxt}>왕조 가능</b> : <><b className="num">{o.tierIdx + 1}</b>단계</>}
-              <span> · 능력치 +<span className="num">{o.tier.v}</span></span>
-              {o.next && <span className={s.nextTxt}> · <span className="num">{o.next.at - o.can}</span>명 더 모으면 +<span className="num">{o.next.v}</span></span>}
+              {dynasty ? <b className={s.dynTxt}>{tierName(o.kind, o.tierIdx)}</b> : <b>{tierName(o.kind, o.tierIdx)}</b>}
+              <span> +<span className="num">{o.tier.v}</span></span>
+              {o.next && <span className={s.nextTxt}> · <span className="num">{o.next.at - o.can}</span>명 더 +<span className="num">{o.next.v}</span></span>}
             </span>
           </span>
         </span>

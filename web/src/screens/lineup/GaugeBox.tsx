@@ -37,13 +37,13 @@ export function GaugeBox({ ev, boom }: { ev: Eval; boom: number | null }) {
       <Gauge
         value={shown}
         base={ev.base}
-        potential={ev.exploded ? undefined : ev.potential}
+        potential={ev.golden ? undefined : ev.potential}
         potentialLabel={<>{potentialLead(ev)} <b className="num">{ev.potential}</b></>}
         parts={ev.parts.slice(0, 3).map((p) => ({ ko: p.ko, v: p.v }))}
         label={(
           <span className={s.label}>
             팀 종합
-            {ev.exploded && <i className={s.tag}>왕조</i>}
+            {ev.exploded && <i className={s.tag}>{ev.golden ? '황금 왕조' : '왕조'}</i>}
             {delta && <em key={delta.n} className={['num', s.delta, delta.v > 0 ? s.up : s.down].join(' ')}>{fmt.signed(delta.v)}</em>}
           </span>
         )}

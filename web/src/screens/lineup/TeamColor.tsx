@@ -1,15 +1,15 @@
-// 세트덱 진행 — 1군 엔트리 20명 기준. 켜진 세트(최대 2)는 주인공 줄로, 그다음 가까운 세트는 헤어라인 줄로.
-// 단계 4개(5·9·14·전원)를 베이스 1루·2루·3루·홈에 빗대어: 전원이면 홈 = 왕조(능력치 폭발).
+// 세트덱 진행 — 1군 엔트리 25명 기준. 켜진 세트(가장 센 하나 — 엔트리 전원이 받음)는 주인공 줄로, 그다음 가까운 세트는 헤어라인 줄로.
+// 단계를 베이스 1루·2루·3루·홈에 빗대어: 20명 홈 = 왕조, 25명 = 황금 왕조(홈이 금빛).
 import type { CSSProperties } from 'react';
 import { Emblem, Icon } from '../../ui';
 import { navigate } from '../../app/router';
 import { teamByCode } from '../../game/mock';
-import { ENTRY_SIZE, SET_KIND_KO, TIERS, statLine, type SetProgress } from '../../game/sets';
+import { ENTRY_SIZE, FULL_SIZE, SET_KIND_KO, TIERS, statLine, tierName, type SetProgress } from '../../game/sets';
 import type { BatSlot, Eval } from './calc';
 import s from './TeamColor.module.css';
 
 const teamOf = (sp: SetProgress) => (sp.code ? teamByCode(sp.code) : undefined);
-const goal = (sp: SetProgress) => sp.next?.at ?? ENTRY_SIZE;
+const goal = (sp: SetProgress) => sp.next?.at ?? FULL_SIZE;
 
 /** 칸 막대 — 칸 수 = 엔트리 20, 단계 문턱에 눈금 */
 function Segments({ have, need, ticks, tone }: { have: number; need: number; ticks: number[]; tone?: string }) {
@@ -22,8 +22,8 @@ function Segments({ have, need, ticks, tone }: { have: number; need: number; tic
   );
 }
 
-/** 베이스 넷 — 켜진 단계만큼 1루 → 2루 → 3루 → 홈 */
-export function Bases({ lit, size = 34 }: { lit: number; size?: number }) {
+/** 베이스 넷 — 켜진 단계만큼 1루 → 2루 → 3루 → 홈 (gold = 황금 왕조) */
+export function Bases({ lit, size = 34, gold }: { lit: number; size?: number; gold?: boolean }) {
   const pts: [number, number][] = [[27, 17], [17, 7], [7, 17]];
   return (
     <svg className={s.bases} width={size} height={size} viewBox="0 0 34 34" aria-hidden>
@@ -31,7 +31,7 @@ export function Bases({ lit, size = 34 }: { lit: number; size?: number }) {
       {pts.map(([x, y], i) => (
         <rect key={i} x={x - 3.6} y={y - 3.6} width="7.2" height="7.2" transform={`rotate(45 ${x} ${y})`} className={i < lit ? s.on : s.off} />
       ))}
-      <path d="M13.4 25.2h7.2v3.4l-3.6 3.2-3.6-3.2z" className={lit >= 4 ? [s.on, s.home].join(' ') : s.off} />
+      <path d="M13.4 25.2h7.2v3.4l-3.6 3.2-3.6-3.2z" className={lit >= 4 ? [s.on, s.home, gold && s.gold].filter(Boolean).join(' ') : s.off} />
     </svg>
   );
 }
@@ -43,7 +43,7 @@ function EffectLines({ sp, eff }: { sp: SetProgress; eff: NonNullable<SetProgres
       <span><i>타자</i>{statLine(eff.bat, 4)}</span>
       <span><i>투수</i>{statLine(eff.pit, 4)}</span>
       {eff.special && <span className={s.sp}><i>특수</i>{eff.special.side === 'bat' ? '타자' : '투수'} · {eff.special.text}</span>}
-      {sp.dynasty && <span className={s.sp}><i>왕조</i>엔트리 전원 능력치 폭발</span>}
+      {sp.dynasty && <span className={s.sp}><i>{sp.golden ? '황금 왕조' : '왕조'}</i>능력치 폭발</span>}
     </span>
   );
 }
@@ -62,21 +62,21 @@ function Hero({ sp }: { sp: SetProgress }) {
           <span className={s.kind}>{SET_KIND_KO[sp.kind]} 세트{sp.cur ? ` · ${sp.cur.trait}` : ''}</span>
         </p>
         <div className={s.track}>
-          <Segments have={Math.min(sp.have, ENTRY_SIZE)} need={ENTRY_SIZE} ticks={tiers.map((x) => x.at - 1).filter((x) => x < ENTRY_SIZE - 1)} tone={tone} />
+          <Segments have={Math.min(sp.have, FULL_SIZE)} need={FULL_SIZE} ticks={tiers.map((x) => x.at - 1).filter((x) => x < FULL_SIZE - 1)} tone={tone} />
           <span className={s.scale} aria-hidden>
             {tiers.map((x, i) => (
-              <i key={x.at} className={['num', i <= sp.tier && s.reached].filter(Boolean).join(' ')} style={{ left: `${(x.at / ENTRY_SIZE) * 100}%` }}>
-                {x.at >= ENTRY_SIZE ? (sp.kind === 'teamYear' ? '왕조' : `${x.at}명`) : `+${x.v}`}
+              <i key={x.at} className={['num', i <= sp.tier && s.reached].filter(Boolean).join(' ')} style={{ left: `${(x.at / FULL_SIZE) * 100}%` }}>
+                {x.at >= ENTRY_SIZE ? (sp.kind === 'teamYear' ? tierName(sp.kind, i) : `${x.at}`) : `+${x.v}`}
               </i>
             ))}
           </span>
         </div>
         {sp.cur && <EffectLines sp={sp} eff={sp.cur} />}
-        {sp.next && <p className={s.note}><span className={s.lead}>{more}명 더</span><span>모으면 +{sp.next.v} 단계 — {statLine(sp.next.bat, 2)} · {statLine(sp.next.pit, 2)}</span></p>}
+        {sp.next && <p className={s.note}><span className={s.lead}>{more}명 더</span><span>{tierName(sp.kind, sp.tier + 1)} +{sp.next.v}</span></p>}
       </div>
       <div className={s.count}>
         <span><b className="num-display">{sp.have}</b><i className="num">/{goal(sp)}</i></span>
-        <Bases lit={sp.tier + 1} />
+        <Bases lit={sp.tier + 1} gold={sp.golden} />
       </div>
     </div>
   );
@@ -94,12 +94,12 @@ export function TeamColorPanel({ ev }: TeamColorProps) {
   return (
     <section className={s.panel} aria-label="세트덱">
       <header className={s.head}>
-        <h3 className={s.h}>세트덱 <small>엔트리 <span className="num">{ev.entry}</span>명 · 켜진 세트 <span className="num">{active.length}</span>/2</small></h3>
+        <h3 className={s.h}>세트덱 <small>엔트리 <span className="num">{ev.entry}</span>명</small></h3>
         <button type="button" className={s.more} onClick={() => navigate('/sets')}>효과 표 <Icon name="chevron" size={14} /></button>
       </header>
       {active.map((sp) => <Hero key={sp.id} sp={sp} />)}
       {!active.length && (
-        <p className={s.empty}>아직 켜진 세트가 없어요. 같은 구단·같은 연도 카드를 엔트리에 <b className="num">5</b>명 모으면 첫 단계가 켜져요.</p>
+        <p className={s.empty}>같은 구단·연도 <b className="num">5</b>명부터 켜져요</p>
       )}
       <ul className={s.rows}>
         {rest.map((sp) => {
@@ -112,14 +112,14 @@ export function TeamColorPanel({ ev }: TeamColorProps) {
               <span className={['num', s.rowN].join(' ')}>{sp.have}<i>/{need}</i></span>
               <Segments have={sp.have} need={need} ticks={[]} />
               <span className={s.rowBonus}>
-                {sp.cur ? <b>+{sp.cur.v} 단계</b> : <span className={s.none}>아직 없음</span>}
-                <small>{need - sp.have}명 더 → +{sp.next!.v} · 타자 {statLine(sp.next!.bat, 2)} · 투수 {statLine(sp.next!.pit, 2)}</small>
+                {sp.cur ? <b>+{sp.cur.v}</b> : <span className={s.none}>—</span>}
+                <small>{need - sp.have}명 더 → +{sp.next!.v}</small>
               </span>
             </li>
           );
         })}
       </ul>
-      <p className={s.rule}>세트는 동시에 2개까지(센 것부터) 켜지고, 한 선수는 받는 세트 중 가장 센 것 하나만 받아요.</p>
+      <p className={s.rule}>가장 센 세트 하나가 엔트리 전원에게 적용돼요</p>
     </section>
   );
 }

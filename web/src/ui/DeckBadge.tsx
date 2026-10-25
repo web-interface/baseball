@@ -11,10 +11,10 @@ export function DeckBadge({ deck, size = 'm', className }: { deck: Deck; size?: 
       style={{ '--dc1': deck.c1, '--dc2': deck.c2 } as CSSProperties}
       title={`${deck.label} — ${deck.sub}`}
     >
-      <i className={s.mark} aria-hidden>{deck.kind === 'dynasty' ? '♛' : deck.kind === 'mixed' ? '◇' : '◆'}</i>
+      <i className={s.mark} aria-hidden>{deck.kind === 'dynasty' || deck.kind === 'golden' ? '♛' : deck.kind === 'mixed' ? '◇' : '◆'}</i>
       <b className={s.name}>{deck.label}</b>
       {size !== 's' && <small className={s.sub}>{deck.sub}</small>}
-      {deck.kind === 'dynasty' && <i className={s.shine} aria-hidden />}
+      {(deck.kind === 'dynasty' || deck.kind === 'golden') && <i className={s.shine} aria-hidden />}
     </span>
   );
 }

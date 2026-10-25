@@ -1,5 +1,5 @@
 // 무슨 덱인가 — 1군 엔트리의 세트덱(game/sets)으로 한 줄 이름. 홈 · 대전 상대 · 감독 순위에 배지로(ui/DeckBadge).
-//  · 왕조(구단+연도 20명)면 "’27 독수리스 왕조덱", 구단+연도 세트면 "’27 독수리스덱", 구단 세트면 "독수리스덱", 연도 세트면 "’25 연도덱"
+//  · 황금 왕조(구단+연도 25명)면 "’27 독수리스 황금 왕조덱", 왕조(20명)면 "’27 독수리스 왕조덱", 구단+연도 세트면 "’27 독수리스덱", 구단 세트면 "독수리스덱", 연도 세트면 "’25 연도덱"
 //  · 켜진 세트가 없으면 "혼합덱" (가장 많이 모은 구단을 작은 글로)
 //  · 다른 감독은 서버에 올린 라인업(카드 구단 · 카드 연도)으로 같은 계산 — 등급 · 강화는 몰라도 덱 이름은 같다
 import { SET_KIND_KO, computeSets, type EntryMember } from './sets';
@@ -8,7 +8,7 @@ import { shortLabel } from './world';
 import { fullYear } from './clubSeasons';
 import type { ClubCode } from './types';
 
-export type DeckKind = 'dynasty' | 'teamYear' | 'team' | 'year' | 'mixed';
+export type DeckKind = 'golden' | 'dynasty' | 'teamYear' | 'team' | 'year' | 'mixed';
 export interface Deck {
   label: string;
   /** 작은 글 — '구단+연도 14명 · +7 단계' */
@@ -32,13 +32,14 @@ export function deckOf(members: EntryMember[]): Deck {
   }
   const t = lead.code ? teamByCode(lead.code) : undefined;
   const club = lead.code ? shortLabel(lead.code) : '';
-  const kind: DeckKind = r.dynasty ? 'dynasty' : lead.kind;
-  const label = kind === 'dynasty' ? `${yyOf(lead.year)} ${club} 왕조덱`
+  const kind: DeckKind = r.golden ? 'golden' : r.dynasty ? 'dynasty' : lead.kind;
+  const label = kind === 'golden' ? `${yyOf(lead.year)} ${club} 황금 왕조덱`
+    : kind === 'dynasty' ? `${yyOf(lead.year)} ${club} 왕조덱`
     : lead.kind === 'teamYear' ? `${yyOf(lead.year)} ${club}덱`
     : lead.kind === 'team' ? `${club}덱` : `${yyOf(lead.year)} 연도덱`;
   return {
     label: label.trim(),
-    sub: `${SET_KIND_KO[lead.kind]} ${lead.have}명${lead.cur ? ` · +${lead.cur.v} 단계` : ''}`,
+    sub: `${lead.have}명${lead.cur ? ` · +${lead.cur.v}` : ''}`,
     kind,
     c1: t?.colors.primary ?? (lead.kind === 'year' ? '#6b5cff' : '#7a5cff'),
     c2: t?.colors.secondary ?? '#2b2466',

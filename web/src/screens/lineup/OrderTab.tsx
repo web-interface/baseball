@@ -57,9 +57,7 @@ export function OrderTab({ st, ev, onOpen, onSwap, onAuto, initialPick = null }:
     <section className={s.tab} aria-label="타순">
       <header className={s.top}>
         <p className={s.lead}>
-          {pick == null
-            ? <>손잡이를 누르고 다른 줄을 누르면 순서가 바뀌어요.</>
-            : <><b className="num">{pick + 1}</b>번과 바꿀 타순을 누르세요</>}
+          {pick != null && <><b className="num">{pick + 1}</b>번과 바꿀 타순</>}
         </p>
         {pick == null
           ? <Button variant="ghost" size="s" onClick={onAuto}>추천 타순</Button>

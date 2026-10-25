@@ -5,7 +5,7 @@
 //    레전드급(타자 2 · 투수 2) · MVP(4) · 같은 사람 한 번은 그대로 지킨다.
 //  · 연도 없는 카드(레전드급 · 특별 선수)는 같은 구단 연도 세트 · 연도 세트에 함께 든다 (game/sets 와 같은 규칙)
 import type { ClubCode } from '../../game/types';
-import { TIERS, type SetKind, type Tier } from '../../game/sets';
+import { TIERS, sameLine, type SetKind, type Tier } from '../../game/sets';
 import { teamByCode } from '../../game/mock';
 import { shortLabel } from '../../game/world';
 import { clubTitles } from '../../game/clubSeasons';
@@ -97,10 +97,13 @@ export function deckOptions(st: LineupState): DeckOption[] {
       merge(wildAll, who, f);
     }
   }
-  // 연도 없는 카드 — 연도 카드가 만든 세트에만 함께 (혼자서는 연도 세트를 만들지 않는다)
+  // 연도 없는 카드 — 연도 카드가 만든 세트에만 함께 (혼자서는 연도 세트를 만들지 않는다) · 구단 세트는 같은 계보 구단 것도
   for (const d of decks.values()) {
-    const wild = d.t.kind === 'teamYear' ? wildClub.get(d.t.code!) : d.t.kind === 'year' ? wildAll : undefined;
-    if (wild) for (const [who, f] of wild) merge(d.m, who, f);
+    if (d.t.kind === 'year') { for (const [who, f] of wildAll) merge(d.m, who, f); continue; }
+    for (const [code, wild] of wildClub) {
+      if (d.t.kind === 'team' && code === d.t.code) continue; // 자기 구단 것은 이미 들어 있다
+      if (sameLine(code, d.t.code!)) for (const [who, f] of wild) merge(d.m, who, f);
+    }
   }
   const ev = evaluate(st);
   const nowOf = new Map(ev.sets.map((x) => [x.id, x.have]));
@@ -171,8 +174,9 @@ interface Cand { id: string; who: string; l: LiteU; base: number; m: boolean; le
 
 export function autoLineupFor(st: LineupState, t: DeckTarget): LineupState {
   const y = t.year != null ? String(t.year) : '';
-  const match = (l: LiteU) => (t.kind === 'team' ? l.code === t.code
-    : t.kind === 'teamYear' ? l.code === t.code && (l.yearKey === y || l.yearKey === 'none')
+  const wildIn = (l: LiteU) => l.yearKey === 'none' && sameLine(l.code, t.code!);
+  const match = (l: LiteU) => (t.kind === 'team' ? l.code === t.code || wildIn(l)
+    : t.kind === 'teamYear' ? (l.code === t.code && l.yearKey === y) || wildIn(l)
       : l.yearKey === y || l.yearKey === 'none');
   const val = (c: Cand, bonus: number) => c.base + (c.m ? bonus : 0);
   // 사람마다 · 쪽마다 — 보통 등급 · 레전드급 · MVP 각각 가장 좋은 카드 (덱 카드 먼저, 그다음 세기)

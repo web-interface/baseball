@@ -168,3 +168,5 @@
 :global([data-theme='broadcast']) .head { border-bottom: 2px solid var(--fg); }
 :global([data-theme='classic']) .head { border-bottom: 1.5px solid var(--fg); }
 :global([data-theme='classic']) .more { color: var(--club-text); }
+/* 황금 왕조 — 홈 베이스가 금빛 */
+.gold { fill: #f2c94c !important; filter: drop-shadow(0 0 3px rgba(242, 201, 76, .9)); }

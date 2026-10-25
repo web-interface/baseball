@@ -11,7 +11,7 @@ import { cardLite } from '../../game/kbo';
 import type { ClubCode, Team } from '../../game/types';
 import { HAS_REAL_SEASONS, clubPennants, clubRunnerUps, clubSeason, clubTitles, clubYears, fullYear, leagueYear, leagueYears, postLabel, seasonLine } from '../../game/clubSeasons';
 import {
-  ENTRY_SIZE, MAX_ACTIVE, SET_KIND_DESC, SET_KIND_KO, STAT_KO, TIERS, setEffect, setName, statLine,
+  ENTRY_SIZE, FULL_SIZE, SET_KIND_DESC, SET_KIND_KO, STAT_KO, TIERS, TIER_NAMES, sameLine, setEffect, setName, statLine,
   type SetEffect, type SetKind, type SetProgress,
 } from '../../game/sets';
 import { boxOf, evaluate, initialLineup, store, unit } from '../lineup/calc';
@@ -32,10 +32,7 @@ export default function SetsScreen({ query }: ScreenProps) {
     <div className={s.screen}>
       <header className={s.top}>
         <h2 className={['head', s.title].join(' ')}>세트덱</h2>
-        <p className={s.lead}>
-          1군 엔트리(타자 9 · 선발 5 · 불펜 최대 10 · 마무리 1) 안에서 같은 구단 · 같은 연도 카드를 모으면,
-          모인 인원 단계마다 <b>그 선수들의</b> 능력치가 올라요. 오르는 능력치는 구단과 연도마다 달라요.
-        </p>
+        <p className={s.lead}>같은 구단·연도 카드를 모으면 <b>엔트리 전원</b> 능력치가 올라요</p>
       </header>
 
       <Rules />
@@ -47,10 +44,10 @@ export default function SetsScreen({ query }: ScreenProps) {
 
 /* ───────── 규칙 표 ───────── */
 function Rules() {
-  const cols = [5, 9, 14, ENTRY_SIZE];
+  const cols = [5, 9, 14, ENTRY_SIZE, FULL_SIZE];
   return (
     <section className={s.sec} aria-labelledby="rules-h">
-      <header className={s.secHead}><h3 id="rules-h" className="head">단계</h3><span className={s.meta}>단계 가치 = 능력치 칸마다 평균 몇 점</span></header>
+      <header className={s.secHead}><h3 id="rules-h" className="head">단계</h3></header>
       <table className={s.tiers}>
         <thead>
           <tr><th>세트</th>{cols.map((c) => <th key={c} className={s.cR}>{tierHead(c)}</th>)}</tr>
@@ -64,19 +61,17 @@ function Rules() {
               </th>
               {cols.map((c) => {
                 const t = TIERS[k].find((x) => x.at === c);
-                return <td key={c} className={['num', s.cR, !t && s.dim].filter(Boolean).join(' ')}>{t ? `+${t.v}` : '—'}{t && k === 'teamYear' && c === ENTRY_SIZE && <em>왕조</em>}</td>;
+                const name = t ? TIER_NAMES[k][TIERS[k].indexOf(t)] : '';
+                return <td key={c} className={['num', s.cR, !t && s.dim].filter(Boolean).join(' ')}>{t ? `+${t.v}` : '—'}{t && <em>{name}</em>}</td>;
               })}
             </tr>
           ))}
         </tbody>
       </table>
       <ul className={s.ruleList}>
-        <li><b>동시에 {MAX_ACTIVE}개까지</b> — 켜진 세트가 많으면 센 것부터 {MAX_ACTIVE}개만 켜져요.</li>
-        <li><b>그 선수에게만</b> — 세트에 든 선수만 받고, 한 선수가 여러 세트에 들면 가장 센 것 하나만 받아요.</li>
-        <li><b>공정하게</b> — 같은 종류·같은 단계면 어느 구단·연도든 총합이 같아요. 타자는 8칸 합 = 8 × 단계 가치, 투수는 7칸 합 = 7 × 단계 가치. 상황 효과(득점권 컨택 등)는 반만 쳐요 — 색깔만 다르고 손해는 없어요.</li>
-        <li><b>왕조</b> — 엔트리에 한 구단 · 한 연도 카드가 {ENTRY_SIZE}명이면 능력치 폭발.</li>
-        <li><b>연도 없는 카드</b> — 레전드 · 프랜차이즈 · 블랙 · 시그니처 · 특별 선수는 아무 연도로 쳐요. 같은 구단의 구단+연도 세트, 그리고 연도 세트에 함께 들어가 인원으로도 세고 효과도 받아요(왕조 포함).</li>
-        <li>케미 선(이웃한 자리의 공통점) 보너스는 세트와 따로 붙어요.</li>
+        <li><b>엔트리 전원</b> 가장 센 세트 하나가 모두에게</li>
+        <li><b>왕조</b> 구단+연도 {ENTRY_SIZE}명 · <b>황금 왕조</b> {FULL_SIZE}명</li>
+        <li><b>연도 없는 카드</b> 같은 계보 구단(옛 이름 포함) · 아무 연도로</li>
       </ul>
     </section>
   );
@@ -96,9 +91,9 @@ function Mine({ ev, st }: { ev: ReturnType<typeof evaluate>; st: ReturnType<type
     <section className={s.sec} aria-labelledby="mine-h">
       <header className={s.secHead}>
         <h3 id="mine-h" className="head">지금 내 엔트리</h3>
-        <span className={s.meta}>엔트리 <span className="num">{ev.entry}</span>/<span className="num">{ENTRY_SIZE}</span> · 켜진 세트 <span className="num">{ev.active.length}</span>/{MAX_ACTIVE}</span>
+        <span className={s.meta}>엔트리 <span className="num">{ev.entry}</span>/<span className="num">{FULL_SIZE}</span></span>
       </header>
-      {!ev.active.length && <p className={s.note}>아직 켜진 세트가 없어요. 아래에서 가장 가까운 세트부터 모아 보세요.</p>}
+      {!ev.active.length && <p className={s.note}>켜진 세트 없음</p>}
       <ul className={s.mine}>
         {list.map((x) => <MineRow key={x.id} sp={x} spare={spare} />)}
       </ul>
@@ -110,9 +105,9 @@ function Mine({ ev, st }: { ev: ReturnType<typeof evaluate>; st: ReturnType<type
 interface Spare { id: string; code: string; year: number | null }
 function MineRow({ sp, spare }: { sp: SetProgress; spare: Spare[] }) {
   const t = sp.code ? teamByCode(sp.code) : undefined;
-  const need = sp.next ? sp.next.at : ENTRY_SIZE;
-  // 연도 없는 카드(레전드급 · 특별 선수)는 아무 연도 — 같은 구단 연도 세트 · 연도 세트에도 든다
-  const fits = spare.filter((u) => (sp.code ? u.code === sp.code : true) && (sp.year != null ? u.year === sp.year || u.year == null : true));
+  const need = sp.next ? sp.next.at : FULL_SIZE;
+  // 연도 없는 카드(레전드급 · 특별 선수)는 아무 연도 · 같은 계보 구단 — 구단 세트 · 구단+연도 세트 · 연도 세트에도 든다
+  const fits = spare.filter((u) => (sp.code ? u.code === sp.code || (u.year == null && sameLine(u.code, sp.code)) : true) && (sp.year != null ? u.year === sp.year || u.year == null : true));
   const more = sp.next ? sp.next.at - sp.have : 0;
   const short = sp.code ? shortLabel(sp.code) : '';
   const want = sp.kind === 'teamYear' ? `${short} ${fmt.yearTag(sp.year! % 100)} 카드` : sp.kind === 'team' ? `${short} 카드(연도 무관)` : `${fmt.yearTag(sp.year! % 100)} 카드(구단 무관)`;
@@ -130,13 +125,8 @@ function MineRow({ sp, spare }: { sp: SetProgress; spare: Spare[] }) {
       <span className={s.bar} aria-hidden>
         {Array.from({ length: need }, (_, i) => <i key={i} className={i < sp.have ? s.fill : undefined} />)}
       </span>
-      {sp.cur && <p className={s.effNow}><b>지금 +{sp.cur.v}</b> 타자 {statLine(sp.cur.bat, 3)} · 투수 {statLine(sp.cur.pit, 3)}</p>}
-      {sp.next && (
-        <p className={s.effNext}>
-          <b className="num">{more}</b>명 더 모으면 <b>+{sp.next.v}</b> — 타자 {statLine(sp.next.bat, 3)} · 투수 {statLine(sp.next.pit, 2)}
-          {sp.next.special && <> · {sp.next.special.text}</>}
-        </p>
-      )}
+      {sp.cur && <p className={s.effNow}><b>+{sp.cur.v}</b> 타자 {statLine(sp.cur.bat, 3)} · 투수 {statLine(sp.cur.pit, 3)}</p>}
+      {sp.next && <p className={s.effNext}><b className="num">{more}</b>명 더 → <b>+{sp.next.v}</b></p>}
       <div className={s.cands}>
         <span className={s.candsH}>모을 카드 · {want}</span>
         {fits.length ? (
@@ -147,10 +137,10 @@ function MineRow({ sp, spare }: { sp: SetProgress; spare: Spare[] }) {
                 <small>{u.player.name}</small>
               </span>
             ); })}
-            <small className={s.candNote}>내 카드 중 후보 {fits.length}장 — 라인업에 넣으면 돼요</small>
+            <small className={s.candNote}>후보 {fits.length}장</small>
           </span>
         ) : (
-          <small className={s.candNote}>내 카드엔 없어요 — 영입의 {pack}에서 나와요</small>
+          <small className={s.candNote}>{pack}</small>
         )}
       </div>
     </li>

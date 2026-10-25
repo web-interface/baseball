@@ -47,3 +47,12 @@
 }
 @keyframes dshine { from { background-position: 130% 0; } to { background-position: -130% 0; } }
 @media (prefers-reduced-motion: reduce) { .shine { animation: none; } }
+
+/* 황금 왕조덱 — 금박 바탕 + 무지갯빛 테 + 빛 두 줄기 */
+.golden {
+  color: #2a1c00; text-shadow: 0 1px 0 rgba(255, 255, 255, .45);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .5), rgba(255, 255, 255, 0) 48%, rgba(120, 80, 0, .18)), linear-gradient(100deg, #f7d774, #e6b64a 45%, #fff1b8 60%, #d9a43a);
+  box-shadow: inset 0 0 0 1.5px #fff4c2, 0 0 0 1px rgba(120, 80, 0, .35), 0 0 16px -2px rgba(255, 210, 90, .9);
+}
+.golden .mark { color: #7a4b00; text-shadow: 0 0 6px rgba(255, 255, 255, .9); }
+.golden .shine { background: linear-gradient(105deg, transparent 25%, rgba(255, 255, 255, .8) 40%, transparent 52%, rgba(255, 255, 255, .5) 62%, transparent 72%) 0 0 / 260% 100% no-repeat; animation-duration: 2.4s; }

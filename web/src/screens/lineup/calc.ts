@@ -5,15 +5,15 @@
 //  · 케미 선: 이웃한 두 자리의 공통점 — 같은 구단 2 · 같은 권역 1 · 같은 시즌 카드 1
 //            + 자리 짝(키스톤·배터리·외야·테이블세터·클린업·뒷문)은 공통점이 하나라도 있으면 1 더
 //            점수 1·2·3 = 1~3단, 4 이상 = 형광. 공통점이 없거나 한쪽이 적성 밖 자리면 끊김.
-//  · 세트덱: 1군 엔트리 20명 기준 — 구단+연도 5·9·14·20명, 구단 5·9·14·20명, 연도 9·14·20명 (game/sets)
-//            동시에 2개까지, 한 선수는 가장 센 세트 하나. 오르는 능력치는 조합마다 다르다.
+//  · 세트덱: 1군 엔트리 — 구단+연도 5·9·14·20·25명, 구단 5·9·14·20·25명, 연도 9·14·20·25명 (game/sets)
+//            가장 센 세트 하나가 켜지고 엔트리 전원이 받는다. 오르는 능력치는 조합마다 다르다.
 //  · 팀 종합: 선발 10명(타자 9 + 1선발)의 '기본(종합 + 강화 + 훈련 + 잠재력) + 세트덱 + 케미' 평균.
 //  · 레전드급(레전드 · 프랜차이즈 · 블랙 · 시그니처) 카드는 1군 엔트리에 타자 2명 · 투수 2명까지 (game/potential LEGEND_MAX).
 //  · MVP 카드는 1군 엔트리에 타자 · 투수 합쳐 4명까지 (MVP_MAX).
 import type { CardInst, Player, Team } from '../../game/types';
 import type { TacState } from '../../game/tactics';
 import { ME, teamByCode, teamById } from '../../game/mock';
-import { DYNASTY_V, computeSets, faceBonus, sideLine, type EntryMember, type SetProgress } from '../../game/sets';
+import { DYNASTY_V, GOLDEN_V, computeSets, faceBonus, sideLine, type EntryMember, type SetProgress } from '../../game/sets';
 import { fullYear } from '../../game/clubSeasons';
 import { yearTag } from '../../ui/format';
 import { getCard, getPlayer, owned, startLayout } from './local-mock';
@@ -244,8 +244,8 @@ const ORDER_NAMES: Record<number, string> = { 0: '테이블세터', 2: '클린�
 
 /* ───────── 세트덱 (game/sets) ───────── */
 // 1군 엔트리(타자 9 · 선발 5 · 불펜 최대 10 · 마무리 1 — 최대 25명) 안에서 같은 구단·같은 연도 카드 수로 단계가 켜진다(5 · 9 · 14 · 20명).
-// 동시에 2개까지(센 것부터), 한 선수는 받는 세트 중 가장 센 것 하나. 오르는 능력치는 조합마다 다르다.
-export { ENTRY_SIZE, DYNASTY_V, TIERS, SET_KIND_KO } from '../../game/sets';
+// 가장 센 세트 하나가 켜지고 엔트리 전원이 받는다. 오르는 능력치는 조합마다 다르다.
+export { ENTRY_SIZE, FULL_SIZE, DYNASTY_V, GOLDEN_V, TIERS, SET_KIND_KO } from '../../game/sets';
 export type { SetProgress } from '../../game/sets';
 /** 예전 이름 — 왕조(엔트리 전원 구단+연도) 때 오르는 값 */
 export const BOOM = DYNASTY_V;
@@ -330,8 +330,10 @@ export interface Eval {
   entry: number;
   /** 대표 구단 — 켜진 세트(없으면 가장 많이 모은 구단)의 구단 */
   club: Team;
-  /** 왕조 — 엔트리 전원이 한 구단·한 연도 */
+  /** 왕조 — 한 구단·한 연도 20명 */
   exploded: boolean;
+  /** 황금 왕조 — 한 구단·한 연도 25명(엔트리 전원) */
+  golden: boolean;
   /** 레전드급 인원 (1군 엔트리) — 타자 · 투수 각 LEGEND_MAX 까지 · MVP 는 합쳐 MVP_MAX 까지 */
   legend: { bat: number; pit: number; mvp: number };
 }
@@ -355,6 +357,7 @@ export function evaluate(st: LineupState): Eval {
   const members = entryMembers(st);
   const sets = computeSets(members);
   const exploded = !!sets.dynasty;
+  const golden = !!sets.golden;
   const lead = sets.dynasty ?? sets.active[0] ?? sets.all.find((x) => x.kind !== 'year' && x.code);
   const club = lead?.code ? teamByCode(lead.code) : teamById(ME.teamId);
   const setOf = (s: Slot) => sets.bonusOf.get(s);
@@ -417,7 +420,7 @@ export function evaluate(st: LineupState): Eval {
   const baseAvg = mean(starters.map((x) => x.base));
   const tcAvg = mean(starters.map((x) => x.tc));
   const chemAvg = mean(starters.map((x) => x.chem));
-  const potRaw = exploded ? raw : mean(starters.map((x) => x.total - x.tc + DYNASTY_V));
+  const potRaw = golden ? raw : mean(starters.map((x) => x.total - x.tc + GOLDEN_V));
 
   /* 묶음 점수 — 받는 세트의 능력치 칸만큼 */
   // 받는 보너스 전부 (강화 · 훈련 · 잠재력 · 플레이스타일 · 세트덱) — 앞면 코드별 (game/cardBonus)
@@ -466,6 +469,7 @@ export function evaluate(st: LineupState): Eval {
     entry: members.length,
     club,
     exploded,
+    golden,
     legend: legendCount(st),
   };
 }
@@ -479,7 +483,7 @@ export function potentialLead(ev: Eval): string {
   if (ty && ty.have >= 5 && ty.have < ENTRY_FULL) return `${yearTag(ty.year! % 100)} ${shortLabelOf(ty.code!)} ${ENTRY_FULL - ty.have}명 더 모으면`;
   return '세트덱 완성 시';
 }
-const ENTRY_FULL = 20;
+const ENTRY_FULL = 25;
 const shortLabelOf = (code: string) => teamByCode(code as Team['code']).short;
 
 /* ───────── 레전드급 — 1군 엔트리에 타자 2명 · 투수 2명까지 · MVP 는 합쳐 4명까지 ───────── */

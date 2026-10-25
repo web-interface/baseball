@@ -104,10 +104,12 @@ export default function LineupScreen({ query }: ScreenProps) {
 
   /* 능력치 폭발 — 다 맞춘 순간에만 연출 */
   const wasBoom = useRef(ev.exploded);
+  const wasGold = useRef(ev.golden);
   useEffect(() => {
-    if (ev.exploded && !wasBoom.current) setBoom(Date.now());
+    if ((ev.exploded && !wasBoom.current) || (ev.golden && !wasGold.current)) setBoom(Date.now());
     wasBoom.current = ev.exploded;
-  }, [ev.exploded]);
+    wasGold.current = ev.golden;
+  }, [ev.exploded, ev.golden]);
 
   // 미리보기: 잠시 뒤 마지막 한 명을 채워 폭발 연출을 본다
   useEffect(() => {
@@ -223,13 +225,11 @@ export default function LineupScreen({ query }: ScreenProps) {
           <Board st={st} ev={ev} home={home} active={slot ?? info ?? pending} onPick={open} boom={boom} onBoomDone={() => setBoom(null)} />
           <div className={s.legend}>
             <LinkLegend />
-            <p>같은 구단 · 권역 · 시즌 카드일수록 선이 굵어져요. 키스톤 · 배터리 · 외야 짝은 한 단 더. 카드 밑 숫자는 라인업에서 오른 종합이에요 — 강화 · 훈련 · 잠재력 · 세트덱 · 케미까지 더한 값 (빨강은 적성 밖 자리로 깎인 것).</p>
           </div>
           <TeamColorPanel ev={ev} onHint={setSlot} />
           <section className={s.bench} aria-label="벤치">
             <h3 className={s.h}>
               <b>벤치</b><span className="num">{st.bench.length}</span>
-              <small>누르면 넣을 자리를 골라요</small>
             </h3>
             <ul className={s.benchRow}>
               {st.bench.map((id) => {
@@ -253,7 +253,6 @@ export default function LineupScreen({ query }: ScreenProps) {
       )}
       {tab === 'pitch' && <PitchTab st={st} ev={ev} onOpen={open} onSwap={swapStaff} />}
 
-      <p className={s.foot}>바꾸는 즉시 저장돼요 · 수치는 아직 목업이에요</p>
 
       <AutoSheet open={autoOpen} onClose={() => setAutoOpen(false)} st={st} onBest={runAuto} onDeck={runDeck} />
       <PlayerSheet slot={info} st={st} ev={ev} onClose={() => setInfo(null)} onSwap={swapFromInfo} />
