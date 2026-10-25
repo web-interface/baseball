@@ -1,0 +1,377 @@
+/* 전력표 — 타순 · 투수진 탭 (선수 = 열, 능력치 = 줄). 색은 모두 테마 토큰 */
+.tab { padding: 2px var(--gutter) 8px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 46px; }
+.lead { min-width: 0; font-size: 12.5px; line-height: 1.4; color: var(--fg-3); letter-spacing: -.03em; text-wrap: pretty; }
+.lead b { color: var(--accent-2); font-weight: 800; }
+.lead b:global(.num) { font-size: 15px; }
+
+/* 오늘 선발 한 줄 (투수진) */
+.todayLine { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: -2px 0 10px; font-size: 12.5px; letter-spacing: -.03em; color: var(--fg-2); }
+.todayLine em { font-style: normal; font-size: 11px; font-weight: 800; color: var(--accent); }
+.todayLine b { font-weight: 800; color: var(--fg); }
+.todayLine span { font-size: 12px; color: var(--fg-3); }
+
+/* ───────── 틀 — 휴대폰은 화면 끝까지, 선수 열만 옆으로 ───────── */
+.frame { position: relative; margin: 0 calc(-1 * var(--gutter)); }
+.scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll::-webkit-scrollbar { display: none; }
+/* 오른쪽에 더 있으면 흐림 */
+.fade {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 28px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--bg));
+  opacity: 0;
+  transition: opacity var(--dur-2);
+}
+.more .fade { opacity: 1; }
+
+.grid {
+  --lab: 60px;
+  --cw: 78px;
+  --stat-h: 25px;
+  position: relative;
+  display: grid;
+  grid-template-columns: calc(var(--lab) + var(--gutter)) repeat(var(--n), var(--cw));
+  width: max-content;
+  padding-right: var(--gutter);
+  border-bottom: 1px solid var(--line-2);
+}
+
+/* 왼쪽 이름 칸 — 옆으로 밀어도 붙어 있다 */
+.labels {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  grid-column: 1;
+  grid-row: 1 / -1;
+  display: grid;
+  grid-template-rows: subgrid;
+  padding-left: var(--gutter);
+  background: var(--bg);
+  box-shadow: inset -1px 0 0 var(--line-2);
+  transition: box-shadow var(--dur-2);
+}
+.scrolled .labels { box-shadow: inset -1.5px 0 0 var(--line-3); }
+.lab {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding-right: 6px;
+  border-top: 1px solid var(--line);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -.04em;
+  color: var(--fg-3);
+  word-break: keep-all;
+}
+.lab small { display: none; margin-top: 1px; font-family: var(--font-num); font-size: 10px; font-weight: 600; letter-spacing: .02em; color: var(--fg-4); }
+.lab-band { border-top: 0; font-size: 10.5px; color: var(--fg-4); }
+.lab-stat { color: var(--fg-2); }
+
+/* 묶음 띠 — 열 위 (테이블세터 · 클린업 · 하위 타선 / 선발 · 불펜 · 마무리) */
+.band {
+  grid-row: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+  min-width: 0;
+  padding: 12px 8px 6px;
+  font-size: 12px;
+  line-height: 1.25;
+  box-shadow: inset 0 -2px 0 var(--line-3), inset 1px 0 0 var(--line);
+}
+.band b { font-weight: 800; letter-spacing: -.03em; color: var(--fg); white-space: nowrap; }
+.bandSub { font-size: 11px; color: var(--fg-3); white-space: nowrap; }
+.bandHot { box-shadow: inset 0 -2px 0 var(--accent), inset 1px 0 0 var(--line); }
+.bandChem { display: inline-flex; gap: 5px; font-size: 11px; font-weight: 600; font-style: normal; color: var(--fg-3); white-space: nowrap; }
+.bandChem i { font-style: normal; font-weight: 800; }
+
+/* ───────── 선수 열 ───────── */
+.col {
+  position: relative;
+  grid-row: 2 / -1;
+  display: grid;
+  grid-template-rows: subgrid;
+  min-width: 0;
+  cursor: pointer;
+  box-shadow: inset 1px 0 0 var(--line);
+  transition: background-color var(--dur-1), opacity var(--dur-2);
+}
+/* 등급 색 — 열 맨 위 가는 띠 */
+.col::before { content: ''; position: absolute; top: 0; left: 1px; right: 0; height: 3px; background: var(--gr, transparent); pointer-events: none; }
+.col:hover { background: color-mix(in srgb, var(--fg) 4%, transparent); }
+.picking .col:not(.picked):not(.blocked):hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.picked, .picked:hover { background: var(--accent-weak); box-shadow: inset 0 0 0 2px var(--accent); }
+.blocked { opacity: .34; cursor: not-allowed; }
+.today { background: color-mix(in srgb, var(--accent) 6%, transparent); box-shadow: inset 0 0 0 2px var(--accent); }
+
+/* 칸 공통 — 줄 사이 헤어라인 */
+.head, .card, .stat, .season, .pot, .marks, .backups, .chem, .sigCell { min-width: 0; border-top: 1px solid var(--line); }
+
+/* 머리 — 타순 번호(손잡이) · 포지션 · 적성 / 보직 */
+.head { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 9px 4px 7px; text-align: center; }
+.no {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: var(--fg);
+  background: var(--bg);
+  box-shadow: inset 0 0 0 1.5px var(--fg-3);
+  transition: background-color var(--dur-1), box-shadow var(--dur-1), color var(--dur-1);
+}
+.no :global(.num-display) { font-size: 17px; line-height: 1; }
+.no:hover { box-shadow: inset 0 0 0 2px var(--accent-2); }
+.no:focus-visible, .cardBtn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.noIco { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 14px; height: 14px; border-radius: 50%; color: var(--fg-2); background: var(--surface-3); box-shadow: 0 0 0 1.5px var(--bg); }
+.noSwap { color: var(--fg-2); }
+.noSwap svg { transform: rotate(90deg); }
+.noStatic { color: var(--fg-4); box-shadow: inset 0 0 0 1px var(--line-2); }
+.picked .no { color: var(--accent-ink); background: var(--accent); box-shadow: none; }
+.picked .noIco { color: var(--accent-ink); background: var(--accent-2); }
+.picking .col:not(.picked):not(.blocked) .no { color: var(--accent-2); box-shadow: inset 0 0 0 1.5px var(--accent-2); }
+
+/* 이웃 타순 케미 사슬 — 번호 동그라미 사이를 잇는 가로 선 */
+.link { position: absolute; z-index: 1; top: 24px; left: 50%; width: 100%; transform: translateY(-50%); transition: height 240ms var(--ease-out), background-color 240ms; }
+.c0 { height: 0; border-top: 1.5px dashed color-mix(in srgb, var(--bad) 75%, transparent); }
+.c1 { height: 1.5px; background: color-mix(in srgb, var(--fg) 38%, transparent); }
+.c2 { height: 3px; background: color-mix(in srgb, var(--fg) 62%, transparent); }
+.c3 { height: 4.5px; background: color-mix(in srgb, var(--fg) 92%, transparent); }
+.c4 { height: 4.5px; background: var(--volt); box-shadow: 0 0 0 3px color-mix(in srgb, var(--volt) 18%, transparent); }
+
+.pos { display: flex; align-items: baseline; justify-content: center; gap: 5px; font-size: 11px; line-height: 1.2; white-space: nowrap; }
+.pos b { font-size: 12.5px; font-weight: 700; color: var(--fg-2); }
+.f-good { color: var(--good); font-weight: 800; }
+.f-ok { color: var(--fg-3); font-weight: 600; }
+.f-poor { color: var(--bad); font-weight: 800; }
+
+/* 투수 머리 */
+.role { font-size: 11.5px; font-weight: 800; line-height: 1.2; letter-spacing: -.04em; color: var(--fg); word-break: keep-all; text-wrap: balance; }
+.hand { font-size: 10px; line-height: 1.25; color: var(--fg-3); word-break: keep-all; }
+.todayTag { padding: 2px 5px 1px; border-radius: var(--r-2); font-size: 10px; font-weight: 800; font-style: normal; white-space: nowrap; color: var(--accent-ink); background: var(--accent); }
+.warnTag { font-size: 10px; font-weight: 800; line-height: 1.25; color: var(--warn); word-break: keep-all; }
+.hurtTag { display: inline-flex; align-items: center; gap: 2px; font-size: 10px; font-weight: 800; white-space: nowrap; color: var(--bad); }
+.hurt .role { color: var(--fg-2); }
+
+/* 작은 카드 */
+.card { display: flex; justify-content: center; padding: 6px 7px 8px; }
+.cardBtn { display: block; width: 100%; max-width: 62px; border-radius: var(--r-3); }
+.cardBtn:active { transform: scale(.97); }
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--r-3);
+  color: var(--fg-3);
+  box-shadow: inset 0 0 0 1.5px var(--line-2);
+}
+.empty small { font-size: 10px; font-weight: 700; }
+
+/* 능력치 칸 — 막대(기본 + 더해진 값 빗금) + 숫자 */
+.stat { position: relative; display: flex; align-items: center; gap: 4px; padding: 0 6px; }
+.bar { position: relative; flex: 1; min-width: 12px; height: 5px; overflow: hidden; border-radius: 1px; background: var(--line-2); }
+.base { position: absolute; top: 0; bottom: 0; left: 0; background: var(--fg-2); }
+.plus { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(90deg, var(--good) 0 2px, transparent 2px 3.5px); }
+.val { min-width: 21px; font-size: 14px; line-height: 1; text-align: right; color: var(--fg); }
+.upNum { display: none; font-size: 10.5px; font-weight: 800; font-style: normal; color: var(--good); }
+.none { justify-content: center; font-size: 10.5px; color: var(--fg-4); }
+/* 포수 블로킹 · 도루저지처럼 다른 능력치일 때 — 막대 위 작은 이름 */
+.alt .bar { margin-top: 10px; }
+.altTag { position: absolute; top: 2px; left: 6px; font-size: 9px; font-weight: 700; line-height: 1; letter-spacing: -.03em; color: var(--fg-3); white-space: nowrap; }
+
+/* 숫자 색 — 90 넘으면 금, 더해진 값이 있으면 초록, 100 넘으면 10 단위 색 (카드 앞면과 같은 규칙) */
+.top { color: var(--gold); }
+.up { color: var(--good); }
+.lo { color: var(--fg-3); }
+.o100, .o110, .o120, .o130, .o140 { font-weight: 800; }
+.o100 { color: var(--info); }
+.o110 { color: var(--good); }
+.o120 { color: var(--accent); }
+.o130 { color: var(--bad); }
+.o140 { color: var(--gold); }
+
+/* 이번 시즌 */
+.season { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 6px 3px; text-align: center; }
+.season b { font-size: 15px; line-height: 1; color: var(--fg); }
+.season small { font-size: 10px; line-height: 1.2; white-space: nowrap; color: var(--fg-3); }
+
+/* 잠재력 */
+.pot { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 6px 4px; text-align: center; }
+.potName {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -.03em;
+  color: var(--fg);
+  word-break: keep-all;
+}
+.potOff .potName { color: var(--fg-3); }
+.offTag { font-size: 9.5px; font-weight: 800; font-style: normal; color: var(--fg-3); }
+.dim { font-size: 10.5px; color: var(--fg-4); }
+
+/* 강화 · 훈련 */
+.marks { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 6px 4px; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: var(--r-2);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  white-space: nowrap;
+  color: var(--fg-2);
+  box-shadow: inset 0 0 0 1px var(--line-3);
+}
+.chip :global(.num) { font-size: 11px; }
+.enhHi { color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg-2); }
+.trLit { color: var(--info); box-shadow: inset 0 0 0 1px var(--info); }
+.enhMax, .trMax { color: var(--accent-ink); background: var(--gold); box-shadow: none; }
+
+/* 백업 (타순) */
+.backups { display: flex; flex-direction: column; justify-content: center; gap: 4px; margin: 0; padding: 7px 6px 9px; list-style: none; }
+.backups li { display: flex; align-items: baseline; gap: 3px; min-width: 0; font-size: 10.5px; line-height: 1.2; color: var(--fg-2); }
+.bName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.backups b { margin-left: auto; font-size: 11.5px; color: var(--fg); }
+.bFit { flex: none; font-size: 9.5px; font-weight: 700; font-style: normal; color: var(--fg-3); }
+
+/* 케미 (투수진 — 배터리 · 뒷문) */
+.chem { display: flex; align-items: center; justify-content: center; padding: 5px 3px; }
+.chemMark { display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 10px; color: var(--fg-3); }
+.chemLv { display: inline-flex; align-items: center; gap: 3px; }
+.chemLv b { font-size: 11px; font-weight: 800; }
+.chemMark svg { overflow: visible; }
+.chemMark path { fill: none; stroke-linecap: round; stroke: var(--fg); }
+.m0 path { stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 2 3; }
+.m1 path { stroke-opacity: .38; stroke-width: 1.5; }
+.m2 path { stroke-opacity: .62; stroke-width: 3; }
+.m3 path { stroke-opacity: .92; stroke-width: 4.5; }
+.m4 path { stroke: var(--volt); stroke-width: 4.5; }
+.t0 { color: var(--bad); }
+.t1 { color: var(--fg-3); }
+.t2 { color: var(--fg-2); }
+.t3 { color: var(--fg); }
+.t4 { color: var(--volt); }
+
+/* 고유 구종 (투수진) */
+.sigCell { display: flex; align-items: center; justify-content: center; padding: 6px 4px; text-align: center; }
+.sigName { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 800; line-height: 1.2; letter-spacing: -.03em; color: var(--fg-2); word-break: keep-all; }
+.sigName::before { content: ''; flex: none; width: 3px; height: 10px; background: var(--sig); }
+
+/* ───────── 평균 ───────── */
+.avg { margin-top: 18px; }
+.avgHead { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.avgHead b { font-family: var(--font-head); font-size: 15.5px; font-weight: var(--head-weight); letter-spacing: var(--head-tracking); text-shadow: var(--misreg); }
+.avgHead small { font-size: 11.5px; color: var(--fg-3); }
+.avgList { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.avgCell { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; margin: 0; padding: 8px 4px 7px; border-radius: var(--r-2); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.avgCell dt { font-size: 11px; font-weight: 700; letter-spacing: -.03em; white-space: nowrap; color: var(--fg-3); }
+.avgCell dd { display: flex; align-items: baseline; gap: 3px; margin: 0; }
+.avgCell dd b { font-size: 24px; line-height: 1; }
+.avgCell dd small, .avgTable td small { font-size: 10.5px; font-weight: 800; color: var(--good); }
+.combo { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line-2), inset 0 2px 0 var(--accent); }
+.combo dt { color: var(--fg-2); }
+
+.avgTable { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.avgTable th, .avgTable td { padding: 7px 2px; border-top: 1px solid var(--line); text-align: center; }
+.avgTable thead th { padding-top: 0; padding-bottom: 6px; border-top: 0; font-size: 10.5px; font-weight: 700; letter-spacing: -.04em; color: var(--fg-3); word-break: keep-all; }
+.avgTable thead th:first-child { width: 74px; }
+.avgTable tbody th { padding-left: 2px; text-align: left; font-size: 11.5px; font-weight: 800; letter-spacing: -.03em; color: var(--fg-2); word-break: keep-all; }
+.avgTable tbody th small { display: block; margin-top: 1px; font-size: 10px; font-weight: 600; color: var(--fg-3); }
+.avgTable td b { font-size: 19px; line-height: 1; }
+.avgTable td small { display: block; margin-top: 2px; }
+.avgStrong { background: var(--surface); }
+.avgStrong th, .avgStrong td { border-top-color: var(--line-3); }
+.avgStrong th { color: var(--fg); }
+
+.foot { margin-top: 14px; font-size: 11.5px; line-height: 1.5; letter-spacing: -.03em; color: var(--fg-4); text-wrap: pretty; }
+
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+
+
+/* ───────── 넓은 화면 — 9열(투수진은 16열)이 한 번에 ───────── */
+@media (min-width: 720px) {
+  /* 본문 칸(600)보다 넓게 — 가운데에 맞춰 양옆으로 */
+  .tab { --tw: min(var(--tmax, 1040px), calc(100vw - 64px)); width: var(--tw); margin-left: calc((100% - var(--tw)) / 2); }
+  .tabWide { --tmax: 1400px; }
+  .frame { margin: 0; }
+  .grid {
+    --cw-min: 64px;
+    --stat-h: 27px;
+    width: 100%;
+    min-width: calc(var(--lab) + var(--n) * var(--cw-min));
+    padding-right: 0;
+    grid-template-columns: var(--lab) repeat(var(--n), minmax(0, 1fr));
+  }
+  .grid { --lab: 92px; }
+  .labels { padding-left: 0; }
+  .lab-stat { flex-direction: row; align-items: center; justify-content: flex-start; gap: 5px; }
+  .lab small { display: block; margin-top: 0; }
+  .cardBtn { max-width: 70px; }
+  /* 열이 넓으면(타순 9열) 더해진 값을 숫자 옆에 */
+  .roomy .upNum { display: inline; }
+  .avgList { grid-template-columns: repeat(6, minmax(0, 1fr)) repeat(2, minmax(0, 1.2fr)); }
+}
+
+/* ───────── 테마 ───────── */
+/* broadcast — 굵은 잉크 선, 형광은 형광펜 밑줄 */
+:global([data-theme='broadcast']) .band { box-shadow: inset 0 -2px 0 var(--fg), inset 1px 0 0 var(--line); }
+:global([data-theme='broadcast']) .bandHot { box-shadow: inset 0 -3px 0 var(--accent), inset 1px 0 0 var(--line); }
+:global([data-theme='broadcast']) .bar { height: 6px; background: var(--surface-3); }
+:global([data-theme='broadcast']) .base { background: var(--fg); }
+:global([data-theme='broadcast']) .t4, :global([data-theme='broadcast']) .bandChem .t4 {
+  color: var(--fg);
+  background: linear-gradient(transparent 52%, var(--volt) 52%, var(--volt) 92%, transparent 92%);
+}
+:global([data-theme='broadcast']) .c4 { box-shadow: 0 0 0 1.5px var(--fg); }
+:global([data-theme='broadcast']) .chemMark .m4 { filter: drop-shadow(0 0 .6px var(--fg)) drop-shadow(0 0 .6px var(--fg)); }
+:global([data-theme='broadcast']) .band b { font-style: italic; }
+:global([data-theme='broadcast']) .top, :global([data-theme='classic']) .top { color: var(--accent); }
+:global([data-theme='broadcast']) .avgCell, :global([data-theme='broadcast']) .empty { border-radius: 0; }
+
+/* classic — 기록지 괘선, 형광 대신 별색 */
+:global([data-theme='classic']) .band { box-shadow: inset 0 -1.5px 0 var(--fg), inset 1px 0 0 var(--line-2); }
+:global([data-theme='classic']) .bandHot { box-shadow: inset 0 -2.5px 0 var(--club), inset 1px 0 0 var(--line-2); }
+:global([data-theme='classic']) .col { box-shadow: inset 1px 0 0 var(--line-2); }
+:global([data-theme='classic']) .picked, :global([data-theme='classic']) .today { box-shadow: inset 0 0 0 2px var(--club); }
+:global([data-theme='classic']) .bar { background: var(--surface-3); }
+:global([data-theme='classic']) .base { background: var(--fg-2); }
+:global([data-theme='classic']) .plus { background: repeating-linear-gradient(90deg, var(--accent) 0 1.5px, transparent 1.5px 3.5px); }
+:global([data-theme='classic']) .no { box-shadow: inset 0 0 0 1.5px var(--fg); }
+:global([data-theme='classic']) .c1 { height: 0; background: none; border-top: 1.5px dotted var(--fg-2); }
+:global([data-theme='classic']) .c4 { background: var(--club); box-shadow: none; }
+:global([data-theme='classic']) .t4 { color: var(--accent); }
+:global([data-theme='classic']) .m4 path { stroke: var(--club); }
+:global([data-theme='classic']) .avgCell, :global([data-theme='classic']) .empty, :global([data-theme='classic']) .chip { border-radius: 0; }
+:global([data-theme='classic']) .combo { box-shadow: inset 0 0 0 1px var(--line-3), inset 0 2.5px 0 var(--club); }
+
+/* 움직임 줄이기 */
+@media (prefers-reduced-motion: reduce) {
+  .col, .no, .link, .fade, .labels { transition: none; }
+  .cardBtn:active { transform: none; }
+}
