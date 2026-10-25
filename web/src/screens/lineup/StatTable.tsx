@@ -74,8 +74,8 @@ export function avgOf(list: Cells[], rows: StatRow[]): Record<string, Avg | null
 }
 
 /** 숫자 색 — 100 을 넘으면 10 단위 색, 더해진 값이 있으면 오름 색 (카드 앞면과 같은 규칙) */
-export const tone = (t: number, up: number) =>
-  t >= 140 ? s.o140 : t >= 130 ? s.o130 : t >= 120 ? s.o120 : t >= 110 ? s.o110 : t >= 100 ? s.o100 : up > 0 ? s.up : t >= 90 ? s.top : t >= 60 ? undefined : s.lo;
+/** 숫자 색 — 사용자 지시 10-26 "70이하 · 80이하 · 90이하 · 100이하 · 그 이상 다르게" (더해진 값은 막대 빗금 · +n 으로 따로 보인다) */
+export const tone = (t: number) => (t > 100 ? s.v5 : t > 90 ? s.v4 : t > 80 ? s.v3 : t > 70 ? s.v2 : s.v1);
 /** 막대 끝 — 100 을 넘는 카드도 있어서 조금 넉넉하게 */
 const BAR_MAX = 120;
 const pct = (v: number) => `${Math.max(0, Math.min(100, (v / BAR_MAX) * 100))}%`;
@@ -207,7 +207,7 @@ export function StatCells({ rows, cells, none }: { rows: StatRow[]; cells: Cells
               <i className={s.base} style={{ width: pct(Math.min(x.base, x.total)) }} />
               {x.up > 0 && <i className={s.plus} style={{ left: pct(x.base), width: `calc(${pct(x.total)} - ${pct(x.base)})` }} />}
             </span>
-            <b className={cx('num', s.val, tone(x.total, x.up))}>{x.total}</b>
+            <b className={cx('num', s.val, tone(x.total))}>{x.total}</b>
             {x.up > 0 && <em className={cx('num', s.upNum)}>+{x.up}</em>}
           </div>
         );
@@ -266,7 +266,7 @@ export const chemTone = (lv: Level) => s['t' + lv];
 /* ───────── 평균 ───────── */
 const AvgNum = ({ a }: { a: { v: number; up: number } | null }) => (
   <>
-    <b className={cx('num-display', a && tone(Math.round(a.v), 0))}>{a ? Math.round(a.v) : '—'}</b>
+    <b className={cx('num-display', a && tone(Math.round(a.v)))}>{a ? Math.round(a.v) : '—'}</b>
     {a && Math.round(a.up) > 0 && <small className="num">+{Math.round(a.up)}</small>}
   </>
 );

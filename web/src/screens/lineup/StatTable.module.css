@@ -198,16 +198,12 @@
 .alt .bar { margin-top: 10px; }
 .altTag { position: absolute; top: 2px; left: 6px; font-size: 9px; font-weight: 700; line-height: 1; letter-spacing: -.03em; color: var(--fg-3); white-space: nowrap; }
 
-/* 숫자 색 — 90 넘으면 금, 더해진 값이 있으면 초록, 100 넘으면 10 단위 색 (카드 앞면과 같은 규칙) */
-.top { color: var(--gold); }
-.up { color: var(--good); }
-.lo { color: var(--fg-3); }
-.o100, .o110, .o120, .o130, .o140 { font-weight: 800; }
-.o100 { color: var(--info); }
-.o110 { color: var(--good); }
-.o120 { color: var(--accent); }
-.o130 { color: var(--bad); }
-.o140 { color: var(--gold); }
+/* 숫자 색 — 구간마다 (StatTable tone): 70 이하 회색 · 71~80 초록 · 81~90 파랑 · 91~100 보라 · 100 넘음 주황 */
+.v1 { color: var(--fg-3); }
+.v2 { color: var(--good); }
+.v3 { color: var(--info); }
+.v4 { color: var(--gr-elite); font-weight: 800; }
+.v5 { color: var(--gr-special); font-weight: 800; }
 
 /* 이번 시즌 */
 .season { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 6px 3px; text-align: center; }
@@ -351,7 +347,6 @@
 :global([data-theme='broadcast']) .c4 { box-shadow: 0 0 0 1.5px var(--fg); }
 :global([data-theme='broadcast']) .chemMark .m4 { filter: drop-shadow(0 0 .6px var(--fg)) drop-shadow(0 0 .6px var(--fg)); }
 :global([data-theme='broadcast']) .band b { font-style: italic; }
-:global([data-theme='broadcast']) .top, :global([data-theme='classic']) .top { color: var(--accent); }
 :global([data-theme='broadcast']) .avgCell, :global([data-theme='broadcast']) .empty { border-radius: 0; }
 
 /* classic — 기록지 괘선, 형광 대신 별색 */
