@@ -32,6 +32,7 @@ import {
   type LineupState, type Slot, type StaffSlot,
 } from './calc';
 import s from './Lineup.module.css';
+import { showOvr } from '../../game/ovrShow';
 
 type Tab = 'field' | 'order' | 'pitch';
 const TABS: { value: Tab; label: string }[] = [
@@ -165,9 +166,9 @@ export default function LineupScreen({ query }: ScreenProps) {
     const ne = evaluate(next);
     const set = ne.sets.find((x) => x.id === o.id);
     if (!(ne.exploded && !ev.exploded)) {
-      const d1 = ne.overall - ev.overall;
+      const d1 = showOvr(ne.overall) - showOvr(ev.overall);
       toast({
-        text: <>{o.name} 덱으로 · 엔트리 <b className="num">{set?.have ?? 0}</b>명{set?.cur && <> (+{set.cur.v})</>} · 팀 종합 <b className="num">{ne.overall}</b>{d1 !== 0 && <> ({fmt.signed(d1)})</>}</>,
+        text: <>{o.name} 덱으로 · 엔트리 <b className="num">{set?.have ?? 0}</b>명{set?.cur && <> (+{set.cur.v})</>} · 팀 종합 <b className="num">{showOvr(ne.overall)}</b>{d1 !== 0 && <> ({fmt.signed(d1)})</>}</>,
         tone: (set?.have ?? 0) > o.now ? 'good' : 'info',
         action: { label: '되돌리기', onClick: undo },
       });
@@ -183,11 +184,11 @@ export default function LineupScreen({ query }: ScreenProps) {
     }
     const ne = evaluate(next);
     if (!(ne.exploded && !ev.exploded)) { // 폭발이면 연출이 대신 알린다
-      const pit = (e: typeof ev) => e.parts.find((p) => p.k === 'pit')!.v;
-      const d1 = ne.overall - ev.overall;
+      const pit = (e: typeof ev) => showOvr(e.parts.find((p) => p.k === 'pit')!.v);
+      const d1 = showOvr(ne.overall) - showOvr(ev.overall);
       const d2 = pit(ne) - pit(ev);
       toast({
-        text: <>자동 편성 · 팀 종합 <b className="num">{ne.overall}</b>{d1 !== 0 && <> ({fmt.signed(d1)})</>} · 투수 <b className="num">{pit(ne)}</b>{d2 !== 0 && <> ({fmt.signed(d2)})</>}</>,
+        text: <>자동 편성 · 팀 종합 <b className="num">{showOvr(ne.overall)}</b>{d1 !== 0 && <> ({fmt.signed(d1)})</>} · 투수 <b className="num">{pit(ne)}</b>{d2 !== 0 && <> ({fmt.signed(d2)})</>}</>,
         tone: d1 > 0 || (d1 === 0 && d2 > 0) ? 'good' : d1 < 0 ? 'bad' : 'info',
         action: { label: '되돌리기', onClick: undo },
       });

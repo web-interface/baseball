@@ -11,6 +11,7 @@ import { draftGradeOf, draftPool, draftYearOf } from './local-mock';
 import type { StepProps } from './index';
 import s from './cs.module.css';
 import d from './StepDraft.module.css';
+import { showOvr } from '../../game/ovrShow';
 
 type Filter = 'all' | 'P' | 'B';
 
@@ -86,7 +87,7 @@ export function StepDraft({ st, set, go, Dock }: StepProps) {
                   </span>
                 </span>
                 <span className={d.ovr}>
-                  <b className="num-display">{p.ovr}</b>
+                  <b className="num-display">{showOvr(p.ovr)}</b>
                   <small>종합</small>
                 </span>
                 <span className={d.mark} aria-hidden>{on ? <span className="num">{n + 1}</span> : <Icon name="plus" size={16} />}</span>

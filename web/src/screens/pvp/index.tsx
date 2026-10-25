@@ -21,6 +21,7 @@ import { clubTeam, mySnapshot, usePvpOnline, type SessionGame } from './online';
 import { listBattles, saveBattle, type BattleRec } from './battles';
 import { TeamLineup, cardsFromMockSide, cardsFromSnapshot } from './TeamLineup';
 import s from './pvp.module.css';
+import { showOvr } from '../../game/ovrShow';
 
 type Tab = 'opp' | 'log';
 const RES_KO = { W: '승', D: '무', L: '패' } as const;
@@ -177,7 +178,7 @@ function RealBoard({ me, today, games }: { me: PvpClub; today: { used: number; l
           <i>레이팅</i>
           <b className="num-display">{fmt.int(me.rating)}</b>
           {games.length > 0 && <span className={['num', s.delta].join(' ')}>{fmt.signed(sessionDelta)}</span>}
-          <small>팀 종합 <span className="num">{me.ovr}</span> · 전력 <span className="num">{fmt.int(me.power)}</span></small>
+          <small>팀 종합 <span className="num">{showOvr(me.ovr)}</span> · 전력 <span className="num">{fmt.int(me.power)}</span></small>
         </div>
         {series.length >= 2 ? <Spark values={series} className={s.spark} label="이번 접속 레이팅" /> : null}
       </div>
@@ -273,7 +274,7 @@ function RealList({ on, onPeek, onStart }: { on: ReturnType<typeof usePvpOnline>
                   </span>
                 </span>
                 <span className={s.oppPow}>
-                  <b className="num-display">{o.ovr}</b>
+                  <b className="num-display">{showOvr(o.ovr)}</b>
                   <small>전력 <span className="num">{fmt.int(o.power)}</span></small>
                 </span>
               </button>
@@ -303,7 +304,7 @@ function RealSheet({ opp, onClose, onStart, busy }: { opp: PvpClub | null; onClo
       open={!!opp}
       onClose={onClose}
       title={opp ? `${opp.teamName} · ${opp.username}` : ''}
-      sub={opp ? <>팀 종합 <span className="num">{opp.ovr}</span> · 전력 <span className="num">{fmt.int(opp.power)}</span></> : undefined}
+      sub={opp ? <>팀 종합 <span className="num">{showOvr(opp.ovr)}</span> · 전력 <span className="num">{fmt.int(opp.power)}</span></> : undefined}
       footer={opp ? <Button block disabled={busy} onClick={() => onStart(opp)}>대전 시작</Button> : undefined}
     >
       {opp && <TeamLineup cards={cardsFromSnapshot(opp.lineup ?? [])} onOpen={onClose} />}

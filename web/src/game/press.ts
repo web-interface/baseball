@@ -26,6 +26,7 @@ import { LEVEL_KO, aiLevel, aiTargetOf } from '../season/league';
 import { boxKeyOf, getBox, type BoxView } from '../season/box';
 import type { PostState, SeriesId } from '../season/post';
 import { evaluate, initialLineup, store as lineupStore, unit, type LineupState, type Unit } from '../screens/lineup/calc';
+import { showOvr } from './ovrShow';
 
 /* ═════════════ 모양 ═════════════ */
 /** 기사 분류 (목록의 [속보] 같은 머리) — 서버 worker/src/press.ts 의 TAGS 와 같은 이름 */
@@ -662,7 +663,7 @@ export function starsOf(box: BoxView | null, mine = true): [string, string][] {
 const tableRows = (rows: StandRow[]) => rows.map((r) => [r.teamId, r.w, r.d, r.l, r.streak.endsWith('승') ? parseInt(r.streak, 10) : r.streak.endsWith('패') ? -parseInt(r.streak, 10) : 0] as [string, number, number, number, number]);
 const squadOf = (ps: PlayerFact[], season: boolean) => ps.slice(0, 6).map((f) => [
   f.p.name, f.pos === 'SP' || f.pos === 'CL' || f.pos === 'RP' ? f.pos : f.p.pos === 'P' ? 'P' : f.pos,
-  safeLine(season ? (f.line || (f.inj ? `부상: ${f.inj}` : '')) : [`종합 ${f.ovr}`, f.tags.includes('legend') ? `${gradeKo(f.grade)} 카드` : '', f.inj ? `부상: ${f.inj}` : ''].filter(Boolean).join(' · '), 40) ?? '',
+  safeLine(season ? (f.line || (f.inj ? `부상: ${f.inj}` : '')) : [`종합 ${showOvr(f.ovr)}`, f.tags.includes('legend') ? `${gradeKo(f.grade)} 카드` : '', f.inj ? `부상: ${f.inj}` : ''].filter(Boolean).join(' · '), 40) ?? '',
 ] as [string, string, string]);
 function gameIn(f: DayFacts) {
   const m = f.my;
@@ -683,8 +684,8 @@ function gameIn(f: DayFacts) {
 const TAG_V = 2;
 export function newsReqOpen(f: OpenFacts) {
   return {
-    v: 1, tv: TAG_V, moment: 'open', year: f.year, date: f.date, me: f.me, lv: f.lv, ovr: f.ovr || undefined,
-    power: f.power.map(([id, p]) => [id, Math.max(0, Math.round(p))]),
+    v: 1, tv: TAG_V, moment: 'open', year: f.year, date: f.date, me: f.me, lv: f.lv, ovr: f.ovr ? showOvr(f.ovr) : undefined,
+    power: f.power.map(([id, p]) => [id, Math.max(0, showOvr(p))]),
     first: f.first ? { opp: f.first.opp, home: f.first.home, sp: okName(f.players.find((x) => x.key === 'sp')?.p.name) } : undefined,
     rival: f.rival ?? undefined,
     squad: squadOf(f.players.filter((x) => x.tags.includes('star') || x.tags.includes('hurt') || x.tags.includes('tired')), false),
@@ -695,7 +696,7 @@ export function newsReqOpen(f: OpenFacts) {
 const leaderRows = (ls: CloseFacts['leaders']) => ls.map((l) => [l.label, playerById(l.id)?.name ?? '', l.team, l.value] as [string, string, string, string]).filter((x) => !!okName(x[1]) && /^[0-9.\-]{1,7}$/.test(x[3]));
 export function newsReqClose(f: CloseFacts) {
   return {
-    v: 1, tv: TAG_V, moment: 'close', year: f.year, date: f.date, me: f.me, lv: f.lv, ovr: f.ovr || undefined,
+    v: 1, tv: TAG_V, moment: 'close', year: f.year, date: f.date, me: f.me, lv: f.lv, ovr: f.ovr ? showOvr(f.ovr) : undefined,
     table: tableRows(f.rows), power: [],
     leaders: leaderRows(f.leaders),
     squad: squadOf(f.players.filter((x) => !!x.line).sort((a, b) => (b.tags.includes('hot') ? 1 : 0) - (a.tags.includes('hot') ? 1 : 0)), true),
@@ -1012,7 +1013,7 @@ function ivReq(f: IvFacts) {
   const c = f.close, o = f.open;
   return {
     v: 1, moment: f.m.moment, year: f.m.year, date: f.m.date || (o?.date ?? c?.date ?? ''), me: ME.teamId,
-    lv: o?.lv ?? c?.lv, ovr: (o?.ovr ?? c?.ovr) || undefined,
+    lv: o?.lv ?? c?.lv, ovr: (o?.ovr ?? c?.ovr) ? showOvr((o?.ovr ?? c?.ovr)!) : undefined,
     rank: c ? c.rank : undefined, rec: c ? [c.row.w, c.row.d, c.row.l] : undefined,
     opp: f.m.opp, home: f.m.home, stage: c ? c.post.stage : undefined,
     rival: o?.rival && o.first && o.first.opp === o.rival.id ? o.rival.name : undefined,
@@ -1020,7 +1021,7 @@ function ivReq(f: IvFacts) {
       k: p.key, id: p.p.id, n: p.p.name, pos: p.pos === 'SP' || p.pos === 'CL' || p.pos === 'RP' ? p.pos : p.p.pos === 'P' ? 'P' : p.pos,
       c: Math.max(1, Math.min(5, Math.round(p.cond))), f: Math.max(0, Math.min(100, Math.round(p.fat))),
       inj: safeLine(p.inj, 24),
-      note: safeLine(c ? p.line : [`종합 ${p.ovr}`, p.tags.includes('legend') ? `${gradeKo(p.grade)} 카드` : ''].filter(Boolean).join(' · '), 40),
+      note: safeLine(c ? p.line : [`종합 ${showOvr(p.ovr)}`, p.tags.includes('legend') ? `${gradeKo(p.grade)} 카드` : ''].filter(Boolean).join(' · '), 40),
     })),
     topics: f.topics.map((t) => safeLine(t, 70)).filter((t): t is string => !!t).slice(0, 5),
     // 질문마다 기자 성향 — 서버가 그 말투로 쓴다 (예전 서버는 이 칸을 그냥 넘긴다)

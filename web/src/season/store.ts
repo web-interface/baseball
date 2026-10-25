@@ -10,7 +10,7 @@ import { useSyncExternalStore } from 'react';
 import { ME, TEAMS, playerById, teamById } from '../game/mock';
 import type { LineupState } from '../screens/lineup/calc';
 import { FIRST_DAY, OLD_PER_OPP, OPENING_DATE, PER_OPP, SEASON_GAMES, openingDate, regularDays, rescheduled, seasonGames, setScheduleYear, type DayGames } from './schedule';
-import { closeYear, seasonYear, type LeagueYear } from './league';
+import { closeYear, seasonYear, type LeagueYear, type TeamStat } from './league';
 import type { BatRow, GameOut, PitRow } from './sim';
 import type { PostState } from './post';
 import { saveMyBox } from './box';
@@ -173,7 +173,7 @@ export function nextSeason(): LeagueYear | null {
   if (!isOver(s) || !s.post?.champion) return null;
   const row = standingsOf(s).find((r) => r.teamId === ME.teamId);
   archiveSeason(s);
-  const rec = closeYear({ rank: row?.rank ?? 5, w: row?.w ?? 0, d: row?.d ?? 0, l: row?.l ?? 0, post: postResultOf(s.post) });
+  const rec = closeYear({ rank: row?.rank ?? 5, w: row?.w ?? 0, d: row?.d ?? 0, l: row?.l ?? 0, post: postResultOf(s.post), stat: teamStatOf(ME.teamId, s) });
   clearSeen();
   state = fresh();
   save();
@@ -285,6 +285,23 @@ export const rankLabel = (ln: TeamLine, short = false) => (!ln.started ? '개막
 /* ───────── 선수 시즌 기록 (개막부터 친 경기) ───────── */
 export interface BatLine { g: number; pa: number; ab: number; h: number; hr: number; rbi: number; sb: number; bb: number; so: number; avg: number }
 export interface PitLine { g: number; gs: number; w: number; l: number; sv: number; hld: number; outs: number; er: number; so: number; era: number }
+/** 팀 타율 · 평균자책점과 리그 순위 — 리그 승격 조건 (season/league GATE bat · pit) */
+export function teamStatOf(team: string, s: SeasonState = load()): TeamStat {
+  const ab = new Map<string, number>(), h = new Map<string, number>(), outs = new Map<string, number>(), er = new Map<string, number>();
+  const plus = (m: Map<string, number>, k: string, v: number) => m.set(k, (m.get(k) ?? 0) + v);
+  for (const b of Object.values(s.bat)) { plus(ab, b.team, b.AB); plus(h, b.team, b.H); }
+  for (const p of Object.values(s.pit)) { plus(outs, p.team, p.outs); plus(er, p.team, p.ER); }
+  const avgOf = (t: string) => ((ab.get(t) ?? 0) > 0 ? (h.get(t) ?? 0) / ab.get(t)! : 0);
+  const eraOf = (t: string) => ((outs.get(t) ?? 0) > 0 ? ((er.get(t) ?? 0) * 27) / outs.get(t)! : 99);
+  const ids = TEAMS.map((t) => t.id);
+  const a = avgOf(team), e = eraOf(team);
+  const r = s.table[team];
+  return {
+    avg: a, avgRank: 1 + ids.filter((t) => avgOf(t) > a).length,
+    era: e === 99 ? 0 : e, eraRank: 1 + ids.filter((t) => eraOf(t) < e).length,
+    games: r ? r.w + r.d + r.l : 0,
+  };
+}
 export function batLine(id: string, s: SeasonState = load()): BatLine {
   const a = s.bat[id];
   if (!a) return { g: 0, pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, sb: 0, bb: 0, so: 0, avg: 0 };

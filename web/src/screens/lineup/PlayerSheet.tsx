@@ -12,6 +12,7 @@ import { cardAttrBonus, cardBonusSources, gearBonus, gearOf, recentOf } from '..
 import { cardProps } from '../../cards';
 import { FIT_KO, STAFF_FIT_KO, SLOT_KO, fitPenalty, getSlot, isBat, unit, type Eval, type LineupState, type Slot } from './calc';
 import s from './PlayerSheet.module.css';
+import { cardShow, cardViewPlayer, showWith } from '../../game/ovrShow';
 
 const BAT_KEYS: AttrKey[] = ['contactR', 'contactL', 'power', 'gap', 'eye', 'avoidK'];
 const RUN_FIELD_KEYS: AttrKey[] = ['speed', 'baserunning', 'range', 'hands', 'armStr', 'armAcc'];
@@ -25,7 +26,7 @@ const throwsKo = (p: Player) => (p.throws === 'L' ? '좌투' : '우투');
 const ipText = (ip: number) => (Number.isInteger(ip) ? `${ip}.0` : String(ip));
 
 type AB = Partial<Record<AttrKey | 'stuff' | 'command', number>>;
-function Bars({ title, keys, p, bonus }: { title: string; keys: AttrKey[]; p: Player; bonus?: AB }) {
+function Bars({ title, keys, p, bonus }: { title: string; keys: AttrKey[]; p: Player; bonus?: AB }) { // p 는 화면용(눈금 몫을 더한) 선수
   const list = keys.filter((k) => p.attrs[k] != null);
   if (!list.length) return null;
   return (
@@ -77,7 +78,9 @@ export function PlayerSheet({ slot, st, ev, onClose, onSwap }: PlayerSheetProps)
   const bl = p.season.bat;
   const pl = p.season.pit;
   const sig = c.signaturePitch;
-  const ovr = c.ovr ?? p.ovr;
+  const ovr = cardShow(c, p.ovr).ovr;
+  const pv = cardViewPlayer(c, p); // 능력치 막대 — 화면 눈금
+  const tot = ue ? showWith(c, p.ovr, ue.total) : ovr;
   const trend = recent.trend === 'hot' ? '오름세' : recent.trend === 'cold' ? '내림세' : '평소대로';
   // 더해진 값 — 선수 상세 능력치와 같은 계산: 강화 · 훈련 · 잠재력(팀 몫 포함) · 플레이스타일 · 세트덱 · 장비
   const gearPer = gearBonus(p, gearOf(c, p).equipped).per;
@@ -142,8 +145,8 @@ export function PlayerSheet({ slot, st, ev, onClose, onSwap }: PlayerSheetProps)
         </div>
         <div className={s.ovr}>
           <small>{ue ? '라인업 종합' : '종합'}</small>
-          <b className={['num-display', ue && Math.round(ue.total) > ovr && s.ovrUp, ue && Math.round(ue.total) < ovr && s.ovrDown].filter(Boolean).join(' ')}>{ue ? Math.round(ue.total) : ovr}</b>
-          {ue && Math.round(ue.total) !== ovr && <small>카드 <span className="num">{ovr}</span> {Math.round(ue.total) > ovr ? '+' : '−'}<span className="num">{Math.abs(Math.round(ue.total) - ovr)}</span></small>}
+          <b className={['num-display', ue && tot > ovr && s.ovrUp, ue && tot < ovr && s.ovrDown].filter(Boolean).join(' ')}>{tot}</b>
+          {ue && tot !== ovr && <small>카드 <span className="num">{ovr}</span> {tot > ovr ? '+' : '−'}<span className="num">{Math.abs(tot - ovr)}</span></small>}
         </div>
       </div>
 
@@ -157,7 +160,7 @@ export function PlayerSheet({ slot, st, ev, onClose, onSwap }: PlayerSheetProps)
         )}
         {pit ? (
           <div className={s.cols}>
-            <Bars title="투구" keys={PIT_KEYS} p={p} bonus={bonus} />
+            <Bars title="투구" keys={PIT_KEYS} p={pv} bonus={bonus} />
             {p.pitches && p.pitches.length > 0 && (
               <div className={s.group}>
                 <h4 className={s.gh}>구종 위력<span>평균 구속 · 구사율</span></h4>
@@ -171,9 +174,9 @@ export function PlayerSheet({ slot, st, ev, onClose, onSwap }: PlayerSheetProps)
           </div>
         ) : (
           <div className={s.cols}>
-            <Bars title="타격" keys={BAT_KEYS} p={p} bonus={bonus} />
-            <Bars title="주루 · 수비" keys={RUN_FIELD_KEYS} p={p} bonus={bonus} />
-            {p.pos === 'C' && <Bars title="포수" keys={CATCH_KEYS} p={p} bonus={bonus} />}
+            <Bars title="타격" keys={BAT_KEYS} p={pv} bonus={bonus} />
+            <Bars title="주루 · 수비" keys={RUN_FIELD_KEYS} p={pv} bonus={bonus} />
+            {p.pos === 'C' && <Bars title="포수" keys={CATCH_KEYS} p={pv} bonus={bonus} />}
           </div>
         )}
         {sig && (

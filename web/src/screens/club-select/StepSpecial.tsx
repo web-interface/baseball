@@ -17,6 +17,7 @@ import {
 import type { StepProps } from './index';
 import s from './cs.module.css';
 import x from './StepSpecial.module.css';
+import { showOvr } from '../../game/ovrShow';
 
 function Group({ title, note, children }: { title: string; note?: ReactNode; children: ReactNode }) {
   return (
@@ -281,7 +282,7 @@ export function StepSpecial({ st, set, go, Dock }: StepProps) {
             <blockquote>“{chant}”</blockquote>
             <button type="button" className={x.again} onClick={() => put({ chant: c.chant + 1 })}><Icon name="refresh" size={14} /> 다른 구호</button>
           </div>
-          <p className={x.pot}><b>잠재력 최고</b> · 종합 <span className="num">{player.ovr}</span>에서 시작</p>
+          <p className={x.pot}><b>잠재력 최고</b> · 종합 <span className="num">{showOvr(player.ovr)}</span>에서 시작</p>
         </div>
       </div>
 

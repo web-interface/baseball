@@ -5,8 +5,8 @@ import { Link } from '../../app/router';
 import type { LineupState } from '../lineup/calc';
 import { Button, useToast } from '../../ui';
 import { ME } from '../../game/mock';
-import { GATE, LEVELS, LEVEL_KO, LEVEL_INFO, PROMOTE_RANK, RELEGATE_RANK, gateItems, gateOk, metLevel, nextLevel, teamStatus, useLeague, type AiLevel } from '../../season/league';
-import { isOver, nextSeason, standingsOf, useSeason, yearOf } from '../../season/store';
+import { LEVELS, LEVEL_KO, LEVEL_INFO, PROMOTE_RANK, RELEGATE_RANK, gateItems, gateOk, metLevel, nextLevel, teamStatus, useLeague, type AiLevel } from '../../season/league';
+import { isOver, nextSeason, standingsOf, teamStatOf, useSeason, yearOf } from '../../season/store';
 import s from './LeaguePanel.module.css';
 
 /** 시즌 끝 — 지금 순위 · 조건이면 다음 해 단계 */
@@ -38,7 +38,7 @@ export function LeaguePanel({ endOnly = false }: { endOnly?: boolean }) {
   const over = isOver(season);
   const year = yearOf(season);
   // 라인업 · 카드가 바뀌면 값도 바뀐다 — 화면을 열 때마다 새로 (가벼운 계산)
-  const t = useMemo(() => teamStatus(), [season, L]);
+  const t = useMemo(() => teamStatus(undefined, teamStatOf(ME.teamId, season)), [season, L]);
   const up = nextLevel(L.level);
   const upItems = up ? gateItems(up, t) : [];
   const rank = standingsOf(season).find((r) => r.teamId === ME.teamId)?.rank ?? 0;
@@ -84,7 +84,7 @@ export function LeaguePanel({ endOnly = false }: { endOnly?: boolean }) {
       {up ? (
         <div className={s.next}>
           <p className={s.nextH}>{LEVEL_KO[up]} 조건</p>
-          <ul className={s.items} title={GATE[up].teamYear != null ? '단일팀 연도덱 = 엔트리 중 같은 구단 · 같은 연도 카드' : undefined}>
+          <ul className={s.items}>
             {upItems.map((x) => (
               <li key={x.label} className={x.ok ? s.ok : s.no}>
                 <i aria-hidden>{x.ok ? '✓' : '·'}</i>
@@ -117,7 +117,8 @@ export function LeaguePanel({ endOnly = false }: { endOnly?: boolean }) {
 /** 한 줄 — 라인업 화면 게이지 아래: '리그 단계 연습생 · 2군까지 팀 종합 80 (지금 65)' (누르면 시즌 화면) */
 export function LeagueLine({ st }: { st?: LineupState }) {
   const L = useLeague();
-  const t = useMemo(() => teamStatus(st), [st, L]);
+  const season = useSeason();
+  const t = useMemo(() => teamStatus(st, teamStatOf(ME.teamId, season)), [st, L, season]);
   const up = nextLevel(L.level);
   const miss = up ? gateItems(up, t).filter((x) => !x.ok) : [];
   return (

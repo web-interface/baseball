@@ -16,6 +16,7 @@ import { GAME } from './local-mock';
 import { PLAYS, type Live } from './timeline';
 import { ipText, isSeasonGame, pitcherToday } from './Panels';
 import s from './LineupSheet.module.css';
+import { cardShow, cardViewPlayer, playerShift, shiftPlayer, showOvr } from '../../game/ovrShow';
 
 type Side = 'away' | 'home';
 const HITS = ['1B', '2B', '3B', 'HR'];
@@ -96,10 +97,10 @@ export function cardFor(p: Player, mine: Map<string, CardInst>) {
   }
   const v = /^(k[0-9a-z]+)~(\d{4})$/.exec(p.id);
   const kc = v ? seasonCardOf(v[1], Number(v[2])) : undefined;
-  if (kc) { const inst = cardInst(kc); return { props: { player: p, grade: inst.grade, year: inst.year, cardId: inst.id }, card: null }; }
+  if (kc) { const inst = cardInst(kc); return { props: { player: cardViewPlayer(inst, p), grade: inst.grade, year: inst.year, cardId: inst.id }, card: null }; }
   const legacy = CARDS.find((x) => x.playerId === p.id);
-  if (legacy) return { props: { player: p, grade: legacy.grade, year: legacy.year, cardId: legacy.id }, card: null };
-  return { props: { player: p, grade: 'normal' as GradeId }, card: null };
+  if (legacy) return { props: { player: cardViewPlayer(legacy, p), grade: legacy.grade, year: legacy.year, cardId: legacy.id }, card: null };
+  return { props: { player: shiftPlayer(p, playerShift(p.ovr)), grade: 'normal' as GradeId }, card: null };
 }
 
 interface Cell { key: string; p: Player; badge: string; pos: string; short: string; long: string; season: string; now: boolean; pitcher: boolean }
@@ -209,7 +210,10 @@ function TeamBlock({ side, live, pre, done, mine: myCardsMap, sel, onSel }: { si
 function Detail({ cell, mine }: { cell: Cell; mine: Map<string, CardInst> }) {
   const { card } = cardFor(cell.p, mine);
   const now = card ? cardNow(card) : null;
-  const ovr = now?.ovr ?? cell.p.ovr;
+  // 화면 눈금 — 우리 카드면 카드 구간 + 더해진 값, 아니면 꺾은선
+  const sh = card ? cardShow(card, cell.p.ovr).shift : playerShift(cell.p.ovr);
+  const ovr = card ? Math.round((now?.ovr ?? card.ovr ?? cell.p.ovr) + sh) : showOvr(cell.p.ovr);
+  const fb = card?.boost ?? 0;
   return (
     <div className={s.detail}>
       <p className={s.dName}>
@@ -222,7 +226,7 @@ function Detail({ cell, mine }: { cell: Cell; mine: Map<string, CardInst> }) {
       <div className={s.bars}>
         {cell.p.face.map((f) => {
           const add = Math.round(now?.bonus.total[f.code] ?? 0);
-          return <StatBar key={f.code} label={f.ko} value={f.v} bonus={add > 0 ? add : undefined} size="s" labelWidth={56} />;
+          return <StatBar key={f.code} label={f.ko} value={f.v + fb + sh} bonus={add > 0 ? add : undefined} size="s" labelWidth={56} />;
         })}
       </div>
       {card && <p className={s.dNote}>우리 선수 — 강화 · 훈련 · 잠재력 · 세트덱이 더해진 값</p>}

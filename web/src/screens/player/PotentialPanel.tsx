@@ -17,6 +17,7 @@ import { cardNow } from '../lineup/ctx';
 import { potentialMax } from './Hero';
 import { Stars } from './common';
 import s from './PotentialPanel.module.css';
+import { cardShow } from '../../game/ovrShow';
 
 const cx = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ');
 const won = (n: number) => n.toLocaleString('ko-KR');
@@ -37,6 +38,7 @@ export function PotentialPanel({ p, card, owned }: { p: Player; card: CardInst; 
   const cur = potOf(card, p);
   const fixed = rollFixed(card, p);
   const grow = potentialMax(p);
+  const sh = cardShow(card, p.ovr).shift; // 화면 눈금 몫
   const [lit, setLit] = useState<{ k: number; name: string; n: number } | null>(null);
   const [hit, setHit] = useState<{ k: number; n: number; pot: Potential } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -188,9 +190,9 @@ export function PotentialPanel({ p, card, owned }: { p: Player; card: CardInst; 
         </details>
       )}
       <div className={s.grow}>
-        <span>성장 한계 {owned ? '' : '(추정) '}<b className="num">{owned ? grow : `${Math.max(p.ovr, grow - 3)}–${Math.min(99, grow + 3)}`}</b></span>
+        <span>성장 한계 {owned ? '' : '(추정) '}<b className="num">{owned ? grow + sh : `${Math.max(p.ovr, grow - 3) + sh}–${Math.min(99, grow + 3) + sh}`}</b></span>
         <Stars v={p.potential} size={12} />
-        <small>지금 <span className="num">{p.ovr}</span>{grow > p.ovr ? <> · 더 자랄 수 있는 폭 <span className="num">+{grow - p.ovr}</span></> : ' · 완성형'}</small>
+        <small>지금 <span className="num">{p.ovr + sh}</span>{grow > p.ovr ? <> · 더 자랄 수 있는 폭 <span className="num">+{grow - p.ovr}</span></> : ' · 완성형'}</small>
       </div>
     </section>
   );

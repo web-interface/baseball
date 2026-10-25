@@ -13,6 +13,7 @@ import { shortLabel } from '../../game/world';
 import { useIncremental } from '../../ui/useIncremental';
 import type { GradeId } from '../../game/types';
 import s from './GradeSheet.module.css';
+import { cardShow } from '../../game/ovrShow';
 
 /** 누르면 목록이 열리는 등급 */
 export const LISTED: GradeId[] = ['signature', 'black', 'franchise', 'mvp', 'gg', 'th'];
@@ -48,6 +49,8 @@ export function GradeSheet({ grade, onClose }: { grade: GradeId | null; onClose:
             const inst = (own > 0 && ownedCard(k.id)) || cardInst(k);
             const team = teamByCode(k.code);
             const award = awardLabel(k);
+            const sv = cardShow(inst, p.ovr); // 화면 눈금 (등급마다 5씩)
+            const fv = (v: number) => v + (inst.boost ?? 0) + sv.shift;
             return (
               <li key={k.id} className={own > 0 ? s.got : s.locked}>
                 <button type="button" className={s.row} style={{ '--tc': team.colors.primary } as CSSProperties} onClick={() => own > 0 && navigate(`/player/${inst.playerId}?card=${inst.id}`)}>
@@ -64,11 +67,11 @@ export function GradeSheet({ grade, onClose }: { grade: GradeId | null; onClose:
                     <small>{shortLabel(k.code)}{k.year ? ` · ${k.year}` : k.span ? ` · ${k.span[0]}–${k.span[1]}` : ''} · {p.pos === 'P' ? (p.role === 'SP' ? '선발' : p.role === 'CL' ? '마무리' : '불펜') : p.pos}</small>
                     <span className={s.stats}>
                       {p.face.slice(0, 6).map((f) => (
-                        <span key={f.code} className={f.v + (inst.boost ?? 0) >= 85 ? s.hi : f.v + (inst.boost ?? 0) >= 70 ? s.mid : undefined}><i>{f.ko ?? FACE_KO[f.code] ?? f.code}</i><b className="num">{f.v + (inst.boost ?? 0)}</b></span>
+                        <span key={f.code} className={fv(f.v) >= 85 ? s.hi : fv(f.v) >= 70 ? s.mid : undefined}><i>{f.ko ?? FACE_KO[f.code] ?? f.code}</i><b className="num">{fv(f.v)}</b></span>
                       ))}
                     </span>
                   </span>
-                  <span className={s.ovr}><b className="num">{inst.ovr ?? p.ovr}</b><small>종합</small></span>
+                  <span className={s.ovr}><b className="num">{sv.ovr}</b><small>종합</small></span>
                 </button>
               </li>
             );

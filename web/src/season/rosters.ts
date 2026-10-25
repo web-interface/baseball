@@ -8,6 +8,7 @@ import { eraOfCode } from '../game/world';
 import type { Player, PitcherRole, Pos } from '../game/types';
 import type { BatKey, PitKey, SetEffect } from '../game/sets';
 import { cardBonusOf, engineFxOf } from '../game/cardBonus';
+import { cardShow } from '../game/ovrShow';
 import { LEGEND_MAX, MVP_MAX, isLegendGrade, isMvpGrade, potFaceOf, teamPotential } from '../game/potential';
 import { interviewFx } from '../game/press';
 import { loadTactics, type TacState } from '../game/tactics';
@@ -33,6 +34,8 @@ export interface ClubRoster {
   setFx: Map<string, SetEffect>;
   /** 카드 강화 보너스 (내 구단) */
   enh: Map<string, number>;
+  /** 화면 눈금 몫 (내 구단 — 카드 등급 구간, game/ovrShow cardShow). 없으면 엔진 힘의 꺾은선(playerShift) — season/sim teamIn */
+  show?: Map<string, number>;
   /** 카드 훈련으로 오른 능력치 + 켜진 잠재력 — 엔진 칸별 { k, v } (내 구단, game/training trainFx · game/potential potEngineFx) */
   train?: Map<string, { k: BatKey | PitKey; v: number }[]>;
   /** 팀 종합 (표시용) */
@@ -105,6 +108,7 @@ export function myRoster(st: LineupState = withTac(lineupStore.get() ?? initialL
   const setFx = new Map<string, SetEffect>();
   const enh = new Map<string, number>();
   const train = new Map<string, { k: BatKey | PitKey; v: number }[]>();
+  const show = new Map<string, number>();
   const pl = (id: string | null) => (id ? unit(id) : undefined);
   // 잠재력 — 엔트리(타자 9 · 투수 16) 카드의 별 셋은 팀 타자 · 투수 전원에게(엔트리에서 2명만 켜진다 — 라인업 계산과 같은 potEntryOf),
   // 벤치 카드는 자기 몫만(별 셋은 꺼짐)
@@ -116,6 +120,7 @@ export function myRoster(st: LineupState = withTac(lineupStore.get() ?? initialL
     const u = pl(id);
     if (!u) return;
     const isP = u.player.pos === 'P';
+    show.set(u.player.id, cardShow(u.card, u.player.ovr).shift);
     const tf = engineFxOf(cardBonusOf(u.card, u.player, { potFace: potFaceOf(tp, u.card.id, isP) }), isP);
     if (tf.length) train.set(u.player.id, tf);
   };
@@ -172,7 +177,7 @@ export function myRoster(st: LineupState = withTac(lineupStore.get() ?? initialL
     train.set(pid, [...(train.get(pid) ?? []), ...fx]);
   }
   // 전술은 스냅샷에 얼린 것만(예전 기록의 스냅샷엔 없다 → 엔진 기본, 그때와 같은 경기)
-  return { teamId: ME.teamId, mine: true, batting, rotation, bullpen, closer, bench, delta: new Map(), setFx, enh, train, ovr: Math.round(ev.raw), tac: st.tac };
+  return { teamId: ME.teamId, mine: true, batting, rotation, bullpen, closer, bench, delta: new Map(), setFx, enh, train, show, ovr: Math.round(ev.raw), tac: st.tac };
 }
 
 /** 그 구단 선수단 (내 구단이면 내 엔트리) */

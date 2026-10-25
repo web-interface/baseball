@@ -12,6 +12,7 @@ import {
   type BoardSlot, type Cand, type Eval, type Fit, type Link, type LineupState, type LiteU, type Slot,
 } from './calc';
 import s from './SwapSheet.module.css';
+import { cardShow, showOvr, showWith } from '../../game/ovrShow';
 
 /** 받침 있으면 a, 없으면 b — '1선발과' · '포수와' */
 export const josa = (w: string, a: string, b: string) => {
@@ -124,8 +125,8 @@ function Effects({ fx }: { fx: Fx[] }) {
 
 function Score({ cur, nx, slot }: { cur: Eval; nx: Eval; slot: Slot }) {
   const pit = !isBat(slot) && slot !== 'R0';
-  const v = pit ? nx.parts.find((p) => p.k === 'pit')!.v : nx.overall;
-  const d = v - (pit ? cur.parts.find((p) => p.k === 'pit')!.v : cur.overall);
+  const v = showOvr(pit ? nx.parts.find((p) => p.k === 'pit')!.v : nx.overall);
+  const d = v - showOvr(pit ? cur.parts.find((p) => p.k === 'pit')!.v : cur.overall);
   return (
     <span className={s.num}>
       {pit && <small>투수</small>}
@@ -197,10 +198,10 @@ export function SwapSheet({ slot, st, ev, onClose, onApply }: SwapSheetProps) {
               <span className="num">Lv {fmt.level(cu.card.level)}</span>
             </p>
             <p className={s.sum}>
-              <span>기본 <b className="num">{Math.round(ue.base)}</b></span>
+              <span>기본 <b className="num">{showWith(cu.card, cu.player.ovr, ue.base)}</b></span>
               <span>세트 <b className="num">+{ue.tc % 1 ? ue.tc.toFixed(1) : ue.tc}</b></span>
               <span>케미 <b className="num">+{ue.chem.toFixed(1)}</b></span>
-              <span className={s.eq}>= <b className="num">{Math.round(ue.total)}</b></span>
+              <span className={s.eq}>= <b className="num">{showWith(cu.card, cu.player.ovr, ue.total)}</b></span>
             </p>
             {links.length > 0 && <p className={s.curLinks}>케미 선 · {links.join(' · ')}</p>}
             {ue.tcText.length > 0 && <p className={s.curLinks}>받는 세트 · {ue.tcText.join(' · ')}</p>}
@@ -285,7 +286,7 @@ export function BenchSheet({ cardId, st, ev, onClose, onApply }: BenchSheetProps
       onClose={onClose}
       height="tall"
       title={`${u.player.name} 넣을 자리`}
-      sub={`${u.team.name} · ${POS_KO[u.player.pos]} · 종합 ${u.player.ovr}`}
+      sub={`${u.team.name} · ${POS_KO[u.player.pos]} · 종합 ${cardShow(u.card, u.player.ovr).ovr}`}
     >
       <p className={s.listHead}><span>자리</span><span>넣으면 팀 종합</span></p>
       <ul className={s.list}>

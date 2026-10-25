@@ -10,6 +10,7 @@ import type { AttrKey, Player, Pos, WeatherKey } from '../game/types';
 import { condsOf, weatherFx } from '../game/weatherFit';
 import type { BatKey, PitKey, SetEffect } from '../game/sets';
 import { rosterOf, type ClubRoster } from './rosters';
+import { playerShift } from '../game/ovrShow';
 import { startTime } from './schedule';
 import { weatherOf } from './weather';
 export { rainedOut, weatherOf } from './weather';
@@ -53,18 +54,20 @@ const armSlot = (p: Player): PlayerIn['armSlot'] => {
   const f = p.form?.pitch ?? '';
   return /사이드/.test(f) ? 'side' : /언더/.test(f) ? 'under' : /오버/.test(f) ? 'over' : 'threeQuarter';
 };
-export function toPlayerIn(p: Player, id: number, delta: number, fx?: SetEffect, enh = 0, train?: { k: string; v: number }[]): PlayerIn {
+/** shift — 화면 눈금 몫(game/ovrShow): 엔진도 화면에 보이는 능력치 숫자를 그대로 받는다 (성향 칸 '…Tend' 은 그대로).
+ *  리그 공통 수준은 GameInput.levelRef(두 팀 평균 몫)로 맞춘다 — runGame */
+export function toPlayerIn(p: Player, id: number, delta: number, fx?: SetEffect, enh = 0, train?: { k: string; v: number }[], shift = 0): PlayerIn {
   const isP = p.pos === 'P';
   const attrs = ATTR_KEYS.map((k) => {
     const raw = p.attrs[k as AttrKey];
     if (/Tend$/.test(k)) return raw ?? (DEF_B[k] ?? DEF_P[k] ?? 50);
-    return raw != null ? clamp(raw + delta) : (DEF_B[k] ?? DEF_P[k] ?? 50);
+    return raw != null ? clamp(raw + delta + shift) : (DEF_B[k] ?? DEF_P[k] ?? 50) + shift;
   });
   const pos = POS_KEYS.map((q) => (q === p.pos ? 20 : p.subPos?.includes(q as Pos) ? 15 : q === 'DH' && !isP ? 16 : isP ? (q === 'P' ? 20 : 1) : 4));
   return {
     id, age: p.age, throws: p.throws, bats: p.bats, heightCm: p.heightCm, weightKg: p.weightKg, armSlot: armSlot(p),
     attrs, pos,
-    pitches: isP ? (p.pitches ?? [{ type: 'FF', ko: '포심', stuff: 50, command: 50, usage: 1, kmh: 140 }]).map((x) => ({ t: x.type, stuff: clamp(x.stuff + delta), cmd: clamp(x.command + delta), use: Math.round(x.usage * 100) })) : [],
+    pitches: isP ? (p.pitches ?? [{ type: 'FF', ko: '포심', stuff: 50, command: 50, usage: 1, kmh: 140 }]).map((x) => ({ t: x.type, stuff: clamp(x.stuff + delta + shift), cmd: clamp(x.command + delta + shift), use: Math.round(x.usage * 100) })) : [],
     traits: [],
     role: isP ? (p.role === 'SP' ? 'SP' : p.role === 'CL' ? 'CL' : 'RP') : undefined,
     bonus: bonusArr(fx, enh, isP, train),
@@ -99,7 +102,7 @@ const RULES = { maxInnings: 12, dh: true, zone: 'ABS' as const, shift: 'restrict
 const POST_RULES = { ...RULES, maxInnings: 15 };
 
 /* ───────── 선수단 → 엔진 팀 ───────── */
-export interface SideIn { team: TeamIn; webOf: Map<number, string>; idOf: Map<string, number>; roster: ClubRoster }
+export interface SideIn { team: TeamIn; webOf: Map<number, string>; idOf: Map<string, number>; roster: ClubRoster; /** 화면 눈금 몫 합 · 선수 수 (levelRef) */ shift: { sum: number; n: number } }
 /** conds — 그 경기에 걸리는 날씨(더위 · 추위 · 비 · 낮 경기): 선수마다 궁합이면 +, 상극이면 − (game/weatherFit) */
 export function teamIn(r: ClubRoster, day: number, idBase: number, conds: WeatherKey[] = []): SideIn {
   const list: Player[] = [];
@@ -112,12 +115,17 @@ export function teamIn(r: ClubRoster, day: number, idBase: number, conds: Weathe
   add(r.closer);
   const idOf = new Map<string, number>();
   const webOf = new Map<number, string>();
+  const shift = { sum: 0, n: 0 };
   const players = list.map((p, i) => {
     const id = idBase + i;
     idOf.set(p.id, id); webOf.set(id, p.id);
     const wfx = conds.length ? weatherFx(p, conds) : [];
     const extra = wfx.length ? [...(r.train?.get(p.id) ?? []), ...wfx] : r.train?.get(p.id);
-    return toPlayerIn(p, id, r.delta.get(p.id) ?? 0, r.setFx.get(p.id), r.enh.get(p.id) ?? 0, extra);
+    const delta = r.delta.get(p.id) ?? 0, enh = r.enh.get(p.id) ?? 0;
+    // 화면 눈금 몫 — 내 카드는 그 등급 구간(rosters.myRoster), AI · 카드 없는 선수는 엔진 힘(종합 + 보정 + 보너스)의 꺾은선
+    const sh = r.show?.get(p.id) ?? playerShift(p.ovr + delta + enh);
+    shift.sum += sh; shift.n++;
+    return toPlayerIn(p, id, delta, r.setFx.get(p.id), enh, extra, sh);
   });
   const rot = r.rotation.length ? r.rotation : r.bullpen.slice(0, 1);
   const sp = rot[((day % rot.length) + rot.length) % rot.length];
@@ -137,7 +145,7 @@ export function teamIn(r: ClubRoster, day: number, idBase: number, conds: Weathe
     mood: 55, streak: 0, chemTier: r.mine ? Math.min(3, r.setFx.size ? 2 : 0) : 1,
   };
   if (r.tac) applyTac(team, r, list, idBase);
-  return { team, webOf, idOf, roster: r };
+  return { team, webOf, idOf, roster: r, shift };
 }
 
 /**
@@ -243,6 +251,8 @@ export function runGame(seasonSeed: string, day: number, date: string, awayId: s
     ump: UMP,
     home: home.team,
     away: away.team,
+    // 리그 기준점 R — 능력치가 화면 눈금(힘 눈금보다 평균 14쯤 낮다)으로 들어가니, 두 팀 평균 몫만큼 공통 수준을 되돌린다(선수 사이 차이는 그대로)
+    levelRef: Math.round(((away.shift.sum + home.shift.sum) / Math.max(1, away.shift.n + home.shift.n)) * 10) / 10,
     // 경기 중 작전(내 팀만 — 엔진이 isUser 팀 명령만 받는다). 명령 앞 투구까지는 명령 없는 경기와 똑같다
     cmds: opts.cmds?.length ? opts.cmds : undefined,
     opts: opts.log ? { log: true, attrib: true } : undefined,

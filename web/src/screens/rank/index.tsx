@@ -16,6 +16,7 @@ import { deckOf, deckOfSnapshot } from '../../game/deck';
 import { entryMembers, initialLineup, store as lineupStore } from '../lineup/calc';
 import { demoRankings } from './demo';
 import s from './rank.module.css';
+import { showOvr } from '../../game/ovrShow';
 
 const BY: { value: RankingBy; label: string; col: string }[] = [
   { value: 'rating', label: '레이팅', col: '레이팅' },
@@ -188,7 +189,7 @@ function Managers({ by, setBy, demo }: { by: RankingBy; setBy: (v: RankingBy) =>
         open={!!peek}
         onClose={() => setPeek(null)}
         title={peek ? `${peek.teamName} · ${peek.username}` : ''}
-        sub={peek ? <>팀 종합 <span className="num">{peek.ovr}</span> · 전력 <span className="num">{fmt.int(peek.power)}</span></> : undefined}
+        sub={peek ? <>팀 종합 <span className="num">{showOvr(peek.ovr)}</span> · 전력 <span className="num">{fmt.int(peek.power)}</span></> : undefined}
         height="tall"
       >
         {peek && (demo

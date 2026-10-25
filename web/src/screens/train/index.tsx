@@ -21,6 +21,7 @@ import {
 import type { CardInst } from '../../game/types';
 import { PlaceArt } from './PlaceArt';
 import s from './Train.module.css';
+import { cardShow } from '../../game/ovrShow';
 
 /* ───────── 이 기기에 기억 (고른 카드 · 장소 · 카드별 능력치) ───────── */
 const PREF_KEY = 'bb.train';
@@ -175,7 +176,7 @@ function Trainer({ id, placeId, setPlaceId, onPickCard, log, onLog, onOpen }: {
             <b className="head">{p.name}</b>
             <span className={s.grade} style={{ color: `var(--gr-${card.grade})` }}>{GRADES[card.grade].ko}{yy(card)}</span>
           </p>
-          <p className={s.sub}>{team.short} · {posKo} · 종합 <span className="num">{card.ovr ?? p.ovr}</span></p>
+          <p className={s.sub}>{team.short} · {posKo} · 종합 <span className="num">{cardShow(card, p.ovr).ovr}</span></p>
           <div className={s.stage}>
             <span className={s.stageLab}>훈련 단계</span>
             <b className="num-display">{tr.lv}</b><small className="num">/ {TRAIN_MAX}</small>

@@ -25,6 +25,7 @@ import {
 } from './local-mock';
 import { entryOf, inLineup, setPlaystyle, tryEnhance, useInventory } from '../../game/inventory';
 import s from './player.module.css';
+import { cardShow, cardViewPlayer } from '../../game/ovrShow';
 
 type Tab = 'attr' | 'season' | 'real' | 'career' | 'pot' | 'gear' | 'enhance';
 const TAB_IDS: Tab[] = ['attr', 'season', 'real', 'career', 'pot', 'gear', 'enhance'];
@@ -171,7 +172,7 @@ function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: 
           <span className={s.miniFace}><PlayerArt player={p} team={team} variant="mini" /></span>
           <span className={s.miniText}>
             <b>{p.name}</b>
-            <span><span className="num">{p.ovr}</span> · {g.short}{cur.enh > 0 ? ` ${fmt.roman(cur.enh)}` : ''}</span>
+            <span><span className="num">{cardShow(card, p.ovr).ovr}</span> · {g.short}{cur.enh > 0 ? ` ${fmt.roman(cur.enh)}` : ''}</span>
           </span>
         </div>
         <Tabs className={s.tabs} items={tabItems} value={tab} onChange={setTab} fill aria-label="선수 정보" />
@@ -180,7 +181,7 @@ function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: 
       <div role="tabpanel" aria-label={tabItems.find((x) => x.value === tab)?.label}>
         {tab === 'attr' && (
           <AttrPanel
-            p={p} card={card} grade={card.grade} owned={owned} mineCount={mine.length}
+            p={cardViewPlayer(card, p)} card={card} grade={card.grade} owned={owned} mineCount={mine.length}
             enh={cur.enh} playstyle={cur.ps} gearPer={gb.per} scale={scale} onScale={setScale}
           />
         )}

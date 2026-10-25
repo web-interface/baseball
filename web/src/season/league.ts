@@ -1,14 +1,14 @@
 // 리그 단계 = AI 상대 난이도 — 고르지 않는다. 연습생에서 시작해, 시즌이 끝날 때 성적과 팀 조건으로 저절로 오르내린다.
-//  · 오르기: 정규 시즌 1위 + 다음 단계 조건(팀 종합 · 단일팀 연도덱 · 우승 연도 · 강화)을 모두 채웠을 때 한 단계씩
+//  · 오르기: 정규 시즌 1위 + 다음 단계 조건(팀 종합 · 강화 · 팀 타격 · 팀 투수 성적)을 모두 채웠을 때 한 단계씩
 //  · 내리기: 9 · 10위면 한 단계, 지금 단계 조건이 깨졌으면 조건을 채우는 단계까지
 //  · AI 구단 = 단계 기준(처음 팀보다 조금 셈) + 내 팀이 기준보다 센 만큼의 70%(고무줄) + 같은 단계에 오래 머물수록 조금씩 — 성적 올리기가 쉽지 않게
-//  · 1군부터는 '단일팀 연도덱(구단+연도 세트 14명 이상) + 그 연도가 우승 연도 + 팀 종합 100' 이 기본, 올스타부터는 강화까지
+//  · 1군부터는 '팀 타율 · 팀 평균자책점 리그 순위'(그 시즌 성적)가 붙고, 올스타부터는 강화까지
+//    (사용자 지시 10-25 밤 — 세트덱 조건(단일팀 연도덱 · 우승덱 · 왕조)은 빼고 타자 · 투수 성적으로)
 // 저장: localStorage 'bb.ladder' { v: 1, club, year, level, stay, aiRef, history } — 시즌 연도도 여기서 센다(2027 → 2028 …).
 import { useSyncExternalStore } from 'react';
 import { ME, teamById } from '../game/mock';
-import { clubTitles } from '../game/clubSeasons';
-import { ENTRY_SIZE } from '../game/sets';
 import type { GradeId } from '../game/types';
+import { showOvr } from '../game/ovrShow';
 import { BAT_SLOTS, evaluate, initialLineup, store as lineupStore, unit, type LineupState } from '../screens/lineup/calc';
 
 export type AiLevel = 'trainee' | 'futures' | 'first' | 'allstar' | 'national' | 'legend';
@@ -26,16 +26,19 @@ export const LEVEL_INFO: Record<AiLevel, { desc: string; grades: GradeId[]; rewa
   legend: { desc: '승리 확률표대로 최적 판단', grades: ['legend', 'black', 'signature'], reward: 2, prize: '블랙 이상 확정 팩' },
 };
 
-/** 단계에 들어가는 조건 — ovr 팀 종합 · teamYear 단일팀 연도덱 인원(우승 연도여야) · enh 선발 10명 평균 강화 */
-export interface Gate { ovr: number; teamYear?: number; enh?: number }
+/** 단계에 들어가는 조건 — ovr 팀 종합(힘 눈금) · enh 선발 10명 평균 강화 · bat 팀 타율 리그 몇 위 이내 · pit 팀 평균자책점 리그 몇 위 이내.
+ *  성적(bat · pit)은 그 시즌을 치른 결과라 오를 때만 본다 — '조건이 깨져 내려감' 판단(metLevel)엔 넣지 않는다 */
+export interface Gate { ovr: number; enh?: number; bat?: number; pit?: number }
 export const GATE: Record<AiLevel, Gate> = {
   trainee: { ovr: 0 },
   futures: { ovr: 80 },
-  first: { ovr: 100, teamYear: 14 },
-  allstar: { ovr: 104, teamYear: 14, enh: 5 },
-  national: { ovr: 107, teamYear: ENTRY_SIZE, enh: 7 },
-  legend: { ovr: 110, teamYear: ENTRY_SIZE, enh: 9 },
+  first: { ovr: 100, bat: 3, pit: 3 },
+  allstar: { ovr: 104, enh: 5, bat: 3, pit: 3 },
+  national: { ovr: 107, enh: 7, bat: 2, pit: 2 },
+  legend: { ovr: 110, enh: 9, bat: 1, pit: 1 },
 };
+/** 리그 순위 글 — '1위' · '3위 이내' */
+export const rankKo = (n: number) => (n === 1 ? '1위' : `${n}위 이내`);
 /** 오르는 성적 · 내려가는 성적 */
 export const PROMOTE_RANK = 1;
 export const RELEGATE_RANK = 9;
@@ -106,59 +109,44 @@ export const aiLevel = (): AiLevel => read().level;
 export function resetLeague() { write(fresh()); }
 
 /* ───────── 내 팀 조건 ───────── */
+/** 이번 시즌 팀 타율 · 평균자책점과 리그 순위 (season/store teamStatOf) */
+export interface TeamStat { avg: number; avgRank: number; era: number; eraRank: number; games: number }
 export interface TeamStatus {
-  /** 팀 종합 (99 위로도 셈) */
+  /** 팀 종합 (힘 눈금, 99 위로도 셈) */
   ovr: number;
-  /** 가장 많이 모은 단일팀 연도덱 (구단+연도 세트) */
-  ty: { name: string; have: number; title: boolean } | null;
-  /** 우승 연도 단일팀 연도덱 중 가장 많이 모은 것 */
-  titleTy: { name: string; have: number } | null;
   /** 선발 10명(타순 9 + 1선발) 평균 강화 */
   enhAvg: number;
+  /** 이번 시즌 팀 성적 — 없으면 성적 조건은 아직 못 채운 것으로 */
+  stat?: TeamStat | null;
 }
-export function teamStatus(st: LineupState = lineupStore.get() ?? initialLineup()): TeamStatus {
+export function teamStatus(st: LineupState = lineupStore.get() ?? initialLineup(), stat: TeamStat | null = null): TeamStatus {
   const ev = evaluate(st);
-  const tys = ev.sets.filter((s) => s.kind === 'teamYear' && s.code && s.year).sort((a, b) => b.have - a.have);
-  const isTitle = (s: (typeof tys)[number]) => clubTitles(s.code!).includes(s.year!);
-  const best = tys[0];
-  const bestTitle = tys.find(isTitle);
   const ids = [...BAT_SLOTS.map((s) => st.field[s]), st.rotation[0]].filter((x): x is string => !!x);
   const enh = ids.map((id) => { try { return unit(id).card.enhance ?? 0; } catch { return 0; } });
   return {
     ovr: Math.round(ev.raw),
-    ty: best ? { name: best.name, have: best.have, title: isTitle(best) } : null,
-    titleTy: bestTitle ? { name: bestTitle.name, have: bestTitle.have } : null,
     enhAvg: enh.length ? enh.reduce((a, b) => a + b, 0) / enh.length : 0,
+    stat,
   };
 }
 export interface GateItem { label: string; ok: boolean; now: string }
-/** 그 단계 조건을 하나씩 — 화면 체크 목록 */
-export function gateItems(level: AiLevel, t: TeamStatus): GateItem[] {
+/** 그 단계 조건을 하나씩 — 화면 체크 목록. withStats: 시즌 성적 조건까지 (오를 때) — 팀 종합은 화면 눈금으로 보여 준다 */
+export function gateItems(level: AiLevel, t: TeamStatus, withStats = true): GateItem[] {
   const g = GATE[level];
-  const out: GateItem[] = [{ label: `팀 종합 ${g.ovr} 이상`, ok: t.ovr >= g.ovr, now: `지금 ${t.ovr}` }];
-  if (g.teamYear) {
-    const full = g.teamYear >= ENTRY_SIZE;
-    out.push({
-      label: full ? `단일팀 연도덱 엔트리 전원(왕조)` : `단일팀 연도덱 ${g.teamYear}명 이상`,
-      ok: (t.ty?.have ?? 0) >= g.teamYear,
-      now: t.ty ? `지금 ${t.ty.name} ${t.ty.have}명` : '아직 없음',
-    });
-    out.push({
-      label: '그 연도덱이 우승 연도(우승덱)',
-      ok: (t.titleTy?.have ?? 0) >= g.teamYear,
-      now: t.titleTy ? `${t.titleTy.name} ${t.titleTy.have}명` : '우승 연도 카드 없음',
-    });
-  }
+  const out: GateItem[] = [{ label: `팀 종합 ${showOvr(g.ovr)} 이상`, ok: t.ovr >= g.ovr, now: `지금 ${showOvr(t.ovr)}` }];
   if (g.enh) out.push({ label: `선발 10명 평균 강화 ${roman(g.enh)} 이상`, ok: t.enhAvg >= g.enh, now: `지금 ${t.enhAvg.toFixed(1)}` });
+  const st = t.stat && t.stat.games > 0 ? t.stat : null;
+  if (withStats && g.bat) out.push({ label: `팀 타율 리그 ${rankKo(g.bat)}`, ok: !!st && st.avgRank <= g.bat, now: st ? `지금 ${st.avg.toFixed(3).replace(/^0/, '')} · ${st.avgRank}위` : '시즌 기록 없음' });
+  if (withStats && g.pit) out.push({ label: `팀 평균자책점 리그 ${rankKo(g.pit)}`, ok: !!st && st.eraRank <= g.pit, now: st ? `지금 ${st.era.toFixed(2)} · ${st.eraRank}위` : '시즌 기록 없음' });
   return out;
 }
-export const gateOk = (level: AiLevel, t: TeamStatus) => gateItems(level, t).every((x) => x.ok);
+export const gateOk = (level: AiLevel, t: TeamStatus, withStats = true) => gateItems(level, t, withStats).every((x) => x.ok);
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 const roman = (n: number) => ROMAN[Math.max(0, Math.min(10, n))];
-/** 조건을 채운 가장 높은 단계 */
+/** 조건을 채운 가장 높은 단계 — 팀 조건(종합 · 강화)만 (성적은 오를 때만 본다) */
 export function metLevel(t: TeamStatus): AiLevel {
   let out: AiLevel = 'trainee';
-  for (const l of LEVELS) if (gateOk(l, t)) out = l;
+  for (const l of LEVELS) if (gateOk(l, t, false)) out = l;
   return out;
 }
 export const nextLevel = (l: AiLevel): AiLevel | null => LEVELS[LEVELS.indexOf(l) + 1] ?? null;
@@ -185,9 +173,9 @@ export function freezeAiRef() {
 }
 
 /* ───────── 시즌 끝 → 다음 해 ───────── */
-export function closeYear(r: { rank: number; w: number; d: number; l: number; post?: string }): LeagueYear {
+export function closeYear(r: { rank: number; w: number; d: number; l: number; post?: string; stat?: TeamStat | null }): LeagueYear {
   const L = read();
-  const t = teamStatus();
+  const t = teamStatus(undefined, r.stat ?? null);
   const cur = L.level;
   const i = LEVELS.indexOf(cur);
   const up = nextLevel(cur);

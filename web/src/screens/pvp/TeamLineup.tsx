@@ -14,6 +14,7 @@ import type { ClubRoster } from '../../season/rosters';
 import { cardNow } from '../lineup/ctx';
 import { initialLineup, store as lineupStore, unit } from '../lineup/calc';
 import s from './TeamLineup.module.css';
+import { cardShow, cardViewPlayer, playerShift, shiftPlayer } from '../../game/ovrShow';
 
 type MiniLook = ComponentProps<typeof CardMini>;
 export interface LineupCard {
@@ -58,10 +59,10 @@ function findCatalogCard(kid: string, viewYear: number, y?: number, ovr?: number
 function lookOfPlayer(p: Player): { look: MiniLook; card: { id: string } | null } {
   const v = VIEW_RE.exec(p.id);
   const kc = v ? seasonCardOf(v[1], Number(v[2])) : undefined;
-  if (kc) { const c = cardInst(kc); return { look: { player: p, grade: c.grade, year: c.year, cardId: c.id, signaturePitch: c.signaturePitch ?? null, award: c.award }, card: c }; }
+  if (kc) { const c = cardInst(kc); return { look: { player: cardViewPlayer(c, p), grade: c.grade, year: c.year, cardId: c.id, signaturePitch: c.signaturePitch ?? null, award: c.award }, card: c }; }
   const legacy = CARDS.find((x) => x.playerId === p.id);
-  if (legacy) return { look: { player: p, grade: legacy.grade, year: legacy.year, cardId: legacy.id }, card: legacy };
-  return { look: { player: p, grade: 'normal' }, card: null };
+  if (legacy) return { look: { player: cardViewPlayer(legacy, p), grade: legacy.grade, year: legacy.year, cardId: legacy.id }, card: legacy };
+  return { look: { player: shiftPlayer(p, playerShift(p.ovr)), grade: 'normal' }, card: null };
 }
 /** 내 카드 그대로 (강화 · 훈련 · 잠재력 · 지금 종합) */
 function lookOfMine(card: CardInst): MiniLook {
@@ -87,9 +88,10 @@ export function cardsFromSnapshot(lineup: PvpLineupItem[]): LineupCards {
       card = null;
     }
     const special = id === 'p-special' || id === 'p41'; // 특별 선수 — 서버엔 등급이 없어도 ONLY ONE 카드로
+    // 화면 눈금 — 카드면 그 등급 구간, 아니면 꺾은선 (it.ovr 은 서버에 올라간 힘 눈금 종합)
     const look: MiniLook = card
-      ? { player: p, grade: card.grade, year: card.year, cardId: card.id, signaturePitch: card.signaturePitch ?? null, award: card.award, ovrShown: it.ovr }
-      : { player: p, grade: special ? 'unique' : 'normal', ovrShown: it.ovr };
+      ? { player: cardViewPlayer(card, p), grade: card.grade, year: card.year, cardId: card.id, signaturePitch: card.signaturePitch ?? null, award: card.award, ovrShown: it.ovr, ovrShift: cardShow(card, p.ovr).shift }
+      : { player: shiftPlayer(p, playerShift(p.ovr)), grade: special ? 'unique' : 'normal', ovrShown: it.ovr, ovrShift: playerShift(it.ovr) };
     const href = card ? hrefOf(p, card) : undefined;
     if (isP) mound.push({ key: `p${i}`, badge: 'P', pos: it.pos === 'SP' ? '선발' : it.pos === 'CP' ? '마무리' : '불펜', look, href });
     else bat.push({ key: `b${i}`, badge: String(bat.length + 1), pos: POS_SHORT[it.pos] ?? it.pos, look, href });

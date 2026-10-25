@@ -15,7 +15,8 @@ import { resetStarter } from '../../game/starter';
 import { evaluate, initialLineup, store as lineupStore } from '../lineup/calc';
 import { mergeStarter, resetInventory } from '../../game/inventory';
 import { SEASON_GAMES, clearSeason, getSeason, setNextNotice } from '../../season/store';
-import { GATE, LEVELS, LEVEL_INFO, LEVEL_KO, resetLeague } from '../../season/league';
+import { GATE, LEVELS, LEVEL_INFO, LEVEL_KO, rankKo, resetLeague } from '../../season/league';
+import { showOvr } from '../../game/ovrShow';
 import type { StepProps } from './index';
 import s from './cs.module.css';
 import o from './StepOpen.module.css';
@@ -93,7 +94,7 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
             <button type="button" className={o.edit} onClick={() => go('draft')}><Icon name="swap" size={14} /> 바꾸기</button>
           </div>
         </div>
-        <p className={o.starter}>팀 종합 <b className="num">{ovr}</b></p>
+        <p className={o.starter}>팀 종합 <b className="num">{showOvr(ovr)}</b></p>
       </section>
 
       <section className={s.group} aria-labelledby="ai-h">
@@ -102,8 +103,9 @@ export function StepOpen({ st, set, go, Dock }: StepProps) {
           {LEVELS.map((id, i) => {
             const g = GATE[id];
             const need = [
-              g.ovr ? `종합 ${g.ovr}` : '처음 시작',
-              g.teamYear ? (g.teamYear >= 20 ? '우승 연도 왕조' : `우승 연도덱 ${g.teamYear}명`) : '',
+              g.ovr ? `종합 ${showOvr(g.ovr)}` : '처음 시작',
+              g.bat ? `타율 ${rankKo(g.bat)}` : '',
+              g.pit ? `평균자책 ${rankKo(g.pit)}` : '',
               g.enh ? `강화 ${['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][g.enh]}` : '',
             ].filter(Boolean).join(' · ');
             return (

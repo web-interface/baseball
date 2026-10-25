@@ -16,6 +16,7 @@ import { GAME } from './local-mock';
 import { PLAYS, type Live } from './timeline';
 import { usedBefore, type CmdBody, type Commander } from './command';
 import s from './TacticsPanel.module.css';
+import { cardShow, playerShift, showOvr } from '../../game/ovrShow';
 
 type Body = CmdBody;
 const GRADE_SHORT: Partial<Record<GradeId, string>> = { franchise: '프랜차이즈', th: 'TH', gg: 'GG', mvp: 'MVP', unique: '특별' };
@@ -164,7 +165,11 @@ function CandRow({ c, pitcher, mine, onPick, sub }: { c: Cand; pitcher?: boolean
   const card = cardFor(p, mine);
   const grade = card.props.grade as GradeId;
   const g = GRADES[grade];
-  const face = (code: string) => p.face.find((f) => f.code === code)?.v;
+  // 화면 눈금 — 우리 카드면 등급 몫 + 카드 구간 몫, 아니면 꺾은선 몫
+  const cc = card.card;
+  const sh = cc ? cardShow(cc, p.ovr).shift : playerShift(p.ovr);
+  const face = (code: string) => { const v = p.face.find((f) => f.code === code)?.v; return v == null ? undefined : v + (cc?.boost ?? 0) + sh; };
+  const ovrNow = 'ovrShown' in card.props && card.props.ovrShown != null ? Math.round(card.props.ovrShown + sh) : cc ? cardShow(cc, p.ovr).ovr : showOvr(p.ovr);
   const keys = pitcher ? ['VEL', 'STF', 'CTL'] : ['CON', 'POW', 'SPD'];
   const KO: Record<string, string> = { VEL: '구속', STF: '구위', CTL: '제구', CON: '컨택', POW: '파워', SPD: '주루' };
   const line = pitcher ? (() => { const l = pitLine(p.id); return `ERA ${eraLabel(l)}`; })() : (() => { const l = batLine(p.id); return `${avgLabel(l)} · ${l.hr}홈런`; })();
@@ -184,7 +189,7 @@ function CandRow({ c, pitcher, mine, onPick, sub }: { c: Cand; pitcher?: boolean
             {keys.map((k) => <span key={k}><i>{KO[k]}</i><b className="num">{face(k) ?? '-'}</b></span>)}
           </span>
         </span>
-        <span className={s.cOvr}><b className="num">{('ovrShown' in card.props ? card.props.ovrShown : undefined) ?? p.ovr}</b></span>
+        <span className={s.cOvr}><b className="num">{ovrNow}</b></span>
       </button>
     </li>
   );

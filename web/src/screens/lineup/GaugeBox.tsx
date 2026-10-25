@@ -4,15 +4,17 @@ import { Gauge, fmt } from '../../ui';
 import { potentialLead, type Eval } from './calc';
 import { useDelta, useTween } from './hooks';
 import s from './GaugeBox.module.css';
+import { GAUGE, showOvr } from '../../game/ovrShow';
 
-const MIN = 60;
-const MAX = 115;
+const MIN = GAUGE.min;
+const MAX = GAUGE.max;
 const pos = (v: number) => Math.max(0, Math.min(1, (v - MIN) / (MAX - MIN)));
 
 export function GaugeBox({ ev, boom }: { ev: Eval; boom: number | null }) {
   const host = useRef<HTMLDivElement>(null);
-  const shown = useTween(ev.overall, boom != null ? 1100 : 480);
-  const delta = useDelta(ev.overall);
+  const now = showOvr(ev.overall); // 화면 눈금
+  const shown = useTween(now, boom != null ? 1100 : 480);
+  const delta = useDelta(now);
   const [bar, setBar] = useState<{ l: number; t: number; w: number } | null>(null);
 
   // 공용 Gauge 의 막대([role=meter]) 자리를 재서 그 위에 효과를 얹는다
@@ -36,10 +38,11 @@ export function GaugeBox({ ev, boom }: { ev: Eval; boom: number | null }) {
     <div ref={host} className={[s.box, ev.exploded && s.exploded].filter(Boolean).join(' ')}>
       <Gauge
         value={shown}
-        base={ev.base}
-        potential={ev.golden ? undefined : ev.potential}
-        potentialLabel={<>{potentialLead(ev)} <b className="num">{ev.potential}</b></>}
-        parts={ev.parts.slice(0, 3).map((p) => ({ ko: p.ko, v: p.v }))}
+        base={showOvr(ev.base)}
+        potential={ev.golden ? undefined : showOvr(ev.potential)}
+        potentialLabel={<>{potentialLead(ev)} <b className="num">{showOvr(ev.potential)}</b></>}
+        parts={ev.parts.slice(0, 3).map((p) => ({ ko: p.ko, v: showOvr(p.v) }))}
+        min={GAUGE.min} max={GAUGE.max} ticks={GAUGE.ticks()}
         label={(
           <span className={s.label}>
             팀 종합
@@ -52,7 +55,7 @@ export function GaugeBox({ ev, boom }: { ev: Eval; boom: number | null }) {
         <div className={s.fx} style={{ left: bar.l, top: bar.t, width: bar.w }} aria-hidden>
           {ev.exploded && <i className={s.charged} style={{ width: `${pos(shown) * 100}%` }} />}
           {boom != null && <i key={`s${boom}`} className={s.sweep} />}
-          {boom != null && <i key={`b${boom}`} className={s.burst} style={{ left: `${pos(ev.overall) * 100}%` }} />}
+          {boom != null && <i key={`b${boom}`} className={s.burst} style={{ left: `${pos(now) * 100}%` }} />}
         </div>
       )}
     </div>

@@ -21,6 +21,7 @@ import { gearSet, mockGear, slotsOf, type GearPiece } from './gear';
 import { attachMotion } from './motion';
 import { Crest, Gem, Laurel, LeagueMark, Star4, autographStroke } from './parts';
 import { CARD_BG, TYPE_KO, WxIcon, cardTypeOf, weatherOf, weatherTitle } from './front';
+import { cardShow } from '../game/ovrShow';
 import s from './Card.module.css';
 import c from './SdCard.module.css';
 
@@ -76,8 +77,10 @@ export interface CardProps {
   pot?: PotTier | null;
   /** 별 셋이 꺼짐 (1군 엔트리에서 2명만 · 벤치) — 배지를 흐리게 */
   potOff?: boolean;
-  /** 종합 칸에 대신 보일 값 — 라인업에서 강화 · 훈련 · 잠재력 · 세트덱 · 케미까지 더한 종합 (오르면 초록 빛, 100 넘으면 10 단위 색) */
+  /** 종합 칸에 대신 보일 값(힘 눈금) — 라인업에서 강화 · 훈련 · 잠재력 · 세트덱 · 케미까지 더한 종합 (오르면 초록 빛, 100 넘으면 10 단위 색) */
   ovrShown?: number;
+  /** 화면 눈금 몫 — ovrShown(힘 눈금)에 더해 보여 준다 (game/ovrShow · cardProps 가 넣는다) */
+  ovrShift?: number;
   /** 대표 능력치에 더해진 값 (앞면 코드별 — game/cardBonus: 강화 · 훈련 · 잠재력 · 플레이스타일 · 세트덱) */
   faceUp?: Partial<Record<string, number>>;
   /** 촘촘한 목록용 가벼운 효과 — 화면을 다시 칠하는 비싼 움직임(테두리 회전 · 홀로 · 번개 …)은 끄고 GPU 로 도는 것만 */
@@ -117,11 +120,13 @@ function ovrCls(base: number, shown?: number): string[] {
 /** 카드의 훈련 단계 (보유 카드 저장의 train.lv — 없으면 0) */
 /** 켜진 잠재력 등급 (없으면 null) — 돌리는 연출 중엔 전의 것 · 별 둘부터 못 받는 등급은 별 하나로 */
 export const potTierOf = (c: Pick<CardInst, 'id' | 'grade'>): PotTier | null => shownTierOf(c);
-function nowOf(c: CardInst, player: Player): { ovrShown?: number; faceUp?: Partial<Record<string, number>>; potOff?: boolean } {
+function nowOf(c: CardInst, powerBase: number): { ovrShown?: number; faceUp?: Partial<Record<string, number>>; potOff?: boolean } {
   const now = cardNow(c);
   if (!now) return {};
-  return { ovrShown: now.ovr !== player.ovr ? now.ovr : undefined, faceUp: Object.keys(now.bonus.total).length ? now.bonus.total : undefined, potOff: now.potOff || undefined };
+  return { ovrShown: Math.round(now.ovr) !== Math.round(powerBase) ? now.ovr : undefined, faceUp: Object.keys(now.bonus.total).length ? now.bonus.total : undefined, potOff: now.potOff || undefined };
 }
+/** 종합 칸에 보일 숫자(화면 눈금) — 더해진 값이 있으면 그 값, 없으면 카드 종합 */
+const shownOf = (ovrShown?: number, ovrShift?: number) => (ovrShown != null ? Math.round(ovrShown + (ovrShift ?? 0)) : undefined);
 export const trainLvOf = (c: unknown) => {
   const v = (c as { train?: { lv?: number } } | null | undefined)?.train?.lv ?? 0;
   return Math.max(0, Math.min(10, Math.floor(Number(v) || 0)));
@@ -141,8 +146,10 @@ function withOvr(p: Player, ovr: number, boost = 0): Player {
 
 export function cardProps(c: CardInst) {
   const base = playerOfCard(c);
-  // 카드마다 종합이 다르다 (CardInst.ovr) — 같은 선수라도 윗 등급이 더 높게
-  const player = (c.ovr != null && c.ovr !== base.ovr) || c.boost ? withOvr(base, c.ovr ?? base.ovr, c.boost ?? 0) : base;
+  // 카드마다 종합이 다르다 (CardInst.ovr) — 같은 선수라도 윗 등급이 더 높게.
+  // 화면엔 화면 눈금(game/ovrShow — 등급마다 5씩)으로: 종합은 그 등급 구간, 대표 능력치는 등급 몫(boost) + 눈금 몫(shift)
+  const { ovr: shownBase, shift } = cardShow(c, base.ovr);
+  const player = withOvr(base, shownBase, (c.boost ?? 0) + shift);
   const extra = c as Omit<CardInst, 'gear'> & { gear?: GearPiece[]; serial?: Serial | null };
   return {
     player,
@@ -159,8 +166,9 @@ export function cardProps(c: CardInst) {
     set: uniformOf(c),
     train: trainLvOf(c),
     pot: potTierOf(c),
-    // 지금 값 — 라인업이면 라인업 종합, 아니면 카드 자체 보너스까지 (screens/lineup/ctx — 어디서 보든 같은 숫자)
-    ...nowOf(c, player),
+    // 지금 값 — 라인업이면 라인업 종합, 아니면 카드 자체 보너스까지 (screens/lineup/ctx — 어디서 보든 같은 숫자). 힘 눈금 + ovrShift 로 보인다
+    ovrShift: shift,
+    ...nowOf(c, c.ovr ?? base.ovr),
   } satisfies Partial<CardProps>;
 }
 
@@ -232,8 +240,9 @@ function nameFit(text: string, base: number, room: number) {
 function CardImpl(props: CardProps) {
   const {
     player, grade, year, level, enhance = 0, signaturePitch, award, team, size = 'm', width, fluid, showStats, selected, dimmed, isNew,
-    onClick, className, style, cardId, serial, set, live, still, eager, train = 0, pot = null, potOff, ovrShown, faceUp, lite, dense,
+    onClick, className, style, cardId, serial, set, live, still, eager, train = 0, pot = null, potOff, ovrShown: ovrPower, ovrShift, faceUp, lite, dense,
   } = props;
+  const ovrShown = shownOf(ovrPower, ovrShift);
   const t = team ?? teamById(player.teamId);
   const g = GRADES[grade];
   const w = width ?? WIDTH[size];
@@ -361,8 +370,9 @@ export interface CardMiniProps extends Partial<Omit<CardProps, 'player' | 'grade
 }
 
 function CardMiniImpl({
-  player, grade, enhance = 0, team, size = 's', width, fluid, badge, label = true, selected, dimmed, onClick, className, style, cardId, set, eager, isNew, year, level, still, train = 0, pot = null, potOff, ovrShown,
+  player, grade, enhance = 0, team, size = 's', width, fluid, badge, label = true, selected, dimmed, onClick, className, style, cardId, set, eager, isNew, year, level, still, train = 0, pot = null, potOff, ovrShown: ovrPower, ovrShift,
 }: CardMiniProps) {
+  const ovrShown = shownOf(ovrPower, ovrShift);
   const t = team ?? teamById(player.teamId);
   const w = width ?? WIDTH[size];
   const miniRef = useRef<HTMLDivElement>(null);

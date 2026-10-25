@@ -11,6 +11,7 @@ import type { PvpOpponent } from '../../game/types';
 import { Spark } from './Spark';
 import { expected, mySide, oppSide, ratingDelta, simulate, type Beat, type Side, type Sim } from './local-mock';
 import s from './battle.module.css';
+import { showOvr } from '../../game/ovrShow';
 
 type Phase = 'pre' | 'live' | 'done';
 const SPEED: Record<'quick' | 'normal', { idle: number; run: number }> = { quick: { idle: 260, run: 620 }, normal: { idle: 480, run: 1150 } };
@@ -122,7 +123,7 @@ function Pre({ me, them, opp, pace, setPace, onStart, left }: { me: Side; them: 
               <span className={s.face}><PlayerArt player={sd.sp.player} team={sd.team} variant="mini" /></span>
               <span className={s.spBody}>
                 <b>{sd.sp.player.name}</b>
-                <span>{sd.team.short} · <span className="num">{sd.sp.player.ovr}</span> · 평균자책 <span className="num">{fmt.era(sd.sp.player.season.pit?.era ?? 4)}</span></span>
+                <span>{sd.team.short} · <span className="num">{showOvr(sd.sp.player.ovr)}</span> · 평균자책 <span className="num">{fmt.era(sd.sp.player.season.pit?.era ?? 4)}</span></span>
                 {sd.sp.card.signaturePitch && <em style={{ '--sig': sd.sp.card.signaturePitch.color } as CSSProperties}>{sd.sp.card.signaturePitch.name}</em>}
               </span>
             </div>
@@ -150,9 +151,9 @@ function Pre({ me, them, opp, pace, setPace, onStart, left }: { me: Side; them: 
             return (
               <li key={b.order}>
                 <span className={s.oL}><b>{b.player.name}</b><span>{POS_KO[b.pos]}</span></span>
-                <span className={['num', s.oOvr, b.player.ovr >= (o?.player.ovr ?? 0) && s.oWin].filter(Boolean).join(' ')}>{b.player.ovr}</span>
+                <span className={['num', s.oOvr, b.player.ovr >= (o?.player.ovr ?? 0) && s.oWin].filter(Boolean).join(' ')}>{showOvr(b.player.ovr)}</span>
                 <span className={['num', s.oNo].join(' ')}>{b.order}</span>
-                <span className={['num', s.oOvr, (o?.player.ovr ?? 0) > b.player.ovr && s.oWin].filter(Boolean).join(' ')}>{o?.player.ovr}</span>
+                <span className={['num', s.oOvr, (o?.player.ovr ?? 0) > b.player.ovr && s.oWin].filter(Boolean).join(' ')}>{o ? showOvr(o.player.ovr) : ''}</span>
                 <span className={s.oR}><b>{o?.player.name}</b><span>{o ? POS_KO[o.pos] : ''}</span></span>
               </li>
             );
@@ -180,7 +181,7 @@ function SideHead({ side, align, tag }: { side: Side; align: 'L' | 'R'; tag: str
       <p className={s.sTag}>{tag}</p>
       <p className={['head', s.sName].join(' ')}>{side.team.name}</p>
       <p className={s.sUser}>{side.key === 'me' ? '나' : side.user} · 레이팅 <span className="num">{fmt.int(side.rating)}</span></p>
-      <p className={s.sOvr}><b className="num-display">{side.ovr}</b><span>팀 종합</span></p>
+      <p className={s.sOvr}><b className="num-display">{showOvr(side.ovr)}</b><span>팀 종합</span></p>
     </div>
   );
 }

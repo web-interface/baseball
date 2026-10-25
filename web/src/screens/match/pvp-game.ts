@@ -11,6 +11,7 @@ import { loadBattle, type BattleItem, type BattleRec, type BattleSnap } from '..
 import { defaultAfter, genSeq, makeDefense, rng, type Bases, type Code, type FullGame, type FullPlay, type GameEvent, type GameSide, type WxState } from './local-mock';
 import { markHighlights } from './highlights';
 import type { MatchCtx } from './EndBar';
+import { showOvr } from '../../game/ovrShow';
 
 const r3 = (v: number) => Math.round(v * 1000) / 1000;
 const POS_KO: Record<number, string> = { 1: '투수', 2: '포수', 3: '1루수', 4: '2루수', 5: '3루수', 6: '유격수', 7: '좌익수', 8: '중견수', 9: '우익수' };
@@ -328,7 +329,7 @@ export function pvpFullGame(b: BattleRec): FullGame {
   const keyFactors: Cause[] = [];
   const big = plays.filter((p) => p.highlight).sort((a2, b2) => Math.abs(b2.wp[1] - b2.wp[0]) - Math.abs(a2.wp[1] - a2.wp[0]))[0];
   if (big) keyFactors.push({ factor: 'form', text: big.text });
-  keyFactors.push({ factor: 'chem', text: `팀 종합 ${b.me.ovr || '?'} 대 ${b.opp.ovr || '?'} — 서버가 정한 결과` });
+  keyFactors.push({ factor: 'chem', text: `팀 종합 ${b.me.ovr ? showOvr(b.me.ovr) : '?'} 대 ${b.opp.ovr ? showOvr(b.opp.ovr) : '?'} — 서버가 정한 결과` });
   const sideOut = (s: Side): GameSide => ({
     teamId: s.teamId,
     batting: s.batting.map((x, i) => ({ slot: i + 1, pid: x.p.id, pos: x.pos })),

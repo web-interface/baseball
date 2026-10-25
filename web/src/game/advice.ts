@@ -7,6 +7,7 @@ import { BAT_OPTS, PIT_OPTS, TEAM_DEF, TEAM_OPTS, personKey, teamVal, type TacSt
 import { BAT_SLOTS, STAFF_SLOTS, SLOT_KO, evaluate, getSlot, initialLineup, store as lineupStore, unit, type LineupState, type StaffSlot } from '../screens/lineup/calc';
 import { batLine, getSeason, pitLine, teamLine } from '../season/store';
 import { api, ApiError } from '../api';
+import { cardShow, showOvr } from './ovrShow';
 
 /* ───────── 보내는 자료 (서버와 같은 모양 — worker/src/advice.ts) ───────── */
 export interface AdviceBatter { id: string; n: string; pos: string; o: number; ovr: number; f: Record<string, number>; avg?: string; hr?: number; ops?: string; sb?: number; ab?: number }
@@ -51,14 +52,16 @@ export function buildAdviceInput(tac: TacState, st: LineupState = lineupStore.ge
   const s = getSeason();
   const ln = teamLine(ME.teamId, s);
   const team = teamById(ME.teamId);
-  const faceOf = (p: ReturnType<typeof unit>['player']) => Object.fromEntries(p.face.map((f) => [f.code, f.v]));
+  // 화면 눈금(game/ovrShow) — 카드 화면 · 경기 엔진과 같은 숫자로 보낸다
+  const faceOf = (u: ReturnType<typeof unit>, sh: number) => Object.fromEntries(u.player.face.map((f) => [f.code, Math.round(f.v + sh)]));
+  const shOf = (u: ReturnType<typeof unit>) => cardShow(u.card, u.player.ovr).shift;
   const batters: AdviceBatter[] = st.order.map((slot, i) => {
     const id = st.field[slot];
     if (!id) return null;
     const u = unit(id);
     const b = batLine(u.player.id, s);
     const ue = ev.units[slot];
-    const x: AdviceBatter = { id: personKey(u.player.id), n: u.player.name, pos: slot, o: i + 1, ovr: Math.round(ue?.total ?? u.player.ovr), f: faceOf(u.player) };
+    const x: AdviceBatter = { id: personKey(u.player.id), n: u.player.name, pos: slot, o: i + 1, ovr: Math.round((ue?.total ?? u.player.ovr) + shOf(u)), f: faceOf(u, shOf(u)) };
     if (b.ab) Object.assign(x, { avg: avg3(b.avg), hr: b.hr, sb: b.sb, ab: b.ab });
     return x;
   }).filter((x): x is AdviceBatter => !!x);
@@ -68,17 +71,17 @@ export function buildAdviceInput(tac: TacState, st: LineupState = lineupStore.ge
     const u = unit(id);
     const l = pitLine(u.player.id, s);
     const ue = ev.units[slot];
-    const x: AdvicePitcher = { id: personKey(u.player.id), n: u.player.name, slot: SLOT_KO[slot], role: u.player.role ?? 'RP', t: u.player.throws === 'L' ? 'L' : 'R', ovr: Math.round(ue?.total ?? u.player.ovr), f: faceOf(u.player) };
+    const x: AdvicePitcher = { id: personKey(u.player.id), n: u.player.name, slot: SLOT_KO[slot], role: u.player.role ?? 'RP', t: u.player.throws === 'L' ? 'L' : 'R', ovr: Math.round((ue?.total ?? u.player.ovr) + shOf(u)), f: faceOf(u, shOf(u)) };
     if (ue && ue.fit === 'near') x.off = true;
     if (l.outs) Object.assign(x, { era: l.era.toFixed(2), ip: Math.floor(l.outs / 3), so: l.so, sv: l.sv, hld: l.hld });
     return x;
   }).filter((x): x is AdvicePitcher => !!x);
-  const parts = Object.fromEntries(ev.parts.map((p) => [p.k, p.v]));
+  const parts = Object.fromEntries(ev.parts.map((p) => [p.k, showOvr(p.v)]));
   const st2 = team.stadium;
   const park = `${st2.name} · 좌 ${st2.fence[0]} · 중 ${st2.fence[1]} · 우 ${st2.fence[2]}m${st2.roof === 'dome' ? ' · 돔' : ''}`;
   return {
     v: 1,
-    team: { name: team.name, ovr: ev.overall, parts, w: ln.row.w, d: ln.row.d, l: ln.row.l, rank: ln.rank, g: ln.played, left: ln.left, rs: ln.row.rs, ra: ln.row.ra, park },
+    team: { name: team.name, ovr: showOvr(ev.overall), parts, w: ln.row.w, d: ln.row.d, l: ln.row.l, rank: ln.rank, g: ln.played, left: ln.left, rs: ln.row.rs, ra: ln.row.ra, park },
     tac: Object.fromEntries(TEAM_OPTS.map((o) => [o.key, teamVal(tac, o.key)])) as Record<TeamKey, string>,
     batters,
     pitchers,
@@ -87,9 +90,11 @@ export function buildAdviceInput(tac: TacState, st: LineupState = lineupStore.ge
 
 /* ───────── 기본 분석 (규칙) — 서버가 없을 때 같은 모양으로 ───────── */
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+/** 문턱 기준 — 숫자는 화면 눈금(힘 눈금보다 평균 14 낮다, 엔진 levelRef 와 같은 몫). 문턱은 예전 힘 눈금 값에서 이만큼 뺀다 */
+const LV = 14;
 export function ruleAdvice(inp: AdviceInput, note?: string): AdviceOut {
   const B = inp.batters, P = inp.pitchers;
-  const f = (x: { f: Record<string, number> }, k: string, d = 50) => x.f[k] ?? d;
+  const f = (x: { f: Record<string, number> }, k: string, d = 50 - LV) => x.f[k] ?? d;
   const spd = mean(B.map((b) => f(b, 'SPD'))), pow = mean(B.map((b) => f(b, 'POW'))), con = mean(B.map((b) => f(b, 'CON'))), eye = mean(B.map((b) => f(b, 'EYE')));
   const rot = P.filter((p) => /선발/.test(p.slot)), pen = P.filter((p) => !/선발/.test(p.slot));
   const rotOvr = mean(rot.map((p) => p.ovr)), penOvr = mean(pen.slice(0, 6).map((p) => p.ovr));
@@ -103,38 +108,38 @@ export function ruleAdvice(inp: AdviceInput, note?: string): AdviceOut {
 
   if (sorted[0]) strengths.push(`${KO[sorted[0][0]]} ${sorted[0][1]} — 팀에서 가장 센 묶음`);
   if (sorted.length > 1) { const w = sorted[sorted.length - 1]; weaknesses.push(`${KO[w[0]]} ${w[1]} — 가장 약한 묶음`); }
-  if (spd >= 70) { strengths.push(`발이 빨라요 (주루 평균 ${Math.round(spd)})`); want('steal', 'more', '빠른 주자가 많아 도루로 득점권을 만들 수 있어요'); want('run', 'aggr', '한 베이스 더 가도 살아요'); }
-  else if (spd <= 52) { weaknesses.push(`발이 느려요 (주루 평균 ${Math.round(spd)})`); want('steal', 'less', '도루 실패가 흐름을 끊어요'); want('run', 'safe', '무리한 주루로 아웃을 주지 않게'); }
-  if (pow >= 74) { strengths.push(`장타력 (파워 평균 ${Math.round(pow)})`); want('two', 'full', '몰려도 장타가 나오는 타선이에요'); want('bunt', 'less', '번트로 아웃을 주기 아까운 타선이에요'); }
-  else if (pow <= 58 && con >= 68) { want('two', 'short', '맞히는 힘이 좋아 삼진을 줄이면 이득이에요'); want('hitrun', 'more', '컨택이 좋아 작전이 잘 먹혀요'); }
-  if (eye >= 72) want('bat', 'pat', `선구안이 좋아요 (선구 평균 ${Math.round(eye)}) — 볼넷 · 투구 수로 선발을 지치게`);
-  else if (eye <= 58 && con >= 66) want('bat', 'aggr', '볼을 오래 보면 불리해요 — 빠른 카운트에 노려 치기');
+  if (spd >= 70 - LV) { strengths.push(`발이 빨라요 (주루 평균 ${Math.round(spd)})`); want('steal', 'more', '빠른 주자가 많아 도루로 득점권을 만들 수 있어요'); want('run', 'aggr', '한 베이스 더 가도 살아요'); }
+  else if (spd <= 52 - LV) { weaknesses.push(`발이 느려요 (주루 평균 ${Math.round(spd)})`); want('steal', 'less', '도루 실패가 흐름을 끊어요'); want('run', 'safe', '무리한 주루로 아웃을 주지 않게'); }
+  if (pow >= 74 - LV) { strengths.push(`장타력 (파워 평균 ${Math.round(pow)})`); want('two', 'full', '몰려도 장타가 나오는 타선이에요'); want('bunt', 'less', '번트로 아웃을 주기 아까운 타선이에요'); }
+  else if (pow <= 58 - LV && con >= 68 - LV) { want('two', 'short', '맞히는 힘이 좋아 삼진을 줄이면 이득이에요'); want('hitrun', 'more', '컨택이 좋아 작전이 잘 먹혀요'); }
+  if (eye >= 72 - LV) want('bat', 'pat', `선구안이 좋아요 (선구 평균 ${Math.round(eye)}) — 볼넷 · 투구 수로 선발을 지치게`);
+  else if (eye <= 58 - LV && con >= 66 - LV) want('bat', 'aggr', '볼을 오래 보면 불리해요 — 빠른 카운트에 노려 치기');
   if (P.length) {
     if (penOvr >= rotOvr + 3) { strengths.push(`불펜이 선발보다 세요 (${Math.round(penOvr)} vs ${Math.round(rotOvr)})`); want('hook', 'quick', '센 불펜에 일찍 넘기는 게 이득이에요'); }
     else if (rotOvr >= penOvr + 4) { weaknesses.push(`불펜이 약해요 (${Math.round(penOvr)})`); want('hook', 'long', '선발이 길게 버티는 게 나아요'); }
-    if (ctl >= 72) want('call', 'attack', `제구가 좋아요 (제구 평균 ${Math.round(ctl)}) — 정면 승부로 투구 수를 아끼기`);
-    else if (ctl <= 56) { weaknesses.push(`제구가 흔들려요 (제구 평균 ${Math.round(ctl)})`); want('call', 'attack', '유인구가 볼넷이 되기 쉬워요 — 존 안에서 승부'); }
+    if (ctl >= 72 - LV) want('call', 'attack', `제구가 좋아요 (제구 평균 ${Math.round(ctl)}) — 정면 승부로 투구 수를 아끼기`);
+    else if (ctl <= 56 - LV) { weaknesses.push(`제구가 흔들려요 (제구 평균 ${Math.round(ctl)})`); want('call', 'attack', '유인구가 볼넷이 되기 쉬워요 — 존 안에서 승부'); }
   }
-  if ((parts.def ?? 70) <= 64) want('of', 'deep', '수비가 약하면 장타부터 막는 게 나아요');
+  if ((parts.def ?? 70 - LV) <= 64 - LV) want('of', 'deep', '수비가 약하면 장타부터 막는 게 나아요');
 
   // 선수별
   const players: AdvicePlayer[] = [];
   for (const b of B) {
     const set: Record<string, string> = {};
     const why: string[] = [];
-    if (f(b, 'SPD') >= 85) { set.steal = 'green'; why.push(`주루 ${f(b, 'SPD')}`); }
-    else if (f(b, 'SPD') <= 38) { set.steal = 'never'; why.push(`주루 ${f(b, 'SPD')} — 도루는 손해`); }
-    if (f(b, 'POW') >= 85 && b.o >= 3 && b.o <= 5) { set.spray = 'pull'; why.push(`파워 ${f(b, 'POW')} 중심 타자`); }
-    else if (f(b, 'CON') >= 80 && f(b, 'POW') <= 60) { set.spray = 'oppo'; why.push(`컨택 ${f(b, 'CON')} · 진루타`); }
-    if (f(b, 'EYE') >= 82 && b.o <= 2) { set.bat = 'pat'; why.push(`선구 ${f(b, 'EYE')} — 출루`); }
+    if (f(b, 'SPD') >= 85 - LV) { set.steal = 'green'; why.push(`주루 ${f(b, 'SPD')}`); }
+    else if (f(b, 'SPD') <= 38 - LV) { set.steal = 'never'; why.push(`주루 ${f(b, 'SPD')} — 도루는 손해`); }
+    if (f(b, 'POW') >= 85 - LV && b.o >= 3 && b.o <= 5) { set.spray = 'pull'; why.push(`파워 ${f(b, 'POW')} 중심 타자`); }
+    else if (f(b, 'CON') >= 80 - LV && f(b, 'POW') <= 60 - LV) { set.spray = 'oppo'; why.push(`컨택 ${f(b, 'CON')} · 진루타`); }
+    if (f(b, 'EYE') >= 82 - LV && b.o <= 2) { set.bat = 'pat'; why.push(`선구 ${f(b, 'EYE')} — 출루`); }
     if (Object.keys(set).length) players.push({ id: b.id, kind: 'bat', name: b.n, set, why: why.join(' · ') });
   }
   for (const p of rot) {
     const set: Record<string, string> = {};
     const why: string[] = [];
-    if (f(p, 'STA') >= 82) { set.limit = 'long'; why.push(`체력 ${f(p, 'STA')}`); }
-    else if (f(p, 'STA', 60) <= 50) { set.limit = 'short'; why.push(`체력 ${f(p, 'STA')} — 짧게 끊기`); }
-    if (f(p, 'CTL') >= 80) { set.call = 'attack'; why.push(`제구 ${f(p, 'CTL')}`); }
+    if (f(p, 'STA') >= 82 - LV) { set.limit = 'long'; why.push(`체력 ${f(p, 'STA')}`); }
+    else if (f(p, 'STA', 60 - LV) <= 50 - LV) { set.limit = 'short'; why.push(`체력 ${f(p, 'STA')} — 짧게 끊기`); }
+    if (f(p, 'CTL') >= 80 - LV) { set.call = 'attack'; why.push(`제구 ${f(p, 'CTL')}`); }
     if (Object.keys(set).length) players.push({ id: p.id, kind: 'pit', name: p.n, set, why: why.join(' · ') });
   }
 

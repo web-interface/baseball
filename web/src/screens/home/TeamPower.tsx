@@ -5,6 +5,7 @@ import { Link } from '../../app/router';
 import { SET_KIND_KO, statLine } from '../../game/sets';
 import { evaluate, initialLineup, potentialLead, store } from '../lineup/calc';
 import s from './TeamPower.module.css';
+import { GAUGE, showOvr } from '../../game/ovrShow';
 
 export function TeamPower() {
   const ev = useMemo(() => evaluate(store.get() ?? initialLineup()), []);
@@ -16,8 +17,9 @@ export function TeamPower() {
         <h2 id="power-h" className={s.h}>팀 종합</h2>
         <Link to="/lineup" className={s.link}>라인업에서 맞추기 <Icon name="chevron" size={14} /></Link>
       </header>
-      <Gauge value={ev.overall} base={ev.base} potential={ev.golden ? undefined : ev.potential}
-        potentialLabel={<>{potentialLead(ev)} <b className="num">{ev.potential}</b></>} parts={ev.parts.map((p) => ({ ko: p.ko, v: p.v }))} label="지금" />
+      <Gauge value={showOvr(ev.overall)} base={showOvr(ev.base)} potential={ev.golden ? undefined : showOvr(ev.potential)}
+        potentialLabel={<>{potentialLead(ev)} <b className="num">{showOvr(ev.potential)}</b></>} parts={ev.parts.map((p) => ({ ko: p.ko, v: showOvr(p.v) }))} label="지금"
+        min={GAUGE.min} max={GAUGE.max} ticks={GAUGE.ticks()} />
       <div className={s.boom}>
         <p className={s.boomHead}>
           <Icon name="bolt" size={16} />
