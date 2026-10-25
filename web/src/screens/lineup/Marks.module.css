@@ -13,44 +13,82 @@
   box-shadow: 0 0 10px rgba(255, 216, 74, .55);
   animation: flow 2.4s linear infinite;
 }
-/* 잠재력 — 보통 담백 · 상급 보랏빛 · 최고 무지개 */
-.pot { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-.pot i { flex: none; width: 6px; height: 6px; transform: rotate(45deg); background: currentColor; }
-.pC { color: var(--fg-2); background: color-mix(in srgb, var(--fg) 8%, transparent); }
-.pA { color: #fff; background: linear-gradient(135deg, #5b3fc4, #a86cff); box-shadow: 0 0 9px rgba(168, 108, 255, .55); }
-.pS {
-  color: #2a1700;
-  background: linear-gradient(90deg, #ff4f7b, #ffb84f, #f5ff6b, #6bf09a, #4fd8ff, #8a7bff, #ff4f7b) 0 0 / 200% 100%;
-  box-shadow: 0 0 12px rgba(255, 216, 74, .7);
-  animation: flow 2s linear infinite;
-}
-.pS i { background: #fff; box-shadow: 0 0 6px #fff; }
 @keyframes flow { to { background-position: 200% 0; } }
+
+/* 잠재력 — 별 배지 + 별명. 배지가 등급 색을 맡고, 띠는 그 색을 아주 옅게만 */
+.marks > .pot { max-width: 100%; overflow: hidden; padding: 0 7px 0 2px; color: var(--fg); background: color-mix(in srgb, var(--fg) 7%, transparent); }
+.pot b { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 800; letter-spacing: -.02em; }
+.pA { background: linear-gradient(90deg, color-mix(in srgb, #8b5cf6 24%, transparent), color-mix(in srgb, var(--fg) 5%, transparent) 80%) !important; }
+.pS {
+  background: linear-gradient(90deg, color-mix(in srgb, #f2b534 30%, transparent), color-mix(in srgb, #ff69be 9%, transparent) 55%, color-mix(in srgb, #6ed2ff 10%, transparent)) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #f2b534 42%, transparent);
+}
+.marks > .pOff { color: var(--fg-3); background: color-mix(in srgb, var(--fg) 5%, transparent) !important; box-shadow: none; }
+.pot em { font-style: normal; font-size: 9.5px; font-weight: 800; color: var(--fg-3); }
 
 /* 잠재력 발동 띠 */
 .banner {
   position: relative;
   overflow: hidden;
   margin: 8px var(--gutter) 0;
-  padding: 10px 12px;
+  padding: 10px 12px 11px;
   border-radius: 6px;
-  background: linear-gradient(135deg, rgba(91, 63, 196, .28), rgba(168, 108, 255, .1));
-  box-shadow: inset 0 0 0 1px rgba(168, 108, 255, .45);
+  background: linear-gradient(135deg, color-mix(in srgb, #6a38ee 20%, transparent), color-mix(in srgb, #6a38ee 5%, transparent));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #9c70ff 42%, transparent);
 }
 .bannerS {
-  background: linear-gradient(135deg, rgba(255, 79, 123, .22), rgba(255, 184, 79, .18) 30%, rgba(107, 240, 154, .14) 60%, rgba(79, 216, 255, .2));
-  box-shadow: inset 0 0 0 1.5px rgba(255, 216, 74, .65), 0 0 22px rgba(255, 184, 79, .28);
+  background:
+    linear-gradient(100deg, color-mix(in srgb, #f2b534 18%, transparent), color-mix(in srgb, #ff69be 8%, transparent) 48%, color-mix(in srgb, #6ed2ff 10%, transparent)),
+    color-mix(in srgb, var(--surface, var(--bg)) 40%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #f2b534 55%, transparent), 0 6px 22px -12px rgba(242, 181, 52, .55);
 }
-.shine { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, .22) 50%, transparent 65%) 0 0 / 250% 100% no-repeat; animation: sweep 3.2s ease-in-out infinite; }
+.shine { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, .16) 50%, transparent 65%) 0 0 / 250% 100% no-repeat; animation: sweep 3.6s ease-in-out infinite; }
 @keyframes sweep { from { background-position: 160% 0; } to { background-position: -60% 0; } }
 .bHead { position: relative; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .bHead b { font-family: var(--font-head); font-size: 15px; letter-spacing: var(--head-tracking); }
-.bannerS .bHead b { color: transparent; background: linear-gradient(90deg, #ffe08a, #ff9ad1, #8fe3ff, #ffe08a) 0 0 / 200% 100%; -webkit-background-clip: text; background-clip: text; animation: flow 2.6s linear infinite; }
 .bHead span { font-size: 12px; color: var(--fg-3); }
-.bList { position: relative; margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
-.bList li { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 4px 8px; }
-.bList .pot { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: 3px; font-size: 11px; font-weight: 800; }
-.who { font-size: 12.5px; font-weight: 700; }
+
+/* 별 셋 고르기 줄 — 3명 이상일 때 */
+.pick {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 9px;
+  padding: 8px 10px 8px 9px;
+  border-radius: 5px;
+  text-align: left;
+  color: var(--fg);
+  background: color-mix(in srgb, var(--bg) 62%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #f2b534 50%, transparent);
+  transition: background-color var(--dur-1, 120ms);
+}
+.pick:active { background: color-mix(in srgb, var(--bg) 80%, transparent); }
+.pickText { display: grid; gap: 1px; min-width: 0; }
+.pickText b { font-size: 13px; font-weight: 800; letter-spacing: -.02em; }
+.pickText small { font-size: 11px; color: var(--fg-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pickGo { display: inline-flex; align-items: center; gap: 1px; font-size: 12.5px; font-weight: 800; color: var(--accent); }
+
+.bList { position: relative; margin: 9px 0 0; padding: 0; list-style: none; display: grid; gap: 7px; }
+.bList li { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr); align-items: center; gap: 3px 8px; min-width: 0; }
+.nick { font-size: 13.5px; font-weight: 850; letter-spacing: -.03em; white-space: nowrap; }
+.liS .nick { color: color-mix(in srgb, #f2b534 55%, var(--fg)); }
+.liA .nick { color: color-mix(in srgb, #9c70ff 50%, var(--fg)); }
+.who { font-size: 12px; font-weight: 600; color: var(--fg-2); white-space: nowrap; }
 .bList small { font-size: 11.5px; color: var(--fg-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 380px) { .bList li { grid-template-columns: auto minmax(0, 1fr); } .bList small { grid-column: 1 / -1; } }
-@media (prefers-reduced-motion: reduce) { .trMax, .pS, .shine, .bannerS .bHead b { animation: none; } }
+.liOff .nick,
+.liOff .who { color: var(--fg-3); }
+.offTag { justify-self: start; font-style: normal; font-size: 10.5px; font-weight: 800; padding: 1px 6px; border-radius: 3px; color: var(--fg-3); box-shadow: inset 0 0 0 1px var(--line-2); }
+@media (max-width: 400px) { .bList li { grid-template-columns: auto auto minmax(0, 1fr); } .bList small, .offTag { grid-column: 2 / -1; } }
+
+/* 밝은 테마 — 금빛 글자는 조금 더 진하게 */
+:global([data-theme='broadcast']) .liS .nick,
+:global([data-theme='classic']) .liS .nick { color: #8a5a00; }
+:global([data-theme='broadcast']) .liA .nick,
+:global([data-theme='classic']) .liA .nick { color: #5a2fc4; }
+/* 꺼진 별 셋 — 어느 테마든 흐리게 (테마 글자색보다 뒤 · 세게) */
+.bList .liOff .nick,
+.bList .liOff .who { color: var(--fg-3) !important; }
+@media (prefers-reduced-motion: reduce) { .trMax, .shine { animation: none; } }

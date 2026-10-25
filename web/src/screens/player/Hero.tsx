@@ -9,7 +9,9 @@ import { initialLineup, store as lineupStore } from '../lineup/calc';
 import { CondArrow } from './icons';
 import { Pips } from './common';
 import { chanceAfter, enhTable } from './local-mock';
-import { TIER_KO, potVersion, potentialsOf, shownPickOf, subscribePot } from '../../game/potential';
+import { potVersion, shownPotOf, subscribePot } from '../../game/potential';
+import { PotBadge } from '../../ui/PotBadge';
+import { cardNow } from '../lineup/ctx';
 import s from './hero.module.css';
 
 const COND_KO = { 5: '최상', 4: '좋음', 3: '보통', 2: '나쁨', 1: '최악' } as const;
@@ -52,8 +54,9 @@ export function Hero({ p, team, card, cards, owned, isMineCard, enh, fails, leve
   const next = table[enh];
   const nextChance = next ? chanceAfter(next.base, fails) : null;
   useSyncExternalStore(subscribePot, potVersion);
-  const potK = shownPickOf(card.id);
-  const pot = potK >= 0 ? potentialsOf(p, card.grade)[potK] : null;
+  const pot = shownPotOf(card, p);
+  // 별 셋이 라인업에서 꺼졌나 (1군 엔트리에서 2명만 · 벤치는 꺼짐)
+  const potOff = pot?.tier === 'S' && !!cardNow(card)?.potOff;
   const vars = { '--team': team.colors.primary, '--team-2': team.colors.secondary, '--gr': `var(--gr-${card.grade})` } as CSSProperties;
 
   return (
@@ -113,10 +116,18 @@ export function Hero({ p, team, card, cards, owned, isMineCard, enh, fails, leve
         </button>
         <button type="button" role="listitem" className={s.kpi} onClick={() => onKpi('potential')}>
           <span className={s.kLabel}>잠재력</span>
-          {pot
-            ? <b className={[s.kVal, s.potVal, s['pot' + pot.tier]].join(' ')}>{TIER_KO[pot.tier]}</b>
-            : <b className={[s.kVal, s.potVal, s.potNone].join(' ')}>{owned ? '미개방' : '—'}</b>}
-          <span className={[s.kSub, s.potName].join(' ')}>{pot ? pot.name : owned ? '눌러서 열기' : '후보 보기'}</span>
+          {pot ? (
+            <>
+              <PotBadge tier={pot.tier} size="s" off={potOff} />
+              <b className={[s.potNick, s['pot' + pot.tier], potOff && s.potOff].filter(Boolean).join(' ')}>{pot.name}</b>
+              {potOff && <span className={s.kSub}>꺼짐 · 엔트리 2명만</span>}
+            </>
+          ) : (
+            <>
+              <b className={[s.kVal, s.potVal, s.potNone].join(' ')}>{owned ? '미개방' : '—'}</b>
+              <span className={[s.kSub, s.potName].join(' ')}>{owned ? '눌러서 열기' : '후보 보기'}</span>
+            </>
+          )}
         </button>
       </div>
 

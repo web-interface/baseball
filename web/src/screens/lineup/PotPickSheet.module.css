@@ -1,0 +1,63 @@
+/* 별 셋 잠재력 고르기 — 메달 · 별명 · 팀 종합 몫. 고른 줄은 금빛 테, 안 고른 줄은 메달이 잿빛 */
+.sub { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sub b { color: var(--fg); }
+.lead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin: 2px 0 10px; font-size: 13.5px; font-weight: 700; color: var(--fg-2); }
+.lead b { font-size: 15px; color: var(--fg); }
+.lead small { font-size: 11.5px; font-weight: 600; color: var(--fg-3); }
+
+.list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.row {
+  --ring: var(--line-2);
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 12px 11px 10px;
+  border-radius: var(--r-3);
+  text-align: left;
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 3%, var(--surface, transparent));
+  box-shadow: inset 0 0 0 1px var(--ring);
+  transition: box-shadow 140ms var(--ease-out), background-color 140ms;
+}
+.row:active { transform: scale(.995); }
+.on {
+  --ring: color-mix(in srgb, #f2b534 75%, transparent);
+  background:
+    linear-gradient(100deg, color-mix(in srgb, #f2b534 16%, transparent), color-mix(in srgb, #ff69be 6%, transparent) 55%, color-mix(in srgb, #6ed2ff 7%, transparent)),
+    var(--surface, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--ring), 0 6px 18px -12px rgba(242, 181, 52, .7);
+}
+.text { display: grid; gap: 3px; min-width: 0; }
+.nick { font-family: var(--font-head); font-size: 17px; font-weight: 800; line-height: 1.15; letter-spacing: -.035em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row:not(.on) .nick { color: var(--fg-2); }
+.meta { font-size: 12px; font-weight: 600; color: var(--fg-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fx { font-size: 12px; font-weight: 700; color: var(--fg-2); line-height: 1.35; }
+.on .fx { color: color-mix(in srgb, #f2b534 50%, var(--fg)); }
+
+/* 팀 종합 몫 — 오른쪽 숫자 */
+.gain { display: grid; justify-items: end; gap: 1px; text-align: right; }
+.gain small { font-size: 10.5px; font-weight: 700; color: var(--fg-3); }
+.gain b { font-size: 19px; line-height: 1; color: var(--fg); }
+.row:not(.on) .gain b { color: var(--fg-3); }
+.gain i { font-style: normal; font-size: 10.5px; color: var(--fg-3); white-space: nowrap; }
+
+/* 고름 표시 — 동그란 칸, 고르면 금빛 체크 */
+.check { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--line-3); }
+.check svg { width: 14px; height: 14px; fill: none; stroke: #3a2400; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transform: scale(.6); transition: opacity 120ms, transform 160ms var(--ease-snap, ease-out); }
+.on .check { background: linear-gradient(160deg, #fff1b0, #f2b534 60%, #d0901a); box-shadow: 0 0 0 1px rgba(120, 76, 0, .45); }
+.on .check svg { opacity: 1; transform: none; }
+
+.note { margin-top: 12px; font-size: 11.5px; line-height: 1.5; color: var(--fg-3); }
+.autoBtn { flex: 0 0 auto !important; padding-left: 16px; padding-right: 16px; }
+
+/* 밝은 테마 — 금빛 글자는 더 진하게 */
+:global([data-theme='broadcast']) .on .fx,
+:global([data-theme='classic']) .on .fx { color: #8a5a00; }
+@media (max-width: 370px) {
+  .row { grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; }
+  .check { position: absolute; right: 8px; top: 8px; width: 18px; height: 18px; }
+  .gain { padding-top: 14px; }
+}

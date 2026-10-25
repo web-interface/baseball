@@ -204,10 +204,30 @@
   .kVal { font-size: 26px; }
 }
 
-/* ── 잠재력 칸 — 켜진 잠재력 등급 ── */
+/* ── 잠재력 칸 — 별 배지 + 별명(주인공) ── */
 .potVal { font-family: var(--font-head); font-size: 26px; line-height: .95; letter-spacing: -.02em; }
-.potC { color: var(--fg-2); }
-.potA { color: var(--gr-elite); }
-.potS { background: linear-gradient(100deg, #ffe08a, #ff9ad1 40%, #8fe3ff 70%, #ffe08a); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 6px rgba(255, 190, 90, .45)); }
 .potNone { font-size: 20px; color: var(--fg-3); }
 .potName { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.potNick {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  max-width: 100%;
+  overflow: hidden;
+  margin-top: -1px;
+  font-family: var(--font-head);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -.04em;
+  word-break: keep-all;
+  color: var(--fg);
+}
+.potA { color: color-mix(in srgb, #9c70ff 55%, var(--fg)); }
+.potS:not(.potOff) { background: linear-gradient(100deg, #ffe08a, #ffc24a 30%, #ff9ad1 62%, #8fe3ff); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 6px rgba(255, 190, 90, .35)); }
+.potOff { color: var(--fg-3); }
+:global([data-theme='broadcast']) .potNick:not(.potA):not(.potS):not(.potOff) { color: var(--inv-fg); }
+:global([data-theme='broadcast']) .potA { color: #c4a8ff; }
+:global([data-theme='broadcast']) .potOff { color: var(--inv-fg-3); }
+:global([data-theme='classic']) .potA { color: #5a2fc4; }
+:global([data-theme='classic']) .potS:not(.potOff) { background-image: linear-gradient(100deg, #8a5a00, #b4561e 45%, #9b2f6e 75%, #2a6f9a); filter: none; }

@@ -8,10 +8,11 @@
 //   ?bench=<카드 id> — 그 카드를 넣을 자리 고르기(누구와 바꿀지). 벤치 카드뿐 아니라 보관함 카드도 — 선수보관 · 선수 정보의 '라인업에 넣기'가 여기로 온다.
 // 새로 얻은 카드는 보관함으로만 들어온다. 라인업은 여기서 감독이 바꿀 때만(교체 · 자동 편성 버튼) 바뀌고 바로 저장된다.
 //   ?demo=set (’27 독수리스 5명 — 세트 +2) · ?demo=set9 (9명 — +4) · ?demo=boom (5명 → 잠시 뒤 9명, 단계가 오르는 순간) · ?pick=2 (타순 고르는 중)
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { CardMini, cardProps } from '../../cards';
 import { PotBanner } from './Marks';
+import { potVersion, subscribePot } from '../../game/potential';
 import { Button, Tabs, fmt, useToast } from '../../ui';
 import { myTeam } from '../../game/mock';
 import { isOwned } from '../../game/inventory';
@@ -58,7 +59,9 @@ export default function LineupScreen({ query }: ScreenProps) {
 
   const [tab, setTab] = useState<Tab>(() => (q.get('tab') === 'order' ? 'order' : q.get('tab') === 'pitch' ? 'pitch' : 'field'));
   const [st, setSt] = useState<LineupState>(() => demoStart(q) ?? store.get() ?? initialLineup());
-  const ev = useMemo(() => evaluate(st), [st]);
+  // 잠재력(별 셋 켤 2명 고르기 등)이 바뀌어도 다시 계산
+  const potV = useSyncExternalStore(subscribePot, potVersion);
+  const ev = useMemo(() => evaluate(st), [st, potV]); // eslint-disable-line react-hooks/exhaustive-deps
   const stRef = useRef(st);
   stRef.current = st;
 

@@ -1,0 +1,95 @@
+/* 잠재력 배지 — 별 개수 + 등급 엠블럼. 바탕 · 테 · 별 색이 배지 안에서 끝나서 어두운 · 밝은 테마 어디에 놓아도 같은 물건처럼 보인다.
+ * 치수는 모두 em (배지 글자 크기 = 크기 단계). 모양은 clip-path — 테(::before)와 면(::after) 두 겹이라 깎은 모서리에도 테가 남는다 */
+.pb {
+  --cut: .55em;
+  --shape: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% 50%, calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 50%);
+  --bev: .11em;
+  --ss: 1.02em;
+  --edge: #2b4260;
+  --face: #7d96b1;
+  --star: #fff;
+  --star-sh: rgba(18, 34, 58, .75);
+  --glow: transparent;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  isolation: isolate;
+  vertical-align: middle;
+  line-height: 0;
+  font-style: normal;
+  filter: drop-shadow(0 .07em .1em rgba(0, 0, 0, .3)) drop-shadow(0 0 .34em var(--glow));
+}
+.pb::before,
+.pb::after { content: ''; position: absolute; clip-path: var(--shape); pointer-events: none; }
+.pb::before { inset: 0; z-index: -2; background: var(--edge); }
+.pb::after { inset: var(--bev); z-index: -1; background: var(--face); }
+.stars { display: inline-flex; align-items: center; justify-content: center; gap: .1em; }
+.stars svg { display: block; width: var(--ss); height: var(--ss); fill: var(--star); filter: drop-shadow(0 .07em 0 var(--star-sh)); }
+
+/* ── 판 (줄 안 · 알림 · 띠) ── */
+.plate { height: 1.8em; padding: 0 .64em; }
+.xs { font-size: 8px; }
+.s { font-size: 10px; }
+.m { font-size: 13px; }
+
+/* ── 메달 (패널 · 도장) — 세로로 선 육각, 별 셋은 피라미드 ── */
+.medal {
+  --shape: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  --bev: .15em;
+  --ss: .98em;
+  width: 3.2em;
+  height: 3.6em;
+}
+.l { font-size: 13px; }
+.xl { font-size: 28px; }
+.medal .stars { display: grid; grid-template-columns: repeat(2, var(--ss)); justify-content: center; align-content: center; gap: .02em .07em; padding-top: .06em; }
+.medal.tS .stars svg:first-child { grid-column: 1 / -1; justify-self: center; }
+.medal.tC .stars { grid-template-columns: var(--ss); }
+.medal.tC { --ss: 1.5em; }
+.medal.tA { --ss: 1.12em; }
+/* 메달 안쪽 고리 — 동전 테처럼 가는 두 줄 (밝은 줄 + 아래 그늘) */
+.ring { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: visible; }
+.ring polygon { fill: none; stroke-width: .7; vector-effect: non-scaling-stroke; }
+.ring polygon:first-child { stroke: var(--ring-dk, rgba(0, 0, 0, .22)); transform: translateY(.45px); }
+.ring polygon:last-child { stroke: var(--ring, rgba(255, 255, 255, .42)); }
+.xl .ring polygon { stroke-width: 1.1; }
+.medal .stars { position: relative; z-index: 1; }
+
+/* ── 별 하나 — 강철 파랑 (빗질한 금속 결 + 가운데 접힌 빛) ── */
+.tC {
+  --edge: linear-gradient(180deg, #9cb3cc, #2e4562 52%, #1d2f46);
+  --face:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, .07) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #e8f0f7 0%, #b3c6d9 30%, #819bb7 48%, #637e9c 52%, #8da7c2 76%, #ccdbe9 100%);
+  --star-sh: rgba(20, 38, 64, .85);
+}
+/* ── 별 둘 — 보라 보석 (깎은 면 + 위쪽 윤기) ── */
+.tA {
+  --edge: linear-gradient(180deg, #d2b6ff, #3b1789 52%, #250f5c);
+  --face:
+    linear-gradient(180deg, rgba(255, 255, 255, .48), rgba(255, 255, 255, 0) 46%),
+    conic-gradient(from 200deg at 50% 62%, #6a38ee, #b892ff 60deg, #7b4cf6 115deg, #dccaff 165deg, #5a2ad8 225deg, #9c70ff 295deg, #6a38ee);
+  --star-sh: rgba(42, 10, 120, .9);
+  --glow: rgba(160, 112, 255, .5);
+}
+/* ── 별 셋 — 금박 위로 무지갯빛이 흐른다 ── */
+.tS {
+  --edge: linear-gradient(180deg, #fff3b8, #8c5c00 52%, #5a3900);
+  --face:
+    linear-gradient(105deg, transparent 32%, rgba(255, 105, 190, .55) 42%, rgba(110, 210, 255, .6) 51%, rgba(160, 255, 160, .5) 60%, transparent 70%),
+    linear-gradient(180deg, #fff8d6 0%, #ffdc77 26%, #f2b534 47%, #d0901a 52%, #f7ca4f 76%, #fff3bf 100%);
+  --star: #4a2900;
+  --star-sh: rgba(255, 248, 220, .9);
+  --glow: rgba(255, 192, 56, .66);
+}
+.tS::after { background-size: 320% 100%, 100% 100%; background-repeat: no-repeat; animation: pbSheen 3.2s linear infinite; }
+@keyframes pbSheen { from { background-position: 125% 0, 0 0; } to { background-position: -125% 0, 0 0; } }
+
+/* 꺼진 별 셋 — 빛을 빼고 흐리게 */
+.off { filter: grayscale(1) contrast(.85); opacity: .48; }
+.off::after { animation: none; }
+
+/* 클래식 — 인쇄한 판처럼 빛 대신 살짝 어긋난 그림자 */
+:global([data-theme='classic']) .pb:not(.off) { filter: drop-shadow(.07em .07em 0 rgba(29, 30, 33, .38)); }
+@media (prefers-reduced-motion: reduce) { .tS::after { animation: none; } }

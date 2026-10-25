@@ -8,10 +8,10 @@ import { eraOfCode } from '../game/world';
 import type { Player, PitcherRole, Pos } from '../game/types';
 import type { BatKey, PitKey, SetEffect } from '../game/sets';
 import { cardBonusOf, engineFxOf } from '../game/cardBonus';
-import { LEGEND_MAX, MVP_MAX, isLegendGrade, isMvpGrade, potEngineFx, potFaceOf, teamPotential } from '../game/potential';
+import { LEGEND_MAX, MVP_MAX, isLegendGrade, isMvpGrade, potFaceOf, teamPotential } from '../game/potential';
 import { interviewFx } from '../game/press';
 import { loadTactics, type TacState } from '../game/tactics';
-import { PEN_SLOTS, ROT_SLOTS, STAFF_FIT_PENALTY, evaluate, fitOf, getSlot, initialLineup, store as lineupStore, unit, type LineupState, type StaffSlot } from '../screens/lineup/calc';
+import { PEN_SLOTS, ROT_SLOTS, STAFF_FIT_PENALTY, evaluate, fitOf, getSlot, initialLineup, potEntryOf, store as lineupStore, unit, type LineupState, type StaffSlot } from '../screens/lineup/calc';
 
 import { LEVEL_KO, aiLevel, aiTargetOf, type AiLevel } from './league';
 export { LEVEL_KO, aiLevel, aiTargetOf, type AiLevel };
@@ -106,9 +106,10 @@ export function myRoster(st: LineupState = withTac(lineupStore.get() ?? initialL
   const enh = new Map<string, number>();
   const train = new Map<string, { k: BatKey | PitKey; v: number }[]>();
   const pl = (id: string | null) => (id ? unit(id) : undefined);
-  // 잠재력 — 엔트리(타자 9 · 투수 11) 카드의 최고 잠재력은 팀 타자 · 투수 전원에게, 벤치 카드는 자기 몫만
+  // 잠재력 — 엔트리(타자 9 · 투수 16) 카드의 별 셋은 팀 타자 · 투수 전원에게(엔트리에서 2명만 켜진다 — 라인업 계산과 같은 potEntryOf),
+  // 벤치 카드는 자기 몫만(별 셋은 꺼짐)
   const entryIds = [...st.order.map((slot) => st.field[slot]), ...st.rotation, ...st.bullpen, st.closer].filter((id): id is string => !!id);
-  const tp = teamPotential(entryIds.map((id) => unit(id)), st.bench.filter((id) => !entryIds.includes(id)).map((id) => unit(id)));
+  const tp = teamPotential(potEntryOf(st), st.bench.filter((id) => !entryIds.includes(id)).map((id) => unit(id)));
   /** 카드 보너스 → 엔진 보너스 — 강화 · 훈련 · 잠재력(팀 몫 포함) · 플레이스타일 (game/cardBonus — 카드 숫자 · 능력치 · 팀 종합과 같은 계산).
    *  세트덱은 setFx 로 따로. 벤치 카드도 — 대타로 나오면 그대로 */
   const noteTrain = (id: string | null) => {

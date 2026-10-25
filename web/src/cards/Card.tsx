@@ -7,7 +7,8 @@
 // 앞면 스타일은 SdCard.module.css, 뒷면은 Card.module.css. 크기는 모두 카드 너비 기준(cqw).
 import { memo, useEffect, useRef, type CSSProperties, type KeyboardEvent } from 'react';
 import { cardNow } from '../screens/lineup/ctx';
-import { shownPickOf, type PotTier } from '../game/potential';
+import { shownTierOf, tierMark, type PotTier } from '../game/potential';
+import { PotBadge } from '../ui/PotBadge';
 import type { CardInst, GradeId, Player, SignaturePitch, Team } from '../game/types';
 import { GRADES } from '../game/grades';
 import { POS_KO, handKo } from '../game/labels';
@@ -71,8 +72,10 @@ export interface CardProps {
   eager?: boolean;
   /** 훈련 단계 0~10 — 5단계부터 카드에 불빛, 10단계(최종)가 가장 화려 */
   train?: number;
-  /** 켜진 잠재력 등급 — 보통 C · 상급 A · 최고 S (game/potential) */
+  /** 켜진 잠재력 등급 — 별 하나 C · 둘 A · 셋 S (game/potential) — 앞면엔 별 배지(ui/PotBadge) */
   pot?: PotTier | null;
+  /** 별 셋이 꺼짐 (1군 엔트리에서 2명만 · 벤치) — 배지를 흐리게 */
+  potOff?: boolean;
   /** 종합 칸에 대신 보일 값 — 라인업에서 강화 · 훈련 · 잠재력 · 세트덱 · 케미까지 더한 종합 (오르면 초록 빛, 100 넘으면 10 단위 색) */
   ovrShown?: number;
   /** 대표 능력치에 더해진 값 (앞면 코드별 — game/cardBonus: 강화 · 훈련 · 잠재력 · 플레이스타일 · 세트덱) */
@@ -112,19 +115,18 @@ function ovrCls(base: number, shown?: number): string[] {
 }
 
 /** 카드의 훈련 단계 (보유 카드 저장의 train.lv — 없으면 0) */
-/** 켜진 잠재력 등급 (없으면 null) — 돌리는 연출 중엔 전의 것 */
-export const potTierOf = (cardId: string): PotTier | null => { const k = shownPickOf(cardId); return k === 2 ? 'S' : k === 1 ? 'A' : k === 0 ? 'C' : null; };
-function nowOf(c: CardInst, player: Player): { ovrShown?: number; faceUp?: Partial<Record<string, number>> } {
+/** 켜진 잠재력 등급 (없으면 null) — 돌리는 연출 중엔 전의 것 · 별 둘부터 못 받는 등급은 별 하나로 */
+export const potTierOf = (c: Pick<CardInst, 'id' | 'grade'>): PotTier | null => shownTierOf(c);
+function nowOf(c: CardInst, player: Player): { ovrShown?: number; faceUp?: Partial<Record<string, number>>; potOff?: boolean } {
   const now = cardNow(c);
   if (!now) return {};
-  return { ovrShown: now.ovr !== player.ovr ? now.ovr : undefined, faceUp: Object.keys(now.bonus.total).length ? now.bonus.total : undefined };
+  return { ovrShown: now.ovr !== player.ovr ? now.ovr : undefined, faceUp: Object.keys(now.bonus.total).length ? now.bonus.total : undefined, potOff: now.potOff || undefined };
 }
 export const trainLvOf = (c: unknown) => {
   const v = (c as { train?: { lv?: number } } | null | undefined)?.train?.lv ?? 0;
   return Math.max(0, Math.min(10, Math.floor(Number(v) || 0)));
 };
 /** 훈련 불빛 색 — 5 하늘 · 6 초록 · 7 금 · 8 주황 · 9 빨강 · 10 흰 빛(무지개 고리) */
-const POT_KO: Record<PotTier, string> = { C: '보통', A: '상급', S: '최고' };
 const TRAIN_GLOW = ['', '', '', '', '', '#4fd8ff', '#4cf0a0', '#ffd84a', '#ff9a3c', '#ff4f6b', '#ffffff'];
 
 /** CardInst → Card props (CardMini · CardBack 에도 그대로 펼쳐 넣을 수 있다) */
@@ -155,7 +157,7 @@ export function cardProps(c: CardInst) {
     gear: extra.gear ?? mockGear(c, player),
     set: uniformOf(c),
     train: trainLvOf(c),
-    pot: potTierOf(c.id),
+    pot: potTierOf(c),
     // 지금 값 — 라인업이면 라인업 종합, 아니면 카드 자체 보너스까지 (screens/lineup/ctx — 어디서 보든 같은 숫자)
     ...nowOf(c, player),
   } satisfies Partial<CardProps>;
@@ -229,7 +231,7 @@ function nameFit(text: string, base: number, room: number) {
 function CardImpl(props: CardProps) {
   const {
     player, grade, year, level, enhance = 0, signaturePitch, award, team, size = 'm', width, fluid, showStats, selected, dimmed, isNew,
-    onClick, className, style, cardId, serial, set, live, still, eager, train = 0, pot = null, ovrShown, faceUp, lite, dense,
+    onClick, className, style, cardId, serial, set, live, still, eager, train = 0, pot = null, potOff, ovrShown, faceUp, lite, dense,
   } = props;
   const t = team ?? teamById(player.teamId);
   const g = GRADES[grade];
@@ -289,7 +291,7 @@ function CardImpl(props: CardProps) {
             <div className={c.left}>
               {tier && <span className={[c.enh, c['enh-' + tier]].join(' ')} title={`강화 ${roman(enhance)}`}>{roman(enhance)}</span>}
               {tl > 0 && <span className={[c.tr, tl >= 5 && c.trLit, tl >= 10 && c.trMax].filter(Boolean).join(' ')} title={`훈련 ${tl}단계`}>{tl >= 10 ? '훈련 MAX' : `훈련 ${tl}`}</span>}
-              {pot && <span className={[c.potc, c['pot' + pot]].join(' ')} title={`잠재력 ${POT_KO[pot]}`}>잠재 {pot}</span>}
+              {pot && <PotBadge tier={pot} size="fit" off={potOff} className={c.potc} title={`잠재력 ${tierMark(pot)}${potOff ? ' · 꺼짐' : ''}`} />}
               {rookie && <span className={c.rc}>RC</span>}
             </div>
           )}
@@ -358,7 +360,7 @@ export interface CardMiniProps extends Partial<Omit<CardProps, 'player' | 'grade
 }
 
 function CardMiniImpl({
-  player, grade, enhance = 0, team, size = 's', width, fluid, badge, label = true, selected, dimmed, onClick, className, style, cardId, set, eager, isNew, year, level, still, train = 0, pot = null, ovrShown,
+  player, grade, enhance = 0, team, size = 's', width, fluid, badge, label = true, selected, dimmed, onClick, className, style, cardId, set, eager, isNew, year, level, still, train = 0, pot = null, potOff, ovrShown,
 }: CardMiniProps) {
   const t = team ?? teamById(player.teamId);
   const w = width ?? WIDTH[size];
@@ -405,7 +407,7 @@ function CardMiniImpl({
             <div className={c.left}>
               {tier && <span className={[c.enh, c['enh-' + tier]].join(' ')} title={`강화 ${roman(enhance)}`}>{roman(enhance)}</span>}
               {tl > 0 && <span className={[c.tr, tl >= 5 && c.trLit, tl >= 10 && c.trMax].filter(Boolean).join(' ')} title={`훈련 ${tl}단계`}>{tl >= 10 ? 'MAX' : `T${tl}`}</span>}
-              {pot && <span className={[c.potc, c['pot' + pot]].join(' ')} title={`잠재력 ${POT_KO[pot]}`}>{pot}</span>}
+              {pot && <PotBadge tier={pot} size="fit" off={potOff} className={c.potc} title={`잠재력 ${tierMark(pot)}${potOff ? ' · 꺼짐' : ''}`} />}
             </div>
           )}
           {(glow || tl >= 5) && <i className={c.holo} aria-hidden />}

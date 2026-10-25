@@ -19,7 +19,7 @@ import { yearTag } from '../../ui/format';
 import { getCard, getPlayer, owned, startLayout } from './local-mock';
 import { enhGainTotal, invVersion, loadLineup, saveLineup } from '../../game/inventory';
 import { cardLite } from '../../game/kbo';
-import { LEGEND_MAX, MVP_MAX, isLegendGrade, isMvpGrade, potFaceOf, teamPotential, type FaceFx, type TeamPot } from '../../game/potential';
+import { LEGEND_MAX, MVP_MAX, isLegendGrade, isMvpGrade, potFaceOf, teamPotential, type FaceFx, type PotUnit, type TeamPot } from '../../game/potential';
 import { cardBonusOf, ovrBonusOf, type CardBonus } from '../../game/cardBonus';
 
 /* ───────── 자리 ───────── */
@@ -174,6 +174,13 @@ export const face = (p: Player, code: string, d = 55) => p.face.find((f) => f.co
 const ovrPotOf = (b: CardBonus, p: Player) => Object.values(b.parts.pot ?? {}).reduce((x, v) => x + v, 0) / (p.face.length || 6);
 /** 이 카드의 종합 — 카드에 따로 적혀 있으면 그것, 없으면 선수 종합 */
 export const cardOvr = (u: Unit) => u.card.ovr ?? u.player.ovr;
+/** 잠재력 셈에 넣는 1군 엔트리 (타자 9 · 선발 5 · 불펜 10 · 마무리) — starter: 팀 종합에 드는 선발 10명(타자 9 + 1선발). 경기 엔진(season/rosters)도 같이 쓴다 */
+export function potEntryOf(st: LineupState): PotUnit[] {
+  const out: PotUnit[] = [];
+  for (const s of BAT_SLOTS) { const id = st.field[s]; if (id) { const u = unit(id); out.push({ card: u.card, player: u.player, starter: true }); } }
+  for (const s of STAFF_SLOTS) { const id = getSlot(st, s); if (id) { const u = unit(id); out.push({ card: u.card, player: u.player, starter: s === 'R0' }); } }
+  return out;
+}
 
 /* ───────── 자리 적성 ───────── */
 export type Fit = 'main' | 'sub' | 'near' | 'any' | 'off';
@@ -293,6 +300,8 @@ export interface UnitEval {
   pot: number;
   /** 받는 잠재력 — 앞면 코드별 (선수 시트의 '더해진 값') */
   potFace?: FaceFx;
+  /** 별 셋 잠재력이 꺼짐 — 1군 엔트리에서 2명만 켜진다 (game/potential sPlan) */
+  potOff?: boolean;
   /** 받는 보너스 전부 (강화 · 훈련 · 잠재력 · 플레이스타일 · 세트덱 — game/cardBonus) — 카드 숫자 · 능력치 · 엔진이 같이 쓴다 */
   bonus?: CardBonus;
   /** 세트덱 (종합 기준 단계 가치) */
@@ -349,9 +358,10 @@ export function evaluate(st: LineupState): Eval {
   const fits: Partial<Record<Slot, Fit>> = {};
   bat.forEach(({ s, u }) => { fits[s] = fitOf(u.player, s); });
   STAFF_SLOTS.forEach((s) => { const u = U(getSlot(st, s)); if (u) fits[s] = fitOf(u.player, s); });
-  /* 잠재력 — 엔트리 카드의 켜진 잠재력 (최고는 팀 타자 · 투수 전원에게) */
-  const tp: TeamPot = teamPotential([...bat.map((x) => x.u), ...STAFF_SLOTS.map((s) => U(getSlot(st, s))).filter((u): u is Unit => !!u)]);
+  /* 잠재력 — 엔트리 카드의 켜진 잠재력 (별 셋은 팀 타자 · 투수 전원에게 — 엔트리에서 2명만 켜진다) */
+  const tp: TeamPot = teamPotential(potEntryOf(st));
   const pf = (u: Unit) => potFaceOf(tp, u.card.id, u.player.pos === 'P');
+  const potOff = (u: Unit) => tp.off.has(u.card.id) || undefined;
 
   /* 세트덱 — 엔트리 20명 */
   const members = entryMembers(st);
@@ -394,7 +404,7 @@ export function evaluate(st: LineupState): Eval {
     const bonus = cardBonusOf(u.card, u.player, { potFace: pf(u), set: sp?.cur ?? null });
     const pot = ovrPotOf(bonus, u.player);
     const base = cardOvr(u) + ovrBonusOf(bonus, u.player) - FIT_PENALTY[fit] + (of === 'good' ? 0.5 : of === 'poor' ? -0.5 : 0);
-    units[s] = { slot: s, id: u.id, fit, base, pot, potFace: pf(u), bonus, tc, chem: ch, total: base + tc + ch, tcText: setText(sp, false), set: sp, orderIdx: idx, orderFit: of };
+    units[s] = { slot: s, id: u.id, fit, base, pot, potFace: pf(u), potOff: potOff(u), bonus, tc, chem: ch, total: base + tc + ch, tcText: setText(sp, false), set: sp, orderIdx: idx, orderFit: of };
   });
 
   STAFF_SLOTS.forEach((s, i) => {
@@ -411,7 +421,7 @@ export function evaluate(st: LineupState): Eval {
     if (s === 'R0') ch = chemOf('P');
     else if (s[0] === 'R') ch = r1((battery[i]?.level ?? 0) * 0.45);
     else if (s === 'B0' || s === 'CL') ch = r1((backdoor?.level ?? 0) * 0.45);
-    units[s] = { slot: s, id: u.id, fit, base, pot, potFace: pf(u), bonus, tc, chem: ch, total: base + tc + ch, tcText: setText(sp, true), set: sp, injured };
+    units[s] = { slot: s, id: u.id, fit, base, pot, potFace: pf(u), potOff: potOff(u), bonus, tc, chem: ch, total: base + tc + ch, tcText: setText(sp, true), set: sp, injured };
   });
 
   /* 팀 종합 — 선발 10명 */
