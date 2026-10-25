@@ -3,10 +3,10 @@
 // 엔진에 넣을 때 종합을 목표에 맞춘다 — 능력치를 더하거나 빼되 92 위로 넘치는 만큼은 엔진 보너스(강화와 같은 길)로.
 import { ME, PLAYERS, TEAMS, registerPlayers } from '../game/mock';
 import { synthPlayer } from '../game/starter';
-import { seasonRoster } from '../game/history';
-import { eraOfCode } from '../game/world';
-import type { Player, PitcherRole, Pos } from '../game/types';
-import type { BatKey, PitKey, SetEffect } from '../game/sets';
+import { LAST_REAL_SEASON, seasonRoster } from '../game/history';
+import { clubSeason, clubYears } from '../game/clubSeasons';
+import type { ClubCode, Player, PitcherRole, Pos } from '../game/types';
+import { TIERS, setEffect, type BatKey, type PitKey, type SetEffect } from '../game/sets';
 import { cardBonusOf, engineFxOf } from '../game/cardBonus';
 import { cardShow, playerShift } from '../game/ovrShow';
 import { LEGEND_MAX, MVP_MAX, isLegendGrade, isMvpGrade, potFaceOf, teamPotential } from '../game/potential';
@@ -49,6 +49,8 @@ export interface ClubRoster {
   ovr: number;
   /** 경기 전 전술 (내 구단 — game/tactics). 없으면 엔진 기본 */
   tac?: TacState;
+  /** AI 구단 선수단이 어느 시즌인가 · 세트덱 단계 (리그 단계마다 — AI_DECK) */
+  deck?: { year: number; tier: number; v: number; onTop: number };
 }
 
 /** 지금 라인업 + 지금 전술 — 경기에 쓸 때 같이 얼린다(다시 보기 · 경기 기록이 같은 경기가 되게) */
@@ -70,17 +72,56 @@ function myPersons(): { set: Set<string>; sig: string } {
   mineMemo = { st, set, sig: [...set].sort().join(',') };
   return mineMemo;
 }
+/** 리그 단계마다 AI 구단 선수단 — 사용자 지시 10-26 "AI 는 해당 연도 선수로" · "리그가 올라갈수록 강한 연도덱 · 강화된 AI, 마지막 리그는 거의 끝판왕".
+ *  pool: 그 구단 시즌 중 어디서 고르나 — 'recent' 가장 최근 선수단이 다 찬 시즌, 0~1 은 성적 위쪽 몇 할 안에서, 정수는 위에서 몇 시즌 안에서(1 = 역대 최강)
+ *  onTop: 구단+연도 세트덱 몫을 리그 기준 세기(LEVEL_BASE · 고무줄) 위에 얼마나 더 얹나 — 0 이면 세트덱까지 합쳐 기준 세기(연습생 · 2군 난이도 그대로) */
+export const AI_DECK: Record<AiLevel, { pool: 'recent' | number; onTop: number }> = {
+  trainee: { pool: 'recent', onTop: 0 },
+  futures: { pool: 'recent', onTop: 0 },
+  first: { pool: 0.5, onTop: 0.25 },
+  allstar: { pool: 0.25, onTop: 0.5 },
+  national: { pool: 3, onTop: 0.75 },
+  legend: { pool: 1, onTop: 1 },
+};
+/** 선수단이 다 찬 시즌 — 실제 선수 25명 이상 (2026 처럼 기록이 덜 들어온 해는 건너뛴다) */
+const FULL_ROSTER = 25;
+const fullSeason = (code: ClubCode, y: number) => seasonRoster(code, y).filter((p) => !!p.real).length >= FULL_ROSTER;
+const deckYearCache = new Map<string, number>();
+/** 그 리그 단계 · 그 시즌(게임 연도) AI 구단이 쓸 실제 시즌 — 강한 시즌은 우승 > 준우승 > 승률 순, 게임 연도마다 위쪽 몇 시즌 안에서 돌아가며 */
+export function aiDeckYear(code: ClubCode, level: AiLevel, gameYear: number): number {
+  const key = `${code}|${level}|${gameYear}`;
+  const hit = deckYearCache.get(key);
+  if (hit != null) return hit;
+  const ys = clubYears(code).filter((y) => y <= LAST_REAL_SEASON).sort((a, b) => b - a);
+  const plan = AI_DECK[level];
+  let out = ys[0] ?? LAST_REAL_SEASON;
+  if (plan.pool === 'recent') {
+    out = ys.find((y) => fullSeason(code, y)) ?? out;
+  } else {
+    const score = (y: number) => { const r = clubSeason(code, y); const pct = r && r.w != null && r.l != null ? r.w / Math.max(1, r.w + r.l) : 0.4; return (r?.post === '우승' ? 2 : r?.post === '준우승' ? 1 : 0) + pct; };
+    const ranked = ys.slice().sort((a, b) => score(b) - score(a) || b - a);
+    const n = plan.pool >= 1 ? Math.round(plan.pool) : Math.max(1, Math.ceil(ranked.length * plan.pool));
+    const pool: number[] = [];
+    for (const y of ranked) { if (pool.length >= n) break; if (fullSeason(code, y)) pool.push(y); }
+    if (pool.length) out = pool[Math.floor(hash01(`${code}|${level}|${gameYear}|deck`) * pool.length)];
+  }
+  deckYearCache.set(key, out);
+  return out;
+}
+
 /** AI 구단 선수단 (리그 단계 목표 · 구단마다 늘 같은 선수).
  *  내 선수단에 있는 사람은 빼고 다음 선수로 채운다 — 같은 선수가 두 구단에서 동시에 뛰면 시즌 기록이 한 줄로 합쳐진다(288경기 · 타이틀 독식) */
 export function clubRoster(teamId: string, target: number = aiTargetOf(teamId)): ClubRoster {
   const mine = myPersons();
   const year = seasonYear();
-  const key = `${teamId}:${target}:${year}:${mine.sig}`;
+  const level = aiLevel();
+  const key = `${teamId}:${target}:${year}:${level}:${mine.sig}`;
   const hit = aiCache.get(key);
   if (hit) return hit;
   const team = TEAMS.find((t) => t.id === teamId) ?? TEAMS[0];
-  // 그 구단 2027 선수단 = 마지막 실제 시즌 선수단 (부활 옛 구단은 그 이름의 마지막 시즌) — 내 선수단에 있는 사람은 빼고
-  const real = seasonRoster(team.code, team.old ? eraOfCode(team.code)[1] : 2027).filter((p) => !!p.real && !mine.set.has(person(p.id)));
+  // 그 리그 단계 AI 선수단 = 그 구단 한 시즌 실제 선수단(aiDeckYear — 연습생 · 2군은 가장 최근 다 찬 시즌, 위로 갈수록 강한 시즌) — 내 선수단에 있는 사람은 빼고
+  const deckYear = aiDeckYear(team.code, level, year);
+  const real = seasonRoster(team.code, deckYear).filter((p) => !!p.real && !mine.set.has(person(p.id)));
   const own = real.length >= 12 ? real : PLAYERS.filter((p) => p.teamId === teamId && /^p\d+$/.test(p.id) && p.id !== 'p41');
   const used = new Set<string>();
   const delta = new Map<string, number>();
@@ -93,14 +134,17 @@ export function clubRoster(teamId: string, target: number = aiTargetOf(teamId)):
   let group = 'bat';
   let k = 0;
   const take = (pred: (p: Player) => boolean, pos: Pos, role: PitcherRole | undefined, off: number, sub?: Pos[]): Player => {
-    const real = own.find((p) => !used.has(p.id) && pred(p));
+    // 딱 맞는 선수가 없으면 그해 실제 선수 중에서 — 타자는 그 자리를 부포지션으로 보는 선수 → 아무 타자, 투수는 보직 상관없이 (옛 시즌엔 마무리 · 지명타자 표시가 없다)
+    const free = (f: (p: Player) => boolean) => own.find((p) => !used.has(p.id) && f(p));
+    const real = free(pred)
+      ?? (pos === 'P' ? free((p) => p.pos === 'P') : free((p) => p.pos !== 'P' && !!p.subPos?.includes(pos)) ?? (pos === 'C' ? undefined : free((p) => p.pos !== 'P')));
     if (real) {
       used.add(real.id);
       chosen.push({ p: real, off, g: group });
       return real;
     }
     const id = `ai-${teamId}-${String(k++).padStart(2, '0')}`;
-    const want = target + off;
+    const want = target + off; // 빈자리 가상 선수 — 세트덱 몫은 엔트리면 따로 받는다(아래)
     const p = synthPlayer({ id, teamId, pos, role, sub, ovr: Math.round(Math.min(want, ATTR_ROOM)), seed: `ai:${teamId}:${pos}:${k}`, usedNames: names });
     made.push(p);
     delta.set(id, 0);
@@ -116,6 +160,22 @@ export function clubRoster(teamId: string, target: number = aiTargetOf(teamId)):
   group = 'pen';
   const bullpen = [0, -1, -1, -2, -3].map((off) => take((p) => p.pos === 'P' && p.role === 'RP', 'P', 'RP', off));
   const closer = take((p) => p.pos === 'P' && p.role === 'CL', 'P', 'CL', 1);
+  // AI 세트덱 — 한 시즌 실제 선수단 = 구단+연도 세트덱. 엔트리(타자 9 · 선발 · 불펜 · 마무리)에서 그 시즌 실제 선수 수로 단계(20명 '왕조' +12)를 정하고
+  // 내 구단처럼 엔트리 전원이 받는다(벤치는 안 받음). 사용자 지시 10-26 "AI 리그팀들 단일연도+단일팀덱 세트 효과 주고 엔진 돌리기, 그 기준으로"
+  const setFx = new Map<string, SetEffect>();
+  const entry = [...batting.map((b) => b.player), ...rotation, ...bullpen, ...(closer ? [closer] : [])];
+  // AI 는 그 시즌 그 구단 선수단 — 엔트리 전원(빈자리를 메운 가상 선수도 그해 그 구단 선수)이 세트 인원 (사용자 지시 10-26 "AI 는 해당 연도 선수로, 당연히")
+  const deckN = entry.length;
+  const tier = TIERS.teamYear.reduce((acc, x, i) => (deckN >= x.at ? i : acc), -1);
+  let setV = 0;
+  if (tier >= 0) {
+    const fx = setEffect('teamYear', team.code, deckYear, tier);
+    for (const p of entry) setFx.set(p.id, fx);
+    setV = fx.v;
+  }
+  // 리그 기준 세기(target)는 세트덱 몫까지 합친 세기 — 위 리그(AI_DECK.onTop)는 세트덱 몫을 그 위에 더 얹는다(끝판왕)
+  const onTop = AI_DECK[level].onTop;
+  const baseShift = -setV * (1 - onTop);
   // 실제 선수 세기 = 목표 + 자리 몫 + 2(주전은 조금 더 세게) + 실력 차이(그 선수 종합 − 같은 묶음 평균) × AI_SPREAD — 묶음 평균은 0 으로 되돌린다
   const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
   const spread = new Map<string, number>();
@@ -130,7 +190,7 @@ export function clubRoster(teamId: string, target: number = aiTargetOf(teamId)):
   const aces = new Set(chosen.filter((c) => c.g === 'rot').slice(0, 2).map((c) => c.p.id));
   for (const { p, off } of chosen) {
     const career = aces.has(p.id) && hash01(`${year}|${p.id}|breakout`) < BREAKOUT.chance ? BREAKOUT.boost : 0;
-    const want = target + off + 2 + (spread.get(p.id) ?? 0) + career;
+    const want = target + baseShift + off + 2 + (spread.get(p.id) ?? 0) + career;
     delta.set(p.id, Math.round(Math.min(want, ATTR_ROOM) - p.ovr));
     if (want > ATTR_ROOM) enh.set(p.id, Math.round(want - ATTR_ROOM));
   }
@@ -148,7 +208,8 @@ export function clubRoster(teamId: string, target: number = aiTargetOf(teamId)):
   const show = new Map<string, number>();
   const teamShift = playerShift(target + 2);
   for (const p of [...order.map((b) => b.player), ...bench, ...rotation, ...bullpen, ...(closer ? [closer] : [])]) show.set(p.id, teamShift);
-  const r: ClubRoster = { teamId, mine: false, batting: order, rotation, bullpen, closer, bench, delta, setFx: new Map(), enh, show, ovr: Math.round(target) };
+  // 팀 종합(리그 기준점 levelRef 의 공통 수준) — 리그 기준 세기 + 위에 더 얹은 세트덱 몫
+  const r: ClubRoster = { teamId, mine: false, batting: order, rotation, bullpen, closer, bench, delta, setFx, enh, show, ovr: Math.round(target + setV * onTop), deck: { year: deckYear, tier, v: setV, onTop } };
   if (aiCache.size > 40) aiCache.clear(); // 라인업을 바꿀 때마다 열쇠가 새로 생긴다 — 오래된 것은 버린다
   aiCache.set(key, r);
   return r;

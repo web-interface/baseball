@@ -14,6 +14,7 @@ import { ME, teamById } from '../../game/mock';
 import { showOvr } from '../../game/ovrShow';
 import { allDays, gamesPlayed, gbLabel, isOver, pctLabel, standingsOf, useSeason, yearOf, type SeasonState } from '../../season/store';
 import { leagueEnv } from '../../season/env';
+import { tierName } from '../../game/sets';
 import { avgOf, eraOf, obpOf, r2, r3, seasonBook, slgOf, whipOf, type TeamRow, type WDL } from '../../season/awards';
 import { SERIES_ORDER, type SeriesRec } from '../../season/post';
 import { RankChart } from '../season/RankChart';
@@ -158,7 +159,7 @@ function Standings({ st, onTeamRecords }: { st: SeasonState; onTeamRecords: (tea
         open={!!peek}
         onClose={() => setPeek(null)}
         title={peek ? teamById(peek).name : ''}
-        sub={peekRoster ? <>팀 종합 <span className="num">{showOvr(peekRoster.ovr)}</span></> : undefined}
+        sub={peekRoster ? <>팀 종합 <span className="num">{showOvr(peekRoster.ovr)}</span>{peekRoster.deck && <> · ’<span className="num">{String(peekRoster.deck.year % 100).padStart(2, '0')}</span> 시즌 선수단 · {tierName('teamYear', peekRoster.deck.tier)} 세트</>}</> : undefined}
         height="tall"
       >
         {peek && started && <PeekStat t={teamOf(peek)} onMore={() => { const id = peek; setPeek(null); onTeamRecords(id); }} />}

@@ -15,7 +15,7 @@ export interface LeagueEnv {
 }
 
 /** 보통 해(e = 0) 의 몫과 극단까지의 폭 — 한 시즌 시험으로 맞춘 값 */
-export const ENV = { pow: { base: -1.8, span: 2.4 }, con: { base: 0.2, span: 0.12 } };
+export const ENV = { pow: { base: -2.5, span: 2.4 }, con: { base: 0.2, span: 0.12 } };
 
 let override: number | null = null;
 /** 시험용 — e 를 고정 (null 이면 시드대로) */
