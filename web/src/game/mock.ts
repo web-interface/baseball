@@ -682,10 +682,13 @@ export const PVP_OPPONENTS: PvpOpponent[] = [
 // 10-25 "카드 팩 확률 좀 올려줘" — 윗 등급일수록 더: 레전드급 ×2 · 엘리트 ×1.6 · 레어 ×1.4 · 스페셜 ×1.2 (맨 아래 등급이 나머지, 천장은 그대로)
 //   → 팩당 레전드급 1장 이상: 일반 0.09% · 프리미엄(연도 · 구단) 0.98% · 스페셜 1.85% · 레전드팩 3.1%
 //     (1000팩을 열면 레전드급이 일반 1장 · 프리미엄 10장 · 스페셜 19장 · 레전드팩 32장쯤)
+// 10-25 "좀더 올려줘 3배" — 맨 아래 등급을 뺀 모든 등급 ×3 (맨 아래 등급이 나머지, 천장은 그대로)
+//   → 팩당 레전드급 1장 이상: 일반 0.27% · 프리미엄(연도 · 구단) 2.9% · 스페셜 5.5% · 레전드팩 9%
+//     (1000팩을 열면 레전드급이 일반 3장 · 프리미엄 30장 · 스페셜 56장 · 레전드팩 95장쯤)
 const PREMIUM_ODDS: Pack['odds'] = [
-  { grade: 'special', pct: 87.80714 }, { grade: 'rare', pct: 11.2 }, { grade: 'elite', pct: 0.96 }, { grade: 'legend', pct: 0.02 },
-  { grade: 'mvp', pct: 0.004 }, { grade: 'gg', pct: 0.004 }, { grade: 'th', pct: 0.004 },
-  { grade: 'franchise', pct: 0.0006 }, { grade: 'black', pct: 0.0002 }, { grade: 'signature', pct: 0.00006 },
+  { grade: 'special', pct: 63.42142 }, { grade: 'rare', pct: 33.6 }, { grade: 'elite', pct: 2.88 }, { grade: 'legend', pct: 0.06 },
+  { grade: 'mvp', pct: 0.012 }, { grade: 'gg', pct: 0.012 }, { grade: 'th', pct: 0.012 },
+  { grade: 'franchise', pct: 0.0018 }, { grade: 'black', pct: 0.0006 }, { grade: 'signature', pct: 0.00018 },
 ];
 
 /** 모든 팩 30장 묶음 · 가격은 임시(요구사항 39번) · 확률 공개 · 천장은 팩 종류별 */
@@ -693,7 +696,7 @@ export const PACKS: Pack[] = [
   {
     id: 'basic', name: '일반팩', desc: '노멀~레전드 30장', size: 30,
     price: { gp: 30_000 },
-    odds: [{ grade: 'normal', pct: 88.293 }, { grade: 'special', pct: 10.8 }, { grade: 'rare', pct: 0.84 }, { grade: 'elite', pct: 0.064 }, { grade: 'legend', pct: 0.003 }],
+    odds: [{ grade: 'normal', pct: 64.879 }, { grade: 'special', pct: 32.4 }, { grade: 'rare', pct: 2.52 }, { grade: 'elite', pct: 0.192 }, { grade: 'legend', pct: 0.009 }],
     pity: { count: 0, max: 100, guaranteed: '엘리트 이상 1장' },
   },
   {
@@ -706,9 +709,9 @@ export const PACKS: Pack[] = [
     id: 'special', name: '스페셜팩', desc: '레어 이상 30장 · MVP·GG·TH 확률 ↑', size: 30,
     price: { gp: 450_000 },
     odds: [
-      { grade: 'rare', pct: 95.9378 }, { grade: 'elite', pct: 4 }, { grade: 'legend', pct: 0.04 },
-      { grade: 'mvp', pct: 0.006 }, { grade: 'gg', pct: 0.006 }, { grade: 'th', pct: 0.006 },
-      { grade: 'franchise', pct: 0.003 }, { grade: 'black', pct: 0.001 }, { grade: 'signature', pct: 0.0002 },
+      { grade: 'rare', pct: 87.8134 }, { grade: 'elite', pct: 12 }, { grade: 'legend', pct: 0.12 },
+      { grade: 'mvp', pct: 0.018 }, { grade: 'gg', pct: 0.018 }, { grade: 'th', pct: 0.018 },
+      { grade: 'franchise', pct: 0.009 }, { grade: 'black', pct: 0.003 }, { grade: 'signature', pct: 0.0006 },
     ],
     pity: { count: 0, max: 500, guaranteed: '블랙 이상 1장' },
   },
@@ -716,9 +719,9 @@ export const PACKS: Pack[] = [
     id: 'legend', name: '레전드팩', desc: '엘리트 이상 30장 · 이번 주 한정', size: 30,
     price: { ball: 9_000 },
     odds: [
-      { grade: 'elite', pct: 99.89492 }, { grade: 'legend', pct: 0.062 }, { grade: 'franchise', pct: 0.0088 },
-      { grade: 'mvp', pct: 0.0098 }, { grade: 'gg', pct: 0.0098 }, { grade: 'th', pct: 0.0098 },
-      { grade: 'black', pct: 0.0039 }, { grade: 'signature', pct: 0.00098 },
+      { grade: 'elite', pct: 99.68476 }, { grade: 'legend', pct: 0.186 }, { grade: 'franchise', pct: 0.0264 },
+      { grade: 'mvp', pct: 0.0294 }, { grade: 'gg', pct: 0.0294 }, { grade: 'th', pct: 0.0294 },
+      { grade: 'black', pct: 0.0117 }, { grade: 'signature', pct: 0.00294 },
     ],
     pity: { count: 0, max: 200, guaranteed: '시그니처 선택권' },
     limited: '이번 주 한정',
