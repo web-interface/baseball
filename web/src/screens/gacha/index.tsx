@@ -21,7 +21,7 @@ import { OddsBar, PityTally, Price, Swatch, gradeShort } from './bits';
 import { OddsSheet } from './OddsSheet';
 import { Opening, type OpeningStep } from './Opening';
 import { AutoOpen, BulkOpen } from './AutoOpen';
-import { coolText, nextQuota, quotaKo, quotaPacks, quotaView, spendQuota, useAutoQuota } from './autoQuota';
+import { coolText, nextQuota, quotaKo, quotaPacks, quotaView, useAutoQuota } from './autoQuota';
 import { LEVEL_KO } from '../../season/league';
 import s from './Gacha.module.css';
 
@@ -72,7 +72,7 @@ function Store({ query }: { query: URLSearchParams }) {
   const [auto, setAuto] = useState<{ runs: PullResult[]; asked: number } | null>(null);
   // 가득 찰 때까지 (휴대폰용 — 한 번 눌러 두면 상한까지)
   const [bulk, setBulk] = useState(0);
-  // 자동 열기 한도 — 리그 단계마다 (연습생 1만 장 … 레전드 한도 없음), 다 쓰면 1분 쉬기
+  // '한도까지 열기' 한도 — 리그 단계마다 (연습생 1만 장 … 레전드 한도 없음), 다 쓰면 1분 쉬기. 'N팩 자동 열기'(1~10팩)는 시간 제한 없음 (사용자 지시 10-25)
   const aq = useAutoQuota();
 
   const pack = PACKS.find((p) => p.id === packId) ?? PACKS[1];
@@ -108,17 +108,15 @@ function Store({ query }: { query: URLSearchParams }) {
     if (totalCards() > CARD_CAP) { toast({ text: '보관함이 가득 찼어요', tone: 'bad' }); goClean(); return; }
     setDemoStep(undefined); setResult(pullPack(pack, pick));
   };
-  // 자동 열기 — 살 수 있는 만큼(최대 고른 수 · 남은 한도) 한 번에 열고 요약으로
+  // 자동 열기 — 살 수 있는 만큼(최대 고른 수) 한 번에 열고 요약으로. 한도 · 쉬는 시간과 상관없음
   const qPacks = quotaPacks(pack.size, aq);
-  const nAuto = Math.min(autoN, affordCount(pack, g.wallet), qPacks);
+  const nAuto = Math.min(autoN, affordCount(pack, g.wallet));
   const coolMsg = () => `한도를 다 썼어요. ${coolText(aq)} 뒤 다시 열 수 있어요`;
   const autoOpen = () => {
     if (totalCards() > CARD_CAP) { toast({ text: '보관함이 가득 찼어요', tone: 'bad' }); goClean(); return; }
-    const v = quotaView();
-    if (v.cooling) { toast({ text: coolMsg(), tone: 'bad' }); return; }
-    const want = Math.min(autoN, affordCount(pack, readWallet()), quotaPacks(pack.size, v));
+    const want = Math.min(autoN, affordCount(pack, readWallet()));
     const runs = pullMany(pack, pick, want);
-    if (runs.length) { spendQuota(runs.length * pack.size, pack.size); setResult(null); setAuto({ runs, asked: want }); }
+    if (runs.length) { setResult(null); setAuto({ runs, asked: want }); }
   };
   const startBulk = () => {
     if (totalCards() > CARD_CAP) { goClean(); return; }
@@ -215,24 +213,22 @@ function Store({ query }: { query: URLSearchParams }) {
               className={s.autoBtn}
               onClick={autoOpen}
               disabled={nAuto < 1 || full}
-              trailing={aq.cooling ? undefined : <Price price={times(pack.price, Math.max(1, nAuto))} className={s.buyPrice} />}
+              trailing={<Price price={times(pack.price, Math.max(1, nAuto))} className={s.buyPrice} />}
             >
-              {aq.cooling
-                ? <><span className="num">{coolText(aq)}</span> 뒤 다시 자동</>
-                : nAuto > 0 && nAuto < autoN ? <><span className="num">{nAuto}</span>팩만 자동</> : <><span className="num">{autoN}</span>팩 자동 열기</>}
+              {nAuto > 0 && nAuto < autoN ? <><span className="num">{nAuto}</span>팩만 자동</> : <><span className="num">{autoN}</span>팩 자동 열기</>}
             </Button>
-            <button type="button" className={s.bulkBtn} onClick={startBulk} disabled={nAuto < 1 || full}>
-              {aq.unlimited ? '가득 찰 때까지 열기' : '한도까지 열기'}
+            <button type="button" className={s.bulkBtn} onClick={startBulk} disabled={nAuto < 1 || full || aq.cooling || qPacks < 1}>
+              {aq.cooling ? <span><span className="num">{coolText(aq)}</span> 뒤 다시 한도까지 열기</span> : aq.unlimited ? '가득 찰 때까지 열기' : '한도까지 열기'}
             </button>
-            {/* 자동 열기 한도 — 리그 단계마다. 다 쓰면 1분 쉬기 */}
+            {/* '한도까지 열기' 한도 — 리그 단계마다. 다 쓰면 1분 쉬기 */}
             <div className={[s.quota, aq.cooling && s.quotaCool].filter(Boolean).join(' ')} aria-live="polite">
               <p className={s.quotaTop}>
                 <span className={s.quotaLv}>{LEVEL_KO[aq.level]}</span>
                 {aq.unlimited
-                  ? <span>자동 열기 <b>한도 없음</b></span>
+                  ? <span>한도까지 열기 <b>한도 없음</b></span>
                   : aq.cooling
                     ? <span>쉬는 중 <b className="num">{coolText(aq)}</b></span>
-                    : <span>자동 열기 한도 <b className="num">{aq.left.toLocaleString()}</b><i>/{aq.quota.toLocaleString()}장</i></span>}
+                    : <span>한도까지 열기 <b className="num">{aq.left.toLocaleString()}</b><i>/{aq.quota.toLocaleString()}장</i></span>}
               </p>
               {!aq.unlimited && (
                 <div className={s.quotaBar} aria-hidden>
@@ -371,7 +367,6 @@ function Store({ query }: { query: URLSearchParams }) {
           onClose={() => setAuto(null)}
           onAgain={nAuto > 0 ? autoOpen : undefined}
           againN={nAuto}
-          note={aq.cooling ? coolMsg() : undefined}
           onCombo={() => { setAuto(null); navigate('/combine'); }}
         />
       )}
