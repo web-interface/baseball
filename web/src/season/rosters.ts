@@ -14,10 +14,17 @@ import { interviewFx } from '../game/press';
 import { loadTactics, type TacState } from '../game/tactics';
 import { PEN_SLOTS, ROT_SLOTS, STAFF_FIT_PENALTY, evaluate, fitOf, getSlot, initialLineup, potEntryOf, store as lineupStore, unit, type LineupState, type StaffSlot } from '../screens/lineup/calc';
 
-import { LEVEL_KO, aiLevel, aiTargetOf, type AiLevel } from './league';
+import { LEVEL_KO, aiLevel, aiTargetOf, seasonYear, type AiLevel } from './league';
 export { LEVEL_KO, aiLevel, aiTargetOf, type AiLevel };
 /** 능력치로 올리는 한도 — 넘치는 만큼은 엔진 보너스 */
 const ATTR_ROOM = 92;
+/** AI 구단 실제 선수의 실력 차이를 얼마나 살리나 — 0 이면 모두 목표 세기로 같아진다(에이스 · 강타자가 사라져 평균자책 1위가 3~5점대).
+ *  평균보다 잘하는 쪽(up)은 크게, 못하는 쪽(down)은 덜 벌린다(규정타석 꼴찌 타율이 .160 까지 떨어지지 않게). 벌린 뒤 구단 평균(투수 · 타자 따로)은 목표로 되돌린다.
+ *  사용자 지시 10-26 "평균자책 2~3점대 몇 명 · 특출한 시즌엔 1점대 1~2명" — 한 시즌 시험: 2점대 5~9명 · 1위 2.0~2.6 */
+export const AI_SPREAD = { P: { up: 2.5, down: 0.8 }, B: { up: 2.2, down: 0.7 } };
+/** 올해 커리어 하이 — 시즌마다 AI 1 · 2선발 중 몇 명(리그 전체 1~2명꼴)이 특출한 시즌(평균자책 1점대 언저리)을 보낸다. 연도 · 선수로 정해져 그 시즌 내내 같다 */
+const BREAKOUT = { chance: 0.08, boost: 10 };
+const hash01 = (s: string) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
 
 export interface ClubRoster {
   teamId: string;
@@ -67,7 +74,8 @@ function myPersons(): { set: Set<string>; sig: string } {
  *  내 선수단에 있는 사람은 빼고 다음 선수로 채운다 — 같은 선수가 두 구단에서 동시에 뛰면 시즌 기록이 한 줄로 합쳐진다(288경기 · 타이틀 독식) */
 export function clubRoster(teamId: string, target: number = aiTargetOf(teamId)): ClubRoster {
   const mine = myPersons();
-  const key = `${teamId}:${target}:${mine.sig}`;
+  const year = seasonYear();
+  const key = `${teamId}:${target}:${year}:${mine.sig}`;
   const hit = aiCache.get(key);
   if (hit) return hit;
   const team = TEAMS.find((t) => t.id === teamId) ?? TEAMS[0];
@@ -79,14 +87,16 @@ export function clubRoster(teamId: string, target: number = aiTargetOf(teamId)):
   const enh = new Map<string, number>();
   const names = new Set(PLAYERS.map((p) => p.name));
   const made: Player[] = [];
+  /** 뽑은 실제 선수 — 세기는 다 뽑은 뒤 구단 평균에 맞춰 정한다(실력 차이를 살리려고) */
+  const chosen: { p: Player; off: number; g: string }[] = [];
+  /** 지금 뽑는 묶음 — 실력 차이는 묶음 안에서만 벌린다(선발 · 불펜 · 주전 타자 · 벤치 각자 평균은 예전 그대로) */
+  let group = 'bat';
   let k = 0;
   const take = (pred: (p: Player) => boolean, pos: Pos, role: PitcherRole | undefined, off: number, sub?: Pos[]): Player => {
     const real = own.find((p) => !used.has(p.id) && pred(p));
     if (real) {
       used.add(real.id);
-      const want = target + off + 2; // 주전은 그 구단에서 조금 더 세게
-      delta.set(real.id, Math.min(want, ATTR_ROOM) - real.ovr);
-      if (want > ATTR_ROOM) enh.set(real.id, Math.round(want - ATTR_ROOM));
+      chosen.push({ p: real, off, g: group });
       return real;
     }
     const id = `ai-${teamId}-${String(k++).padStart(2, '0')}`;
@@ -99,10 +109,31 @@ export function clubRoster(teamId: string, target: number = aiTargetOf(teamId)):
   };
   const OFF: Record<string, number> = { C: -1, '1B': 2, '2B': 0, '3B': 1, SS: 1, LF: 0, CF: 1, RF: 1, DH: 2 };
   const batting = BAT_POS.map((pos) => ({ pos, player: take((p) => p.pos === pos, pos, undefined, OFF[pos]) }));
+  group = 'bench';
   const bench = [take((p) => p.pos === 'C', 'C', undefined, -4), take((p) => p.pos !== 'P', '2B', undefined, -3, ['SS', '3B'])];
+  group = 'rot';
   const rotation = [2, 1, 0, -1, -2].map((off) => take((p) => p.pos === 'P' && p.role === 'SP', 'P', 'SP', off));
+  group = 'pen';
   const bullpen = [0, -1, -1, -2, -3].map((off) => take((p) => p.pos === 'P' && p.role === 'RP', 'P', 'RP', off));
   const closer = take((p) => p.pos === 'P' && p.role === 'CL', 'P', 'CL', 1);
+  // 실제 선수 세기 = 목표 + 자리 몫 + 2(주전은 조금 더 세게) + 실력 차이(그 선수 종합 − 같은 묶음 평균) × AI_SPREAD — 묶음 평균은 0 으로 되돌린다
+  const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+  const spread = new Map<string, number>();
+  for (const grp of ['bat', 'bench', 'rot', 'pen']) {
+    const g = chosen.filter((c) => c.g === grp);
+    const m = avg(g.map((c) => c.p.ovr));
+    const k = grp === 'rot' || grp === 'pen' ? AI_SPREAD.P : AI_SPREAD.B;
+    const raw = g.map((c) => { const d = c.p.ovr - m; return d > 0 ? k.up * d : k.down * d; });
+    const back = avg(raw); // 벌린 뒤 평균을 0 으로 — 구단 세기는 목표 그대로
+    g.forEach((c, i) => spread.set(c.p.id, raw[i] - back));
+  }
+  const aces = new Set(chosen.filter((c) => c.g === 'rot').slice(0, 2).map((c) => c.p.id));
+  for (const { p, off } of chosen) {
+    const career = aces.has(p.id) && hash01(`${year}|${p.id}|breakout`) < BREAKOUT.chance ? BREAKOUT.boost : 0;
+    const want = target + off + 2 + (spread.get(p.id) ?? 0) + career;
+    delta.set(p.id, Math.round(Math.min(want, ATTR_ROOM) - p.ovr));
+    if (want > ATTR_ROOM) enh.set(p.id, Math.round(want - ATTR_ROOM));
+  }
   registerPlayers(made);
   // 타순 — 종합 순으로 3·4·5번에 세고, 1·2번은 빠른 선수
   const strength = (p: Player) => p.ovr + (delta.get(p.id) ?? 0) + (enh.get(p.id) ?? 0);

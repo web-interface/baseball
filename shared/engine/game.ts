@@ -230,7 +230,7 @@ function runPA(g: G, firstOfHalf: boolean): void {
         BIN.tLaunch = b.tLaunch; BIN.tGbPit = p.tGb; BIN.dEdge = PT.d; BIN.zRel = PT.z - pa.zMid;
         BIN.vPlate = PT.vPlate; BIN.veloDev = PT.type === 8 || pc.sig === 8 ? 0 : clamp(PT.vRel - P.bat.veloRef - P.pt.veloOff[PT.type], -15, 15); BIN.mem = PT.f; BIN.move = PT.move; BIN.heavy = pc.sig === 2; BIN.rainLv = g.slot.rainLv; BIN.tempC = g.slot.tC; BIN.coldT = b.wxT[1];
         const appr = pa.approach;
-        BIN.vb = P.bat.vb0 + P.bat.power * pa.zPow + P.bat.strength * b.z[A.strength] + (appr === 3 ? P.bat.approachPow : appr === 4 ? P.bat.contactVb : appr === 5 ? -2 : appr === 6 ? -1 : 0) + (PT.guessHit ? P.bat.guessV : 0) + P.ev.powerVb * pa.cPow + P.env.powerAdj
+        BIN.vb = P.bat.vb0 + P.bat.power * pa.zPow + P.bat.strength * b.z[A.strength] + (appr === 3 ? P.bat.approachPow : appr === 4 ? P.bat.contactVb : appr === 5 ? -2 : appr === 6 ? -1 : 0) + (PT.guessHit ? P.bat.guessV : 0) + P.ev.powerVb * pa.cPow + (g.inp.env?.powerAdj ?? P.env.powerAdj)
           + (g.strikes === 2 && O.tac.twoStrike === 'shorten' ? -3 : g.strikes === 2 && O.tac.twoStrike === 'full' ? 1.5 : 0) + (hasT(b, TR.fastballHunter) && P.pt.fam[PT.type] === 0 ? 1.5 : 0);
         BIN.weakAdj = (PT.guessHit ? -0.51 : PT.guessMiss ? 0.34 : 0) - 2.0 * (b.mech.hitRel ?? 0) + P.ev.stuffWeak * pa.cStuff - P.ev.contactWeak * pa.cCon + (pc.sig === 11 ? 0.3 : 0);
         BIN.muAdj = (appr === 5 ? 0.15 : appr === 6 ? -0.2 : 0) + (pa.mode === 1 ? -0.3 : 0);

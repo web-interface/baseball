@@ -166,6 +166,8 @@ export interface GameInput {
   opts?: GameOpts;
   /** 리그 수준 기준점 R(경기엔진.md 3.4) — 서버가 양 팀 종합 수준으로 계산해 넘긴다. 모든 선수의 능력치(성향 4개 제외)·구종 위력·커맨드에서 똑같이 뺀다. 기본 0, −20~60 */
   levelRef?: number;
+  /** 리그 환경(시즌마다 — 공인구 반발력 · 타고투저/투고타저). 없으면 params env 그대로 */
+  env?: { powerAdj?: number; contactAdj?: number };
 }
 
 // ───────────── 출력 ─────────────

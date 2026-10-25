@@ -13,6 +13,7 @@ import { Button, Emblem, Icon, Sheet, Tabs } from '../../ui';
 import { ME, teamById } from '../../game/mock';
 import { showOvr } from '../../game/ovrShow';
 import { allDays, gamesPlayed, gbLabel, isOver, pctLabel, standingsOf, useSeason, yearOf, type SeasonState } from '../../season/store';
+import { leagueEnv } from '../../season/env';
 import { avgOf, eraOf, obpOf, r2, r3, seasonBook, slgOf, whipOf, type TeamRow, type WDL } from '../../season/awards';
 import { SERIES_ORDER, type SeriesRec } from '../../season/post';
 import { RankChart } from '../season/RankChart';
@@ -50,7 +51,11 @@ export default function LeagueScreen({ query }: ScreenProps) {
     <div className={s.screen}>
       <header className={s.head}>
         <h2 className={['head', s.h].join(' ')}><span className="num">{year}</span> 순위·리그 기록</h2>
-        <p className={s.meta}>{played === 0 ? '개막 전' : isOver(st) ? '정규 시즌 끝' : <><span className="num">{played}</span>/<span className="num">{days.length}</span>일</>}</p>
+        <p className={s.meta}>
+          {/* 리그 환경(시즌마다 공인구 반발력 — season/env) */}
+          <span className={s.envTag} title="시즌마다 공인구 반발력이 달라요 — 실제 KBO 범위 안에서">리그 환경 · {leagueEnv(st.seed).label}</span>{' '}
+          {played === 0 ? '개막 전' : isOver(st) ? '정규 시즌 끝' : <><span className="num">{played}</span>/<span className="num">{days.length}</span>일</>}
+        </p>
       </header>
       <div className={s.views}>
         <Tabs fill aria-label="보기" value={view} onChange={setView} items={[{ value: 'rank', label: '순위' }, { value: 'team', label: '팀 기록' }, { value: 'player', label: '선수 기록' }]} />

@@ -282,7 +282,7 @@ export function throwPitch(g: G, pitchout: boolean): number {
   const two = st === 2;
   const twoTac = O.tac.twoStrike;
   let lc = P.con.c0 + P.con.c1 * Math.tanh(d / P.con.w) + P.pt.C[t] + P.con.zc * pa.zCon + P.con.zk * pa.zK + P.con.zcope * zCope - P.con.zs * zs
-    - (fam === 0 ? P.con.velo * (T.vPerc - 146) : t === 8 || pc.sig === 8 ? 0 : P.con.veloOS * clamp(vRel - P.bat.veloRef - P.pt.veloOff[t], -15, 15)) + P.con.mem * f + (two ? P.con.two : 0) + P.ev.contactLogit * (pa.cCon - pa.cStuff) + P.env.contactAdj;
+    - (fam === 0 ? P.con.velo * (T.vPerc - 146) : t === 8 || pc.sig === 8 ? 0 : P.con.veloOS * clamp(vRel - P.bat.veloRef - P.pt.veloOff[t], -15, 15)) + P.con.mem * f + (two ? P.con.two : 0) + P.ev.contactLogit * (pa.cCon - pa.cStuff) + (g.inp.env?.contactAdj ?? P.env.contactAdj);
   if (t === 0 && z > zm + HH / 3) lc -= P.con.highFF * (pc.sig === 4 ? 1.3 : 1);
   if (pa.prevType >= 0 && P.pt.fam[pa.prevType] === 0 && fam >= 1) lc -= P.con.timing * Math.max(0, pa.prevV - vRel - 10) + (pc.sig === 8 ? 0.6 : 0);
   if (T.guessHit) lc += P.con.guessHit; else if (T.guessMiss) lc += P.con.guessMiss;

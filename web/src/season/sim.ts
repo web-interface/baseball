@@ -13,6 +13,7 @@ import { rosterOf, type ClubRoster } from './rosters';
 import { playerShift } from '../game/ovrShow';
 import { armLoads, relieverAvail, starterRelief, type ArmLoad } from './arm';
 import { getSeason } from './store';
+import { leagueEnv } from './env';
 import { startTime } from './schedule';
 import { weatherOf } from './weather';
 export { rainedOut, weatherOf } from './weather';
@@ -262,6 +263,8 @@ export function runGame(seasonSeed: string, day: number, date: string, awayId: s
     away: away.team,
     // 리그 기준점 R — 능력치가 화면 눈금(힘 눈금보다 평균 14쯤 낮다)으로 들어가니, 두 팀 평균 몫만큼 공통 수준을 되돌린다(선수 사이 차이는 그대로)
     levelRef: Math.round(((away.shift.sum + home.shift.sum) / Math.max(1, away.shift.n + home.shift.n)) * 10) / 10,
+    // 리그 환경 — 시즌마다 공인구 반발력(타고투저 · 투고타저, season/env). 그 시즌 내내 같다
+    env: (({ powerAdj, contactAdj }) => ({ powerAdj, contactAdj }))(leagueEnv(seasonSeed)),
     // 경기 중 작전(내 팀만 — 엔진이 isUser 팀 명령만 받는다). 명령 앞 투구까지는 명령 없는 경기와 똑같다
     cmds: opts.cmds?.length ? opts.cmds : undefined,
     opts: opts.log ? { log: true, attrib: true } : undefined,
