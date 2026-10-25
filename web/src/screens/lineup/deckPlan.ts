@@ -5,7 +5,7 @@
 //    레전드급(타자 2 · 투수 2) · MVP(4) · 같은 사람 한 번은 그대로 지킨다.
 //  · 연도 없는 카드(레전드급 · 특별 선수)는 같은 구단 연도 세트 · 연도 세트에 함께 든다 (game/sets 와 같은 규칙)
 import type { ClubCode } from '../../game/types';
-import { TIERS, sameLine, type SetKind, type Tier } from '../../game/sets';
+import { TIERS, type SetKind, type Tier } from '../../game/sets';
 import { teamByCode } from '../../game/mock';
 import { shortLabel } from '../../game/world';
 import { clubTitles } from '../../game/clubSeasons';
@@ -97,13 +97,13 @@ export function deckOptions(st: LineupState): DeckOption[] {
       merge(wildAll, who, f);
     }
   }
-  // 연도 없는 카드 — 연도 카드가 만든 세트에만 함께 (혼자서는 연도 세트를 만들지 않는다) · 구단 세트는 같은 계보 구단 것도
+  // 연도 없는 카드 — 연도 카드가 만든 세트에만 함께 (혼자서는 연도 세트를 만들지 않는다) · 구단 · 구단+연도 세트는 카드 구단이 똑같을 때만
+  //  (다른 구단은 프랜차이즈 엘리트 · 옛 이름이라도 안 됨 — game/sets computeSets 와 같은 규칙)
   for (const d of decks.values()) {
     if (d.t.kind === 'year') { for (const [who, f] of wildAll) merge(d.m, who, f); continue; }
-    for (const [code, wild] of wildClub) {
-      if (d.t.kind === 'team' && code === d.t.code) continue; // 자기 구단 것은 이미 들어 있다
-      if (sameLine(code, d.t.code!)) for (const [who, f] of wild) merge(d.m, who, f);
-    }
+    if (d.t.kind === 'team') continue; // 자기 구단 것은 이미 들어 있다
+    const wild = wildClub.get(d.t.code!);
+    if (wild) for (const [who, f] of wild) merge(d.m, who, f);
   }
   const ev = evaluate(st);
   const nowOf = new Map(ev.sets.map((x) => [x.id, x.have]));
@@ -174,7 +174,7 @@ interface Cand { id: string; who: string; l: LiteU; base: number; m: boolean; le
 
 export function autoLineupFor(st: LineupState, t: DeckTarget): LineupState {
   const y = t.year != null ? String(t.year) : '';
-  const wildIn = (l: LiteU) => l.yearKey === 'none' && sameLine(l.code, t.code!);
+  const wildIn = (l: LiteU) => l.yearKey === 'none' && l.code === t.code; // 연도 없는 카드도 같은 구단만
   const match = (l: LiteU) => (t.kind === 'team' ? l.code === t.code || wildIn(l)
     : t.kind === 'teamYear' ? (l.code === t.code && l.yearKey === y) || wildIn(l)
       : l.yearKey === y || l.yearKey === 'none');

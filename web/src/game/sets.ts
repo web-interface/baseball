@@ -1,6 +1,6 @@
 // 세트덱 — 1군 엔트리(타자 9 · 선발 5 · 불펜 최대 10 · 마무리 1 — 최대 25명) 안에서 같은 구단·같은 연도 카드를 모으면
-// (연도 없는 카드 — 레전드 · 프랜차이즈 · 블랙 · 시그니처 · 특별 선수 — 는 아무 연도로 쳐서, 같은 계보 구단(옛 이름 · 지금 이름)의
-//  구단 세트 · 구단+연도 세트, 그리고 연도 세트에 함께 든다)
+// (연도 없는 카드 — 레전드 · 프랜차이즈 · 블랙 · 시그니처 · 특별 선수 — 는 아무 연도로 쳐서, 같은 구단의
+//  구단 세트 · 구단+연도 세트, 그리고 연도 세트에 함께 든다. 구단 세트 · 구단+연도 세트는 카드 구단이 똑같아야 — 옛 이름 · 지금 이름도 다른 구단)
 // 인원 단계(5 · 9 · 14 · 20 · 25명)마다 능력치가 오른다. 구단+연도 20명이면 왕조, 25명(엔트리 전원)이면 황금 왕조.
 //  · 세트 3종: 구단+연도(가장 셈) · 구단(연도 무관) · 연도(구단 무관)
 //  · 오르는 능력치는 조합마다 다르다 — 구단 성향(세계관) + 그 해 성격(구단 연도 기록) / 연도 세트는 그 해 리그 특징
@@ -376,13 +376,13 @@ export function computeSets(members: EntryMember[]): SetsResult {
     }
   }
   // 연도 없는 카드(레전드 · 프랜차이즈 · 블랙 · 시그니처 · 특별 선수)는 '아무 연도' — 연도 카드가 만든 세트에 함께 든다
-  //  같은 계보 구단(옛 이름 · 지금 이름 — world LINEAGE)의 구단 세트 · 구단+연도 세트 모두, 연도 세트 모두.
+  //  구단+연도 세트는 카드 구단이 똑같을 때만(구단 세트는 위에서 이미 같은 구단으로 들었다), 연도 세트는 모두.
+  //  다른 구단 카드는 프랜차이즈 엘리트라도, 옛 이름 · 지금 이름(같은 계보)이라도 구단 · 구단+연도 세트에 안 든다 — 사용자 지시 10-25 밤.
   //  혼자서는 연도 세트를 만들지 않는다. 사용자 지시 10-24 · 10-25
   const wild = members.filter((m) => m.year == null);
   if (wild.length) {
     for (const [id, g] of [...groups]) {
-      if (g.kind === 'teamYear') { for (const m of wild) if (sameLine(m.code, g.code!)) add(id, 'teamYear', m, g.code, g.year); }
-      else if (g.kind === 'team') { for (const m of wild) if (m.code !== g.code && sameLine(m.code, g.code!)) add(id, 'team', m, g.code); }
+      if (g.kind === 'teamYear') { for (const m of wild) if (m.code === g.code) add(id, 'teamYear', m, g.code, g.year); }
       else if (g.kind === 'year') { for (const m of wild) add(id, 'year', m, undefined, g.year); }
     }
   }

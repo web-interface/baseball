@@ -11,7 +11,7 @@ import { cardLite } from '../../game/kbo';
 import type { ClubCode, Team } from '../../game/types';
 import { HAS_REAL_SEASONS, clubPennants, clubRunnerUps, clubSeason, clubTitles, clubYears, fullYear, leagueYear, leagueYears, postLabel, seasonLine } from '../../game/clubSeasons';
 import {
-  ENTRY_SIZE, FULL_SIZE, SET_KIND_DESC, SET_KIND_KO, STAT_KO, TIERS, TIER_NAMES, sameLine, setEffect, setName, statLine,
+  ENTRY_SIZE, FULL_SIZE, SET_KIND_DESC, SET_KIND_KO, STAT_KO, TIERS, TIER_NAMES, setEffect, setName, statLine,
   type SetEffect, type SetKind, type SetProgress,
 } from '../../game/sets';
 import { boxOf, evaluate, initialLineup, store, unit } from '../lineup/calc';
@@ -71,7 +71,8 @@ function Rules() {
       <ul className={s.ruleList}>
         <li><b>엔트리 전원</b> 가장 센 세트 하나가 모두에게</li>
         <li><b>왕조</b> 구단+연도 {ENTRY_SIZE}명 · <b>황금 왕조</b> {FULL_SIZE}명</li>
-        <li><b>연도 없는 카드</b> 같은 계보 구단(옛 이름 포함) · 아무 연도로</li>
+        <li><b>구단 · 구단+연도</b> 카드 구단이 같아야 (다른 구단은 프랜차이즈라도 안 돼요)</li>
+        <li><b>연도 없는 카드</b> 아무 연도로</li>
       </ul>
     </section>
   );
@@ -106,8 +107,8 @@ interface Spare { id: string; code: string; year: number | null }
 function MineRow({ sp, spare }: { sp: SetProgress; spare: Spare[] }) {
   const t = sp.code ? teamByCode(sp.code) : undefined;
   const need = sp.next ? sp.next.at : FULL_SIZE;
-  // 연도 없는 카드(레전드급 · 특별 선수)는 아무 연도 · 같은 계보 구단 — 구단 세트 · 구단+연도 세트 · 연도 세트에도 든다
-  const fits = spare.filter((u) => (sp.code ? u.code === sp.code || (u.year == null && sameLine(u.code, sp.code)) : true) && (sp.year != null ? u.year === sp.year || u.year == null : true));
+  // 연도 없는 카드(레전드급 · 특별 선수)는 아무 연도 — 같은 구단의 구단 세트 · 구단+연도 세트, 연도 세트에도 든다 (다른 구단은 안 됨)
+  const fits = spare.filter((u) => (sp.code ? u.code === sp.code : true) && (sp.year != null ? u.year === sp.year || u.year == null : true));
   const more = sp.next ? sp.next.at - sp.have : 0;
   const short = sp.code ? shortLabel(sp.code) : '';
   const want = sp.kind === 'teamYear' ? `${short} ${fmt.yearTag(sp.year! % 100)} 카드` : sp.kind === 'team' ? `${short} 카드(연도 무관)` : `${fmt.yearTag(sp.year! % 100)} 카드(구단 무관)`;
