@@ -13,7 +13,7 @@ import { isLegendGrade, isMvpGrade } from '../../game/potential';
 import { owned } from './local-mock';
 import {
   BAT_SLOTS, LEGEND_MAX, MVP_MAX, ROT_SLOTS, STAFF_SLOTS, FIT_PENALTY, STAFF_FIT_PENALTY,
-  autoOrder, benchFor, cardPower, evaluate, fitOf, getSlot, liteUnit, unit,
+  autoLineup, autoOrder, benchFor, cardPower, evaluate, fitOf, getSlot, liteUnit, unit,
   type BatSlot, type LineupState, type LiteU, type StaffSlot,
 } from './calc';
 
@@ -130,6 +130,22 @@ export function deckOptions(st: LineupState): DeckOption[] {
 /** 센 덱 먼저 — 단계 가치 → 채울 수 있는 인원 → 구단+연도 > 구단 > 연도 */
 const KIND_RANK: Record<SetKind, number> = { teamYear: 3, team: 2, year: 1 };
 export const byStrength = (a: DeckOption, b: DeckOption) => b.tier.v - a.tier.v || b.can - a.can || KIND_RANK[b.kind] - KIND_RANK[a.kind] || (b.year ?? 0) - (a.year ?? 0);
+/** 추천 덱 — 구단+연도 넷 · 구단 둘 · 연도 둘, 센 순 (자동 편성 시트 '추천' 탭) */
+export function recommendedDecks(opts: DeckOption[]): DeckOption[] {
+  const of = (k: SetKind) => opts.filter((o) => o.kind === k);
+  return [...of('teamYear').slice(0, 4), ...of('team').slice(0, 2), ...of('year').slice(0, 2)].sort(byStrength);
+}
+/** 정말 가장 센 팀 — 카드 힘만 보고 짠 편성(calc autoLineup — 세트덱 효과는 따지지 않는다)과 추천 덱으로 짠 편성을 모두 짜 보고 팀 종합이 가장 높은 것.
+ *  사용자 지시 10-26: 자동 편성 시트에 숫자를 붙이니 '가장 센 팀'(71)이 독수리스덱(80)보다 약했다 */
+export function strongestLineup(st: LineupState, opts: DeckOption[] = deckOptions(st)): LineupState {
+  let best = autoLineup(st), bv = evaluate(best).raw;
+  for (const o of recommendedDecks(opts)) {
+    const x = autoLineupFor(st, o);
+    const v = evaluate(x).raw;
+    if (v > bv + 1e-9) { best = x; bv = v; }
+  }
+  return best;
+}
 
 /* ───────── 그 덱으로 짜기 ───────── */
 // 덱 카드에 얹는 값을 바꿔 가며 배정해, '고른 덱이 오를 수 있는 가장 높은 단계 인원'을 채우는 가장 작은 값을 찾는다.

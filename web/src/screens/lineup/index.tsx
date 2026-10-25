@@ -26,9 +26,9 @@ import { PitchTab } from './PitchTab';
 import { BenchSheet, SwapSheet } from './SwapSheet';
 import { PlayerSheet } from './PlayerSheet';
 import { AutoSheet } from './AutoSheet';
-import { autoLineupFor, type DeckOption, type DeckTarget } from './deckPlan';
+import { autoLineupFor, strongestLineup, type DeckOption, type DeckTarget } from './deckPlan';
 import {
-  BAT_SLOTS, LEGEND_MAX, MVP_MAX, STAFF_SLOTS, SLOT_KO, autoLineup, autoOrder, evaluate, getSlot, initialLineup, isBat, place, store, swapOrder, unit,
+  BAT_SLOTS, LEGEND_MAX, MVP_MAX, STAFF_SLOTS, SLOT_KO, autoOrder, evaluate, getSlot, initialLineup, isBat, place, store, swapOrder, unit,
   type LineupState, type Slot, type StaffSlot,
 } from './calc';
 import s from './Lineup.module.css';
@@ -177,7 +177,7 @@ export default function LineupScreen({ query }: ScreenProps) {
   };
   const runAuto = () => {
     setAutoOpen(false);
-    const next = autoLineup(st);
+    const next = strongestLineup(st); // 카드 힘만 본 편성 · 추천 덱 편성 중 팀 종합이 가장 높은 것
     if (JSON.stringify(next) === JSON.stringify(st)) {
       toast({ text: '지금이 가장 좋은 라인업이에요', tone: 'info' });
       return;
