@@ -41,13 +41,21 @@ export function pressTagOf(v: unknown): PressTag | null {
 /** 서버로 보내는 사건 분류 — 옛 서버(배포 전)는 새 이름을 400 으로 막으니 옛 이름으로 보낸다. 새 서버는 둘 다 받는다 */
 const WIRE_TAG = new Map<PressTag, string>([['화제', '실화냐'], ['이슈', '루머']]);
 /** 기사 하나 (Claude 나 템플릿이 쓴 제목 · 리드 · 댓글 — 매체 · 기자 · 시각 · 공감 수는 화면이 코드로 붙인다) */
-export interface RawPost { tag: PressTag; title: string; body: string; comments: string[] }
+export interface RawPost {
+  tag: PressTag; title: string; body: string; comments: string[];
+  /** 쓴 기자 성향 — AI 가 기사마다 정한다(없으면 아무 기자) */
+  style?: RepStyle;
+}
 export type Moment = 'open' | 'close';
 export type AnsType = 'trust' | 'push' | 'calm';
 export const ANS_KO: Record<AnsType, string> = { trust: '감싸기', push: '채찍', calm: '여유' };
+/** 기자 성향 — snark: 독설 · 자극(일명 '기레기' 스타일) / kind: 훈훈 · 응원. 사용자 지시 10-25 (서버 worker/src/press.ts STYLES 와 같은 이름) */
+export type RepStyle = 'snark' | 'kind';
+export const REP_STYLE_KO: Record<RepStyle, string> = { snark: '독설', kind: '훈훈' };
+const repStyleOf = (v: unknown): RepStyle | undefined => (v === 'snark' || v === 'kind' ? v : undefined);
 export interface IvOpt { type: AnsType; text: string; head: string }
 /** 질문 하나 — 기자 · 매체는 코드가 붙인 가상 이름 */
-export interface IvQ { by: string; outlet: string; q: string; target: string | null; opts: IvOpt[] }
+export interface IvQ { by: string; outlet: string; q: string; target: string | null; opts: IvOpt[]; /** 물은 기자 성향 */ style?: RepStyle }
 export interface IvRec {
   key: string; moment: Moment; year: number; club: string;
   src: 'ai' | 'tpl';
@@ -299,7 +307,8 @@ export function readPosts(v: unknown, min: number, max: number, names: Set<strin
     const tag = pressTagOf(p.tag);
     const title = newsTone(pressClean(p.title, 40, names)), body = newsTone(pressClean(p.body, 180, names));
     const comments = (Array.isArray(p.comments) ? p.comments : []).map((c) => newsTone(pressClean(c, 60, names), true)).filter((c): c is string => !!c).slice(0, 4);
-    if (tag && title && body && comments.length) out.push({ tag, title, body, comments });
+    const style = repStyleOf(p.style);
+    if (tag && title && body && comments.length) out.push({ tag, title, body, comments, ...(style ? { style } : {}) });
   }
   return out.length >= min ? out.slice(0, max) : null;
 }
@@ -1014,17 +1023,41 @@ function ivReq(f: IvFacts) {
       note: safeLine(c ? p.line : [`종합 ${p.ovr}`, p.tags.includes('legend') ? `${gradeKo(p.grade)} 카드` : ''].filter(Boolean).join(' · '), 40),
     })),
     topics: f.topics.map((t) => safeLine(t, 70)).filter((t): t is string => !!t).slice(0, 5),
+    // 질문마다 기자 성향 — 서버가 그 말투로 쓴다 (예전 서버는 이 칸을 그냥 넘긴다)
+    styles: ivStylesOf(f.m.key),
   };
 }
 /** 가상 매체 · 기자 (실제 언론사 이름 아님) — 인터뷰 기사와 리그 뉴스 목록(screens/press/feed)이 같이 쓴다 */
 export const OUTLETS = ['한별스포츠', '별빛일보', '한별데일리', '9회말뉴스', '마운드통신', '외야석일보', '스탠드리포트', '불펜타임스', '그라운드저널', '베이스라인', '데일리볼', '다이아몬드뉴스'];
 // 가상 기자 — 실제 인물과 겹치지 않게 드문 성으로 (게임 가상 선수 이름 규칙과 같게)
 export const REPORTERS = ['남궁태식', '제갈서윤', '독고하람', '황보가람', '선우하율', '사공재민', '서문지후', '편세린', '탁준혁', '용채아', '반다온', '옥하진'];
+/** 성향별 기자 · 매체 (위 이름을 둘로 나눔) */
+export const REPORTERS_BY: Record<RepStyle, string[]> = {
+  snark: ['독고하람', '탁준혁', '사공재민', '반다온', '편세린', '서문지후'],
+  kind: ['선우하율', '제갈서윤', '남궁태식', '황보가람', '용채아', '옥하진'],
+};
+export const OUTLETS_BY: Record<RepStyle, string[]> = {
+  snark: ['9회말뉴스', '데일리볼', '스탠드리포트', '불펜타임스', '외야석일보', '다이아몬드뉴스'],
+  kind: ['한별스포츠', '별빛일보', '한별데일리', '마운드통신', '그라운드저널', '베이스라인'],
+};
+/** 인터뷰 질문마다 기자 성향 — 셋 안에 독설 · 훈훈이 다 들어가게 (인터뷰마다 고정) */
+export function ivStylesOf(key: string): RepStyle[] {
+  const r = rng(`ivs:${key}`);
+  const third: RepStyle = r() < 0.5 ? 'snark' : 'kind';
+  return (['snark', 'kind', third] as RepStyle[]).sort(() => r() - 0.5);
+}
 function withReporters(key: string, qs: Omit<IvQ, 'by' | 'outlet'>[]): IvQ[] {
   const r = rng(`iv:${key}`);
-  const outs = OUTLETS.slice().sort(() => r() - 0.5);
-  const reps = REPORTERS.slice().sort(() => r() - 0.5);
-  return qs.map((q, i) => ({ ...q, by: reps[i % reps.length], outlet: outs[i % outs.length] }));
+  const styles = ivStylesOf(key);
+  const used = new Set<string>();
+  return qs.map((q, i) => {
+    const st = q.style ?? styles[i % styles.length];
+    const reps = REPORTERS_BY[st].slice().sort(() => r() - 0.5);
+    const outs = OUTLETS_BY[st].slice().sort(() => r() - 0.5);
+    const by = reps.find((x) => !used.has(x)) ?? reps[0];
+    used.add(by);
+    return { ...q, style: st, by, outlet: outs[0] };
+  });
 }
 const ivBusy = new Map<string, Promise<IvRec>>();
 /** 인터뷰 시작 — 이미 있으면 그대로. AI 질문(되면) 또는 템플릿 질문 3개를 정해 둔다(다시 열어도 같은 질문).

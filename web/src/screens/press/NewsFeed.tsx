@@ -3,7 +3,7 @@
 // 날마다 기사는 템플릿(무료). 개막 특집 · 시즌 결산 · 특이사항(직접 치른 날의 큰일)만 AI 가 쓴다 — game/press.
 // 이 화면이 보일 때만 특이사항을 살피고 AI 글을 하나씩 만든다(빨리 감기로 넘긴 날은 건너뜀). 연결 상태 같은 개발용 표시는 없다.
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { aiReady, pendingJobs, pumpJobs, scanEvents, usePress, type PressTag } from '../../game/press';
+import { REP_STYLE_KO, aiReady, pendingJobs, pumpJobs, scanEvents, usePress, type PressTag } from '../../game/press';
 import { useSeason } from '../../season/store';
 import { fmt } from '../../ui';
 import { buildFeed, type FeedPost } from './feed';
@@ -82,6 +82,7 @@ function Row({ p, open, onToggle }: { p: FeedPost; open: boolean; onToggle: () =
         </span>
         <span className={s.l2}>
           <span className={s.outlet}>{p.outlet}</span>
+          {p.style && <span className={[s.style, p.style === 'snark' ? s.stSnark : s.stKind].join(' ')}>{REP_STYLE_KO[p.style]}</span>}
           <span className={['num', s.dot].join(' ')}>{p.when}</span>
           <span className={s.dot}>댓글 <span className="num">{fmt.int(p.total)}</span></span>
         </span>

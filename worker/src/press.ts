@@ -46,6 +46,15 @@ export function tagOf(v: unknown): Tag | undefined {
   return (TAGS as readonly string[]).includes(v) ? (v as Tag) : OLD_TO_NEW.get(v);
 }
 export const ANSWER_TYPES = ['trust', 'push', 'calm'] as const;
+/** 기자 성향 — snark: 독설 · 자극 기자('기레기' 스타일) / kind: 훈훈한 기자. 사용자 지시 10-25 */
+export const STYLES = ['snark', 'kind'] as const;
+export type Style = (typeof STYLES)[number];
+const styleOf = (v: unknown): Style | undefined => (typeof v === 'string' && (STYLES as readonly string[]).includes(v) ? (v as Style) : undefined);
+const STYLE_RULE = [
+  '기자 성향(style):',
+  "- snark(독설 기자): 꼬투리를 잡고 몰아붙인다. 부진 · 실수 · 불안 요소를 콕 집어 자극적으로, 비꼬는 말투와 과장(위기 · 굴욕 · 민낯 · 또 · 결국)을 쓴다. 낚시성 제목. 그래도 욕설 · 인신공격 · 외모 · 사생활은 안 되고 경기력과 기록만 건드린다.",
+  '- kind(훈훈한 기자): 선수와 감독을 배려하고 응원한다. 노력 · 성장 · 팀워크를 짚고, 부진도 회복할 가능성 쪽으로 부드럽게. 따뜻한 제목.',
+].join('\n');
 export type AnswerType = (typeof ANSWER_TYPES)[number];
 const EV_KINDS = ['nohit', 'first', 'streakW', 'streakL', 'record', 'dropout', 'walkoffW', 'walkoffL', 'comeback', 'injury', 'marathon', 'myRecord', 'postWin', 'postLose', 'champion'];
 
@@ -199,6 +208,8 @@ export interface InterviewIn {
   opp?: string; home?: boolean; stage?: string; rival?: string;
   players: PlayerIn[];
   topics: string[];
+  /** 질문마다 기자 성향 (없으면 예전처럼) */
+  styles: Style[];
 }
 
 /** POST /ai/interview 요청 검사 */
@@ -229,6 +240,7 @@ export function parseInterviewIn(v: unknown): InterviewIn {
     opp: teamOf(v.opp), home: typeof v.home === 'boolean' ? v.home : undefined, stage,
     rival: typeof v.rival === 'string' && RIVALRIES.includes(v.rival) ? v.rival : undefined,
     players, topics: listOf(v.topics, 5, (x) => lineOf(x, 70)),
+    styles: listOf(v.styles, 3, styleOf),
   };
 }
 
@@ -260,13 +272,14 @@ function gameLine(g: GameIn, me: string) {
 
 const NEWS_SYSTEM = [
   "가상 프로야구 '한별 리그'의 스포츠 뉴스 기사와, 그 기사에 달린 독자 댓글을 쓴다. 자료에 있는 사실로만.",
-  '기사: 스포츠 신문 기사체. title 은 눈길을 끄는 자극적인 헤드라인 — 따옴표 인용 · 말줄임(…) · 쉼표 끊기를 써도 된다(예: "출구가 안 보인다" ○○, 불펜 또 무너졌다 / ○○, 9회말 끝내기로 웃었다). body 는 ~했다 체 리드 2~3문장.',
+  '기사: 스포츠 신문 기사체. 기사마다 쓴 기자의 성향(style)을 정하고 그 말투로 쓴다 — snark 와 kind 를 비슷하게 섞는다. title 은 눈길을 끄는 헤드라인 — 따옴표 인용 · 말줄임(…) · 쉼표 끊기를 써도 된다(snark 예: "출구가 안 보인다" ○○, 불펜 또 무너졌다 / kind 예: ○○, 9회말 끝내기로 웃었다 · 묵묵히 버틴 불펜에 박수). body 는 ~했다 체 리드 2~3문장.',
+  STYLE_RULE,
   '댓글: 포털 뉴스 독자 댓글. 완결된 문장으로, 존댓말(~네요 · ~습니다)과 평서문(~다)을 섞고 가끔 짧은 질문. 한 기사 안에서 반응을 서로 다르게 — 칭찬 · 전술 분석 · 아쉬움 · 걱정 · 응원 · 질문(예: 불펜 운용은 다시 점검이 필요해 보입니다. / 오늘처럼만 하면 순위 싸움도 해 볼 만하겠네요. / 선발이 조금 더 버텼으면 어땠을까요?). 예시는 말투만 참고하고 그대로 쓰지 않는다.',
   '쓰지 않는 것: 초성(ㅋㅋ · ㄷㄷ · ㄹㅇ 등), 커뮤니티 말투와 속어(실화냐 · 미쳤다 · ~각 · ㄱㄱ · 반박 안 받음 · .txt 등), 반말 조롱, 이모지, 해시태그, 매체·기자 이름, 제목 앞 [ ] 머리말(분류는 tag 로).',
   '지킬 것:',
   '- 구단·선수 이름은 자료에 나온 것만, 적힌 글자 그대로(철자를 고치지 않는다). 실제 프로야구 선수·감독·구단, 기업, 언론사·방송사, 커뮤니티 사이트 이름은 쓰지 않는다.',
   '- 점수·순위·기록 숫자는 자료 그대로. 없는 숫자는 만들지 않는다(이슈 기사는 "~라는 관측이 나온다"처럼 전하는 말로, 숫자 없이).',
-  '- 욕설, 비하(지역·성별·장애·인종·외모), 성적 표현, 정치, 실존 인물 이야기는 쓰지 않는다. 선수 비판은 경기력만, 정중하게.',
+  '- 욕설, 비하(지역·성별·장애·인종·외모), 성적 표현, 정치, 실존 인물 이야기는 쓰지 않는다. 선수 비판은 경기력만(snark 도 마찬가지 — 날카롭되 인신공격 없이).',
   '형식: tag 는 속보·단독·충격·화제·분석·이슈 중 하나. title 28자 이내. body 90자 이내. comments 는 댓글 하나에 20~45자.',
 ].join('\n');
 
@@ -279,11 +292,12 @@ const NEWS_SCHEMA: Record<string, unknown> = {
         type: 'object',
         properties: {
           tag: { type: 'string', enum: [...TAGS] },
+          style: { type: 'string', enum: [...STYLES] },
           title: { type: 'string' },
           body: { type: 'string' },
           comments: { type: 'array', items: { type: 'string' } },
         },
-        required: ['tag', 'title', 'body', 'comments'],
+        required: ['tag', 'style', 'title', 'body', 'comments'],
         additionalProperties: false,
       },
     },
@@ -328,7 +342,8 @@ export function newsUser(n: NewsIn): string {
 
 const IV_SYSTEM = [
   "가상 프로야구 '한별 리그' 경기 전 감독 인터뷰를 쓴다. 기자 질문 3개, 질문마다 감독이 고를 답 3개.",
-  '- 질문: 자료의 선수 상태(컨디션·피로·부상·기록 흐름)나 상대·순위를 짚는 날카로운 질문, 45자 이내. 선수 한 명을 겨냥하면 target 에 그 선수 키(예: b3, sp), 팀 전체 질문이면 빈 문자열.',
+  '- 질문: 자료의 선수 상태(컨디션·피로·부상·기록 흐름)나 상대·순위를 짚는 질문, 45자 이내. 질문마다 정해 준 기자 성향(style) 말투로 쓴다. 선수 한 명을 겨냥하면 target 에 그 선수 키(예: b3, sp), 팀 전체 질문이면 빈 문자열.',
+  STYLE_RULE,
   '- 답 3개는 trust(감싸기·믿음), push(채찍·강수), calm(여유·돌려 말하기) 하나씩. 감독 말투 존댓말, 25자 이내.',
   '- head: 그 답이 기사로 나갈 때 제목. 자극적으로, 20자 이내.',
   '- 이름은 자료에 나온 것만, 적힌 글자 그대로(철자를 고치지 않는다). 실제 선수·감독·구단·기업·언론사 이름, 욕설·비하·정치는 쓰지 않는다. 없는 숫자는 만들지 않는다.',
@@ -388,6 +403,7 @@ export function interviewUser(iv: InterviewIn): string {
     L.push(`${p.k} ${p.n} ${POS_KO[p.pos]} · ${bits.join(' · ')}`);
   }
   if (iv.topics.length) L.push(`화제: ${iv.topics.join(' / ')}`);
+  if (iv.styles.length) L.push(`질문 순서대로 기자 성향: ${iv.styles.map((x, i) => `${i + 1}번 ${x === 'snark' ? 'snark(독설 기자)' : 'kind(훈훈한 기자)'}`).join(' · ')}`);
   L.push('');
   L.push(iv.moment === 'open'
     ? '할 일: 개막을 앞둔 질문 3개. 선수 몸 상태·기대·상대를 고르게.'
@@ -590,7 +606,7 @@ export function newsTone(t: string | null, comment = false): string | null {
   return s;
 }
 
-export interface PostOut { tag: Tag; title: string; body: string; comments: string[] }
+export interface PostOut { tag: Tag; style?: Style; title: string; body: string; comments: string[] }
 /** 뉴스 글 읽기 — 형식이 틀린 글 · 걸린 글은 빼고, 모자라면 오류(사이트는 템플릿으로) */
 export function readNews(text: string, stop: string | null, n: NewsIn, allow: Set<string>): PostOut[] {
   const data = stop === 'max_tokens' ? salvage(text, 'posts') : (() => { try { return JSON.parse(text) as unknown; } catch { return salvage(text, 'posts'); } })();
@@ -604,7 +620,8 @@ export function readNews(text: string, stop: string | null, n: NewsIn, allow: Se
     if (!tag || !title || !body) continue;
     const comments = (Array.isArray(p.comments) ? p.comments : []).map((c) => newsTone(cleanText(c, 60, allow), true)).filter((c): c is string => !!c).slice(0, 4);
     if (!comments.length) continue;
-    posts.push({ tag, title, body, comments });
+    const style = styleOf(p.style);
+    posts.push({ tag, ...(style ? { style } : {}), title, body, comments });
   }
   const min = n.moment === 'event' ? 1 : 3;
   const max = n.moment === 'event' ? 3 : 6;

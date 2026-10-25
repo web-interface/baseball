@@ -103,3 +103,8 @@
   .more { animation: none; }
   .skel i { animation: none; }
 }
+
+/* 기자 성향 — 독설(일명 기레기 스타일) · 훈훈 */
+.style { display: inline-block; margin-left: 6px; padding: 1px 6px 0; border-radius: 999px; font-size: 10.5px; font-weight: 800; line-height: 1.5; vertical-align: 1px; }
+.stSnark { color: #fff; background: #d6453d; }
+.stKind { color: #08331c; background: #7ee2a8; }

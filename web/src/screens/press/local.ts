@@ -7,7 +7,7 @@
 //   인터뷰 답은 감독 존댓말. 욕설 · 비하 · 실제 구단/선수/기업/언론사 이름 없음.
 import { ME, playerById, teamById } from '../../game/mock';
 import {
-  POST_SEEDS, evTag, pickOf, rng, seriesKo,
+  POST_SEEDS, evTag, ivStylesOf, pickOf, rng, seriesKo,
   type AnsType, type CloseFacts, type DayFacts, type EvKind, type EvRec, type IvFacts, type IvOpt, type IvQ, type OpenFacts, type PlayerFact, type PressTag, type RawPost,
 } from '../../game/press';
 import { longDate } from '../../season/schedule';
@@ -807,7 +807,18 @@ export function localInterview(f: IvFacts): Omit<IvQ, 'by' | 'outlet'>[] {
     const opts = ORDERS[out.length % 3].map((type) => ({ type, text: fill(t.o[type][0], v) ?? '', head: fill(t.o[type][1], v) ?? '' })).filter((o) => o.text && o.head);
     if (opts.length === 3) out.push({ q, target: null, opts });
   }
-  return out.slice(0, 3);
+  // 기자 성향 — 질문 앞에 그 기자다운 한마디 (AI 를 못 쓸 때도 독설 · 훈훈이 섞이게)
+  const styles = ivStylesOf(f.m.key);
+  const rf = rng(`ivf:${f.m.key}`);
+  const open = f.m.moment === 'open';
+  const LEAD = {
+    snark: open ? ['솔직히 묻겠습니다. ', '벌써부터 걱정하는 팬들이 많습니다. ', '냉정하게 보죠. '] : ['솔직히 묻겠습니다. ', '팬들 사이에선 불안하다는 말이 많습니다. ', '냉정하게 보죠. '],
+    kind: open ? ['개막을 손꼽아 기다린 팬들이 많습니다. ', '겨우내 준비 많이 하셨죠. ', '선수들 표정이 밝아 보입니다. '] : ['시즌 내내 고생 많으셨습니다. ', '팬들이 끝까지 응원했습니다. ', '선수들 모두 수고 많았습니다. '],
+  };
+  return out.slice(0, 3).map((x, i) => {
+    const st = styles[i % styles.length];
+    return { ...x, style: st, q: pickOf(rf, LEAD[st]) + x.q };
+  });
 }
 /** 인터뷰 카드 미리 보기 한 줄 — 기자들이 먼저 물어볼 것 같은 것 */
 export function ivTeaser(f: IvFacts): string {

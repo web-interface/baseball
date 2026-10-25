@@ -2,7 +2,7 @@
 // 매체 · 기자 · 입력 시각 · 댓글 수, 댓글마다 가린 아이디 · 시각 · 답글 · 공감/비공감은 코드가 붙인다(시드 — 다시 열어도 같은 값).
 // 특이사항 기사는 그날 맨 위에. 매체 · 기자는 가상 이름(game/press 의 OUTLETS · REPORTERS), 아이디는 이름이 아닌 무작위 글자.
 import {
-  FEED_DAYS, OUTLETS, POST_BASE, REPORTERS, closeFacts, closeKey, dayFacts, evKey, eventsOf, isOpenTime, openFacts, openKey, pickOf, rng,
+  FEED_DAYS, OUTLETS, OUTLETS_BY, POST_BASE, REPORTERS, REPORTERS_BY, closeFacts, closeKey, dayFacts, evKey, eventsOf, isOpenTime, openFacts, openKey, pickOf, rng,
   type DayFacts, type EvRec, type PressSaved, type PressTag, type RawPost,
 } from '../../game/press';
 import { allDays, isOver, yearOf, type SeasonState } from '../../season/store';
@@ -102,7 +102,7 @@ function decorate(key: string, i: number, p: RawPost, boost: number, lead: boole
     return c;
   });
   return {
-    ...p, id: `${key}:${i}`, outlet: pickOf(r, OUTLETS), reporter: pickOf(r, REPORTERS),
+    ...p, id: `${key}:${i}`, outlet: pickOf(r, p.style ? OUTLETS_BY[p.style] : OUTLETS), reporter: pickOf(r, p.style ? REPORTERS_BY[p.style] : REPORTERS),
     when: at.label ?? hhmm(min), stamp: Number.isFinite(abs) ? stampOf(abs, true) : at.label ?? '',
     total, cmts, lead: lead && i === 0, abs,
   };

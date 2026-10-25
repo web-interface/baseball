@@ -4,7 +4,7 @@
 // 시즌 중에는 조용히 한 줄만(효과가 남아 있으면 효과를).
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ANS_KO, activeFx, answerInterview, beginInterview, fxOfAnswer, fxOfRec, fxText, ivDone, ivFacts, ivMomentOf, usePress,
+  ANS_KO, REP_STYLE_KO, activeFx, answerInterview, beginInterview, fxOfAnswer, fxOfRec, fxText, ivDone, ivFacts, ivMomentOf, usePress,
   type ActiveFx, type IvMoment, type IvOpt, type IvQ, type IvRec,
 } from '../../game/press';
 import { playerById } from '../../game/mock';
@@ -136,7 +136,7 @@ function Step({ rec, qi, onPick }: { rec: IvRec; qi: number; onPick: (oi: number
   return (
     <div className={s.step}>
       <p className={s.count}>질문 <b className="num">{qi + 1}</b><span className="num"> / {rec.qs.length}</span></p>
-      <p className={s.by}>{q.outlet} · {q.by} 기자{target ? <span className={s.to}> → {target.name}</span> : null}</p>
+      <p className={s.by}>{q.outlet} · {q.by} 기자{q.style && <span className={[s.style, q.style === 'snark' ? s.stSnark : s.stKind].join(' ')}>{REP_STYLE_KO[q.style]}</span>}{target ? <span className={s.to}> → {target.name}</span> : null}</p>
       <p className={s.qText}>{q.q}</p>
       {!opt ? (
         <ul className={s.opts}>
