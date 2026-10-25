@@ -402,6 +402,9 @@ export default function MatchRoute(props: ScreenProps) {
     (async () => {
       try {
         if (g === 'post') {
+          // 가을야구 출사표 인터뷰를 안 끝냈으면 경기 대신 경기 준비 화면으로 (거기 관문에서 인터뷰)
+          const { postIvGate } = await import('../../game/press');
+          if (postIvGate()) { navigate('/season', { replace: true }); return; }
           const { preparePostGame } = await import('./post-game');
           const r = await preparePostGame();
           if (!alive) return;

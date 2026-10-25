@@ -80,7 +80,7 @@ function preview(rec: IvRec, q: IvQ, o: IvOpt): string {
   return t.join(' · ');
 }
 
-function InterviewSheet({ m, open, onClose }: { m: IvMoment; open: boolean; onClose: () => void }) {
+export function InterviewSheet({ m, open, onClose }: { m: IvMoment; open: boolean; onClose: () => void }) {
   const press = usePress();
   const rec = press.saved.iv[m.key];
   const [loading, setLoading] = useState(false);

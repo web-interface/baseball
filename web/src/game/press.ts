@@ -1085,6 +1085,13 @@ export function answerInterview(key: string, qi: number, oi: number): void {
 }
 export const ivDone = (r: IvRec | undefined) => !!r && r.picks.length > 0 && r.picks.every((p) => p != null);
 export const ivOf = (key: string, sv: PressSaved = load()): IvRec | undefined => sv.iv[key];
+/** 가을야구 관문 — 우리 구단이 가을야구에 나갔는데 '가을야구 출사표' 인터뷰를 아직 안 끝냈으면 그 자리(아니면 null).
+ *  우리 포스트시즌 경기는 이 인터뷰를 끝내야 할 수 있다 (사용자 지시 10-25 — 다른 구단 경기는 그대로 진행) */
+export function postIvGate(s: SeasonState = getSeason(), sv: PressSaved = load()): IvMoment | null {
+  const m = ivMomentOf(s);
+  if (!m || m.moment !== 'close' || !m.stage) return null;
+  return ivDone(sv.iv[m.key]) ? null : m;
+}
 
 /* ───────── 효과 (코드가 정함 — 작게, 그 몇 경기에만) ─────────
  *  감싸기(trust): 그 선수 주 능력 +2 (타자 컨택 · 파워 / 투수 제구 · 구위) · 겨냥한 선수가 없으면 타선 컨택 +1 · 마운드 제구 +1

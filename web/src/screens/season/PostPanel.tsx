@@ -1,9 +1,12 @@
 // 포스트시즌 판 — 정규 시즌이 끝나면: KBO 방식 대진(WC → 준PO → PO → KS) · 시리즈 승수 · 차전 결과 · 다음 경기.
 // 내 구단 경기는 경기 화면에서 이닝별로 끝까지 봐야 넘어가고, 다른 구단 경기는 바로 계산한다.
+// 우리 경기는 '가을야구 출사표' 인터뷰를 끝내야 할 수 있다 (사용자 지시 10-25) — 다른 구단 경기는 그대로.
 import { useState } from 'react';
 import { navigate } from '../../app/router';
 import { Button, Emblem, useToast } from '../../ui';
 import { ME, teamById } from '../../game/mock';
+import { postIvGate, usePress } from '../../game/press';
+import { InterviewSheet } from '../press';
 import { shortDate } from '../../season/schedule';
 import { isOver, useSeason, yearOf } from '../../season/store';
 import { BASE_GAMES, SERIES_KO, SERIES_ORDER, nextPostGame, playOtherPostGame, playOthersUntilMine, startPost, stillAlive, type SeriesId, type SeriesRec } from '../../season/post';
@@ -58,8 +61,10 @@ function SeriesRow({ sr, live }: { sr?: SeriesRec; live: boolean; id: SeriesId }
 
 export function PostPanel() {
   const season = useSeason();
+  const press = usePress();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
+  const [ivOpen, setIvOpen] = useState(false);
   if (!isOver(season)) return null;
   const post = season.post;
   const year = yearOf(season);
@@ -77,6 +82,7 @@ export function PostPanel() {
 
   const nx = nextPostGame(post);
   const alive = stillAlive(post);
+  const gate = nx?.mine ? postIvGate(season, press.saved) : null;
   const run = async (f: () => Promise<unknown>) => { setBusy(true); try { await f(); } finally { setBusy(false); } };
 
   return (
@@ -101,7 +107,13 @@ export function PostPanel() {
             <span className="num">{shortDate(nx.date)}</span> · {short(nx.away)} vs {short(nx.home)} <small>({short(nx.home)} 홈)</small>
             {nx.mine && <b className={s.mineTag}>우리 경기</b>}
           </p>
-          {nx.mine ? (
+          {nx.mine && gate ? (
+            <div className={s.gate}>
+              <p><b>{gate.title}</b> 인터뷰를 마쳐야 우리 경기를 할 수 있어요</p>
+              <Button size="l" block icon="play" onClick={() => setIvOpen(true)}>인터뷰 하기</Button>
+              <InterviewSheet m={gate} open={ivOpen} onClose={() => setIvOpen(false)} />
+            </div>
+          ) : nx.mine ? (
             <Button size="l" block icon="play" onClick={() => navigate('/match?g=post')}>우리 경기 보기</Button>
           ) : (
             <div className={s.btns}>
