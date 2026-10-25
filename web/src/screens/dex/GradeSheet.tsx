@@ -64,7 +64,7 @@ export function GradeSheet({ grade, onClose }: { grade: GradeId | null; onClose:
                     <small>{shortLabel(k.code)}{k.year ? ` · ${k.year}` : k.span ? ` · ${k.span[0]}–${k.span[1]}` : ''} · {p.pos === 'P' ? (p.role === 'SP' ? '선발' : p.role === 'CL' ? '마무리' : '불펜') : p.pos}</small>
                     <span className={s.stats}>
                       {p.face.slice(0, 6).map((f) => (
-                        <span key={f.code} className={f.v >= 85 ? s.hi : f.v >= 70 ? s.mid : undefined}><i>{f.ko ?? FACE_KO[f.code] ?? f.code}</i><b className="num">{f.v}</b></span>
+                        <span key={f.code} className={f.v + (inst.boost ?? 0) >= 85 ? s.hi : f.v + (inst.boost ?? 0) >= 70 ? s.mid : undefined}><i>{f.ko ?? FACE_KO[f.code] ?? f.code}</i><b className="num">{f.v + (inst.boost ?? 0)}</b></span>
                       ))}
                     </span>
                   </span>

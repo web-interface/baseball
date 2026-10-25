@@ -4,6 +4,8 @@
 //  · 잠재력: 자기 몫 (라인업에선 팀 최고 잠재력 몫까지 — calc 가 potFace 로 넘긴다)
 //  · 플레이스타일: 강화 V 부터 (고른 것, 없으면 대표 능력치에 맞는 것 — game/playstyle)
 //  · 세트덱: 라인업에서만 (game/sets faceBonus) — 팀 종합엔 세트 단계 가치(tc)로 따로 들어가서 ovrBonusOf 엔 안 넣는다
+//  · 등급: GG 이상 특별 등급 카드의 기본 몫 (CardInst.boost — game/kbo GRADE_BAND). 카드 종합엔 이미 들어 있어 ovrBonusOf · total 엔 안 넣고,
+//    경기 엔진(engineFxOf)과 능력치 화면(engineFxOf 를 쓰는 cardAttrBonus)에만 더한다. 카드 앞면은 대표 능력치 자체에 더해 보인다(cards/Card cardProps)
 //  · 장비는 아직 미리보기(저장 안 됨)라 여기엔 없다 — 선수 상세 화면에서만 따로 보인다.
 import type { CardInst, Player } from './types';
 import { faceBonus, type BatKey, type PitKey, type SetEffect } from './sets';
@@ -12,8 +14,8 @@ import { activePotential, type FaceFx } from './potential';
 import { ENGINE_OF } from './training';
 import { defaultPlaystyle, playstylesFor } from './playstyle';
 
-export type BonusSrc = 'enh' | 'train' | 'pot' | 'ps' | 'set';
-export const SRC_KO: Record<BonusSrc, string> = { enh: '강화', train: '훈련', pot: '잠재력', ps: '플레이스타일', set: '세트덱' };
+export type BonusSrc = 'enh' | 'train' | 'pot' | 'ps' | 'set' | 'grade';
+export const SRC_KO: Record<BonusSrc, string> = { enh: '강화', train: '훈련', pot: '잠재력', ps: '플레이스타일', set: '세트덱', grade: '등급' };
 export interface BonusCtx {
   /** 받는 잠재력 (자기 + 팀 몫) — 없으면 자기 몫만 */
   potFace?: FaceFx | null;
@@ -55,6 +57,9 @@ export function cardBonusOf(card: CardInst, p: Player, ctx: BonusCtx = {}): Card
   if (ctx.set) { const fb = faceBonus(ctx.set, p.pos === 'P') as FaceFx; const o: FaceFx = {}; for (const [c, v] of Object.entries(fb)) add(o, c, v); if (nonEmpty(o)) parts.set = o; }
   const total: FaceFx = {};
   for (const o of Object.values(parts)) for (const [c, v] of Object.entries(o ?? {})) add(total, c, v);
+  // 등급 몫은 카드의 기본 능력치라 '더해진 값(total)'에서 뺀다
+  const gb = Math.round(card.boost ?? 0);
+  if (gb > 0) parts.grade = Object.fromEntries(codes.map((c) => [c, gb]));
   return { parts, total };
 }
 
@@ -75,10 +80,12 @@ export function ovrPartsOf(b: CardBonus, p: Player): Partial<Record<BonusSrc, nu
 }
 
 const BAT_K = new Set<string>(['con', 'pow', 'gap', 'eye', 'spd', 'stl', 'def', 'arm']);
+/** 엔진에 넣는 몫 — 팀 종합 몫 + 등급(엔진은 시즌 능력치에서 시작하므로) */
+const ENGINE_SRC: BonusSrc[] = [...OVR_SRC, 'grade'];
 /** 경기 엔진 보너스 { k, v } — 세트덱 빼고 (세트는 엔진에 setFx 로 따로 들어간다) */
 export function engineFxOf(b: CardBonus, isP: boolean): { k: BatKey | PitKey; v: number }[] {
   const acc = new Map<BatKey | PitKey, number>();
-  for (const src of OVR_SRC) {
+  for (const src of ENGINE_SRC) {
     for (const [code, v] of Object.entries(b.parts[src] ?? {})) {
       for (const [k, w] of ENGINE_OF[code] ?? []) {
         if (BAT_K.has(k) === isP) continue;

@@ -131,17 +131,18 @@ const TRAIN_GLOW = ['', '', '', '', '', '#4fd8ff', '#4cf0a0', '#ffd84a', '#ff9a3
 
 /** CardInst → Card props (CardMini · CardBack 에도 그대로 펼쳐 넣을 수 있다) */
 const ovrCache = new Map<string, Player>();
-function withOvr(p: Player, ovr: number): Player {
-  const k = `${p.id}|${ovr}`;
+/** 카드 종합 · 등급 보정(대표 능력치마다 +boost — 특별 등급의 기본 능력치)을 얹은 보기 */
+function withOvr(p: Player, ovr: number, boost = 0): Player {
+  const k = `${p.id}|${ovr}|${boost}`;
   let v = ovrCache.get(k);
-  if (!v) { v = { ...p, ovr }; ovrCache.set(k, v); }
+  if (!v) { v = { ...p, ovr, ...(boost ? { face: p.face.map((f) => ({ ...f, v: f.v + boost })) } : {}) }; ovrCache.set(k, v); }
   return v;
 }
 
 export function cardProps(c: CardInst) {
   const base = playerOfCard(c);
   // 카드마다 종합이 다르다 (CardInst.ovr) — 같은 선수라도 윗 등급이 더 높게
-  const player = c.ovr != null && c.ovr !== base.ovr ? withOvr(base, c.ovr) : base;
+  const player = (c.ovr != null && c.ovr !== base.ovr) || c.boost ? withOvr(base, c.ovr ?? base.ovr, c.boost ?? 0) : base;
   const extra = c as Omit<CardInst, 'gear'> & { gear?: GearPiece[]; serial?: Serial | null };
   return {
     player,

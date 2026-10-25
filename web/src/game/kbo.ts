@@ -63,6 +63,8 @@ export interface KCard {
   year?: number;
   code: ClubCode;
   ovr: number;
+  /** 등급 보정 — 대표 능력치마다 더하는 값 (특별 등급만, GRADE_BAND) */
+  boost?: number;
   /** 능력치를 가져온 시즌 */
   view: number;
   /** 수상 부문 (GG 포지션 · TH 부문 코드) */
@@ -137,6 +139,26 @@ for (const [kid, g, y, code, ovr, view, sub, a, b] of CORE.cards) {
   if (!persons.has(kid)) continue;
   const id = ICON_SUF[g] ? `${kid}-${ICON_SUF[g]}` : `${kid}-${y}${g}${g === 'th' ? `-${(sub ?? '').toLowerCase()}` : ''}`;
   add({ id, kid, grade: g, year: y ?? undefined, code: code as ClubCode, ovr, view, sub: sub ?? undefined, span: a != null && b != null ? [a, b] : undefined });
+}
+
+/**
+ * 특별 등급 종합 구간 — 사용자 지시 10-25 "시그니처 > 블랙 > 프랜차이즈 > MVP > TH > 레전드 > GG > 엘리트 > 레어 > 스페셜, 시그니처는 진짜 개쩔어야".
+ *  시즌 카드(노멀 ~ 엘리트)는 그 시즌 종합 그대로(엘리트 최고 92). 특별 등급은 그 위로 겹치지 않게 쌓고, 시그니처는 블랙 위로 크게 띄운다.
+ *  같은 등급 안에서는 원래 카드 종합 순서대로 구간에 고루 편다. 카드 종합 = 구간 값, 대표 능력치마다 (구간 값 − 그 시즌 종합)을 더한다
+ *  (boost → game/cardBonus '등급' — 카드 숫자 · 능력치 · 팀 종합 · 경기 엔진이 같은 값).
+ */
+export const GRADE_BAND: Partial<Record<GradeId, [number, number]>> = {
+  gg: [93, 95], legend: [96, 98], th: [99, 101], mvp: [102, 104], franchise: [105, 107], black: [108, 110], signature: [113, 118],
+};
+for (const [g, [lo, hi]] of Object.entries(GRADE_BAND) as [GradeId, [number, number]][]) {
+  const list = cards.filter((c) => c.grade === g)
+    .map((c) => ({ c, s: persons.get(c.kid)?.seasons.find((x) => x.year === c.view)?.ovr ?? c.ovr }))
+    .sort((a, b) => a.c.ovr - b.c.ovr || a.s - b.s || (a.c.id < b.c.id ? -1 : 1));
+  list.forEach(({ c, s }, i) => {
+    const t = Math.round(lo + (hi - lo) * (list.length > 1 ? i / (list.length - 1) : 0.5));
+    c.ovr = Math.max(t, s);
+    c.boost = c.ovr - s;
+  });
 }
 
 /* ───────── 찾기 ───────── */
@@ -336,6 +358,7 @@ export function cardInst(c: KCard): CardInst {
     id: c.id, playerId: viewIdOf(c.kid, c.view), grade: c.grade,
     year: c.year != null && c.grade !== 'legend' && c.grade !== 'franchise' && c.grade !== 'black' && c.grade !== 'signature' ? c.year % 100 : undefined,
     level: 1, enhance: 0, dup: 0, ovr: c.ovr, award: awardLabel(c), signaturePitch: signatureOf(c),
+    ...(c.boost ? { boost: c.boost } : {}),
   };
 }
 /** 카드의 Player — 카드 종합(등급 보정)·상징 카드의 계보 기간을 반영한 보기 */

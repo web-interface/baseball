@@ -3,7 +3,8 @@
 //  2. 카탈로그: 카드 id 규칙 · 겹침 없음 · 모든 카드가 선수 본체를 ID 로 찾음 · 같은 입력 → 같은 보기
 //  3. 시작 선수단: 20개 구단 모두 팀 종합 65~68 · 기본 카드는 실제 선수 카드
 //  4. 연도팩 · 구단팩: 그 해 · 그 구단 실제 선수 카드만
-//  5. 종합 분포: 기존 가상 선수(목업)와 크게 어긋나지 않음
+//  5. 종합 분포: 시즌 등급(노멀 ~ 엘리트)은 기존 가상 선수(목업)와 크게 어긋나지 않음 ·
+//     특별 등급은 사용자 지시 10-25 순서(시그니처 > 블랙 > 프랜차이즈 > MVP > TH > 레전드 > GG > 엘리트)로 구간이 겹치지 않음
 import './shim-storage';
 import { existsSync, readFileSync } from 'node:fs';
 
@@ -125,19 +126,32 @@ for (const code of ['DDG', 'GJ', 'SW', 'IBY'] as const) {
 }
 
 /* ───── 5. 종합 분포 ───── */
-sec('5. 종합 분포 — 기존 가상 선수와 비교');
+sec('5. 종합 분포 — 시즌 등급은 기존 가상 선수와 비교 · 특별 등급은 순서대로');
 const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
 const mockBy: Record<string, number[]> = {};
 for (const c of mock.CARDS) if (/^c\d+$/.test(c.id)) (mockBy[c.grade] ??= []).push(c.ovr ?? mock.playerOfCard(c).ovr);
 const kBy: Record<string, number[]> = {};
 for (const c of cards) (kBy[c.grade] ??= []).push(c.ovr);
 const rows: string[] = [];
-for (const g of ['normal', 'special', 'rare', 'elite', 'legend', 'franchise', 'black', 'signature', 'mvp', 'gg', 'th']) {
+for (const g of ['normal', 'special', 'rare', 'elite']) {
   const a = mean(mockBy[g] ?? []), b = mean(kBy[g] ?? []);
   rows.push(`${g} 목업 ${a ? a.toFixed(1) : '-'} / 실제 ${b.toFixed(1)}`);
   if (mockBy[g]?.length && kBy[g]?.length) ok(Math.abs(a - b) <= 9, `${g} 평균 차 9 이하`, [a, b]);
 }
 console.log('  ' + rows.join(' · '));
+// 특별 등급 — 위 등급의 가장 낮은 카드가 아래 등급의 가장 높은 카드보다 높다 · 구간 안 · 등급 몫 = 카드 종합 − 시즌 종합
+const TOP_DOWN = ['signature', 'black', 'franchise', 'mvp', 'th', 'legend', 'gg', 'elite'] as const;
+for (let i = 0; i + 1 < TOP_DOWN.length; i++) {
+  const hi = kBy[TOP_DOWN[i]] ?? [], lo = kBy[TOP_DOWN[i + 1]] ?? [];
+  ok(hi.length && lo.length && Math.min(...hi) > Math.max(...lo), `${TOP_DOWN[i]} > ${TOP_DOWN[i + 1]} (겹치지 않음)`, [Math.min(...hi), Math.max(...lo)]);
+}
+for (const c of cards) {
+  const band = kbo.GRADE_BAND[c.grade];
+  if (!band) continue;
+  const s = kbo.kboPerson(c.kid)?.seasons.find((x) => x.year === c.view)?.ovr ?? 0;
+  if (!(c.ovr >= band[0] && c.ovr <= Math.max(band[1], s)) || c.boost !== c.ovr - s) { ok(false, `${c.id} 등급 구간 · 등급 몫`, [c.grade, c.ovr, band, c.boost, s]); break; }
+}
+console.log('  ' + TOP_DOWN.map((g) => `${g} ${Math.min(...(kBy[g] ?? [0]))}~${Math.max(...(kBy[g] ?? [0]))}`).join(' > '));
 
 /* ───── 6. 내 시즌 → 게임 통산 ───── */
 sec('6. 시즌 기록 → 게임 통산 (시즌을 새로 시작하면 옮겨 적음)');

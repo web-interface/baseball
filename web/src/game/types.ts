@@ -256,6 +256,8 @@ export interface CardInst {
   locked?: boolean;
   /** 이 카드의 종합 (같은 선수라도 등급·연도마다 다르다) — 없으면 선수 ovr */
   ovr?: number;
+  /** 등급 보정 — GG 이상 특별 등급 카드의 대표 능력치마다 더해지는 값. 카드 종합(ovr)엔 이미 들어 있다 (game/kbo GRADE_BAND) */
+  boost?: number;
   /** 일련번호 (한정 등급) — 서버가 뽑는 순간 매긴다. null = 번호 없음 */
   serial?: { no: number; of: number; match: boolean } | null;
   /** 낀 장비 — 모양은 cards/gear.ts 의 GearPiece */
