@@ -191,24 +191,49 @@ export function Caption({ beat, live }: { beat: Beat; live: Live }) {
   );
 }
 
-/* ───────── 승리 확률 막대 (되감기) ───────── */
+/* ───────── 승리 확률 막대 (되감기) ─────────
+   가로축은 이닝마다 같은 폭 · 반 이닝 안은 아웃 수로 — 타석 수로 나누면 앞으로 남은 이닝의 길이(점수 날 이닝)가 미리 보여서. 사용자 지시 10-25
+   연장은 그 이닝이 시작될 때 축이 늘어난다(미리 안 보임). */
 export function Scrubber({ live, onSeek, done }: { live: Live; onSeek: (play: number) => void; done?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const myHome = GAME.match.homeId === ME.teamId;
   const upto = done ? PLAY_COUNT - 1 : live.applied ? live.playIdx : live.playIdx - 1;
   const W = 1000, H = 100;
-  const x = (i: number) => (PLAY_COUNT <= 1 ? 0 : (i / (PLAY_COUNT - 1)) * W);
+  const innCount = Math.max(9, done ? PLAYS[PLAY_COUNT - 1].inning : live.play.inning);
+  const slot = W / innCount, halfW = slot / 2;
+  const halfStart = (inning: number, half: 'top' | 'bot') => (inning - 1) * slot + (half === 'bot' ? halfW : 0);
+  // 플레이가 끝난 뒤 자리 — 그 반 이닝 시작 + 아웃 수(아웃 없는 플레이는 조금씩 앞으로). 그 플레이까지의 기록만 쓴다
+  const xs = new Array<number>(PLAY_COUNT);
+  for (const h of HALVES) {
+    let outs = 0, extra = 0;
+    for (let i = h.first; i <= h.last; i++) {
+      const o = Math.min(3, PLAYS[i].outsAfter);
+      if (o !== outs) { outs = o; extra = 0; } else extra++;
+      const f = o >= 3 ? 1 : Math.min(0.94, (o + Math.min(0.78, extra * 0.2)) / 3);
+      xs[i] = halfStart(h.inning, h.half) + halfW * f;
+    }
+  }
+  const x = (i: number) => xs[i] ?? 0;
   const my = (wp: number) => (myHome ? wp : 1 - wp);
   const y = (wp: number) => 8 + (1 - my(wp)) * (H - 16);
   const pts: string[] = [`0,${y(PLAYS[0].wp[0]).toFixed(1)}`];
   for (let i = 0; i <= upto; i++) pts.push(`${x(i).toFixed(1)},${y(PLAYS[i].wp[1]).toFixed(1)}`);
   const head = Math.max(0, Math.min(PLAY_COUNT - 1, live.playIdx));
+  const hh = halfOf(head);
+  const headX = done ? x(PLAY_COUNT - 1) : live.applied ? x(head) : head > hh.first ? x(head - 1) : halfStart(hh.inning, hh.half);
   const pick = (clientX: number) => {
     const el = ref.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    const u = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
-    onSeek(Math.round(u * (PLAY_COUNT - 1)));
+    const u = Math.max(0, Math.min(0.9999, (clientX - r.left) / r.width));
+    const pos = u * innCount, inning = Math.floor(pos) + 1, rest = pos - (inning - 1);
+    const half = rest < 0.5 ? 'top' : 'bot';
+    const h = HALVES.find((q) => q.inning === inning && q.half === half);
+    if (!h) { onSeek(PLAY_COUNT - 1); return; } // 치르지 않은 반 이닝(9회말 없음 · 경기 뒤) — 끝으로
+    const tx = halfStart(inning, half) + halfW * ((rest % 0.5) / 0.5);
+    let to = h.last;
+    for (let i = h.first; i <= h.last; i++) if (x(i) >= tx) { to = i; break; }
+    onSeek(to);
   };
   const onDown = (e: PointerEvent) => { (e.target as Element).setPointerCapture?.(e.pointerId); pick(e.clientX); };
   const onMove = (e: PointerEvent) => { if (e.buttons) pick(e.clientX); };
@@ -221,7 +246,7 @@ export function Scrubber({ live, onSeek, done }: { live: Live; onSeek: (play: nu
       e.preventDefault();
     }
   };
-  const innTicks = HALVES.filter((h) => h.half === 'top');
+  const innNos = Array.from({ length: innCount }, (_, k) => k + 1);
   const lead = my(PLAYS[Math.max(0, upto)].wp[1]);
   return (
     <div
@@ -231,7 +256,7 @@ export function Scrubber({ live, onSeek, done }: { live: Live; onSeek: (play: nu
       tabIndex={0}
       aria-label="경기 진행 · 승리 확률"
       aria-valuemin={1}
-      aria-valuemax={9}
+      aria-valuemax={innCount}
       aria-valuenow={live.play.inning}
       aria-valuetext={`${live.play.inning}회${halfKo(live.play.half)} · 승리 확률 ${Math.round(lead * 100)}%`}
       onPointerDown={onDown}
@@ -240,14 +265,14 @@ export function Scrubber({ live, onSeek, done }: { live: Live; onSeek: (play: nu
     >
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className={s.scrubSvg} aria-hidden>
         <line x1="0" x2={W} y1={H / 2} y2={H / 2} className={s.mid} />
-        {innTicks.map((h) => <line key={h.key} x1={x(h.first)} x2={x(h.first)} y1={0} y2={H} className={s.tick} />)}
+        {innNos.slice(1).map((n) => <line key={n} x1={(n - 1) * slot} x2={(n - 1) * slot} y1={0} y2={H} className={s.tick} />)}
         <polyline points={pts.join(' ')} className={s.wpLine} />
       </svg>
-      {innTicks.map((h) => <span key={h.key} className={['num', s.innNo].join(' ')} style={{ left: `${(x(h.first) / W) * 100}%` }}>{h.inning}</span>)}
+      {innNos.map((n) => <span key={n} className={['num', s.innNo].join(' ')} style={{ left: `${(((n - 0.5) * slot) / W) * 100}%` }}>{n}</span>)}
       {CALLOUTS_ALL.filter((i) => i <= upto).map((i) => (
         <i key={i} className={s.hl} style={{ left: `${(x(i) / W) * 100}%`, top: `${(y(PLAYS[i].wp[1]) / H) * 100}%`, background: teamById(PLAYS[i].highlight!.teamId).colors.primary }} />
       ))}
-      <span className={s.phead} style={{ left: `${(x(head) / W) * 100}%` }} aria-hidden />
+      <span className={s.phead} style={{ left: `${(headX / W) * 100}%` }} aria-hidden />
     </div>
   );
 }
