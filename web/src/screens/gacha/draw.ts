@@ -416,7 +416,7 @@ export function pullMany(pack: Pack, pick: Pick | null, n: number): PullResult[]
   const want = Math.max(0, Math.min(AUTO_MAX, Math.floor(n)));
   for (let i = 0; i < want; i++) {
     if (affordCount(pack, readWallet(), 1) < 1) break;
-    if (totalCards() > CARD_CAP) break; // 상한(3만 장)을 넘으면 거기서 멈춘다 (자동 정리 먼저)
+    if (totalCards() > CARD_CAP) break; // 상한(10만 장)을 넘으면 거기서 멈춘다 (자동 정리 먼저)
     out.push(pullPack(pack, pick));
   }
   return out;

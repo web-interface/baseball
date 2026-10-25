@@ -1,5 +1,5 @@
 // 자동 정리 시트 — 정리할 등급 · 남길 구단 · 종류마다 1장 남기기 · 끝까지(결과도 다시 재료로) 고르기 → 미리 보기 → 바로 정리 → 결과.
-// 계산은 ./autoClean (같은 조합 공식 · 같은 비용, 연출 없이). 카드가 상한(3만 장)을 넘으면 카드구매가 막히고 여기로 온다(?auto=1).
+// 계산은 ./autoClean (같은 조합 공식 · 같은 비용, 연출 없이). 카드가 상한(10만 장)을 넘으면 카드구매가 막히고 여기로 온다(?auto=1).
 import { useMemo, useState } from 'react';
 import { CardMini, cardProps } from '../../cards';
 import { CARD_CAP, totalCards, useInventory } from '../../game/inventory';

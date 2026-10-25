@@ -235,7 +235,7 @@ function ResultBlock({ sum, n, asked, onDetail }: { sum: ReturnType<typeof summa
   );
 }
 
-/* ───────── 가득 찰 때까지 — 한 번 눌러 두면 보관함 상한(CARD_CAP, 3만 장) 또는 재화까지 같은 팩을 계속 연다 (휴대폰용, 멈추기 가능) ───────── */
+/* ───────── 가득 찰 때까지 — 한 번 눌러 두면 보관함 상한(CARD_CAP, 10만 장) 또는 재화까지 같은 팩을 계속 연다 (휴대폰용, 멈추기 가능) ───────── */
 const BULK_MAX = 2000;
 type BulkEnd = 'cap' | 'gp' | 'stop' | 'max' | 'quota';
 const BULK_END_KO: Record<Exclude<BulkEnd, 'quota'>, string> = {

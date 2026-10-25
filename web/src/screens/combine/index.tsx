@@ -131,7 +131,7 @@ export default function CombineScreen({ query }: ScreenProps) {
         <p className={s.lead}>카드 3~5장으로 새 카드 1장</p>
       </header>
 
-      {/* ───── 자동 정리 — 카드가 많이 쌓였을 때 (상한 3만 장을 넘으면 카드구매가 막힌다) ───── */}
+      {/* ───── 자동 정리 — 카드가 많이 쌓였을 때 (상한 10만 장을 넘으면 카드구매가 막힌다) ───── */}
       <button type="button" className={[s.autoEntry, total > CARD_CAP && s.autoOver].filter(Boolean).join(' ')} onClick={() => setCleanOpen(true)}>
         <span className={s.autoText}>
           <b>자동 정리</b>

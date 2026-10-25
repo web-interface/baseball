@@ -100,7 +100,7 @@ function Store({ query }: { query: URLSearchParams }) {
   const second = view.rows.find((r) => r.grade === 'legend' && r !== top) ?? view.rows[1];
   const affordable = pack.price.ball != null ? g.wallet.ball >= pack.price.ball : g.wallet.gp >= (pack.price.gp ?? 0);
 
-  // 보관함이 상한(3만 장)을 넘으면 카드구매를 막는다 — 선수조합 › 자동 정리로 줄이고 오게 (사용자 지시)
+  // 보관함이 상한(10만 장)을 넘으면 카드구매를 막는다 — 선수조합 › 자동 정리로 줄이고 오게 (사용자 지시)
   const total = totalCards();
   const full = total > CARD_CAP;
   const goClean = () => { setResult(null); setAuto(null); navigate('/combine?auto=1'); };
