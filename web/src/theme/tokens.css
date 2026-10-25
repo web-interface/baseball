@@ -156,12 +156,12 @@
   --gr-rare: #D42640;
   --gr-elite: #9466FF;
   --gr-legend: #D9AE55;
-  --gr-franchise: #CFA14A;
+  --gr-franchise: #F2679F;  /* 프랜차이즈 · MVP · GG · TH 는 색 계열을 갈라 둔다 — 로즈 · 사파이어 · 금 · 에메랄드 */
   --gr-black: #B9E3FF;      /* 흑요석 카드의 얼음빛 네온 — 글자로 쓸 땐 이 색 */
   --gr-signature: #E8DDFF;
-  --gr-mvp: #E7BE57;
-  --gr-gg: #E2B342;
-  --gr-th: #DDA63C;
+  --gr-mvp: #6E9CFF;
+  --gr-gg: #F7C51E;
+  --gr-th: #34CC7E;
   --gr-unique: #7FE3D4;     /* 특별 선수 — 단 하나뿐인 카드 */
   --gr-holo: linear-gradient(100deg, #ff8fb8, #ffd27e 22%, #b8f5a0 40%, #8fe3ff 58%, #b59cff 76%, #ff8fb8);
 }
@@ -268,12 +268,12 @@
 
   --gr-normal: #7D8592;
   --gr-legend: #B48A2E;
-  --gr-franchise: #AE8530;
+  --gr-franchise: #C2357A;
   --gr-black: #23262C;
   --gr-signature: #6B4FD8;
-  --gr-mvp: #B88A22;
+  --gr-mvp: #2E5BD6;
   --gr-gg: #B3861C;
-  --gr-th: #AC7B1E;
+  --gr-th: #0F8A55;
   --gr-unique: #0E8C7E;
 }
 
@@ -394,18 +394,18 @@
   --gr-rare: #A61F30;
   --gr-elite: #5E43B0;
   --gr-legend: #8C6A2F;
-  --gr-franchise: #8C6A2F;
+  --gr-franchise: #9E3466;
   --gr-black: #1D1E21;
   --gr-signature: #4F3AA6;
-  --gr-mvp: #8C6A2F;
-  --gr-gg: #8C6A2F;
-  --gr-th: #8C6A2F;
+  --gr-mvp: #2A4E9E;
+  --gr-gg: #A27814;
+  --gr-th: #1E6B47;
   --gr-unique: #0F6E62;
 }
 
 /* 어두운 무대(뽑기 공개·시상식 등) 위 등급색 — 테마와 상관없이 밝은 판. 판에 class="on-dark" */
 .on-dark {
   --gr-normal: #A3ACB8; --gr-special: #F2852A; --gr-rare: #E0384F; --gr-elite: #A07BFF; --gr-legend: #E2B762;
-  --gr-franchise: #D9AE55; --gr-black: #B9E3FF; --gr-signature: #E8DDFF; --gr-mvp: #E7BE57; --gr-gg: #E2B342; --gr-th: #DDA63C;
+  --gr-franchise: #F2679F; --gr-black: #B9E3FF; --gr-signature: #E8DDFF; --gr-mvp: #7FA6FF; --gr-gg: #F7C51E; --gr-th: #45D08A;
   --gr-unique: #7FE3D4;
 }
