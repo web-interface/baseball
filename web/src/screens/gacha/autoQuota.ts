@@ -1,13 +1,13 @@
 // 자동 열기 한도 — 리그 단계(연습생 → 레전드)가 오를수록 한 번에 자동으로 열 수 있는 카드가 늘어난다. 사용자 지시 10-24
 //  "초반엔 600장 정도 · 쿨타임 1분 · 마지막엔 다 갈 수 있게, 리그 단계에 따라 나눠"
-//  · 연습생 600장(20팩) · 2군 1,500장 · 1군 3,000장 · 올스타 6,000장 · 국가대표 15,000장 · 레전드는 한도 없이(보관함 상한까지)
+//  · 10-25 "처음에는 1만 장" — 연습생 10,000장 · 2군 12,000 · 1군 15,000 · 올스타 20,000 · 국가대표 25,000 · 레전드는 한도 없이(보관함 상한까지)
 //  · 한도를 다 쓰면 1분 쉬고 다시 가득 — 'N팩 자동 열기' · '계속 열기'가 같은 한도를 쓴다 (한 팩씩 여는 '30장 열기'는 상관없음)
 //  · 이 기기에 저장 (localStorage 'bb.autoQuota') — 보관함 · 지갑처럼 이 브라우저 기준
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { LEVELS, LEVEL_KO, aiLevel, useLeague, type AiLevel } from '../../season/league';
 
 export const AUTO_COOLDOWN_MS = 60_000;
-export const AUTO_QUOTA: Record<AiLevel, number> = { trainee: 600, futures: 1_500, first: 3_000, allstar: 6_000, national: 15_000, legend: Infinity };
+export const AUTO_QUOTA: Record<AiLevel, number> = { trainee: 10_000, futures: 12_000, first: 15_000, allstar: 20_000, national: 25_000, legend: Infinity };
 
 const KEY = 'bb.autoQuota';
 interface Q { used: number; until: number }

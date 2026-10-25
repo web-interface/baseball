@@ -72,7 +72,7 @@ function Store({ query }: { query: URLSearchParams }) {
   const [auto, setAuto] = useState<{ runs: PullResult[]; asked: number } | null>(null);
   // 가득 찰 때까지 (휴대폰용 — 한 번 눌러 두면 상한까지)
   const [bulk, setBulk] = useState(0);
-  // 자동 열기 한도 — 리그 단계마다 (연습생 600장 … 레전드 한도 없음), 다 쓰면 1분 쉬기
+  // 자동 열기 한도 — 리그 단계마다 (연습생 1만 장 … 레전드 한도 없음), 다 쓰면 1분 쉬기
   const aq = useAutoQuota();
 
   const pack = PACKS.find((p) => p.id === packId) ?? PACKS[1];
