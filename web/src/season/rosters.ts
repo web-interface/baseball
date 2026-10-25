@@ -8,7 +8,7 @@ import { eraOfCode } from '../game/world';
 import type { Player, PitcherRole, Pos } from '../game/types';
 import type { BatKey, PitKey, SetEffect } from '../game/sets';
 import { cardBonusOf, engineFxOf } from '../game/cardBonus';
-import { cardShow } from '../game/ovrShow';
+import { cardShow, playerShift } from '../game/ovrShow';
 import { LEGEND_MAX, MVP_MAX, isLegendGrade, isMvpGrade, potFaceOf, teamPotential } from '../game/potential';
 import { interviewFx } from '../game/press';
 import { loadTactics, type TacState } from '../game/tactics';
@@ -19,9 +19,9 @@ export { LEVEL_KO, aiLevel, aiTargetOf, type AiLevel };
 /** 능력치로 올리는 한도 — 넘치는 만큼은 엔진 보너스 */
 const ATTR_ROOM = 92;
 /** AI 구단 실제 선수의 실력 차이를 얼마나 살리나 — 0 이면 모두 목표 세기로 같아진다(에이스 · 강타자가 사라져 평균자책 1위가 3~5점대).
- *  평균보다 잘하는 쪽(up)은 크게, 못하는 쪽(down)은 덜 벌린다(규정타석 꼴찌 타율이 .160 까지 떨어지지 않게). 벌린 뒤 구단 평균(투수 · 타자 따로)은 목표로 되돌린다.
- *  사용자 지시 10-26 "평균자책 2~3점대 몇 명 · 특출한 시즌엔 1점대 1~2명" — 한 시즌 시험: 2점대 5~9명 · 1위 2.0~2.6 */
-export const AI_SPREAD = { P: { up: 2.5, down: 0.8 }, B: { up: 2.2, down: 0.7 } };
+ *  평균보다 잘하는 쪽(up)은 크게, 못하는 쪽(down)은 덜 벌린다(규정타석 꼴찌 타율이 너무 떨어지지 않게). 벌린 뒤 묶음(선발 · 불펜 · 주전 · 벤치) 평균은 목표로 되돌린다.
+ *  사용자 지시 10-26 "평균자책 2~3점대 몇 명 · 특출한 시즌엔 1점대" · "KBO 1위 수치 편차 기준" — 맞춘 결과는 shared/engine/params bonus.softCap 주석 */
+export const AI_SPREAD = { P: { up: 2.5, down: 0.8 }, B: { up: 1.75, down: 0.6 } };
 /** 올해 커리어 하이 — 시즌마다 AI 1 · 2선발 중 몇 명(리그 전체 1~2명꼴)이 특출한 시즌(평균자책 1점대 언저리)을 보낸다. 연도 · 선수로 정해져 그 시즌 내내 같다 */
 const BREAKOUT = { chance: 0.08, boost: 10 };
 const hash01 = (s: string) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
@@ -143,7 +143,12 @@ export function clubRoster(teamId: string, target: number = aiTargetOf(teamId)):
   const lead = top.slice().sort((a, b) => spd(b.player) - spd(a.player))[0];
   const rest = sorted.filter((x) => x !== lead);
   const order = [lead, rest[1], rest[0], rest[2], rest[3], ...rest.slice(4)].filter(Boolean);
-  const r: ClubRoster = { teamId, mine: false, batting: order, rotation, bullpen, closer, bench, delta, setFx: new Map(), enh, ovr: Math.round(target) };
+  // 화면 눈금 몫은 구단 하나에 한 값(그 구단 세기 눈금) — 선수마다 꺾은선(playerShift)을 따로 쓰면 등급 구간 기울기(힘 92~110 은 ×2, 그 아래는 ×0.5~0.7)가
+  // 리그 단계마다 AI 스타를 지나치게 누르거나(연습생) 괴물로 만들었다(2군: AI 타자 6명 50홈런). 구단 안 실력 차이는 힘 눈금 그대로 1:1
+  const show = new Map<string, number>();
+  const teamShift = playerShift(target + 2);
+  for (const p of [...order.map((b) => b.player), ...bench, ...rotation, ...bullpen, ...(closer ? [closer] : [])]) show.set(p.id, teamShift);
+  const r: ClubRoster = { teamId, mine: false, batting: order, rotation, bullpen, closer, bench, delta, setFx: new Map(), enh, show, ovr: Math.round(target) };
   if (aiCache.size > 40) aiCache.clear(); // 라인업을 바꿀 때마다 열쇠가 새로 생긴다 — 오래된 것은 버린다
   aiCache.set(key, r);
   return r;
