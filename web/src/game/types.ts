@@ -378,7 +378,7 @@ export interface Play {
    * 타구 — angle: 0 = 중견수 쪽, −45 = 3루 선, +45 = 1루 선 / distM: 낙구(또는 멈춘) 거리
    * x·y: 위에서 본 경기장 좌표 (game/field.ts) — 홈 (0.5, 1), 좌·우 폴 (0, 0.5)·(1, 0.5), 1 = 140m
    */
-  hit?: { x: number; y: number; kind: 'ground' | 'line' | 'fly' | 'pop'; kmh: number; distM: number; angle: number };
+  hit?: { x: number; y: number; kind: 'ground' | 'line' | 'fly' | 'pop'; kmh: number; distM: number; angle: number; /** 발사각(도) — 엔진 경기만 */ la?: number };
   /** 마지막 공 */
   lastPitch?: { type: PitchType | 'SIG'; name: string; kmh: number; zone: [number, number] };
   causes?: Cause[];

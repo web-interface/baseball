@@ -3,7 +3,7 @@
 // 반전 전 그림은 좌타 · 우투 기준(타자는 손이 그림 오른쪽 어깨, 투수 글러브는 그림 오른쪽 팔) — 우타 · 좌투는 mirror.
 // 자세는 POSES — 손 위치만 정하면 팔꿈치는 두 마디 IK 로 잡고, 배트·글러브는 손과 아래팔을 따라간다.
 export const INK = '#2b1d17';
-type Pt = [number, number];
+export type Pt = [number, number];
 
 const hx = (c: string) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
 const th = (a: number[]) => '#' + a.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
@@ -11,20 +11,20 @@ export const shade = (c: string, k: number) => th(hx(c).map((v) => v * k));
 export const mix = (a: string, b: string, t: number) => { const A = hx(a), B = hx(b); return th(A.map((v, i) => v + (B[i] - v) * t)); };
 /** 밝기 0~1 (대충 — 글자색 고를 때) */
 export const lum = (c: string) => { const [r, g, b] = hx(c); return (0.299 * r + 0.587 * g + 0.114 * b) / 255; };
-const r1 = (n: number) => Math.round(n * 10) / 10;
-const P = (x: number, y: number) => `${r1(x)},${r1(y)}`;
+export const r1 = (n: number) => Math.round(n * 10) / 10;
+export const P = (x: number, y: number) => `${r1(x)},${r1(y)}`;
 
 export const SKIN = ['#FFE2C8', '#F8CBA3', '#E9B085', '#CC8D62', '#9B6545'];
 export const HAIR = ['#1c1613', '#33241b', '#583a25', '#7d5a3c'];
 
-function ell(cx: number, cy: number, rx: number, ry: number, rot = 0) {
+export function ell(cx: number, cy: number, rx: number, ry: number, rot = 0) {
   const a = (rot * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a), k = 0.5523;
   const pt = (x: number, y: number) => P(cx + x * c - y * s, cy + x * s + y * c);
   return `M${pt(rx, 0)} C${pt(rx, ry * k)} ${pt(rx * k, ry)} ${pt(0, ry)} C${pt(-rx * k, ry)} ${pt(-rx, ry * k)} ${pt(-rx, 0)} C${pt(-rx, -ry * k)} ${pt(-rx * k, -ry)} ${pt(0, -ry)} C${pt(rx * k, -ry)} ${pt(rx, -ry * k)} ${pt(rx, 0)} Z`;
 }
 
 /** 두 원(반지름 ra→rb)을 잇는 캡슐 — 팔 · 다리 · 손가락 */
-function capsule(x1: number, y1: number, ra: number, x2: number, y2: number, rb: number) {
+export function capsule(x1: number, y1: number, ra: number, x2: number, y2: number, rb: number) {
   const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
   const sa = Math.max(-0.95, Math.min(0.95, (ra - rb) / L)), ca = Math.sqrt(1 - sa * sa);
   const m = [nx * ca + ux * sa, ny * ca + uy * sa], m2 = [-nx * ca + ux * sa, -ny * ca + uy * sa];
@@ -34,7 +34,7 @@ function capsule(x1: number, y1: number, ra: number, x2: number, y2: number, rb:
 }
 
 /** 어깨 S → 손 H, 위팔 a · 아래팔 b, hint 쪽으로 팔꿈치 */
-function elbow(S: Pt, H: Pt, a: number, b: number, hint: Pt): Pt {
+export function elbow(S: Pt, H: Pt, a: number, b: number, hint: Pt): Pt {
   const dx = H[0] - S[0], dy = H[1] - S[1];
   let d = Math.hypot(dx, dy);
   if (d > a + b - 0.5) { const k = a / (a + b); return [S[0] + dx * k, S[1] + dy * k]; }
@@ -47,7 +47,7 @@ function elbow(S: Pt, H: Pt, a: number, b: number, hint: Pt): Pt {
   return dist(e1) < dist(e2) ? e1 : e2;
 }
 
-function batPath(K: Pt, T: Pt) {
+export function batPath(K: Pt, T: Pt) {
   const dx = T[0] - K[0], dy = T[1] - K[1], L = Math.hypot(dx, dy), nx = -dy / L, ny = dx / L;
   const w = (s: number) => {
     if (s < 0.36) return 3.2 + s * 1.4;
@@ -500,7 +500,7 @@ export function drawSd(opt: SdOpts): string {
 }
 
 /** 세로 줄무늬(핀스트라이프) — 부모 clip 안에서만 보인다 */
-function pinstripes(x: number, y: number, w: number, h: number, col: string) {
+export function pinstripes(x: number, y: number, w: number, h: number, col: string) {
   let d = '';
   for (let xx = x; xx <= x + w; xx += 7) d += `M${r1(xx)},${r1(y)} L${r1(xx)},${r1(y + h)} `;
   return `<path d="${d}" stroke="${col}" stroke-width="1" fill="none"/>`;

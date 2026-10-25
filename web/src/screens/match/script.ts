@@ -151,7 +151,8 @@ export function buildBip(p: FullPlay, align: Alignment, prevScore: [number, numb
   let landing: PlayScript['landing'];
   let circles: PlayScript['circles'];
   let ballGone: number | undefined;
-  const la = h.kind === 'ground' ? -6 : h.kind === 'line' ? 14 : h.kind === 'pop' ? 58 : 31;
+  // 발사각 — 엔진 경기는 실제 값, 아니면 타구 종류로 어림 (명장면 컷과 같은 값)
+  const la = h.la ?? (h.kind === 'ground' ? -6 : h.kind === 'line' ? 14 : h.kind === 'pop' ? 58 : 31);
   let readoutT = 0.3;
 
   const isAirOut = AIR_OUT.includes(code);

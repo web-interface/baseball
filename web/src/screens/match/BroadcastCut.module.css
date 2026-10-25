@@ -1,169 +1,217 @@
-/* 명장면 컷인 — 시간표(초): 띠 0 · 두 화면 0.08~0.5 · 던짐 0.72 · 공 0.76~1.02 · 임팩트 1.02 · 글자 1.12 · 나감 2.66~3.0
-   글자 크기는 컨테이너 폭(cqw) 기준 — 휴대폰 · PC 무대 크기에 맞춰 함께 커진다 */
+/* 명장면 컷 — 시간표(ms): 들어옴 0~150 · 와인드업 0~240 · 테이크백 240~420 · 공 380~720 · 스윙 660 · 임팩트 720(멈칫 110) · 타구 830~ · 결과판 980 · 나감 끝 7%
+   (BroadcastCut.tsx 의 REL · HIT · STOP 과 같은 값). 글자 크기는 컨테이너 폭(cqw) 기준 */
 .cut {
-  --ink: #05070d;
-  position: absolute; inset: 0; z-index: 6; overflow: hidden; cursor: pointer; color: #fff; background: var(--ink);
-  container-type: inline-size; isolation: isolate;
-  animation: cutIn .18s ease-out both;
+  position: absolute; inset: 0; z-index: 6; overflow: hidden; cursor: pointer; color: #fff; background: #04060c;
+  container-type: inline-size; isolation: isolate; opacity: 0; -webkit-tap-highlight-color: transparent;
 }
-.out { animation: cutOut .34s cubic-bezier(.6, 0, .9, .4) both; }
-@keyframes cutIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes cutOut { to { opacity: 0; filter: brightness(1.8) blur(2px); } }
+.live { animation: life var(--end) linear both; }
+@keyframes life { 0% { opacity: 0; } 4% { opacity: 1; } 93% { opacity: 1; } 100% { opacity: 0; } }
+.out { animation: skip .24s ease-in both; }
+@keyframes skip { from { opacity: 1; } to { opacity: 0; } }
 
-.stagebox { position: absolute; inset: 0; }
-.shake { animation: shake .36s 1.02s linear both; }
+/* ── 카메라: 천천히 다가감 → 임팩트에 한 번 쿵(확대) · 흔들림 → 타구 따라 고개를 듦 */
+.cam, .pan, .punch, .shake { position: absolute; inset: 0; }
+.cam { transform-origin: var(--ox) var(--oy); animation: push 720ms cubic-bezier(.45, 0, .25, 1) both; }
+@keyframes push { from { transform: scale(1.0); } to { transform: scale(1.045); } }
+.pan { animation: pan var(--fly) 830ms cubic-bezier(.33, .08, .3, 1) both; }
+@keyframes pan { from { transform: none; } to { transform: translateY(var(--panY)); } }
+.punch { transform-origin: var(--ox) var(--oy); animation: punch .56s 720ms cubic-bezier(.2, .9, .3, 1) both; }
+@keyframes punch { 0% { transform: scale(1); } 16% { transform: scale(1.085); } 100% { transform: scale(1.025); } }
+.shake { animation: shake .36s 720ms linear both; }
 @keyframes shake {
-  0% { transform: translate(0, 0) scale(1.03); } 12% { transform: translate(-2.2%, 1.4%) scale(1.04); } 26% { transform: translate(2%, -1.6%) scale(1.03); }
-  42% { transform: translate(-1.2%, -.8%) scale(1.02); } 60% { transform: translate(.9%, .8%) scale(1.01); } 80% { transform: translate(-.3%, .2%); } 100% { transform: translate(0, 0); }
+  0% { transform: translate(0, 0); } 12% { transform: translate(-1.7%, 1.2%); } 26% { transform: translate(1.6%, -1.3%); }
+  42% { transform: translate(-1.1%, -.7%); } 60% { transform: translate(.8%, .7%); } 80% { transform: translate(-.3%, .2%); } 100% { transform: translate(0, 0); }
 }
+.k-k .punch { animation-name: punchK; }
+@keyframes punchK { 0% { transform: scale(1); } 16% { transform: scale(1.04); } 100% { transform: scale(1.015); } }
+.k-k .shake { animation-name: shakeK; animation-duration: .24s; }
+@keyframes shakeK { 0% { transform: none; } 25% { transform: translate(-.7%, .5%); } 50% { transform: translate(.6%, -.4%); } 75% { transform: translate(-.3%, .2%); } 100% { transform: none; } }
 
-/* ── 대각선으로 갈린 두 화면 ── */
-.panel { position: absolute; inset: 0; overflow: hidden; }
-.pTop { clip-path: polygon(0 0, 100% 0, 100% 30%, 0 62%); animation: inLeft .42s .08s cubic-bezier(.16, 1, .3, 1) both; }
-.pBottom { clip-path: polygon(0 66%, 100% 34%, 100% 100%, 0 100%); animation: inRight .42s .16s cubic-bezier(.16, 1, .3, 1) both; }
-@keyframes inLeft { from { transform: translateX(-60%); filter: brightness(2.2); } to { transform: none; filter: none; } }
-@keyframes inRight { from { transform: translateX(60%); filter: brightness(2.2); } to { transform: none; filter: none; } }
-.out .pTop { animation: outLeft .34s cubic-bezier(.6, 0, .9, .4) both; }
-.out .pBottom { animation: outRight .34s cubic-bezier(.6, 0, .9, .4) both; }
-@keyframes outLeft { to { transform: translateX(-70%); } }
-@keyframes outRight { to { transform: translateX(70%); } }
+/* ── 경기장 · 임팩트 뒤 어둡게(섬광이 돋보이게) */
+.bg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.dim {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle at var(--ox) var(--oy), rgba(4, 6, 14, .1) 0, rgba(4, 6, 14, .62) 62%);
+  animation: dim 1.3s 720ms ease-out forwards;
+}
+@keyframes dim { 0% { opacity: 0; } 6% { opacity: 1; } 100% { opacity: .3; } }
+.k-k .dim { animation-name: dimK; }
+@keyframes dimK { 0% { opacity: 0; } 10% { opacity: .7; } 100% { opacity: .2; } }
 
-/* 구단 색 조명 — 깊은 바탕 + 한쪽에서 비치는 빛 */
-.light { position: absolute; inset: 0; }
-.pTop .light {
-  background:
-    radial-gradient(70% 90% at 26% 40%, color-mix(in srgb, var(--c1) 70%, #fff 6%) 0%, color-mix(in srgb, var(--c1) 38%, var(--ink)) 48%, var(--ink) 100%),
-    var(--ink);
-}
-.pBottom .light {
-  background:
-    radial-gradient(70% 90% at 74% 76%, color-mix(in srgb, var(--c1) 70%, #fff 6%) 0%, color-mix(in srgb, var(--c1) 38%, var(--ink)) 48%, var(--ink) 100%),
-    var(--ink);
-}
-/* 집중선 — 캐릭터 쪽으로 모이는 가는 빛살 (가운데는 비움) */
-.lines { position: absolute; inset: -40%; opacity: .55; mix-blend-mode: screen; animation: linesSpin 3s linear both; }
-.pTop .lines {
-  background: repeating-conic-gradient(from 0deg at 36% 43%, rgba(255, 255, 255, .5) 0deg .55deg, transparent .55deg 5.2deg);
-  -webkit-mask: radial-gradient(circle at 36% 43%, transparent 0 13%, #000 34%); mask: radial-gradient(circle at 36% 43%, transparent 0 13%, #000 34%);
-}
-.pBottom .lines {
-  background: repeating-conic-gradient(from 2deg at 64% 58%, rgba(255, 255, 255, .5) 0deg .55deg, transparent .55deg 5.2deg);
-  -webkit-mask: radial-gradient(circle at 64% 58%, transparent 0 13%, #000 34%); mask: radial-gradient(circle at 64% 58%, transparent 0 13%, #000 34%);
-}
-@keyframes linesSpin { from { transform: rotate(0deg) scale(1.05); } to { transform: rotate(4deg) scale(1); } }
-/* 망점 */
-.tone { position: absolute; inset: 0; opacity: .32; background: radial-gradient(circle, rgba(0, 0, 0, .9) 26%, transparent 30%) 0 0 / 5px 5px; -webkit-mask: linear-gradient(115deg, transparent 40%, #000 90%); mask: linear-gradient(115deg, transparent 40%, #000 90%); }
+/* 투수 — 와인드업 → 테이크백 → 마무리 */
+.pf { position: absolute; display: block; max-width: none; pointer-events: none; filter: drop-shadow(0 1.5px 1.5px rgba(0, 0, 0, .35)); }
+.pf1 { animation: pf1 240ms step-end both; }
+@keyframes pf1 { 0% { opacity: 1; } 100% { opacity: 0; } }
+.pf2 { animation: pf2 420ms step-end both; }
+@keyframes pf2 { 0% { opacity: 0; } 57.14% { opacity: 1; } 100% { opacity: 0; } }
+.pf3 { animation: pf3 420ms step-end both; }
+@keyframes pf3 { 0% { opacity: 0; } 100% { opacity: 1; } }
 
-/* 큰 SD 그림 — 테두리 빛(림 라이트) + 천천히 다가옴 */
-.char { position: absolute; display: block; pointer-events: none; filter: drop-shadow(0 0 1px rgba(255, 255, 255, .9)) drop-shadow(0 0 14px color-mix(in srgb, var(--c1) 75%, #fff)); }
-.pTop .char { left: 6%; top: 4%; width: 46%; height: 60%; animation: pushP 2.6s .1s cubic-bezier(.2, .7, .2, 1) both, throwP .3s .7s cubic-bezier(.3, 0, .2, 1) both; }
-.pBottom .char { right: 4%; bottom: -2%; width: 54%; height: 66%; animation: pushB 2.6s .18s cubic-bezier(.2, .7, .2, 1) both; }
-@keyframes pushP { from { transform: scale(1.18) translateX(-6%); } to { transform: scale(1) translateX(0); } }
-@keyframes throwP { 0% { rotate: 0deg; translate: 0 0; } 45% { rotate: -6deg; translate: -2% 1%; } 100% { rotate: 4deg; translate: 3% 0; } }
-@keyframes pushB { from { transform: scale(1.16) translateX(6%); } to { transform: scale(1) translateX(0); } }
-.char > span { width: 100%; height: 100%; }
+/* 존 · 공 · 궤적 */
+.back { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.zone { fill: none; stroke: #fff; animation: zone .5s 120ms ease-out both; }
+.zone rect { stroke-width: 1.1; stroke-opacity: .6; fill: rgba(255, 255, 255, .04); }
+.zone path { stroke-width: .6; stroke-opacity: .3; }
+@keyframes zone { from { opacity: 0; } to { opacity: 1; } }
+.k-hr .zone, .k-xbh .zone, .k-hit .zone, .k-sf .zone { animation: zone .5s 120ms ease-out both, zoneOff .3s 740ms ease-in forwards; }
+@keyframes zoneOff { to { opacity: 0; } }
+.pTrail { fill: none; stroke-width: 2.2; stroke-linecap: round; opacity: .85; filter: drop-shadow(0 0 2px currentColor); animation: trailOff .45s 800ms ease-in forwards; }
+@keyframes trailOff { to { opacity: 0; } }
+.k-k .pTrail { animation-delay: 1100ms; }
+.hGlow { fill: none; stroke: #ffd760; stroke-width: 7; stroke-linecap: round; opacity: .28; }
+.hTrail { fill: none; stroke: #fffaf0; stroke-width: 2.4; stroke-linecap: round; }
+.k-hr .hTrail { stroke: #ffe27a; }
+.k-hr .hGlow { stroke: #ffb63a; opacity: .4; }
+.hGlow, .hTrail { animation: trailOff .6s calc(var(--end) - 900ms) ease-in forwards; }
+.ball { transform-box: view-box; transform-origin: 0 0; opacity: 0; }
+.ballGlow { opacity: .4; }
+.ballCore { fill: #fff; stroke: rgba(0, 0, 0, .25); stroke-width: .6; }
 
-/* 이름판 — 기울인 띠 · 큰 등번호 */
-.plate { position: absolute; display: flex; align-items: center; gap: 2.4cqw; padding: 1.4cqw 3.6cqw 1.4cqw 2.4cqw; transform: skewX(-12deg); background: linear-gradient(90deg, rgba(5, 7, 13, .86), rgba(5, 7, 13, .55)); box-shadow: inset .9cqw 0 0 var(--c1); }
-.plate > * { transform: skewX(12deg); }
-.pTop .plate { right: 4%; top: 13%; animation: plateIn .4s .32s cubic-bezier(.16, 1, .3, 1) both; }
-.pBottom .plate { left: 4%; bottom: 13%; animation: plateIn .4s .4s cubic-bezier(.16, 1, .3, 1) both; }
-@keyframes plateIn { from { opacity: 0; translate: 0 30%; } to { opacity: 1; translate: 0 0; } }
-.plate b { font-size: 8.4cqw; font-weight: 900; line-height: 1; letter-spacing: -.04em; color: transparent; -webkit-text-stroke: .35cqw #fff; font-style: italic; }
-.plate span { display: grid; gap: .3cqw; }
-.plate small { display: flex; align-items: center; gap: 1.2cqw; font-size: 2.6cqw; font-weight: 700; letter-spacing: .02em; color: rgba(255, 255, 255, .72); }
-.plate small em { padding: .2cqw 1.2cqw; border-radius: .6cqw; font-style: normal; font-size: 2.3cqw; font-weight: 900; color: #032029; background: #39d0ff; }
-.plate strong { font-size: 5cqw; font-weight: 900; letter-spacing: -.04em; line-height: 1.1; }
+/* 타자 — 준비 → (스윙) 맞는 순간, 섬광에 몸이 환해짐 */
+.bat { position: absolute; display: block; max-width: none; pointer-events: none; filter: drop-shadow(0 0 1px rgba(255, 255, 255, .35)); }
+.bLoad { animation: bLoad 660ms step-end both; }
+@keyframes bLoad { 0% { opacity: 1; } 100% { opacity: 0; } }
+.look .bLoad { animation: none; opacity: 1; }
+.bHit { opacity: 0; animation: bHit 660ms step-end both; }
+@keyframes bHit { 0% { opacity: 0; } 100% { opacity: 1; } }
+.front { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.smear { opacity: 0; animation: smear 260ms 640ms ease-out both; mix-blend-mode: screen; }
+@keyframes smear { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
 
-/* 가운데 빛나는 대각선 */
-.slash {
-  position: absolute; left: -10%; right: -10%; top: 48%; height: .7cqw; transform: rotate(-17.7deg); transform-origin: center;
-  background: linear-gradient(90deg, transparent, #fff 18%, #fff 82%, transparent); box-shadow: 0 0 2.4cqw #fff, 0 0 7cqw color-mix(in srgb, #ffd56a 80%, transparent);
-  animation: slashIn .36s .14s cubic-bezier(.16, 1, .3, 1) both;
-}
-@keyframes slashIn { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
-
-/* ── 공 궤적 · 임팩트 ── */
-.fx { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-.pitchStreak {
-  fill: none; stroke: url(#bcStreak); stroke-width: 1.6; stroke-linecap: round; vector-effect: non-scaling-stroke;
-  stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 0 3px #ffe39a);
-  animation: draw .26s .76s cubic-bezier(.5, 0, .9, .5) both, fadeOut .4s 1.15s ease-out both;
-}
-.pitchStreak { stroke-width: 5px; }
-@keyframes draw { to { stroke-dashoffset: 0; } }
-@keyframes fadeOut { to { opacity: 0; } }
-/* 공 — 화면 비율과 상관없이 둥글게(HTML) */
-.ball {
-  position: absolute; left: 17%; top: 27%; width: 2.4cqw; height: 2.4cqw; margin: -1.2cqw 0 0 -1.2cqw; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fff 0 45%, #e7e7e7 70%, #c9c9c9); box-shadow: 0 0 2cqw 0.6cqw rgba(255, 240, 190, .95);
-  opacity: 0; animation: ballFly .26s .76s cubic-bezier(.5, 0, .9, .5) both;
-}
-.hitTone .ball, .hr .ball { animation: ballFly .26s .76s cubic-bezier(.5, 0, .9, .5) both, ballOut .7s 1.02s cubic-bezier(.1, .8, .25, 1) both; }
-@keyframes ballFly { from { opacity: 1; left: 17%; top: 27%; transform: scale(.7); } to { opacity: 1; left: 50%; top: 71%; transform: scale(2.2); } }
-@keyframes ballOut { from { left: 50%; top: 71%; transform: scale(2.2); } to { left: 112%; top: 4%; transform: scale(.6); } }
-.hr .ball { animation: ballFly .26s .76s cubic-bezier(.5, 0, .9, .5) both, ballOutHr .75s 1.02s cubic-bezier(.1, .8, .25, 1) both; }
-@keyframes ballOutHr { from { left: 50%; top: 71%; transform: scale(2.2); } to { left: 112%; top: -20%; transform: scale(.5); } }
-.kTone .ball { animation: ballFly .26s .76s cubic-bezier(.5, 0, .9, .5) both, ballStay .2s 1.02s both; }
-@keyframes ballStay { from { left: 50%; top: 71%; transform: scale(2.2); } to { left: 50%; top: 71%; transform: scale(1.7); } }
-
-.bloom { opacity: 0; transform-box: fill-box; transform-origin: center; animation: bloom .42s 1.02s ease-out both; mix-blend-mode: screen; }
-@keyframes bloom { 0% { opacity: 1; transform: scale(.15); } 100% { opacity: 0; transform: scale(1.6); } }
-.wave { fill: none; stroke: #fff; stroke-width: 3px; vector-effect: non-scaling-stroke; opacity: 0; transform-box: fill-box; transform-origin: center; animation: wave .55s 1.02s ease-out both; }
-.wave2 { stroke: #ffd56a; animation-delay: 1.1s; }
-.waveK { stroke: #8fd3ff; }
-@keyframes wave { 0% { opacity: 1; transform: scale(.4); stroke-width: 6px; } 100% { opacity: 0; transform: scale(6); stroke-width: 1px; } }
-.sparks line { stroke: #fff6c8; stroke-width: 2.4px; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+/* ── 임팩트 섬광 (맞은 곳 가운데, 한 겹씩 다른 속도) */
+.burst { position: absolute; width: 0; height: 0; pointer-events: none; }
+.burst svg { position: absolute; left: -55cqw; top: -55cqw; width: 110cqw; height: 110cqw; max-width: none; overflow: visible; opacity: 0; }
+.glow { animation: glow .9s 720ms cubic-bezier(.1, .8, .2, 1) both; }
+@keyframes glow { 0% { opacity: 0; transform: scale(.15); } 5% { opacity: .95; } 30% { opacity: .9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.08); } }
+.rays { animation: rays .8s 720ms cubic-bezier(.1, .9, .25, 1) both; filter: drop-shadow(0 0 2.2cqw rgba(255, 150, 20, .55)); }
+.bK .rays { filter: drop-shadow(0 0 2cqw rgba(60, 150, 255, .5)); }
+@keyframes rays { 0% { opacity: 0; transform: scale(.3) rotate(-7deg); } 5% { opacity: 1; transform: scale(.85) rotate(-3deg); } 14% { transform: scale(1.04) rotate(0deg); } 34% { opacity: 1; transform: scale(1) rotate(1deg); } 100% { opacity: 0; transform: scale(1.22) rotate(4deg); } }
+.rays2 { mix-blend-mode: screen; animation: rays2 .64s 735ms cubic-bezier(.1, .9, .25, 1) both; }
+@keyframes rays2 { 0% { opacity: 0; transform: scale(.3) rotate(10deg); } 10% { opacity: .95; } 100% { opacity: 0; transform: scale(1.25) rotate(-4deg); } }
+.ring circle { fill: none; stroke: #fff; stroke-width: 3; }
+.ring { animation: ring .6s 720ms cubic-bezier(.1, .7, .3, 1) both; }
+.ring2 { animation-delay: 820ms; }
+.ring2 circle { stroke: #ffc94d; stroke-width: 2; }
+@keyframes ring { 0% { opacity: 1; transform: scale(.06); } 100% { opacity: 0; transform: scale(.92); } }
+.streak ellipse { fill: #fff; }
+.streak { mix-blend-mode: screen; animation: streak .5s 720ms ease-out both; }
+@keyframes streak { 0% { opacity: 0; transform: scaleX(.1); } 12% { opacity: .95; } 100% { opacity: 0; transform: scaleX(1.5); } }
+.core circle { fill: #fff; }
+.core { animation: core .46s 720ms ease-out both; }
+@keyframes core { 0% { opacity: 0; transform: scale(.3); } 8% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0; transform: scale(1.7); } }
+.sparks { opacity: 1 !important; }
+.sparks line { stroke: #fff6c8; stroke-width: 2.2; stroke-linecap: round; opacity: 0; transform-box: fill-box; transform-origin: center; animation: spark .62s ease-out both; }
 .sparks line:nth-child(3n) { stroke: #ffb13d; }
-.sparks { opacity: 0; transform-box: fill-box; transform-origin: center; animation: sparks .5s 1.02s cubic-bezier(.1, .8, .3, 1) both; }
-@keyframes sparks { 0% { opacity: 1; transform: scale(.25) rotate(0deg); } 100% { opacity: 0; transform: scale(1.3) rotate(10deg); } }
-.hitStreak {
-  fill: none; stroke: #fff0b8; stroke-width: 6px; stroke-linecap: round; vector-effect: non-scaling-stroke;
-  stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 0 5px rgba(255, 210, 110, .95));
-  animation: draw .55s 1.02s cubic-bezier(.1, .8, .25, 1) both, fadeOut .6s 1.75s ease-out both;
-}
-/* 임팩트 프레임 — 아주 짧게 색이 뒤집히는 섬광 (애니메이션 작화의 '임팩트 프레임') */
-.impact { position: absolute; inset: 0; background: #fff; mix-blend-mode: difference; opacity: 0; pointer-events: none; animation: impact .16s 1.02s steps(1, end) both; }
-@keyframes impact { 0% { opacity: 1; } 50% { opacity: 0; } 70% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes spark { 0% { opacity: 0; transform: translate(0, 0); } 10% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)); } }
+.bK .ring circle { stroke: #dff2ff; }
+.bK .ring2 circle { stroke: #7cc4ff; }
+.bK .sparks line { stroke: #e6f6ff; }
 
-/* ── 결과 글자 — 금속 광택 · 기울임 · 빛 지나감 ── */
-.result { position: absolute; left: 0; right: 0; top: 34%; display: grid; justify-items: center; gap: .6cqw; pointer-events: none; animation: slam .42s 1.12s cubic-bezier(.2, 1.4, .35, 1) both; }
-.result::before {
-  content: ''; position: absolute; left: -6%; right: -6%; top: 6%; bottom: 2%; z-index: -1; transform: skewY(-4deg);
-  background: linear-gradient(90deg, transparent, rgba(5, 7, 13, .78) 18%, rgba(5, 7, 13, .78) 82%, transparent);
-  box-shadow: 0 -1px 0 rgba(255, 255, 255, .18), 0 1px 0 rgba(255, 255, 255, .18);
+/* 집중선 — 맞은 곳으로 모이는 가는 빛살(가운데는 비움) */
+.speed {
+  position: absolute; inset: -20%; pointer-events: none; opacity: 0; mix-blend-mode: screen;
+  background: repeating-conic-gradient(from 0deg at var(--sx) var(--sy), rgba(255, 255, 255, .5) 0deg .45deg, transparent .45deg 3.6deg);
+  -webkit-mask: radial-gradient(circle at var(--sx) var(--sy), transparent 0 24%, #000 52%); mask: radial-gradient(circle at var(--sx) var(--sy), transparent 0 24%, #000 52%);
+  animation: speed .62s 720ms ease-out forwards;
 }
-.result { isolation: isolate; }
-@keyframes slam { from { opacity: 0; transform: scale(2.4) skewX(-12deg); filter: blur(6px); } to { opacity: 1; transform: scale(1) skewX(-8deg); filter: none; } }
-.result b {
-  position: relative; font-size: 17cqw; font-weight: 900; line-height: .95; letter-spacing: -.05em; font-style: italic;
-  color: transparent; background: linear-gradient(180deg, #ffffff 0%, #fff5d6 42%, #f2c14e 52%, #fff2c2 64%, #b9852a 100%); -webkit-background-clip: text; background-clip: text;
-  -webkit-text-stroke: .32cqw rgba(30, 20, 0, .55); filter: drop-shadow(0 .8cqw 0 rgba(0, 0, 0, .45)) drop-shadow(0 0 3cqw rgba(255, 200, 90, .55));
-}
-.result b::after {
-  content: attr(data-t); position: absolute; inset: 0; color: transparent; -webkit-text-stroke: 0;
-  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, .95) 48%, transparent 58%) 0 0 / 260% 100% no-repeat; -webkit-background-clip: text; background-clip: text;
-  animation: sweep .9s 1.5s ease-in-out both;
-}
-@keyframes sweep { from { background-position: 130% 0; } to { background-position: -130% 0; } }
-.kTone .result b { background: linear-gradient(180deg, #ffffff 0%, #dff3ff 44%, #6cc4ff 54%, #e6f7ff 66%, #2b78c9 100%); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 .8cqw 0 rgba(0, 0, 0, .45)) drop-shadow(0 0 3cqw rgba(90, 180, 255, .6)); }
-.hr .result b { font-size: 19cqw; filter: drop-shadow(0 .8cqw 0 rgba(0, 0, 0, .45)) drop-shadow(0 0 4cqw rgba(255, 140, 60, .8)); }
-.result em { font-size: 3.3cqw; font-weight: 900; font-style: italic; letter-spacing: .5em; padding-left: .5em; color: rgba(255, 255, 255, .85); text-shadow: 0 0 2cqw rgba(0, 0, 0, .8); }
-.result span { display: flex; gap: 1.6cqw; margin-top: .8cqw; animation: metaIn .3s 1.35s ease-out both; }
-.result span i { padding: .7cqw 2.2cqw; border-radius: 99px; font-style: normal; font-size: 3cqw; font-weight: 800; letter-spacing: -.02em; background: rgba(5, 7, 13, .72); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22); }
-@keyframes metaIn { from { opacity: 0; transform: translateY(40%); } to { opacity: 1; transform: none; } }
+@keyframes speed { 0% { opacity: 0; transform: scale(1.06); } 10% { opacity: .5; } 100% { opacity: 0; transform: scale(1); } }
+.k-k .speed { animation-name: speedK; }
+@keyframes speedK { 0% { opacity: 0; } 12% { opacity: .4; } 100% { opacity: 0; } }
+/* 임팩트 한 장 — 하얀 화면 */
+.white { position: absolute; inset: 0; background: radial-gradient(circle at var(--ox) var(--oy), #fff 0, rgba(255, 255, 255, .55) 40%, rgba(255, 255, 255, .2) 100%); pointer-events: none; opacity: 0; animation: white .14s 720ms linear forwards; }
+@keyframes white { 0% { opacity: .85; } 100% { opacity: 0; } }
+.k-k .white { background: #e4f3ff; animation-name: whiteK; }
+@keyframes whiteK { 0% { opacity: .45; } 100% { opacity: 0; } }
+.vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 95% at 50% 52%, transparent 58%, rgba(0, 0, 0, .5) 100%); }
 
-/* ── 시네마 띠 — 위(이닝 · 점수 · 아웃) · 아래 ── */
-.topbar, .botbar { position: absolute; left: 0; right: 0; height: 8.5%; background: #000; z-index: 3; }
-.topbar { top: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 3.4cqw; font-size: 3cqw; font-weight: 800; color: rgba(255, 255, 255, .78); animation: barTop .3s cubic-bezier(.16, 1, .3, 1) both; }
-.botbar { bottom: 0; animation: barBot .3s cubic-bezier(.16, 1, .3, 1) both; }
-@keyframes barTop { from { transform: translateY(-100%); } to { transform: none; } }
-@keyframes barBot { from { transform: translateY(100%); } to { transform: none; } }
-.score { display: flex; align-items: center; gap: 1.4cqw; color: #fff; }
-.score i { width: .9cqw; height: 3.4cqw; border-radius: .3cqw; }
-.score b { font-size: 4.2cqw; font-weight: 900; color: #ffd56a; }
-.score em { font-style: normal; color: rgba(255, 255, 255, .5); }
+/* 홈런 — 관중석 카메라 플래시 */
+.flashes { position: absolute; inset: 0; pointer-events: none; }
+.flashes i { position: absolute; width: .9cqw; height: .9cqw; margin: -.45cqw; border-radius: 50%; background: #fff; box-shadow: 0 0 1.4cqw .5cqw rgba(255, 255, 255, .8); opacity: 0; animation: pop .26s ease-out both; }
+@keyframes pop { 0% { opacity: 0; transform: scale(.4); } 30% { opacity: 1; transform: scale(1.3); } 100% { opacity: 0; transform: scale(.8); } }
 
-/* 움직임 줄이기 — 끝 모습만 */
-.still, .still * { animation-duration: .01s !important; animation-delay: 0s !important; }
-.still .impact { display: none; }
+/* ── 화면 정보판 — 짙은 유리판 · 구단색 띠 · 모서리 깎기 */
+.hud {
+  position: absolute; z-index: 4; pointer-events: none; color: #fff; font-family: var(--font-body);
+  background: linear-gradient(135deg, rgba(9, 14, 30, .92), rgba(9, 14, 30, .74));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16), 0 1.2cqw 3cqw rgba(0, 0, 0, .35);
+}
+.hud::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: .9cqw; background: var(--tc); box-shadow: 0 0 2cqw var(--tc); }
+.hud em { margin-left: 1.2cqw; padding: .2cqw 1.1cqw; border-radius: 999px; font-style: normal; font-size: 2.3cqw; font-weight: 800; color: #04222c; background: #39d0ff; vertical-align: .3cqw; }
+
+.pcard {
+  left: 2.6cqw; top: 2.6cqw; width: 35cqw; padding: 1.8cqw 2.2cqw 1.9cqw 3.2cqw;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 3.2cqw), calc(100% - 3.2cqw) 100%, 0 100%);
+  animation: hudL .44s 140ms cubic-bezier(.16, 1, .3, 1) both;
+}
+@keyframes hudL { from { opacity: 0; transform: translateX(-10cqw); } to { opacity: 1; transform: none; } }
+.pWho { display: flex; align-items: baseline; gap: 1.2cqw; white-space: nowrap; }
+.pWho b { font-size: 3.5cqw; font-weight: 800; letter-spacing: -.04em; }
+.pWho span { font-size: 2.5cqw; color: rgba(255, 255, 255, .55); }
+.pWho em { margin-left: 0; }
+.pType { display: flex; align-items: center; gap: 1.1cqw; margin-top: .9cqw; font-size: 3.1cqw; font-weight: 700; color: rgba(255, 255, 255, .9); }
+.pType i { width: 1.9cqw; height: 1.9cqw; border-radius: 50%; background: var(--pc); box-shadow: 0 0 1.4cqw var(--pc); }
+.pSpd { display: flex; align-items: baseline; gap: .8cqw; margin-top: .2cqw; line-height: 1; }
+.pSpd b { font-size: 8.6cqw; font-weight: 800; font-style: italic; letter-spacing: -.02em; background: linear-gradient(180deg, #fff 30%, #c9d6ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.pSpd small { font-size: 2.6cqw; font-weight: 700; color: rgba(255, 255, 255, .6); }
+/* 작은 존 — 공 들어온 자리 */
+.mz {
+  position: absolute; right: 2.6cqw; bottom: 2.4cqw; width: 9cqw; height: 11cqw;
+  background:
+    linear-gradient(rgba(255, 255, 255, .22), rgba(255, 255, 255, .22)) 33.3% 0 / 1px 100% no-repeat,
+    linear-gradient(rgba(255, 255, 255, .22), rgba(255, 255, 255, .22)) 66.6% 0 / 1px 100% no-repeat,
+    linear-gradient(rgba(255, 255, 255, .22), rgba(255, 255, 255, .22)) 0 33.3% / 100% 1px no-repeat,
+    linear-gradient(rgba(255, 255, 255, .22), rgba(255, 255, 255, .22)) 0 66.6% / 100% 1px no-repeat;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5);
+}
+.mzDot { position: absolute; width: 2.2cqw; height: 2.2cqw; margin: -1.1cqw; border-radius: 50%; background: var(--pc); box-shadow: 0 0 0 .35cqw rgba(0, 0, 0, .45), 0 0 1.6cqw var(--pc); animation: dot .3s 720ms cubic-bezier(.3, 1.6, .5, 1) both; }
+@keyframes dot { from { opacity: 0; transform: scale(2.4); } to { opacity: 1; transform: none; } }
+
+.rcard {
+  right: 2.6cqw; bottom: 2.6cqw; min-width: 46cqw; padding: 2cqw 2.8cqw 2.2cqw 3.6cqw;
+  clip-path: polygon(3.2cqw 0, 100% 0, 100% 100%, 0 100%, 0 3.2cqw);
+  animation: hudR .5s 980ms cubic-bezier(.16, 1, .3, 1) both;
+}
+.k-k .rcard { animation-delay: 900ms; }
+@keyframes hudR { from { opacity: 0; transform: translateX(10cqw); } to { opacity: 1; transform: none; } }
+/* 결과판 위를 한 번 쓸고 지나가는 빛 */
+.rcard::after { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, .28) 50%, transparent 65%) -150% 0 / 200% 100% no-repeat; animation: sweep .9s 1150ms ease-out both; }
+@keyframes sweep { to { background-position: 150% 0; } }
+.rHead { display: flex; align-items: center; white-space: nowrap; }
+.rHead b {
+  font-family: var(--font-head); font-size: 6.4cqw; font-weight: 900; font-style: italic; letter-spacing: -.04em; line-height: 1.05; padding-right: .18em;
+  background: linear-gradient(180deg, #ffffff 25%, #ffe79a 60%, #ffb43a); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 .3cqw 0 rgba(0, 0, 0, .45));
+}
+.k-k .rHead b { background: linear-gradient(180deg, #ffffff 25%, #cfe9ff 60%, #74b9ff); -webkit-background-clip: text; background-clip: text; }
+.rHead em { padding: .3cqw 1.3cqw; font-size: 2.5cqw; color: #2a1900; background: linear-gradient(180deg, #ffe08a, #f2b23a); }
+.k-k .rHead em { color: #0a1d33; background: linear-gradient(180deg, #d9efff, #8cc6ff); }
+.rStats { display: grid; grid-template-columns: repeat(3, auto); gap: 0 3.4cqw; margin: 1.3cqw 0 0; }
+.rStats div { display: grid; gap: .2cqw; }
+.rStats dt { font-size: 2.2cqw; font-weight: 600; color: rgba(255, 255, 255, .58); white-space: nowrap; }
+.rStats dd { margin: 0; display: flex; align-items: baseline; gap: .5cqw; line-height: 1; }
+.rStats dd b { font-size: 6.2cqw; font-weight: 800; font-style: italic; }
+.rStats dd small { font-size: 2.3cqw; font-weight: 700; color: rgba(255, 255, 255, .6); }
+.rStats dd small.deg { align-self: flex-start; margin-top: .2cqw; font-size: 3.6cqw; }
+.rWho { display: flex; align-items: center; gap: 1cqw; margin-top: 1.2cqw; font-size: 2.8cqw; font-weight: 700; white-space: nowrap; }
+.rWho i { width: 1.6cqw; height: 1.6cqw; border-radius: .4cqw; background: var(--tc); }
+.rWho span { font-weight: 500; color: rgba(255, 255, 255, .55); }
+.rWho em { margin-left: .4cqw; }
+
+/* 홈런 — 큰 글자 */
+.hrBan { position: absolute; left: 0; right: 0; top: 30%; z-index: 3; display: grid; place-items: center; pointer-events: none; animation: ban .5s 1500ms cubic-bezier(.2, 1.4, .4, 1) both; }
+.hrBan b {
+  font-family: var(--font-num); font-size: 16cqw; font-weight: 800; font-style: italic; letter-spacing: .01em; line-height: 1; white-space: nowrap;
+  background: linear-gradient(180deg, #fffdf2 18%, #ffe28a 48%, #ffad2e 52%, #ffd25c 80%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 .5cqw 0 #3a1e00) drop-shadow(0 0 3cqw rgba(255, 170, 40, .55));
+}
+@keyframes ban { 0% { opacity: 0; transform: scale(1.8); filter: blur(6px); } 60% { opacity: 1; filter: none; } 100% { opacity: 1; transform: none; } }
+
+/* 움직임 줄이기 — 맞는 순간 한 장면 그대로 (전역 규칙이 애니메이션을 바로 끝내므로 보이는 상태를 직접 정한다) */
+.still { opacity: 1; }
+.still .cam, .still .pan, .still .punch, .still .shake, .still .dim, .still .zone, .still .pTrail, .still .speed, .still .white, .still .smear, .still .hud, .still .hrBan, .still .rcard::after { animation: none !important; }
+.still .pf1, .still .pf2, .still .bLoad { animation: none; opacity: 0; }
+.still .pf3, .still .bHit, .still .hud, .still .hrBan { animation: none; opacity: 1; }
+.still.look .bLoad { opacity: 1; }
+.still .burst svg { animation: none; opacity: .85; }
+.still .burst .ring, .still .burst .sparks, .still .burst .streak, .still .burst .core { opacity: 0 !important; }
+.still .dim { opacity: .3; }

@@ -317,7 +317,7 @@ export function fromEngine(run: GameRun, meta: EngineMeta): FullGame {
     if (bbr) {
       const dist = Math.hypot(bbr.lx, bbr.ly);
       const pt = mToField(bbr.lx, bbr.ly);
-      hit = { x: r3(pt.x), y: r3(pt.y), kind: KIND[bbr.kind] ?? 'fly', kmh: Math.round(bbr.ev), distM: Math.round(dist), angle: Math.round(bbr.phi) };
+      hit = { x: r3(pt.x), y: r3(pt.y), kind: KIND[bbr.kind] ?? 'fly', kmh: Math.round(bbr.ev), distM: Math.round(dist), angle: Math.round(bbr.phi), la: Math.round(bbr.la) };
       const caught = fds.find((f) => f.act === 0 || f.act === 2) ?? fds[0];
       fielderNo = caught ? caught.pos + 1 : guessFielder(bbr.phi, dist, bbr.kind);
       if (bbr.kind >= 1 && fds.length) {
