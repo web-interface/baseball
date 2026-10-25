@@ -4,6 +4,7 @@
 // 헤더 · 홈 · 순위 탭 · 시즌 빨리 감기 · 경기 화면은 모두 이 파일의 standingsOf · teamLine · batLine · pitLine 을 쓴다 — 어디서 봐도 같은 값.
 // 저장 형식 2(bb.season.v2). 예전 형식 1(목업 71경기 뒤 6월 15일부터 이어 치던 것)은 일정이 달라 이어 쓸 수 없어 지우고 새 시즌으로(안내 한 줄).
 // 시즌은 내 구단(ME.teamId — 구단 선택에서 고른 구단)의 것 — 내 구단이 바뀌면 새 시즌으로 시작한다.
+import type { Command } from '../../../shared/engine/index.ts';
 import { archiveSeason } from './career';
 import { useSyncExternalStore } from 'react';
 import { ME, TEAMS, playerById, teamById } from '../game/mock';
@@ -47,9 +48,9 @@ export interface SeasonState {
   /** 친 날마다 순위 (구단 → 순위 배열, 공동 순위 그대로) — 순위 경쟁 그래프 */
   rankHist: Record<string, number[]>;
   /** 보는 중인 내 경기 — 다시 열어도 같은 경기가 되게 라인업을 얼려 둔다 (started: 경기를 시작함 — 그 뒤로는 라인업을 바꿔도 그대로) */
-  pending?: { idx: number; snap: LineupState; started?: boolean };
-  /** 내 마지막 경기에 쓴 라인업 — 홈 '지난 경기'가 같은 경기를 다시 계산해 승리 확률 흐름 · 명장면을 보여 준다 */
-  lastSnap?: { idx: number; snap: LineupState };
+  pending?: { idx: number; snap: LineupState; started?: boolean; cmds?: Command[] };
+  /** 내 마지막 경기에 쓴 라인업 — 홈 '지난 경기'가 같은 경기를 다시 계산해 승리 확률 흐름 · 명장면을 보여 준다 (cmds = 경기 중 작전) */
+  lastSnap?: { idx: number; snap: LineupState; cmds?: Command[] };
   /** 한 번 보여 줄 안내 (예전 저장 정리) — Shell 이 토스트로 띄우고 지운다 */
   notice?: string;
   /** 포스트시즌 (정규 시즌이 끝난 뒤 — season/post) */
@@ -399,7 +400,8 @@ export function applyDay(out: DayOutcome): DayHighlight[] {
   if (s.news.length > 160) s.news.splice(0, s.news.length - 160);
   // 내 경기에 쓴 라인업 (보는 중이던 경기면 얼려 둔 것)
   const snap = s.pending && s.pending.idx === out.idx ? s.pending.snap : out.mySnap;
-  if (myPlayed && snap) s.lastSnap = { idx: out.idx, snap: JSON.parse(JSON.stringify(snap)) as LineupState };
+  const cmds = s.pending && s.pending.idx === out.idx ? s.pending.cmds : undefined;
+  if (myPlayed && snap) s.lastSnap = { idx: out.idx, snap: JSON.parse(JSON.stringify(snap)) as LineupState, ...(cmds?.length ? { cmds } : {}) };
   s.next = out.idx + 1;
   if (s.pending && s.pending.idx <= out.idx) delete s.pending;
   if (s.next >= allDays(s).length) s.news.push({ idx: out.idx, date: d.date, kind: '시즌', text: `정규 시즌 끝 — ${tShort(lead.teamId)} 1위`, team: lead.teamId });
@@ -420,6 +422,11 @@ function addPit(s: SeasonState, p: PitRow) {
 
 /** 보는 중인 내 경기 표시 (라인업을 얼려 둠) */
 export function setPending(idx: number, snap: LineupState) { const s = load(); s.pending = { idx, snap }; save(); }
+/** 경기 중 작전 — 다시 열어도 같은 작전으로 같은 경기가 되게 */
+export function setPendingCmds(idx: number, cmds: Command[]) {
+  const s = load();
+  if (s.pending && s.pending.idx === idx) { s.pending = { ...s.pending, cmds: cmds.slice() }; save(); }
+}
 /** 내 경기를 시작함 — 이제부터는 다시 열어도 얼린 라인업 그대로 (새로 고쳐 결과 바꾸기 막기) */
 export function markPendingStarted(idx: number) {
   const s = load();

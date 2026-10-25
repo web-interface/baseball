@@ -18,7 +18,13 @@ import {
 import { Player, useSnapValue } from './player';
 import { Stage } from './Stage';
 import { Caption, LineScore, Scrubber, Transport } from './Board';
-import { Feed, Matchup, Momentum, Tactics } from './Panels';
+import { Feed, Matchup, Momentum } from './Panels';
+import { TacticsPanel } from './TacticsPanel';
+import { BroadcastCut, cutWorthy } from './BroadcastCut';
+import { atOfBeat, sameBeat, type CmdBody } from './command';
+import { setGame } from './local-mock';
+import { rebuildTimeline } from './timeline';
+import { useToast } from '../../ui';
 import { FinalOverlay, PreGame, Starters, Summary } from './Summary';
 import { VIEW_KEY, seenKey, store } from './hooks';
 import { readPrefs } from '../../app/prefs';
@@ -131,7 +137,9 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
     const [a, b, c] = ck.split('|');
     return { play: Number(a), pitches: Number(b), applied: c === '1' };
   }, [ck]);
-  const live = useMemo(() => liveOf(cursor), [cursor]);
+  // 작전으로 남은 경기를 다시 계산하면 gen 이 올라 — 같은 자리여도 새 경기로 다시 그린다
+  const [gen, setGen] = useState(0);
+  const live = useMemo(() => liveOf(cursor), [cursor, gen]); // eslint-disable-line react-hooks/exhaustive-deps
   const beat = player.beats[idx];
 
   // 이닝별 — 이닝 요약을 잠깐 보여 주고 저절로 다음 이닝으로 ('다음 이닝'을 누르면 바로 · 멈춤 중엔 기다림)
@@ -238,6 +246,43 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
     setMode(m);
   }, [phase, ended, cursor.play, player, queue, resetFx]);
 
+  // 중계 화면 컷 — 장타 · 적시타 · 결정적 삼진 순간(타구가 날기 전)에 잠깐 멈추고 보여 준 뒤 이어 간다 (자세히 보기 · 주요 장면)
+  const [cut, setCut] = useState<number | null>(null);
+  const cutSeen = useRef(new Set<number>());
+  const cutResume = useRef(false);
+  useEffect(() => {
+    if (phase !== 'play' || (mode !== 'detail' && mode !== 'key') || cut != null) return;
+    const b = player.beats[idx];
+    if (!b || (b.k !== 'bip' && b.k !== 'result' && b.k !== 'scene')) return;
+    const pl = PLAYS[b.play];
+    if (!pl || cutSeen.current.has(b.play) || !cutWorthy(pl)) return;
+    cutSeen.current.add(b.play);
+    cutResume.current = player.getSnap().playing;
+    player.pause();
+    setCut(b.play);
+  }, [idx, phase, mode]); // eslint-disable-line react-hooks/exhaustive-deps
+  const endCut = useCallback(() => { setCut(null); if (cutResume.current) player.play(); }, [player]);
+
+  // 경기 중 작전 — 지금 던지는 공은 그대로, 다음 공부터. 엔진을 다시 돌려 남은 경기를 바꿔 끼우고 같은 장면에서 이어 간다
+  const toastIssue = useToast();
+  const cmdAt = ctx.kind === 'season' && ctx.cmd ? atOfBeat(beat, PLAYS) : null;
+  const issue = useCallback((body: CmdBody, label: string) => {
+    if (ctx.kind !== 'season' || !ctx.cmd) return;
+    const snap = player.getSnap();
+    const b = player.beats[snap.idx];
+    const at = atOfBeat(b, PLAYS);
+    if (at == null) return;
+    const game = ctx.cmd.issue(body, at);
+    setGame(game);
+    rebuildTimeline();
+    const beats = beatsFor(mode);
+    const k = sameBeat(beats, b);
+    player.swap(beats, k);
+    player.seekBeat(k, snap.local);
+    setGen((x) => x + 1);
+    toastIssue({ text: label, tone: 'accent', duration: 1600 });
+  }, [ctx, player, mode, toastIssue]);
+
   const start = () => { resetFx(); setPhase('play'); player.seekBeat(0); player.play(); };
   const seekPlay = (play: number) => {
     if (postLock && phase !== 'done') return;
@@ -293,6 +338,7 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
           {pre && <PreGame mode={mode} onStart={start} />}
           {done && <FinalOverlay />}
           {!pre && <LineupButton onClick={() => setLineupOpen(true)} />}
+          {cut != null && PLAYS[cut] && <BroadcastCut key={cut} play={PLAYS[cut]} onDone={endCut} />}
         </Stage>
       </CalloutStage>
       <CalloutAnnouncer callout={queue.current} />
@@ -320,7 +366,7 @@ function MatchView({ query, ctx, endBar }: ScreenProps & { ctx: MatchCtx; endBar
       {done && endBar}
       {done && <Summary onReplay={switchMode} onScene={toScene} />}
       {!pre && !done && mode !== 'quick' && <Matchup live={live} />}
-      {!pre && !done && mode === 'detail' && <Tactics live={live} />}
+      {!pre && !done && mode === 'detail' && ctx.kind === 'season' && ctx.cmd && <TacticsPanel live={live} cmd={ctx.cmd} at={cmdAt} onIssue={issue} />}
       {!pre && !done && <Momentum live={live} />}
       {!pre && <Feed live={liveShown} mode={mode} done={done} />}
       <LineupSheet open={lineupOpen} onClose={() => setLineupOpen(false)} live={liveShown} pre={pre} done={done} />

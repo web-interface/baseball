@@ -1,7 +1,7 @@
 // 2D 경기장 무대 — 고정 경기장(Field) 위에 매 프레임 바뀌는 층(공·야수·주자·수비 범위 원)과
 // 중계 그래픽(볼카운트 · 투구 위치 · 날씨 · 타구 정보)을 얹는다.
 import { memo, useMemo, type CSSProperties, type ReactNode } from 'react';
-import { Field, Icon } from '../../ui';
+import { Emblem, Field, Icon } from '../../ui';
 import { ME, playerById, teamById } from '../../game/mock';
 import type { Stadium } from '../../game/types';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -27,6 +27,24 @@ export interface StageProps {
   idle?: boolean;
 }
 
+/** 내 편 — 대전 다시 보기는 늘 원정(pvp-game: 나 = away), 그 밖은 내 구단 쪽 (어느 쪽도 아니면 null) */
+export const mySide = (): 'away' | 'home' | null => (GAME.match.id.startsWith('pvp-') ? 'away' : GAME.match.homeId === ME.teamId ? 'home' : GAME.match.awayId === ME.teamId ? 'away' : null);
+
+/** 우리 팀 — 지금 공격인지 수비인지 (경기장 위 표시와 같은 색 고리) */
+function MyChip({ live }: { live: Live }) {
+  const side = mySide();
+  if (!side) return null;
+  const team = teamById(side === 'home' ? GAME.match.homeId : GAME.match.awayId);
+  const batting = (live.play.half === 'top') === (side === 'away');
+  return (
+    <div className={s.myChip} aria-label={`우리 팀 ${batting ? '공격' : '수비'} 중`}>
+      <i className={s.myDot} aria-hidden />
+      <Emblem team={team} size={15} decorative />
+      <b>{batting ? '우리 공격' : '우리 수비'}</b>
+    </div>
+  );
+}
+
 export function Stage({ player, live, showZone, children, idle }: StageProps) {
   const home = teamById(GAME.match.homeId);
   const wx = GAME.wx[live.play.wx] ?? GAME.wx[0];
@@ -38,6 +56,7 @@ export function Stage({ player, live, showZone, children, idle }: StageProps) {
       <Wind wx={wx} />
       <FieldLayer player={player} idle={idle} />
       <CountBug live={live} />
+      <MyChip live={live} />
       {showZone && <ZonePanel live={live} />}
       <WeatherChip wx={wx} />
       <Readout player={player} />
@@ -83,6 +102,10 @@ function FieldLayer({ player, idle }: { player: Player; idle?: boolean }) {
   const fill = (teamId: string, color: string) => (classic ? (mine(teamId) ? 'var(--club)' : 'var(--surface)') : color);
   const fFill = fill(fieldTeam.id, fieldTeam.colors.primary);
   const rFill = fill(batTeam.id, batTeam.colors.primary);
+  // 우리 팀은 빛나는 고리 — 수비면 야수, 공격이면 주자 (상대는 고리 없이 조금 흐리게)
+  const side = mySide();
+  const fMine = side != null && (play.half === 'top' ? 'home' : 'away') === side;
+  const rMine = side != null && (play.half === 'top' ? 'away' : 'home') === side;
   return (
     <svg className={s.layer} viewBox={VIEWBOX} preserveAspectRatio="xMidYMid slice" aria-hidden>
       {!idle && frame.circles && <Circles circles={frame.circles} color={classic ? 'var(--fg)' : fieldTeam.colors.primary} />}
@@ -90,13 +113,15 @@ function FieldLayer({ player, idle }: { player: Player; idle?: boolean }) {
       {frame.trace && <polyline className={s.trace} points={pts(frame.trace)} />}
       {frame.landing && <Landing l={frame.landing} />}
       {frame.fielders.map((f) => (
-        <g key={f.pos} className={[s.fielder, f.hot && s.hot].filter(Boolean).join(' ')} transform={`translate(${f.p.x * S} ${f.p.y * S})`}>
+        <g key={f.pos} className={[s.fielder, f.hot && s.hot, side && (fMine ? s.mine : s.foe)].filter(Boolean).join(' ')} transform={`translate(${f.p.x * S} ${f.p.y * S})`}>
+          {fMine && <circle className={s.myRing} r={8.2} />}
           {!!f.dive && <ellipse className={s.dive} rx={7 * f.dive + 4} ry={3.6} opacity={0.35 * f.dive} />}
           <circle r={f.hot ? 5.2 : 4.5} style={{ fill: fFill }} />
         </g>
       ))}
       {frame.runners.map((r) => (
-        <g key={r.id} className={[s.runner, r.out && s.out].filter(Boolean).join(' ')} transform={`translate(${r.p.x * S} ${r.p.y * S})`} opacity={r.alpha}>
+        <g key={r.id} className={[s.runner, r.out && s.out, side && (rMine ? s.mine : s.foe)].filter(Boolean).join(' ')} transform={`translate(${r.p.x * S} ${r.p.y * S})`} opacity={r.alpha}>
+          {rMine && <circle className={s.myRing} r={8.6} />}
           <circle r={4.9} style={{ fill: rFill }} />
           {r.out && <path className={s.x} d="M-3 -3 3 3M3 -3-3 3" />}
         </g>

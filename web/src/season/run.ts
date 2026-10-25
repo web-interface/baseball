@@ -8,6 +8,7 @@ import { allDays, applyDay, getSeason, isOver, myGameOf, regularCount, setPendin
 import { rainedOut } from './weather';
 import { noteRun } from './box';
 import type { GameRun } from './sim';
+import type { Command } from '../../../shared/engine/index.ts';
 
 export const loadSim = () => import('./sim');
 
@@ -68,7 +69,7 @@ export async function playNextDay(): Promise<{ idx: number; hl: DayHighlight[]; 
 }
 
 /** 내 경기 준비 — 그 앞날들을 다 치고(비 취소 포함), 라인업을 얼린 뒤 내 경기를 기록과 함께 계산 */
-export async function prepareMyGame(): Promise<{ idx: number; day: DayGames; run: GameRun; away: string; home: string; time: string } | null> {
+export async function prepareMyGame(): Promise<{ idx: number; day: DayGames; run: GameRun; away: string; home: string; time: string; cmds: Command[]; rerun: (cmds: Command[]) => GameRun } | null> {
   const target = nextMyGame();
   if (!target) return null;
   while (getSeason().next < target.idx) {
@@ -83,8 +84,11 @@ export async function prepareMyGame(): Promise<{ idx: number; day: DayGames; run
   if (!keep) setPending(target.idx, JSON.parse(JSON.stringify(snap)) as LineupState);
   const sim = await loadSim();
   const roster = myRoster(snap);
-  const run = sim.runGame(s.seed, target.day.day, target.day.date, target.away, target.home, { log: true, ...(target.away === ME.teamId ? { away: roster } : { home: roster }) });
-  return { idx: target.idx, day: target.day, run, away: target.away, home: target.home, time: startTime(target.day.date) };
+  // 이미 시작한 경기면 그때 낸 작전 그대로 — 다시 열어도 같은 경기
+  const cmds = keep ? (s.pending!.cmds ?? []) : [];
+  const rerun = (c: Command[]) => sim.runGame(s.seed, target.day.day, target.day.date, target.away, target.home, { log: true, cmds: c, ...(target.away === ME.teamId ? { away: roster } : { home: roster }) });
+  const run = rerun(cmds);
+  return { idx: target.idx, day: target.day, run, away: target.away, home: target.home, time: startTime(target.day.date), cmds, rerun };
 }
 
 /** 내 경기 끝 — 그날 나머지 경기를 치고 결과를 넣는다 (이미 넣었으면 그대로) */
@@ -104,7 +108,7 @@ export async function replayMyGame(idx: number): Promise<GameRun | null> {
   if (!rec || !g || !s.lastSnap || s.lastSnap.idx !== idx) return null;
   const sim = await loadSim();
   const roster = myRoster(s.lastSnap.snap);
-  const run = sim.runGame(s.seed, d.day, d.date, g[0], g[1], { log: true, ...(g[0] === ME.teamId ? { away: roster } : { home: roster }) });
+  const run = sim.runGame(s.seed, d.day, d.date, g[0], g[1], { log: true, cmds: s.lastSnap.cmds, ...(g[0] === ME.teamId ? { away: roster } : { home: roster }) });
   const [as, hs] = run.out.score;
   const my = rec.home ? hs : as, their = rec.home ? as : hs;
   return my === rec.my && their === rec.their ? run : null;

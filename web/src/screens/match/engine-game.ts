@@ -11,7 +11,7 @@ import type { Cause, CauseFactor, LineScore, MatchRecord, PitchType, Play, Pos, 
 import type { GameRun } from '../../season/sim';
 import { homeWE, maskOf } from '../../season/we';
 import { markHighlights } from './highlights';
-import { arsenalOf, type Bases, type Code, type FullGame, type FullPlay, type GameEvent, type GameSide, type PitchEv, type PitchRes, type WxState, ZONE } from './local-mock';
+import { arsenalOf, type Bases, type Code, type FullGame, type FullPlay, type GameEvent, type GameSide, type PitchEv, type PitchRes, type SubEv, type WxState, ZONE } from './local-mock';
 
 const PA_N = 12, PT_N = 7, BB_N = 17, FD_N = 11, TH_N = 7, EV_N = 5, WHY_N = 5;
 const POS_IDX: Exclude<Pos, 'DH'>[] = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
@@ -134,6 +134,7 @@ export function fromEngine(run: GameRun, meta: EngineMeta): FullGame {
     return out;
   };
 
+  const evUsed = new Set<number>();
   for (let i = 0; i < nPA; i++) {
     const p = PA[i];
     const inning = p.ih >> 1;
@@ -156,10 +157,13 @@ export function fromEngine(run: GameRun, meta: EngineMeta): FullGame {
     /** 지금 상태의 홈 승리 확률 (화면용 — season/we) */
     const weNow = (o: number, bs: Bases, sc: [number, number]) => r3(homeWE(inning, halfN, o, maskOf(bs), sc[1] - sc[0]));
 
-    // 이 타석 앞 사건 (교체 · 대타) — 투구 번호가 이 타석 첫 공인 것
+    // 이 타석 앞 · 도중 사건 (교체 · 대타) — 투구 번호가 이 타석 안(첫 공 ~ 마지막 공)인 것, 한 사건은 한 번만
+    //  (타석 도중 교체는 경기 중 작전으로 생긴다 — 문자 중계에 남게)
     const pre: GameEvent[] = [];
-    for (const e of EVS) {
-      if (e.pitch !== p.p0) continue;
+    for (let k = 0; k < EVS.length; k++) {
+      const e = EVS[k];
+      if (evUsed.has(k) || e.pitch < p.p0 || e.pitch > p.p0 + Math.max(0, p.np - 1)) continue;
+      evUsed.add(k);
       if (e.code === EVC.SUB_P) {
         const outId = webOfPid(e.a), inId = webOfPid(e.b);
         if (outId && inId && outId !== inId) pre.push({ kind: 'pitching', team: fldSide === 0 ? 'away' : 'home', head: '투수 교체', text: `${nameOf(outId)} → ${nameOf(inId)}`, outId, inId });
@@ -167,8 +171,8 @@ export function fromEngine(run: GameRun, meta: EngineMeta): FullGame {
         const outId = webOfPid(e.a), inId = webOfPid(e.b);
         if (outId && inId) pre.push({ kind: 'pinch-hit', team: batSide === 0 ? 'away' : 'home', head: '대타', text: `${nameOf(outId)} → ${nameOf(inId)}`, outId, inId });
       } else if (e.code === EVC.SUB_PR) {
-        const inId = webOfPid(e.b);
-        if (inId) pre.push({ kind: 'note', team: batSide === 0 ? 'away' : 'home', head: '대주자', text: `${nameOf(inId)} 대주자` });
+        const outId = webOfPid(e.a), inId = webOfPid(e.b);
+        if (inId) pre.push({ kind: 'note', team: batSide === 0 ? 'away' : 'home', head: '대주자', text: `${nameOf(inId)} 대주자`, outId, inId });
       }
     }
 
@@ -212,7 +216,7 @@ export function fromEngine(run: GameRun, meta: EngineMeta): FullGame {
         text: ok ? `${nameOf(runner)}, ${to}루 도루 성공` : `${nameOf(runner)}, ${to}루 도루 실패 — 태그 아웃`,
         notation: ok ? undefined : `2-${to === 2 ? 6 : 5}`,
         rbi: 0, score: [score[0], score[1]], outsAfter, wp: [weNow(outs, before, score), weNow(outsAfter, after, score)],
-        seq, basesAfter: after, pre: pre.splice(0), wx: 0,
+        seq, basesAfter: after, pre: pre.splice(0), wx: 0, p0: p.p0, np: p.np,
       } as FullPlay);
       bases = after;
       outs = outsAfter;
@@ -232,7 +236,8 @@ export function fromEngine(run: GameRun, meta: EngineMeta): FullGame {
     }
     const remaining = seqAll.slice(cut).map((x, k) => ({ ...x, no: cut + k + 1 }));
     // 고의4구는 공 없이 걸어 나간다 — 화면에는 바깥쪽 공 네 개로
-    if (!remaining.length && R_ === R.IBB) for (let k = 0; k < 4; k++) remaining.push({ no: k + 1, type: 'FF', name: '고의4구', kmh: 105, zone: [1.04, 0.5], res: 'ball', b: k + 1, s: 0 });
+    const fakeIbb = !remaining.length && R_ === R.IBB;
+    if (fakeIbb) for (let k = 0; k < 4; k++) remaining.push({ no: k + 1, type: 'FF', name: '고의4구', kmh: 105, zone: [1.04, 0.5], res: 'ball', b: k + 1, s: 0 });
     if (!remaining.length && (outs >= 3 || cut > 0)) { slotPtr[batSide]++; continue; }
     // 공 없이 끝난 타석 — 견제사·주루사로 이닝이 끝남. 화면에는 주자 아웃 한 장면으로
     if (!remaining.length && R_ !== R.IBB) {
@@ -249,7 +254,7 @@ export function fromEngine(run: GameRun, meta: EngineMeta): FullGame {
         outsBefore: Math.min(2, outs) as 0 | 1 | 2, basesBefore: before, batterId, pitcherId,
         count: { b: 0, s: 0 }, pitches: 1, code: 'CS', text: `${nameOf(runner)}, ${po ? '견제사' : '주루사'}`, notation: po ? `1-${fromBase === 1 ? 3 : 6}` : undefined,
         rbi: 0, score: [score[0], score[1]], outsAfter: oa, wp: [weNow(outs, before, score), weNow(oa, after, score)],
-        seq: [fake], basesAfter: after, pre: pre.splice(0), wx: 0,
+        seq: [fake], basesAfter: after, pre: pre.splice(0), wx: 0, p0: p.p0, np: p.np, fake: true,
       } as FullPlay);
       bases = after;
       if (oa < 3) slotPtr[batSide]++;
@@ -392,7 +397,7 @@ export function fromEngine(run: GameRun, meta: EngineMeta): FullGame {
       hit, lastPitch: lastSeq ? { type: lastSeq.sig ? 'SIG' : lastSeq.type, name: lastSeq.name, kmh: lastSeq.kmh, zone: lastSeq.zone } : undefined,
       causes: causes.length ? causes : undefined, defense,
       wp: [weNow(outs, bases, [score[0] - (batSide === 0 ? runs : 0), score[1] - (batSide === 1 ? runs : 0)]), lastPA ? (final0[1] > final0[0] ? 1 : final0[1] < final0[0] ? 0 : 0.5) : weNow(outsAfter, after, score)],
-      seq: remaining, basesAfter: after, pre, wx: 0,
+      seq: remaining, basesAfter: after, pre, wx: 0, p0: p.p0, np: p.np, ...(fakeIbb ? { fake: true } : {}),
       errorBy: code === 'E' ? (fldSide === 0 ? 'away' : 'home') : undefined,
     } as FullPlay);
     bases = after;
@@ -455,7 +460,12 @@ export function fromEngine(run: GameRun, meta: EngineMeta): FullGame {
   };
   const sideLine = (l: LineScore) => ({ inn: l.innings, r: l.r, h: l.h, e: l.e, b: l.b });
   void teamIdOf;
-  return { match, away, home, plays, wx: [wx], line: { away: sideLine(lineA), home: sideLine(lineH) } };
+  // 교체 사건 (투구 번호) — 경기 중 작전 시트가 '이미 나온 선수'를 거르는 데 쓴다
+  const SUBK: Record<number, SubEv['kind']> = { [EVC.SUB_P]: 'pitcher', [EVC.SUB_PH]: 'pinchHit', [EVC.SUB_PR]: 'pinchRun', [EVC.SUB_DEF]: 'defense' };
+  const subs: SubEv[] = EVS.filter((e) => SUBK[e.code]).map((e) => ({
+    pitch: e.pitch, kind: SUBK[e.code], side: run.away.webOf.has(e.b) ? 'away' : 'home', outId: webOfPid(e.a) || undefined, inId: webOfPid(e.b) || undefined,
+  }));
+  return { match, away, home, plays, wx: [wx], line: { away: sideLine(lineA), home: sideLine(lineH) }, subs };
 }
 
 /** 엔진 원인 → 화면 원인 한 줄 */

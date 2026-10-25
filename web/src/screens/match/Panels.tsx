@@ -1,6 +1,6 @@
-// 타자 대 투수 · 분위기 막대 · 작전(자세히 보기에서만) · 문자 중계
+// 타자 대 투수 · 분위기 막대 · 문자 중계 (경기 중 작전은 TacticsPanel)
 import { useState, type CSSProperties, type ReactNode } from 'react';
-import { Button, Emblem, Icon, Sheet, fmt, useToast, type IconName } from '../../ui';
+import { Emblem, Icon, fmt } from '../../ui';
 import { ME, playerById, teamById } from '../../game/mock';
 import { ROLE_KO } from '../../game/labels';
 import type { Player, Team } from '../../game/types';
@@ -156,83 +156,6 @@ export function Momentum({ live }: { live: Live }) {
         <small>{teamById(ME.teamId).short} 승리 확률</small>
         <b className="num-display">{Math.round(my * 100)}<i>%</i></b>
       </div>
-    </section>
-  );
-}
-
-/* ───────── 작전 (자세히 보기에서만) ───────── */
-interface Tac { key: string; label: string; sub: string; icon: IconName; off?: boolean; good: string; risk: string }
-
-function stealPct(runnerId: string, pitcherId: string, catcherId: string) {
-  const r = playerById(runnerId)?.attrs ?? {};
-  const p = playerById(pitcherId)?.attrs ?? {};
-  const c = playerById(catcherId)?.attrs ?? {};
-  const v = 0.66 + ((r.stealJump ?? 55) - 60) * 0.007 + ((r.speed ?? 55) - 60) * 0.004 - ((p.slideStep ?? 60) - 60) * 0.003 - ((c.popTime ?? 60) - 60) * 0.004;
-  return Math.round(Math.max(0.28, Math.min(0.93, v)) * 100);
-}
-
-export function Tactics({ live }: { live: Live }) {
-  const toast = useToast();
-  const [open, setOpen] = useState<Tac | null>(null);
-  const p = live.play;
-  const myHome = GAME.match.homeId === ME.teamId;
-  const myBatting = (p.half === 'bot') === myHome;
-  const [r1, r2, r3] = live.bases;
-  const mySide = myHome ? GAME.home : GAME.away;
-  const oppSide = myHome ? GAME.away : GAME.home;
-  let list: Tac[];
-  if (myBatting) {
-    const runner = r2 && !r3 ? r2 : r1 && !r2 ? r1 : null;
-    const pct = runner ? stealPct(runner, p.pitcherId, oppSide.defense.C) : 0;
-    list = [
-      { key: 'steal', label: '도루', icon: 'steal', sub: runner ? `성공 ${pct}%` : '주자 없음', off: !runner, good: '득점권으로 한 베이스', risk: `잡히면 아웃 하나 (실패 ${100 - pct}%)` },
-      { key: 'bunt', label: '번트', icon: 'bunt', sub: live.outs >= 2 ? '2아웃' : r1 || r2 ? '희생 번트' : '기습 번트', off: live.outs >= 2, good: '주자를 한 베이스 앞으로', risk: '아웃 하나를 내줌' },
-      { key: 'hr', label: '히트앤런', icon: 'bolt', sub: r1 ? '1루 주자 출발' : '주자 없음', off: !r1, good: '병살 위험 ↓ · 1·3루 기회', risk: '헛스윙이면 주자가 잡힘' },
-      { key: 'ph', label: '대타', icon: 'swap', sub: `벤치 ${mySide.bench.length}명`, good: '좌우 상성 맞춤', risk: '빠진 선수는 다시 못 나옴' },
-    ];
-  } else {
-    list = [
-      { key: 'ibb', label: '고의4구', icon: 'arrow-right', sub: r1 ? '1루가 차 있음' : '1루로 보냄', off: !!r1 && !!r2 && !!r3, good: '강타자를 피하고 병살 노림', risk: '주자 하나를 그냥 내보냄' },
-      { key: 'pc', label: '투수 교체', icon: 'pitch', sub: `불펜 ${mySide.bullpen.filter((x) => x !== p.pitcherId).length}명`, good: '지친 투수를 쉬게', risk: '불펜 소모 — 내일 연투 제한' },
-      { key: 'shift', label: '수비 위치', icon: 'lineup', sub: live.outs < 2 && (r3 || r2) ? '전진 수비' : '정상 수비', good: '땅볼을 홈에서 막음', risk: '안타 범위가 넓어짐' },
-      { key: 'pick', label: '견제', icon: 'eye', sub: r1 ? '1루 견제' : '주자 없음', off: !r1, good: '리드 폭을 줄여 도루 억제', risk: '악송구면 한 베이스' },
-    ];
-  }
-  return (
-    <section className={s.tac} aria-label="작전">
-      <p className={s.tacHead}>
-        <span>작전</span>
-        <small>{myBatting ? '공격 중 — 다음 공부터 반영' : '수비 중 — 다음 공부터 반영'}</small>
-      </p>
-      <div className={s.tacRow}>
-        {list.map((t) => (
-          <button key={t.key} type="button" className={s.tacBtn} disabled={t.off} onClick={() => setOpen(t)}>
-            <Icon name={t.icon} size={17} />
-            <b>{t.label}</b>
-            <small className={t.key === 'steal' && !t.off ? 'num' : undefined}>{t.sub}</small>
-          </button>
-        ))}
-      </div>
-      <Sheet
-        open={!!open}
-        onClose={() => setOpen(null)}
-        title={open?.label}
-        sub={open?.sub}
-        footer={(
-          <>
-            <Button variant="secondary" onClick={() => setOpen(null)}>그만두기</Button>
-            <Button onClick={() => { toast({ text: `${open?.label} 사인을 냈어요 · 다음 공부터`, tone: 'accent' }); setOpen(null); }}>작전 걸기</Button>
-          </>
-        )}
-      >
-        {open && (
-          <dl className={s.tacSheet}>
-            <div><dt>좋아지는 것</dt><dd>{open.good}</dd></div>
-            <div><dt>위험한 것</dt><dd>{open.risk}</dd></div>
-            <p className={s.tacNote}>결과는 서버의 경기 엔진이 정해요. 다음 공이 오기 전에 걸면 바로 반영돼요.</p>
-          </dl>
-        )}
-      </Sheet>
     </section>
   );
 }

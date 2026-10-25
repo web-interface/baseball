@@ -9,6 +9,7 @@ import { KIND } from './pitch.ts';
 import { pitLine, batLine, logEV, EVC } from './log.ts';
 import { b2bLoss } from './fatigue.ts';
 import { evPitcherChange } from './events.ts';
+import { setAlignment } from './fielding.ts';
 import type { Tactics, Command } from './types.ts';
 
 export const DEF_TAC: Tactics = {
@@ -319,8 +320,8 @@ export function aiAlign(g: G): void {
 }
 
 // ═════════════ 투구 전 ═════════════
-export interface PrePitch { steal2: boolean; steal3: boolean; pitchout: boolean; hitRun: boolean; ibb: boolean }
-const PRE: PrePitch = { steal2: false, steal3: false, pitchout: false, hitRun: false, ibb: false };
+export interface PrePitch { steal2: boolean; steal3: boolean; pitchout: boolean; hitRun: boolean; ibb: boolean; pick: number }
+const PRE: PrePitch = { steal2: false, steal3: false, pitchout: false, hitRun: false, ibb: false, pick: 0 };
 /** 도루·히트앤런·피치아웃 판단 */
 export function aiPrePitch(g: G): PrePitch {
   PRE.steal2 = false; PRE.steal3 = false; PRE.pitchout = false; PRE.hitRun = false; PRE.ibb = false;
@@ -384,6 +385,7 @@ function canEnter(T: TeamSt, i: number): boolean {
 }
 export function applyCommands(g: G, pre: PrePitch): void {
   const L = g.cmds; if (!L || g.cmdPtr >= L.length) return;
+  let realign = false;
   while (g.cmdPtr < L.length && (L[g.cmdPtr] as Command).at <= g.pitchNo) {
     const c = L[g.cmdPtr++] as Command; const T = c.team === 'home' ? g.T[1] : c.team === 'away' ? g.T[0] : null;
     // 유저 팀 명령만 받는다 [18]: 전에는 상대(AI) 팀 이름으로 보낸 명령도 적용돼, 상대에게 매 투구 희생번트를 시키면 홈 승률 .453 → .943
@@ -401,13 +403,30 @@ export function applyCommands(g: G, pre: PrePitch): void {
       case 'pitchout': if (!isOff && ((g.bases[0] && !g.bases[1]) || (g.bases[1] && !g.bases[2]))) pre.pitchout = true; break;
       // 고의4구(자동 고의4구, 아무 카운트에서나) — 유저 수동 모드에서는 AI 고의4구가 꺼지므로 이 명령으로만
       case 'ibb': if (!isOff) pre.ibb = true; break;
-      case 'infield': if (!isOff) { T.inf = c.v === 'dp' ? 1 : c.v === 'in' ? 2 : c.v === 'cornersIn' ? 3 : 0; T.alignFixed = true; } break;
-      case 'outfield': if (!isOff) { T.of = c.v === 'deep' ? 1 : c.v === 'shallow' ? 2 : 0; T.alignFixed = true; } break;
+      // 수비 대형 — 정한 대형은 바꿀 때까지 유지(자동이면 AI 가 다시 맡음). 이번 타자부터 바로 선다
+      case 'infield': if (!isOff) {
+        if (c.v === 'auto') T.alignFixed = false;
+        else { T.inf = c.v === 'dp' ? 1 : c.v === 'in' ? 2 : c.v === 'cornersIn' ? 3 : c.v === 'shift' ? 4 : c.v === 'lines' ? 5 : 0; T.alignFixed = true; }
+        realign = true;
+      } break;
+      case 'outfield': if (!isOff) {
+        if (c.v === 'auto') T.alignFixed = false;
+        else { T.of = c.v === 'deep' ? 1 : c.v === 'shallow' ? 2 : c.v === 'pull' ? 3 : c.v === 'oppo' ? 4 : c.v === 'noDoubles' ? 5 : 0; T.alignFixed = true; }
+        realign = true;
+      } break;
+      // 견제 — 이번 공 앞에 한 번 (그 루에 주자가 있을 때만)
+      case 'pickoff': if (!isOff && (c.base === 1 || c.base === 2) && g.bases[c.base - 1]) pre.pick = c.base; break;
+      // 마운드 방문 — 흔들린 투수를 진정(경기당 5번)
+      case 'visit': if (!isOff) {
+        const S = (g.ev as { S?: { rattled: boolean; visitLeft: number }[] } | undefined)?.S?.[T.side];
+        if (S && S.visitLeft > 0) { S.visitLeft--; S.rattled = false; logEV(g, EVC.VISIT, T.pit.i, 1); g.clock += P.clock.visit; }
+      } break;
       case 'pitcher': if (!isOff) { const i = T.idOf.get(c.inPid); if (i !== undefined && canEnter(T, i)) changePitcher(g, T, i, T.pen.find((p) => p.i === i)?.role ?? 'MID'); } break;
       case 'pinchHit': if (isOff) { const i = T.idOf.get(c.inPid); if (i !== undefined && T.bench.includes(i)) { const out = T.order[T.next]; substitute(g, T, T.next, i); logEV(g, EVC.SUB_PH, T.pcs[out].id, T.pcs[i].id); } } break;
       case 'pinchRun': if (isOff) { const r = g.bases[c.base - 1]; const i = T.idOf.get(c.inPid); if (r && i !== undefined && T.bench.includes(i)) { const s = T.order.indexOf(r.i); if (s >= 0) { const out = r.i; substitute(g, T, s, i); r.i = i; logEV(g, EVC.SUB_PR, T.pcs[out].id, T.pcs[i].id); } } } break;
       default: break;
     }
   }
+  if (realign) { const D = defense(g), O = offense(g); setAlignment(g, D, O.pcs[g.pa.b], g.pa.bL ? 1 : -1); }
 }
 export { clamp };

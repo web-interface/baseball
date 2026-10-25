@@ -1,4 +1,5 @@
 // 경기 끝 — 시즌 경기는 '다음 경기 바로' · 시즌 성적 · 오늘 다른 구장 결과, 대전은 레이팅 변화 · 전적.
+import type { Commander } from './command';
 import { navigate } from '../../app/router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Button, Emblem, Icon, Sheet, fmt } from '../../ui';
@@ -27,7 +28,7 @@ export interface PvpEnd {
 export type MatchCtx =
   | { kind: 'last'; onDone?: () => void }
   | { kind: 'over'; onDone?: () => void }
-  | { kind: 'season'; idx: number; date: string; onDone?: () => void; onStart?: () => void }
+  | { kind: 'season'; idx: number; date: string; onDone?: () => void; onStart?: () => void; cmd?: Commander }
   | { kind: 'post'; label: string; onDone?: () => void; onStart?: () => void }
   | { kind: 'pvp'; end: PvpEnd; onDone?: () => void };
 

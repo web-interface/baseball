@@ -1,0 +1,89 @@
+/* 중계 화면 컷 — 2D 경기장 위에 잠깐 */
+.cut {
+  position: absolute; inset: 0; z-index: 6; overflow: hidden; cursor: pointer; color: #fff;
+  animation: cutIn .32s cubic-bezier(.2, .8, .2, 1) both;
+}
+.out { animation: cutOut .3s ease-in both; }
+@keyframes cutIn { from { opacity: 0; transform: scale(1.06); filter: brightness(1.6); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes cutOut { to { opacity: 0; transform: scale(1.02); } }
+.scene { position: absolute; inset: 0; width: 100%; height: 100%; animation: camPush 2.6s ease-out both; }
+@keyframes camPush { from { transform: scale(1.04); } to { transform: scale(1); } }
+
+/* 전광판 글자 */
+.sbHead { font-size: 5.6px; font-weight: 700; fill: #8f97a3; text-anchor: middle; }
+.sbHead:first-of-type { text-anchor: start; }
+.sbTeam { font-size: 6.6px; font-weight: 800; fill: #f2f4f7; }
+.sbNum { font-size: 6.6px; font-weight: 700; fill: #ffcf3d; text-anchor: middle; font-family: var(--font-num, inherit); }
+.sbR { font-size: 7.4px; font-weight: 900; fill: #fff; text-anchor: middle; }
+.sbBall { font-size: 5.6px; font-weight: 800; fill: #9be27a; letter-spacing: .3px; }
+.ad { font-size: 6px; font-weight: 900; letter-spacing: .2px; }
+
+/* 타자 등 */
+.backName { font-size: 9px; font-weight: 900; letter-spacing: .5px; }
+.backNo { font-size: 30px; font-weight: 900; font-family: var(--font-num, inherit); paint-order: stroke; }
+.swing { animation: swing .28s .3s cubic-bezier(.3, 1.6, .5, 1) both; }
+@keyframes swing { from { transform: rotate(0); } to { transform: rotate(-112deg); } }
+
+/* 공 */
+.ballHit { animation: ballHit .85s .38s cubic-bezier(.15, .7, .3, 1) both; transform-box: view-box; }
+@keyframes ballHit { from { transform: translate(0, 0) scale(1); opacity: 1; } 85% { opacity: 1; } to { transform: translate(var(--bx), var(--by)) scale(.25); opacity: .9; } }
+.ballK { animation: ballK .5s .18s cubic-bezier(.5, 0, .9, .6) both; transform-box: fill-box; transform-origin: center; }
+@keyframes ballK { from { transform: translate(0, 0) scale(1); } to { transform: translate(var(--kx), var(--ky)) scale(2.4); } }
+.mark { animation: mark .9s .62s ease-out both; transform-box: fill-box; transform-origin: center; }
+@keyframes mark { from { opacity: 0; transform: scale(2.2); } 40% { opacity: 1; transform: scale(1); } to { opacity: 1; transform: scale(1); } }
+.fire { animation: fire .9s 1.05s ease-out both; transform-box: fill-box; transform-origin: center; }
+@keyframes fire { from { opacity: 0; transform: scale(.1); } 30% { opacity: 1; } to { opacity: 0; transform: scale(1.6); } }
+
+/* 투수 · 내야수 (앞모습 그림) */
+.pitcher, .fld { position: absolute; display: block; transform: translateX(-50%); pointer-events: none; }
+.pitcher { left: 50%; top: 43.7%; width: 13%; height: 19%; animation: windup .55s .02s ease-in-out both; }
+@keyframes windup { 0% { transform: translateX(-50%) translateY(0); } 60% { transform: translateX(-50%) translateY(-3%) rotate(-3deg); } 100% { transform: translateX(-50%) translateY(0); } }
+.fld { width: 7%; height: 10%; opacity: .95; }
+.ss { left: 34.5%; top: 44%; }
+.sb { left: 65.5%; top: 44%; }
+
+/* 점수판 · 주자 판 */
+.bug {
+  position: absolute; right: 8px; top: 8px; display: grid; gap: 2px; min-width: 92px; padding: 5px 8px 5px 6px; border-radius: 6px;
+  background: rgba(10, 14, 22, .82); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); font-size: 11px;
+}
+.bug p { display: flex; align-items: center; gap: 5px; }
+.bug p i { width: 4px; height: 12px; border-radius: 1px; }
+.bug p span { flex: 1; font-weight: 800; letter-spacing: -.03em; }
+.bug p b { font-size: 14px; font-weight: 900; color: #ffd84d; }
+.bug small { font-size: 10px; font-weight: 700; color: #b8c2d0; text-align: right; }
+.diamond { position: absolute; left: 10px; top: 30%; width: 54px; height: 54px; }
+.diamond i { position: absolute; width: 14px; height: 14px; transform: rotate(45deg); background: rgba(255, 255, 255, .25); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .9); }
+.diamond i.on { background: #ffd84d; box-shadow: inset 0 0 0 2px #fff, 0 0 8px #ffd84d; }
+.b1 { left: 38px; top: 20px; }
+.b2 { left: 20px; top: 2px; }
+.b0 { left: 2px; top: 20px; }
+.diamond em { position: absolute; left: -2px; top: 46px; font-style: normal; font-size: 11px; font-weight: 900; color: #ff5a5a; text-shadow: 0 1px 2px rgba(0, 0, 0, .6); white-space: nowrap; }
+
+/* 가운데 문구 */
+.cap { position: absolute; left: 0; right: 0; top: 30%; display: grid; justify-items: center; gap: 2px; animation: capPop .5s .62s cubic-bezier(.2, 1.6, .4, 1) both; pointer-events: none; }
+.cap b {
+  font-size: clamp(30px, 11vw, 54px); font-weight: 900; letter-spacing: -.04em; line-height: 1;
+  color: #fff; -webkit-text-stroke: 2px rgba(0, 0, 0, .55); text-shadow: 0 3px 0 rgba(0, 0, 0, .35), 0 0 22px rgba(255, 210, 80, .7);
+}
+.cap small { padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; background: rgba(10, 14, 22, .7); }
+.capHr b { color: #ffe066; text-shadow: 0 3px 0 rgba(0, 0, 0, .35), 0 0 26px rgba(255, 120, 60, .9); }
+.capK b { color: #8fd3ff; text-shadow: 0 3px 0 rgba(0, 0, 0, .35), 0 0 22px rgba(60, 150, 255, .8); }
+@keyframes capPop { from { opacity: 0; transform: scale(2.2); } to { opacity: 1; transform: none; } }
+
+/* 아래 정보 띠 */
+.bars { position: absolute; left: 6px; right: 6px; bottom: 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; animation: barsIn .35s .15s ease-out both; }
+@keyframes barsIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.bar { min-width: 0; padding: 4px 7px 5px; border-radius: 5px; background: rgba(10, 14, 22, .86); box-shadow: inset 3px 0 0 var(--tc), inset 0 0 0 1px rgba(255, 255, 255, .12); }
+.barR { box-shadow: inset -3px 0 0 var(--tc), inset 0 0 0 1px rgba(255, 255, 255, .12); }
+.mineBar { box-shadow: inset 3px 0 0 #39d0ff, inset 0 0 0 1.5px #39d0ff, 0 0 10px -2px #39d0ff; }
+.barTop { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: 12px; }
+.barTop em { flex: none; padding: 0 4px; border-radius: 3px; font-style: normal; font-size: 10px; font-weight: 900; color: #111; background: #ffd84d; }
+.barTop b { font-size: 12px; font-weight: 900; color: #ffd84d; }
+.barTop span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; letter-spacing: -.03em; }
+.barTop small { flex: none; font-size: 10px; color: #b8c2d0; }
+.mineTag { flex: none; margin-left: auto; padding: 0 5px; border-radius: 3px; font-style: normal; font-size: 9.5px; font-weight: 900; color: #04202a; background: #39d0ff; }
+.barLine { margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; color: #cfd6e0; }
+
+/* 움직임 줄이기 — 그림만 */
+.still, .still * { animation-duration: .01s !important; animation-delay: 0s !important; }

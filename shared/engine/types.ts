@@ -144,7 +144,8 @@ export type Command = { id?: string; team: 'home' | 'away'; at: number } & (
   | { k: 'steal'; base: 2 | 3 } | { k: 'hitRun' } | { k: 'bunt'; type: 'sac' | 'drag' | 'squeeze' }
   | { k: 'take' } | { k: 'swingAway' } | { k: 'approach'; v: 'aggressive' | 'patient' | 'power' | 'contact' | 'auto' }
   | { k: 'ibb' } | { k: 'pitchout' } | { k: 'pickoff'; base: 1 | 2 } | { k: 'visit' }
-  | { k: 'infield'; v: 'normal' | 'dp' | 'in' | 'cornersIn' } | { k: 'outfield'; v: 'normal' | 'deep' | 'shallow' }
+  | { k: 'infield'; v: 'auto' | 'normal' | 'dp' | 'in' | 'cornersIn' | 'shift' | 'lines' }
+  | { k: 'outfield'; v: 'auto' | 'normal' | 'deep' | 'shallow' | 'pull' | 'oppo' | 'noDoubles' }
   | { k: 'pinchHit'; inPid: number } | { k: 'pinchRun'; base: 1 | 2 | 3; inPid: number }
   | { k: 'pitcher'; inPid: number } | { k: 'auto'; v: boolean });
 

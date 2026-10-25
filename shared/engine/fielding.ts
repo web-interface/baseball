@@ -19,12 +19,13 @@ export const fenceAt = (g: G, phi: number): number => g.fenceD[Math.max(0, Math.
 export const fenceHAt = (g: G, phi: number): number => g.fenceH[Math.max(0, Math.min(90, Math.round(phi + 45)))];
 export const pcAt = (t: TeamSt, pos: number): PC => t.pcs[t.field[pos]];
 
-/** 수비 대형: 기본 위치 + 쏠림(당김 성향·파워) + 상황 대형(내야 전진·병살·코너, 외야 깊게·얕게) */
+/** 수비 대형: 기본 위치 + 쏠림(당김 성향·파워) + 상황 대형(내야 전진·병살·코너·시프트·선상, 외야 깊게·얕게·당겨·밀어·장타 방지) */
 export function setAlignment(g: G, def: TeamSt, batter: PC, pullSign: number): void {
   const F = P.fld;
   for (let i = 0; i < 6; i++) { g.fx[i] = F.posX[i]; g.fy[i] = F.posY[i]; }
   // 내야 쏠림: 당김 쪽으로 3°·t_pull(최대 6°), 규정상 2루 양쪽 2명·흙 안
-  const shiftDeg = clamp(3 * batter.tPull * 2, -6, 6) * pullSign;   // pullSign: 우타 −1(좌익 쪽), 좌타 +1
+  // 시프트(inf 4): 당김 쪽으로 8° 더 — 2루 양쪽 2명 규정은 그대로 지킨다
+  const shiftDeg = clamp(3 * batter.tPull * 2, -6, 6) * pullSign + (def.inf === 4 ? 8 * pullSign : 0);   // pullSign: 우타 −1(좌익 쪽), 좌타 +1
   if (shiftDeg !== 0) for (const i of [2, 3, 4, 5]) {
     const x = g.fx[i], y = g.fy[i]; const a = shiftDeg * Math.PI / 180;
     g.fx[i] = x * Math.cos(a) + y * Math.sin(a); g.fy[i] = -x * Math.sin(a) + y * Math.cos(a);
@@ -33,11 +34,14 @@ export function setAlignment(g: G, def: TeamSt, batter: PC, pullSign: number): v
   if (def.inf === 1) { g.fy[3] -= 1.5; g.fy[5] -= 1.5; g.fx[3] -= 1.5; g.fx[5] += 1.5; }
   else if (def.inf === 2) { for (const i of [2, 3, 4, 5]) g.fy[i] -= 6; }
   else if (def.inf === 3) { g.fy[2] -= 5; g.fy[4] -= 5; }
+  else if (def.inf === 5) { g.fx[2] += 2.5; g.fy[2] += 1.5; g.fx[4] -= 2.5; g.fy[4] += 1.5; }   // 선상 수비 — 1·3루수가 라인 쪽 · 조금 뒤로
   const pw = clamp(batter.z[A.power], -2, 2.5);
-  const ofShift = (def.of === 1 ? 6 : def.of === 2 ? -6 : 0) + 2 * pw;
+  const ofShift = (def.of === 1 ? 6 : def.of === 2 ? -6 : def.of === 5 ? 9 : 0) + 2 * pw;
   const sh = 4 * batter.tPull * 2 * pullSign;
+  const turn = def.of === 3 ? 8 * pullSign : def.of === 4 ? -8 * pullSign : 0;   // 외야 당겨치기 · 밀어치기 쪽으로
   for (const [i, base] of [[6, -F.ofAng], [7, 0], [8, F.ofAng]] as const) {
-    const ang = base + sh; const D = fenceAt(g, ang) * F.ofDepth + ofShift; const a = ang * Math.PI / 180;
+    const spread = def.of === 5 ? (i === 6 ? -4 : i === 8 ? 4 : 0) : 0;   // 장타 방지 — 깊게 + 좌우 외야수는 선상 쪽
+    const ang = base + sh + turn + spread; const D = fenceAt(g, ang) * F.ofDepth + ofShift; const a = ang * Math.PI / 180;
     g.fx[i] = D * Math.sin(a); g.fy[i] = D * Math.cos(a);
   }
 }

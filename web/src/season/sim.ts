@@ -2,7 +2,7 @@
 // 같은 시즌 시드 · 같은 날 · 같은 선수단이면 늘 같은 경기(엔진은 결정적). 피로·부상은 날을 넘겨 이어 가지 않는다(하루하루 새로).
 import {
   ATTR_KEYS, ENGINE_VER, POS_KEYS, CITY_IDS, neutralTimeline, seedFromString, simulateGame,
-  type GameInput, type GameResult, type Park, type PitRole, type PlayerIn, type TeamIn, type Tactics,
+  type Command, type GameInput, type GameResult, type Park, type PitRole, type PlayerIn, type TeamIn, type Tactics,
 } from '../../../shared/engine/index.ts';
 import { personKey, teamVal, type TeamKey } from '../game/tactics';
 import { TEAMS, teamById } from '../game/mock';
@@ -224,7 +224,7 @@ export interface GameOut {
 export interface GameRun { out: GameOut; result: GameResult; input: GameInput; away: SideIn; home: SideIn }
 
 /** 한 경기 — post 면 포스트시즌(연장 15회 · 큰 경기 압박 ↑ · 다른 시드) */
-export function runGame(seasonSeed: string, day: number, date: string, awayId: string, homeId: string, opts: { log?: boolean; away?: ClubRoster; home?: ClubRoster; post?: boolean } = {}): GameRun {
+export function runGame(seasonSeed: string, day: number, date: string, awayId: string, homeId: string, opts: { log?: boolean; away?: ClubRoster; home?: ClubRoster; post?: boolean; cmds?: Command[] } = {}): GameRun {
   const ai = TEAMS.findIndex((t) => t.id === awayId), hi = TEAMS.findIndex((t) => t.id === homeId);
   const wx = weatherOf(date, homeId, seasonSeed);
   const conds = condsOf(wx); // 날씨 궁합 — 두 팀 모두 같은 규칙
@@ -243,6 +243,8 @@ export function runGame(seasonSeed: string, day: number, date: string, awayId: s
     ump: UMP,
     home: home.team,
     away: away.team,
+    // 경기 중 작전(내 팀만 — 엔진이 isUser 팀 명령만 받는다). 명령 앞 투구까지는 명령 없는 경기와 똑같다
+    cmds: opts.cmds?.length ? opts.cmds : undefined,
     opts: opts.log ? { log: true, attrib: true } : undefined,
   };
   const result = simulateGame(input);

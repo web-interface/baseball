@@ -87,7 +87,15 @@ export interface FullPlay extends Play {
   /** 반 이닝 키 '5T' */
   half: HalfInning;
   halfKey: string;
+  /** 엔진 타석의 첫 투구 번호 · 투구 수 (경기 중 작전을 그 투구부터 — 시즌 경기만) */
+  p0?: number;
+  np?: number;
+  /** 화면용으로 지어낸 공(고의4구 · 공 없이 끝난 타석) */
+  fake?: boolean;
 }
+
+/** 교체 사건 (엔진 투구 번호 — 그 투구 앞) */
+export interface SubEv { pitch: number; kind: 'pitcher' | 'pinchHit' | 'pinchRun' | 'defense'; side: 'away' | 'home'; outId?: string; inId?: string }
 
 export interface LineupSlot { slot: number; pid: string; pos: Pos }
 
@@ -102,6 +110,8 @@ export interface GameSide {
 }
 
 export interface FullGame {
+  /** 교체 사건 — 시즌 경기만 (엔진 기록) */
+  subs?: SubEv[];
   match: MatchRecord;
   away: GameSide;
   home: GameSide;

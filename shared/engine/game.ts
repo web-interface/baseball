@@ -142,11 +142,11 @@ function runPA(g: G, firstOfHalf: boolean): void {
     walk(g); res = R.IBB; bl.BB++; bl.IBB++; pl.BB++; pl.IBB++; D.pit.bb++; D.pit.ibb++; onBase = true; ended = true;
   }
   setAlignment(g, D, b, pa.bL ? 1 : -1);
-  const pre0 = { steal2: false, steal3: false, pitchout: false, hitRun: false, ibb: false };
+  const pre0 = { steal2: false, steal3: false, pitchout: false, hitRun: false, ibb: false, pick: 0 };
   while (!ended && !g.over) {
     if (g.pitchNo >= g.horizon) { g.over = true; g.status = 'suspended'; break; }
     sub(g.rR, g.seed, KIND.R, g.paNo, g.pitchInPA);
-    const pre = aiPrePitch(g); pre0.steal2 = pre.steal2; pre0.steal3 = pre.steal3; pre0.pitchout = pre.pitchout; pre0.hitRun = pre.hitRun; pre0.ibb = false;
+    const pre = aiPrePitch(g); pre0.steal2 = pre.steal2; pre0.steal3 = pre.steal3; pre0.pitchout = pre.pitchout; pre0.hitRun = pre.hitRun; pre0.ibb = false; pre0.pick = 0;
     applyCommands(g, pre0);
     // 유저 대타·투수 교체는 이번 타석부터 [18 재미·악용 심사]: 전에는 타석 문맥(타자·투수)을 명령 전에 잡아 둬서, 대타를 내도 빠진 타자가 그 타석을 끝까지 치고
     //   새 투수를 올려도 앞 투수가 그 타석을 던졌다(시험 120경기 중 0번 적용). 타자·투수가 바뀌었으면 문맥·장부를 새 선수로 다시 잡는다.
@@ -165,6 +165,12 @@ function runPA(g: G, firstOfHalf: boolean): void {
       const n = aiPickoffs(g);
       for (let k = 0; k < n && g.bases[0]; k++) { g.clock += P.clock.visit / 6; if (pickoffPlay(g, 1)) { logEV(g, EVC.PICKOFF, 1, 1); pre0.steal2 = false; if (g.outs >= 3) { ended = true; incomplete = true; break; } } if (g.over) break; }
       if (ended || g.over) break;
+    }
+    // 유저 견제(1 · 2루) — 이번 공 앞에 한 번
+    if (pre0.pick && g.bases[pre0.pick - 1]) {
+      g.clock += P.clock.visit / 6;
+      if (pickoffPlay(g, pre0.pick)) { logEV(g, EVC.PICKOFF, pre0.pick, 1); if (pre0.pick === 1) pre0.steal2 = false; else pre0.steal3 = false; if (g.outs >= 3) { ended = true; incomplete = true; break; } }
+      if (g.over) break;
     }
     // 보크
     if ((g.bases[0] || g.bases[1] || g.bases[2]) && g.rR.next() < P.balk.base * Math.exp(-P.balk.pk * p.z[A.pickoff] - P.balk.comp * p.z[A.composure])) {

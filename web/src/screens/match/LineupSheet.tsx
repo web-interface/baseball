@@ -88,7 +88,7 @@ function myCards(): Map<string, CardInst> {
   return m;
 }
 /** 선수 → 카드 모양 — 내 선수는 내 카드 그대로(강화 · 훈련 · 잠재력 · 지금 종합), 상대는 그 해 실제 카드(없으면 기본) */
-function cardFor(p: Player, mine: Map<string, CardInst>) {
+export function cardFor(p: Player, mine: Map<string, CardInst>) {
   const c = mine.get(p.id);
   if (c) {
     const now = cardNow(c);
