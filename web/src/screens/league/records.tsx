@@ -7,6 +7,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Link, setQueryQuiet } from '../../app/router';
 import { Emblem, Icon, Tabs } from '../../ui';
 import { ME, TEAMS, teamById } from '../../game/mock';
+import { playerHref } from '../player/href';
 import { gamesPlayed, type SeasonState } from '../../season/store';
 import {
   POS_SHORT, ROLE_KO, avgOf, eraOf, ipText, obpOf, opsOf, r2, r3, seasonBook, slgOf, whipOf, wpctOf,
@@ -149,7 +150,7 @@ export function PlayerRecords({ st, rec, onRec }: { st: SeasonState; rec: RecSta
   const lead = (r: BatRow | PitRow) => {
     const t = teamById(r.team);
     return (
-      <Link to={`/player/${r.id}`} className={s.who}>
+      <Link to={playerHref(r.id, { other: r.team !== ME.teamId })} className={s.who}>
         <b>{r.name}</b>
         <small>{!team && <Emblem team={t} size={12} decorative />}{!team && t.short}{!team && ' · '}{side === 'pit' ? ROLE_KO[(r as PitRow).role] : POS_SHORT[r.pos]}</small>
       </Link>

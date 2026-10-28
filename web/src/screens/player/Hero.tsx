@@ -40,12 +40,14 @@ export function Hero({ p, team, card, cards, owned, isMineCard, enh, fails, leve
   const g = GRADES[card.grade];
   // 지금 라인업(저장된 것)에서 이 카드 자리
   const lu = lineupStore.get() ?? initialLineup();
-  const fieldPos = (Object.keys(lu.field) as (keyof typeof lu.field)[]).find((k) => lu.field[k] === card.id);
+  // 보기 전용(다른 구단 선수)이면 내 라인업 자리를 붙이지 않는다
+  const viewOnly = !owned && isMineCard(card.id);
+  const fieldPos = viewOnly ? undefined : (Object.keys(lu.field) as (keyof typeof lu.field)[]).find((k) => lu.field[k] === card.id);
   const order = fieldPos ? lu.order.indexOf(fieldPos) + 1 || undefined : undefined;
   const role = p.pos === 'P' ? (p.role ? ROLE_KO[p.role] : '투수') : null;
-  const isSp = lu.rotation[0] === card.id;
+  const isSp = !viewOnly && lu.rotation[0] === card.id;
   const posLine = p.pos === 'P'
-    ? [`${role} 투수`, isSp ? '오늘 선발' : lu.closer === card.id ? '마무리' : null].filter(Boolean).join(' · ')
+    ? [`${role} 투수`, isSp ? '오늘 선발' : !viewOnly && lu.closer === card.id ? '마무리' : null].filter(Boolean).join(' · ')
     : [POS_KO[p.pos], p.subPos?.length ? `${p.subPos.map((x) => POS_KO[x]).join('·')} 가능` : null, order ? `${order}번 타자` : null].filter(Boolean).join(' · ');
   const lv = fmt.levelParts(level);
   const lvMax = g.levelMax;
@@ -54,7 +56,8 @@ export function Hero({ p, team, card, cards, owned, isMineCard, enh, fails, leve
   const next = table[enh];
   const nextChance = next ? chanceAfter(next.base, fails) : null;
   useSyncExternalStore(subscribePot, potVersion);
-  const pot = shownPotOf(card, p);
+  // 보기 전용(다른 구단 선수 — 내 카드가 아닌 걸로 연 내 카드 종류)이면 내 잠재력 결과를 보이지 않는다
+  const pot = viewOnly ? null : shownPotOf(card, p);
   // 별 셋이 라인업에서 꺼졌나 (1군 엔트리에서 2명만 · 벤치는 꺼짐)
   const potOff = pot?.tier === 'S' && !!cardNow(card)?.potOff;
   const vars = { '--team': team.colors.primary, '--team-2': team.colors.secondary, '--gr': `var(--gr-${card.grade})` } as CSSProperties;

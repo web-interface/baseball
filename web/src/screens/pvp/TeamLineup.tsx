@@ -14,6 +14,7 @@ import type { ClubRoster } from '../../season/rosters';
 import { cardNow } from '../lineup/ctx';
 import { initialLineup, store as lineupStore, unit } from '../lineup/calc';
 import s from './TeamLineup.module.css';
+import { playerHref } from '../player/href';
 import { cardShow, cardViewPlayer, playerShift, shiftPlayer } from '../../game/ovrShow';
 
 type MiniLook = ComponentProps<typeof CardMini>;
@@ -32,7 +33,8 @@ export interface LineupCards { bat: LineupCard[]; mound: LineupCard[] }
 const POS_SHORT: Record<string, string> = { C: '포수', '1B': '1루', '2B': '2루', '3B': '3루', SS: '유격', LF: '좌익', CF: '중견', RF: '우익', DH: '지명', P: '투수' };
 const LEGEND_CLASS = new Set<GradeId>(['legend', 'franchise', 'black', 'signature']);
 const VIEW_RE = /^(k[0-9a-z]+)~(\d{4})$/;
-const hrefOf = (p: Player, card?: { id: string } | null) => `/player/${encodeURIComponent(p.id)}${card ? `?card=${encodeURIComponent(card.id)}` : ''}`;
+/** 선수 화면 주소 — 다른 구단(other)이면 보기 전용 (screens/player/href) */
+const hrefOf = (p: Player, card?: { id: string } | null, other = true) => playerHref(p.id, { card: card?.id, other });
 
 /** 카탈로그 카드 찾기 — 같은 선수 · 같은 카드 연도(연도 없는 레전드급은 그 무리) · 종합이 가장 가까운 카드 (한 번 찾은 건 기억) */
 const catalogMemo = new Map<string, CardInst | null>();
@@ -117,9 +119,9 @@ export function cardsFromRoster(r: ClubRoster): LineupCards {
   const mine = r.mine ? myCardMap() : null;
   const one = (p: Player, key: string, badge: string, pos: string): LineupCard => {
     const card = mine?.get(p.id);
-    if (card) return { key, badge, pos, look: lookOfMine(card), href: hrefOf(p, card) };
+    if (card) return { key, badge, pos, look: lookOfMine(card), href: hrefOf(p, card, false) };
     const { look, card: c } = lookOfPlayer(p);
-    return { key, badge, pos, look, href: c ? hrefOf(p, c) : undefined };
+    return { key, badge, pos, look, href: c ? hrefOf(p, c, !r.mine) : undefined };
   };
   const bat = r.batting.map((b, i) => one(b.player, `b${i}`, String(i + 1), POS_SHORT[b.pos] ?? b.pos));
   const mound: LineupCard[] = [];

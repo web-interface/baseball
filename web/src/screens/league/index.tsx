@@ -11,6 +11,7 @@ import type { ScreenProps } from '../../app/screen';
 import { Link, setQueryQuiet, useLocation } from '../../app/router';
 import { Button, Emblem, Icon, Sheet, Tabs } from '../../ui';
 import { ME, teamById } from '../../game/mock';
+import { playerHref } from '../player/href';
 import { showOvr } from '../../game/ovrShow';
 import { allDays, gamesPlayed, gbLabel, isOver, pctLabel, standingsOf, useSeason, yearOf, type SeasonState } from '../../season/store';
 import { leagueEnv } from '../../season/env';
@@ -322,7 +323,7 @@ function Leaders({ st, query }: { st: SeasonState; query: URLSearchParams }) {
             const mine = e.team === ME.teamId;
             return (
               <li key={e.id}>
-                <Link to={`/player/${e.id}`} className={[s.ld, mine && s.ldMine, e.rank === 1 && s.ldTop].filter(Boolean).join(' ')}>
+                <Link to={playerHref(e.id, { other: !mine })} className={[s.ld, mine && s.ldMine, e.rank === 1 && s.ldTop].filter(Boolean).join(' ')}>
                   <span className={['num', s.ldRank].join(' ')}>{e.rank}</span>
                   <span className={s.ldWho}>
                     <b>{e.name}</b>

@@ -5,6 +5,7 @@ import { Link } from '../../app/router';
 import { Emblem } from '../../ui';
 import { NameYear } from '../../cards';
 import { ME, teamById } from '../../game/mock';
+import { playerHref } from '../player/href';
 import { longDate, startTime } from '../../season/schedule';
 import type { BoxBat, BoxPit, BoxView, Dec } from '../../season/box';
 import type { SeriesId } from '../../season/post';
@@ -32,6 +33,8 @@ const POS_BOX: Record<string, string> = { P: '투', C: '포', '1B': '一', '2B':
 const DEC_KO: Record<Exclude<Dec, ''>, string> = { W: '승', L: '패', S: '세', H: '홀' };
 
 export function BoxScore({ board, view, note, loading }: { board: BoardData; view?: BoxView; note?: string; loading?: boolean }) {
+  // 승 · 패 · 세 투수가 우리 구단 선수인가 — 아니면 선수 화면을 보기 전용으로
+  const decMine = (id: string) => !!view && ([0, 1] as const).some((sd) => (sd === 0 ? view.away : view.home) === ME.teamId && view.pit[sd].some((r) => r.id === id));
   const a = teamById(board.away), h = teamById(board.home);
   const win = board.score[0] > board.score[1] ? 0 : board.score[1] > board.score[0] ? 1 : -1;
   const mySide = board.away === ME.teamId ? 0 : board.home === ME.teamId ? 1 : -1;
@@ -71,7 +74,7 @@ export function BoxScore({ board, view, note, loading }: { board: BoardData; vie
         {(board.dec.w || board.dec.l || board.dec.s) && (
           <p className={s.decs}>
             {(['w', 'l', 's'] as const).map((k) => board.dec[k] && (
-              <span key={k}><em>{k === 'w' ? '승' : k === 'l' ? '패' : '세'}</em><Link to={`/player/${board.dec[k]!.id}`}>{board.dec[k]!.name}</Link></span>
+              <span key={k}><em>{k === 'w' ? '승' : k === 'l' ? '패' : '세'}</em><Link to={playerHref(board.dec[k]!.id, { other: !decMine(board.dec[k]!.id) })}>{board.dec[k]!.name}</Link></span>
             ))}
           </p>
         )}
@@ -175,7 +178,7 @@ function TeamHead({ id, side, what }: { id: string; side: 0 | 1; what: string })
   );
 }
 const nameCell = (p: { id: string; name: string; year?: number }, mine: boolean) => (
-  <Link to={`/player/${p.id}`} className={s.pName}>{mine ? <NameYear name={p.name} year={p.year} /> : p.name}</Link>
+  <Link to={playerHref(p.id, { other: !mine })} className={s.pName}>{mine ? <NameYear name={p.name} year={p.year} /> : p.name}</Link>
 );
 
 function BatTable({ view, side }: { view: BoxView; side: 0 | 1 }) {

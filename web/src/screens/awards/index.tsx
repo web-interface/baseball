@@ -7,6 +7,7 @@ import type { ScreenProps } from '../../app/screen';
 import { Link, setQueryQuiet } from '../../app/router';
 import { Emblem, Icon, Tabs } from '../../ui';
 import { teamById } from '../../game/mock';
+import { playerHref } from '../player/href';
 import { longDate } from '../../season/schedule';
 import { useRosters } from '../games/shared';
 import { pastCeremonies, type AwardWin, type Ceremony } from '../../season/awards';
@@ -82,7 +83,7 @@ const teamLine = (w: AwardWin) => teamById(w.team).name;
 function Lead({ w, c }: { w: AwardWin; c: Ceremony }) {
   return (
     <article className={[s.lead, w.mine && s.mine].filter(Boolean).join(' ')} aria-label={w.label}>
-      <Link to={`/player/${w.id}`} className={s.leadPhoto} aria-label={`${w.name} 선수 정보`}>
+      <Link to={playerHref(w.id, { other: !w.mine })} className={s.leadPhoto} aria-label={`${w.name} 선수 정보`}>
         <Photo win={w} variant="full" pose="celebrate" size="hero" eager />
       </Link>
       <p className={s.cap}><span className="num">{c.year}</span> {w.label} {w.name} · {teamLine(w)}</p>
@@ -106,7 +107,7 @@ function Side({ w, c }: { w: AwardWin; c: Ceremony }) {
           <p className={s.kick}>{w.label}{w.mine && <em className={s.mineTag}>우리 구단</em>}</p>
           <h3 className={s.headlineS}>{w.head}</h3>
         </div>
-        <Link to={`/player/${w.id}`} className={s.sidePhoto} aria-label={`${w.name} 선수 정보`}>
+        <Link to={playerHref(w.id, { other: !w.mine })} className={s.sidePhoto} aria-label={`${w.name} 선수 정보`}>
           <Photo win={w} variant="portrait" size="side" />
         </Link>
       </div>
@@ -136,7 +137,7 @@ function GoldenGloves({ c }: { c: Ceremony }) {
       <ul className={s.gg}>
         {c.gg.map((w) => (
           <li key={`${w.key}-${w.id}`} className={w.mine ? s.mine : undefined}>
-            <Link to={`/player/${w.id}`} className={s.ggItem}>
+            <Link to={playerHref(w.id, { other: !w.mine })} className={s.ggItem}>
               <Photo win={w} variant="portrait" size="tile" />
               <span className={s.ggPos}>{w.label}{w.mine && <em className={s.mineTag}>우리 구단</em>}</span>
               <b className={s.ggName}>{w.name}</b>
@@ -164,7 +165,7 @@ function Titles({ c }: { c: Ceremony }) {
           <ol className={s.titles}>
             {part(side).map((w) => (
               <li key={`${w.key}-${w.id}`}>
-                <Link to={`/player/${w.id}`} className={[s.tRow, w.mine && s.tMine].filter(Boolean).join(' ')}>
+                <Link to={playerHref(w.id, { other: !w.mine })} className={[s.tRow, w.mine && s.tMine].filter(Boolean).join(' ')}>
                   <span className={s.tLabel}>{w.label}{w.shared && <small>공동</small>}</span>
                   <Photo win={w} variant="mini" size="mini" />
                   <span className={s.tWho}>

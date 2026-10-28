@@ -33,16 +33,18 @@ const TAB_IDS: Tab[] = ['attr', 'season', 'real', 'career', 'pot', 'gear', 'enha
 
 export default function PlayerScreen({ params, query }: ScreenProps) {
   const cardQ = query.get('card');
+  // 다른 구단 선수(대전 상대 · 다른 감독 · AI) — 보기 전용 (screens/player/href playerHref)
+  const other = query.get('view') === 'other';
   const ver = useInventory();
-  const res = useMemo(() => resolvePlayer(params.id, cardQ), [params.id, cardQ, ver]); // eslint-disable-line react-hooks/exhaustive-deps
+  const res = useMemo(() => resolvePlayer(params.id, cardQ, other), [params.id, cardQ, other, ver]); // eslint-disable-line react-hooks/exhaustive-deps
   const t = query.get('tab');
   const initTab: Tab = t === 'record' ? 'season' : TAB_IDS.includes(t as Tab) ? (t as Tab) : 'attr';
-  return <PlayerView key={res.player.id} {...res} initTab={initTab} />;
+  return <PlayerView key={res.player.id} {...res} initTab={initTab} other={other} />;
 }
 
 interface Prog { enh: number; fails: number; ps: string | null; level: number }
 
-function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: Player; cards: CardInst[]; mine: CardInst[]; card: CardInst; owned: boolean; initTab: Tab }) {
+function PlayerView({ player: p, cards, mine, card, owned, initTab, other = false }: { player: Player; cards: CardInst[]; mine: CardInst[]; card: CardInst; owned: boolean; initTab: Tab; other?: boolean }) {
   const team = teamById(p.teamId);
   const toast = useToast();
   useScreenTitle(p.name, `${team.name} · No.${p.number}`);
@@ -57,7 +59,8 @@ function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: 
   const bar = useRef<HTMLDivElement>(null);
 
   // 강화 · 실패 보정 · 플레이스타일 · 레벨은 보유 카드 저장소에서 (새로고침해도 그대로)
-  const ent = entryOf(card.id);
+  // 보기 전용이면 내 보관함 값(강화 · 레벨)을 섞지 않는다
+  const ent = other ? undefined : entryOf(card.id);
   const cur: Prog = { enh: ent?.enh ?? card.enhance, fails: ent?.fail ?? 0, ps: ent?.ps ?? ((ent?.enh ?? card.enhance) >= 5 ? defaultPlaystyle(p) : null), level: ent?.lv ?? card.level };
   const gear: GearState = gears[card.id] ?? gearOf(card, p);
   const gb = useMemo(() => gearBonus(p, gear.equipped), [p, gear]);
@@ -115,7 +118,7 @@ function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: 
 
   const pickCard = (id: string) => {
     const tabQ = tab === 'attr' ? '' : `&tab=${tab}`;
-    navigate(`/player/${p.id}?card=${id}${tabQ}`, { replace: true });
+    navigate(`/player/${p.id}?card=${id}${tabQ}${other ? '&view=other' : ''}`, { replace: true });
   };
 
   const patchProg = (patch: Partial<Prog>) => { if ('ps' in patch) setPlaystyle(card.id, patch.ps ?? null); };
@@ -160,7 +163,12 @@ function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: 
           <Button variant="ghost" size="s" onClick={() => navigate(`/lineup?bench=${card.id}`)}>라인업에 넣기</Button>
         </p>
       )}
-      {!owned && (
+      {other ? (
+        <p className={s.fogNote}>
+          <b>다른 구단 선수예요 · 보기 전용.</b> 강화 · 장비 · 잠재력은 바꿀 수 없어요.
+          {isMine(card.id) && <>{' '}<Button variant="ghost" size="s" onClick={() => navigate(`/player/${p.id}?card=${card.id}`)}>내 카드로 보기</Button></>}
+        </p>
+      ) : !owned && (
         <p className={s.fogNote}>
           <b>내 카드가 아니에요.</b> 능력치는 스카우트가 본 범위로 보여요. 상점(카드구매·스카우터)에서 데려오면 강화·장비를 쓸 수 있어요.
         </p>
@@ -219,7 +227,7 @@ function PlayerView({ player: p, cards, mine, card, owned, initTab }: { player: 
             <Button variant="secondary" className={s.ctaMain} onClick={() => setTab('enhance')}>X 완성 · 단계표 보기</Button>
           )}
         </div>
-      ) : (
+      ) : !other && (
         <div className={s.cta}>
           <Button variant="secondary" className={s.ctaMain} icon="shop" onClick={() => navigate('/shop')}>스카우터에서 찾기</Button>
         </div>
