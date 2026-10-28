@@ -5,6 +5,8 @@ import { PvpError, battle, opponents, putMe, rankings } from './pvp';
 import { LobbyChat, chatConnect } from './chat';
 import { PressError, interviewSpec, newsSpec, type Spec } from './press';
 import { adviceSpec } from './advice';
+import { saveRoute } from './save';
+import { REPLACED_MSG, ensureKicks, kickOthers, wasKicked } from './kick';
 
 export { LobbyChat }; // 로비 채팅 방 (Durable Object, SQLite 저장소)
 
@@ -81,20 +83,38 @@ async function body<T>(req: Request): Promise<T> {
   try { return (await req.json()) as T; } catch { throw new HttpError(400, '요청 형식이 잘못됐어요'); }
 }
 
-async function newSession(env: Env, userId: number) {
+/**
+ * 새 세션 — 같은 아이디는 한 기기에서만: 새 세션을 넣으면서 그 사람의 다른 세션은 끊는다(kick.ts, 한 묶음).
+ * 끊은 세션이 있으면 그 기기의 로비 채팅 연결도 끊는다(응답을 늦추지 않게 ctx.waitUntil).
+ */
+async function newSession(env: Env, userId: number, ctx?: ExecutionContext) {
   const token = randomToken();
-  await env.DB.prepare('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)')
-    .bind(await sha256(token), userId, now() + SESSION_DAYS * 86400).run();
+  const th = await sha256(token);
+  const t = now();
+  await ensureKicks(env.DB);
+  const res = await env.DB.batch([
+    env.DB.prepare('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)').bind(th, userId, t + SESSION_DAYS * 86400),
+    ...kickOthers(env.DB, userId, th, t),
+  ]);
+  if ((res[2]?.meta.changes ?? 0) > 0) {
+    const p = env.CHAT.getByName('lobby').kick(userId, th).catch((e: unknown) => console.warn('chat kick', e));
+    if (ctx) ctx.waitUntil(p); else await p;
+  }
   return token;
 }
 
 async function currentUser(req: Request, env: Env) {
   const m = (req.headers.get('Authorization') || '').match(/^Bearer ([A-Za-z0-9_-]{20,})$/);
   if (!m) throw new HttpError(401, '로그인이 필요해요');
+  const th = await sha256(m[1]);
   const row = await env.DB.prepare(
     'SELECT u.id, u.username FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ?',
-  ).bind(await sha256(m[1]), now()).first<{ id: number; username: string }>();
-  if (!row) throw new HttpError(401, '로그인이 만료됐어요. 다시 로그인해 주세요');
+  ).bind(th, now()).first<{ id: number; username: string }>();
+  if (!row) {
+    // 다른 기기에서 로그인해서 끊긴 세션 — 사이트가 '다른 기기에서 로그인했어요' 팝업을 띄운다 (kick.ts)
+    if (await wasKicked(env.DB, th)) throw new HttpError(401, REPLACED_MSG, 'replaced');
+    throw new HttpError(401, '로그인이 만료됐어요. 다시 로그인해 주세요');
+  }
   return row;
 }
 
@@ -134,27 +154,24 @@ async function checkPassword(env: Env, username: string, secret: string, field: 
   return u;
 }
 
-async function login(req: Request, env: Env) {
+async function login(req: Request, env: Env, ctx: ExecutionContext) {
   const { username, key } = await body<{ username?: string; key?: string }>(req);
   if (!username || !key || !KEY_RE.test(key)) throw new HttpError(400, '아이디와 비밀번호를 넣어 주세요');
   const u = await checkPassword(env, username, key, 'pw_hash');
-  return { token: await newSession(env, u.id), username: u.username };
+  return { token: await newSession(env, u.id, ctx), username: u.username };
 }
 
-/** 비밀번호를 잊었을 때 — 복구 코드로 새 비밀번호 (복구 코드도 새로 준다, 다른 기기 로그인은 모두 끝낸다) */
-async function reset(req: Request, env: Env) {
+/** 비밀번호를 잊었을 때 — 복구 코드로 새 비밀번호 (복구 코드도 새로 준다, 다른 기기 로그인은 새 세션이 모두 끊는다) */
+async function reset(req: Request, env: Env, ctx: ExecutionContext) {
   const { username, recoveryCode: code, key } = await body<{ username?: string; recoveryCode?: string; key?: string }>(req);
   if (!username || !code || !key || !KEY_RE.test(key)) throw new HttpError(400, '아이디·복구 코드·새 비밀번호를 넣어 주세요');
   const u = await checkPassword(env, username, normCode(code), 'recovery_hash');
   const p = pepper(env);
   const salt = randomToken(16);
   const next = recoveryCode();
-  await env.DB.batch([
-    env.DB.prepare('UPDATE users SET pw_hash = ?, salt = ?, recovery_hash = ? WHERE id = ?')
-      .bind(await sha256(p + salt + key), salt, await sha256(p + salt + normCode(next)), u.id),
-    env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(u.id),
-  ]);
-  return { token: await newSession(env, u.id), username: u.username, recoveryCode: next };
+  await env.DB.prepare('UPDATE users SET pw_hash = ?, salt = ?, recovery_hash = ? WHERE id = ?')
+    .bind(await sha256(p + salt + key), salt, await sha256(p + salt + normCode(next)), u.id).run();
+  return { token: await newSession(env, u.id, ctx), username: u.username, recoveryCode: next };
 }
 
 // Claude 는 Haiku 5.5 하나만 쓴다 (사용자 지시 — 더 싼 모델로. 다른 모델 금지). 모든 Claude 호출(/ai/ping · /ai/news · /ai/interview)이 이 값.
@@ -313,7 +330,7 @@ async function health(env: Env) {
 }
 
 export default {
-  async fetch(req: Request, env: Env): Promise<Response> {
+  async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const cors = corsHeaders(req, env);
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     const url = new URL(req.url);
@@ -325,8 +342,8 @@ export default {
       switch (route) {
         case 'GET /': case 'GET /health': return json(await health(env), 200, cors);
         case 'POST /auth/register': return json(await register(req, env), 200, cors);
-        case 'POST /auth/login': return json(await login(req, env), 200, cors);
-        case 'POST /auth/reset': return json(await reset(req, env), 200, cors);
+        case 'POST /auth/login': return json(await login(req, env, ctx), 200, cors);
+        case 'POST /auth/reset': return json(await reset(req, env, ctx), 200, cors);
         case 'POST /auth/logout': {
           const m = (req.headers.get('Authorization') || '').match(/^Bearer (.+)$/);
           if (m) await env.DB.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(await sha256(m[1])).run();
@@ -353,6 +370,11 @@ export default {
           return json(await battle(req, env.DB, await currentUser(req, env)), 200, cors);
         }
         case 'GET /rankings': return json(await rankings(url, env.DB, await currentUser(req, env)), 200, cors);
+        // 기기 간 이어하기 — 계정별 게임 진행 저장 (save.ts — D1 표는 처음 쓸 때 스스로 만든다)
+        case 'GET /save/meta': case 'GET /save': case 'PUT /save': {
+          const r = await saveRoute(route, req, env.DB, await currentUser(req, env));
+          return json(r.body, r.status, cors);
+        }
         // 로비 채팅 (WebSocket — 로그인은 연결 뒤 첫 메시지로)
         case 'GET /chat/ws': return await chatConnect(req, env);
         default: throw new HttpError(404, '없는 경로예요');

@@ -9,6 +9,9 @@ import { Preview } from './Preview';
 import { ROUTES, SCREENS, type RouteDef } from './routes';
 import { Link, matchPath, navigate, useLocation, type Loc } from './router';
 import { Shell } from './Shell';
+import { SyncChoice } from './SyncChoice';
+import { ReplacedSheet } from './ReplacedSheet';
+import { startSync, useSync } from './sync';
 import { savedStartClub } from '../game/mock';
 import s from './App.module.css';
 
@@ -19,6 +22,8 @@ export default function App() {
         <AuthProvider>
           <Routes />
           <RecoverySheet />
+          <SyncChoice />
+          <ReplacedSheet />
           <FirstTheme />
         </AuthProvider>
       </ToastProvider>
@@ -62,7 +67,13 @@ function findRoute(path: string) {
 
 function Routes() {
   const loc = useLocation();
-  const { status, recoveryCode, offline } = useAuth();
+  const { status, recoveryCode, offline, user, replaced } = useAuth();
+  // 기기 간 이어하기 (app/sync) — 로그인하면 서버 기록과 맞춘다. 판단이 끝나기 전엔 구단 선택으로 보내지 않고 '기록 불러오는 중'
+  // (가입 직후 복구 코드를 확인한 뒤에 시작 — 새로고침으로 복구 코드가 사라지지 않게 · 다른 기기 로그인으로 끊기면 멈춘다)
+  const { gate } = useSync();
+  const syncOn = status === 'in' && !!user && !recoveryCode && !replaced;
+  const wait = syncOn && !gate;
+  useEffect(() => (syncOn && user ? startSync(user, offline) : undefined), [syncOn, user, offline]);
 
   // 대전 목록에 내 구단 올리기 — 로그인해 앱을 켜 두면 1시간마다(대전 화면에 안 들어가도 다른 감독 목록에 나오게)
   useEffect(() => {
@@ -75,7 +86,7 @@ function Routes() {
 
   // 첫 주소 · 로그인 뒤 이동
   useEffect(() => {
-    if (status === 'checking') return;
+    if (status === 'checking' || wait) return;
     if (loc.path === '/') navigate(status === 'in' ? '/home' : previewAllowed(loc) ? '/preview' : '/login', { replace: true });
     else if (loc.path === '/login' && status === 'in' && !recoveryCode) navigate(loc.query.get('next') || '/home', { replace: true });
     else if (status === 'in' && !recoveryCode && loc.path !== '/club-select' && loc.path !== '/settings' && !savedStartClub() && !guided()) {
@@ -83,9 +94,10 @@ function Routes() {
       markGuided();
       navigate('/club-select', { replace: true });
     }
-  }, [loc, status, recoveryCode]);
+  }, [loc, status, recoveryCode, wait]);
 
   if (status === 'checking') return <Splash />;
+  if (wait) return <Splash label="기록 불러오는 중" />;
   if (loc.path === '/login' || loc.path === '/') return <AuthScreen />;
 
   const preview = status !== 'in';
@@ -116,11 +128,12 @@ function Routes() {
   );
 }
 
-function Splash() {
+function Splash({ label }: { label?: string }) {
   return (
-    <div className={s.splash} aria-label="불러오는 중">
+    <div className={s.splash} aria-label={label ?? '불러오는 중'}>
       <b>야구 매니저</b>
       <span className={s.bar} />
+      {label && <small>{label}</small>}
     </div>
   );
 }

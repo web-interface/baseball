@@ -7,6 +7,7 @@
 //  · IP 는 받지도 저장하지도 않는다(Worker 가 필요한 머리글만 넘긴다). 메시지 줄에는 아이디·구단·시각·본문만.
 //  · 신고는 본문 없이 '누가 · 누구를 · 언제'만 D1 chat_reports 에 7일. 1시간 안에 서로 다른 3명이 신고하면 그 사람은 1시간 동안 보내기 막힘.
 import { DurableObject } from 'cloudflare:workers';
+import { REPLACED_MSG, wasKicked } from './kick';
 
 export interface ChatEnv {
   DB: D1Database;
@@ -29,8 +30,8 @@ const REPORTS_PER_HOUR = 10;
 const REPORT_KEEP_S = 7 * 86400;
 const CLUBS = ['dj', 'gj', 'dg', 'bs', 'sb', 'st', 'sh', 'ic', 'cw', 'sw'];
 
-/** 소켓 꼬리표 — 잠들었다 깨어나도 남는다 (uid 0 = 로그인 안 함) */
-interface Att { uid: number; name: string; club: string | null }
+/** 소켓 꼬리표 — 잠들었다 깨어나도 남는다 (uid 0 = 로그인 안 함). th = 로그인 토큰 해시(다른 기기 로그인으로 끊을 때 — 화면엔 안 보냄) */
+interface Att { uid: number; name: string; club: string | null; th?: string }
 const ANON: Att = { uid: 0, name: '', club: null };
 
 /** 시스템 메시지 형식 (나중을 위해) — 예: 왕조 완성 */
@@ -204,24 +205,48 @@ export class LobbyChat extends DurableObject<ChatEnv> {
   private async hello(ws: WebSocket, token: unknown, club: unknown) {
     let me: Att = ANON;
     let expired = false;
+    let replaced = false;
     if (typeof token === 'string' && /^[A-Za-z0-9_-]{20,200}$/.test(token)) {
       try {
+        const th = await sha256(token);
         const row = await this.env.DB.prepare(
           `SELECT u.id, u.username, p.club_code AS club FROM sessions s JOIN users u ON u.id = s.user_id
            LEFT JOIN pvp_clubs p ON p.user_id = u.id WHERE s.token_hash = ? AND s.expires_at > ?`,
-        ).bind(await sha256(token), Math.floor(Date.now() / 1000)).first<{ id: number; username: string; club: string | null }>();
+        ).bind(th, Math.floor(Date.now() / 1000)).first<{ id: number; username: string; club: string | null }>();
         if (row) {
           const c = typeof club === 'string' && CLUBS.includes(club) ? club : row.club && CLUBS.includes(row.club) ? row.club : null;
-          me = { uid: row.id, name: row.username, club: c };
-        } else expired = true;
+          me = { uid: row.id, name: row.username, club: c, th };
+        } else {
+          expired = true;
+          replaced = await wasKicked(this.env.DB, th); // 다른 기기에서 로그인해서 끊긴 세션 (kick.ts)
+        }
       } catch (e) {
         console.error('chat hello', e);
         this.err(ws, 'server', '로그인을 확인하지 못했어요. 잠시 뒤 다시 연결할게요');
       }
     }
     ws.serializeAttachment(me);
-    this.json(ws, { t: 'me', me: me.uid ? me : null, expired });
+    if (replaced) this.err(ws, 'replaced', REPLACED_MSG);
+    this.json(ws, { t: 'me', me: me.uid ? { uid: me.uid, name: me.name, club: me.club } : null, expired, ...(replaced ? { replaced } : {}) });
     this.broadcastOnline();
+  }
+
+  /**
+   * 같은 아이디가 다른 기기에서 로그인했다(index.ts newSession) — 그 사람의 예전 세션으로 붙은 연결을 끊는다(keep = 새 세션 토큰 해시).
+   * 끊기 전에 'replaced' 를 알려 사이트가 팝업을 띄우게 한다.
+   */
+  async kick(uid: number, keep: string): Promise<number> {
+    let n = 0;
+    for (const w of this.ctx.getWebSockets()) {
+      const a = w.deserializeAttachment() as Att | null;
+      if (!a?.uid || a.uid !== uid || a.th === keep) continue;
+      n++;
+      this.err(w, 'replaced', REPLACED_MSG);
+      w.serializeAttachment(ANON);
+      try { w.close(4001, 'replaced'); } catch { /* 닫히는 중 */ }
+    }
+    if (n) this.broadcastOnline();
+    return n;
   }
 
   private async send(ws: WebSocket, raw: unknown, cid?: string) {

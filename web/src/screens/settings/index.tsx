@@ -1,9 +1,10 @@
 // 설정 — 담당: 홈·시작·설정 개발자
 // 테마(미리보기와 함께 바로 바뀜) · 경기 보기 방식(기본 빨리 보기) · 강조 문구 · 소리(자리) · 로그인된 기기(자리) · 경기 운영 · 정보
 import { KBO_SOURCE_NOTE } from '../../game/kbo';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { ScreenProps } from '../../app/screen';
 import { useAuth } from '../../app/auth';
+import { flushSync, saveLineText, saveNow, saveNowToast, useSync } from '../../app/sync';
 import { Link, navigate } from '../../app/router';
 import { useTheme } from '../../theme/ThemeProvider';
 import type { ThemeId } from '../../theme/themes';
@@ -171,7 +172,7 @@ function Devices() {
       </ul>
       <p className={s.soon}>예시 목록이에요</p>
       <div className={s.outs}>
-        <Button variant="secondary" icon="logout" disabled={status !== 'in'} onClick={() => logout()}>이 기기 로그아웃</Button>
+        <Button variant="secondary" icon="logout" disabled={status !== 'in'} onClick={async () => { await flushSync(); await logout(); }}>이 기기 로그아웃</Button>
         <Button variant="ghost" onClick={() => setAsk(true)}>모든 기기 로그아웃</Button>
       </div>
       <Sheet
@@ -180,6 +181,28 @@ function Devices() {
         title="모든 기기에서 로그아웃할까요?"
         footer={<><Button variant="secondary" onClick={() => setAsk(false)}>그만두기</Button><Button onClick={() => { setAsk(false); toast({ text: '준비 중이에요', tone: 'info' }); }}>모두 로그아웃</Button></>}
       />
+    </>
+  );
+}
+
+/** 기록 저장 — 계정별 서버 저장(app/sync): 마지막 저장 시각(서버에 안 닿으면 '이 기기에만 저장 중') · 지금 저장 */
+function SaveRow() {
+  const v = useSync();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const t = window.setInterval(() => setNow(Date.now()), 30_000); return () => window.clearInterval(t); }, []);
+  const go = async () => {
+    setBusy(true);
+    const r = await saveNow();
+    setBusy(false);
+    setNow(Date.now());
+    toast(saveNowToast(r));
+  };
+  return (
+    <>
+      <span><b>기록 저장</b><small>{saveLineText(v, now)}</small></span>
+      <Button variant="secondary" size="s" loading={busy} disabled={v.phase === 'off'} onClick={go}>지금 저장</Button>
     </>
   );
 }
@@ -230,6 +253,7 @@ export default function SettingsScreen(_: ScreenProps) {
       <Section id="set-play" title="경기 운영">
         <ul className={s.links}>
           <li><span><b>AI 상대 난이도</b></span><em>시즌 시작 때</em></li>
+          <li><SaveRow /></li>
           <li><NewStart /></li>
         </ul>
       </Section>

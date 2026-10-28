@@ -4,7 +4,7 @@
 //  · 30초마다 'ping' — 서버(DO)는 깨지 않고 런타임이 'pong' 으로 답한다. 10초 안에 아무 답이 없으면 끊긴 걸로 보고 다시 잇는다.
 //  · 대화는 서버가 알려 준 보관 시간(하루) 뒤 사라진다 — 서버 시각 기준으로 6초 전부터 흐려지고 시간이 되면 목록에서 뺀다.
 //  · 로그인 토큰은 주소에 넣지 않고 연결 뒤 첫 메시지(hello)로 보낸다.
-import { chatSocketUrl, session } from '../../api';
+import { chatSocketUrl, markReplaced, session } from '../../api';
 import { TEAMS } from '../../game/mock';
 import { FADE_MS, type ChatMsg, type ChatSource, type ChatState, type ConnStatus, type ReqResult, type ServerEvent } from './types';
 
@@ -52,9 +52,12 @@ function myClub(): string | undefined {
 
 /* ───────── 연결 ───────── */
 
+/** hello 에 실어 보낸 토큰 — 서버가 '다른 기기 로그인으로 끊김'(replaced)이라고 하면 그 토큰일 때만 팝업(app/auth) */
+let helloToken: string | null = null;
 function hello(sock: WebSocket) {
   set({ meChecked: false });
-  try { sock.send(JSON.stringify({ t: 'hello', token: session.get() ?? undefined, club: myClub() })); } catch { /* 닫히는 중 */ }
+  helloToken = session.get();
+  try { sock.send(JSON.stringify({ t: 'hello', token: helloToken ?? undefined, club: myClub() })); } catch { /* 닫히는 중 */ }
 }
 
 function connect() {
@@ -150,6 +153,7 @@ function onData(raw: unknown) {
       break;
     }
     case 'me':
+      if (ev.replaced) markReplaced(helloToken);
       set({ me: ev.me, meChecked: true });
       break;
     case 'msg': {
@@ -171,6 +175,7 @@ function onData(raw: unknown) {
       settle(ev.rid, { ok: true });
       break;
     case 'err':
+      if (ev.code === 'replaced') { markReplaced(helloToken); set({ me: null }); break; } // 다른 기기 로그인으로 끊김 — 팝업(app/auth)
       if (ev.rid) settle(ev.rid, { ok: false, text: ev.text });
       else if (ev.cid) failPending(ev.cid, ev.text);
       else set({ notice: { text: ev.text, at: now() } });

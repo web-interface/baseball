@@ -1,7 +1,7 @@
 // 로그인 상태 — 기존 서버 흐름(가입·로그인·복구 코드로 비밀번호 다시 정하기·로그아웃)을 그대로 쓴다.
 // 같은 기기면 저장된 토큰으로 자동 로그인. 서버에 잠깐 못 닿아도(네트워크) 로그아웃시키지 않는다.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, ApiError, session } from '../api';
+import { api, ApiError, isReplaced, onReplaced, session } from '../api';
 
 const USER_KEY = 'bb.user';
 const store = {
@@ -24,6 +24,10 @@ interface AuthCtx {
   reset: (username: string, code: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   clearRecovery: () => void;
+  /** 같은 아이디로 다른 기기에서 로그인해 이 기기 접속이 끊겼다 (어느 API 든 401 code 'replaced') — App 이 팝업을 띄운다 */
+  replaced: boolean;
+  /** 팝업 [확인] — 저장된 토큰만 지우고(게임 기록은 그대로) 로그아웃 상태로 */
+  ackReplaced: () => void;
 }
 
 const Ctx = createContext<AuthCtx | null>(null);
@@ -33,6 +37,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
   const [recoveryCode, setRecovery] = useState<string | null>(null);
+  const [replaced, setReplaced] = useState(false);
+
+  // 다른 기기 로그인으로 끊김 — 어느 API 호출에서 알아채든 팝업
+  useEffect(() => onReplaced(() => setReplaced(true)), []);
 
   useEffect(() => {
     if (!session.get()) return;
@@ -41,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((r) => { if (!alive) return; setUser(r.username); store.set(r.username); setStatus('in'); })
       .catch((e) => {
         if (!alive) return;
+        if (isReplaced(e)) { setReplaced(true); return; } // 팝업 [확인] 때 토큰을 지우고 로그인 화면으로
         if (e instanceof ApiError && e.status === 0 && store.get()) {
           // 네트워크만 끊김 — 토큰은 지키고 저장된 이름으로
           setUser(store.get()); setOffline(true); setStatus('in');
@@ -56,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     store.set(username);
     setUser(username);
     setOffline(false);
+    setReplaced(false);
     setStatus('in');
     if (code) setRecovery(code);
   }, []);
@@ -71,10 +81,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('out');
   }, []);
   const clearRecovery = useCallback(() => setRecovery(null), []);
+  const ackReplaced = useCallback(() => {
+    session.clear();
+    store.clear();
+    setUser(null);
+    setOffline(false);
+    setReplaced(false);
+    setStatus('out');
+  }, []);
 
   const value = useMemo<AuthCtx>(
-    () => ({ status, user, offline, recoveryCode, login, register, reset, logout, clearRecovery }),
-    [status, user, offline, recoveryCode, login, register, reset, logout, clearRecovery],
+    () => ({ status, user, offline, recoveryCode, login, register, reset, logout, clearRecovery, replaced, ackReplaced }),
+    [status, user, offline, recoveryCode, login, register, reset, logout, clearRecovery, replaced, ackReplaced],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

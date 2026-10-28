@@ -24,7 +24,7 @@ export interface ChatMe { uid: number; name: string; club: string | null }
 /** 서버 → 화면 */
 export type ServerEvent =
   | { t: 'init'; msgs: ChatMsg[]; online: number; now?: number; ttl?: number; maxLen?: number }
-  | { t: 'me'; me: ChatMe | null; expired?: boolean }
+  | { t: 'me'; me: ChatMe | null; expired?: boolean; replaced?: boolean }
   | { t: 'msg'; m: ChatMsg; cid?: string }
   | { t: 'del'; id: number }
   | { t: 'online'; n: number }
